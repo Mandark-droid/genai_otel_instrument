@@ -46,6 +46,7 @@ dependencies = [
     "opentelemetry-instrumentation-requests>=0.41b0",
     "opentelemetry-instrumentation-httpx>=0.41b0",
     "wrapt>=1.14.0",
+    "httpx>=0.23.0"
 ]
 
 [project.optional-dependencies]
@@ -76,14 +77,19 @@ huggingface = ["transformers>=4.30.0"]
 databases = [
     "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
     "opentelemetry-instrumentation-redis>=0.41b0",
+    "redis",
     "opentelemetry-instrumentation-pymongo>=0.41b0",
+    "pymongo",
     "opentelemetry-instrumentation-psycopg2>=0.41b0",
+    "psycopg2-binary",
     "opentelemetry-instrumentation-mysql>=0.41b0",
+    "mysql-connector-python",
 ]
 
 # Message queue instrumentation
 messaging = [
     "opentelemetry-instrumentation-kafka-python>=0.41b0",
+    "kafka-python",
 ]
 
 # Vector databases
@@ -159,6 +165,8 @@ all = [
     "chromadb>=0.4.0",
     "pymilvus>=2.3.0",
     "faiss-cpu>=1.7.0",
+    "httpx>=0.23.0"
+
 ]
 
 # Development dependencies
@@ -172,6 +180,8 @@ dev = [
     "mypy>=1.0.0",
     "build>=0.10.0",
     "twine>=4.0.0",
+    "httpx",
+    "mysql-connector-python"
 ]
 
 [project.scripts]
