@@ -1,77 +1,116 @@
-import os
+"""Top-level package for GenAI OpenTelemetry Auto-Instrumentation.
+
+This package provides a comprehensive solution for automatically instrumenting
+Generative AI (GenAI) and Large Language Model (LLM) applications with OpenTelemetry.
+It supports various LLM providers, frameworks, and common data stores (MCP tools).
+"""
+
 import logging
-from typing import Optional
+import os
+
+from .__version__ import __version__, __author__, __email__, __license__
+
+# Re-exporting key components for easier access
 from .auto_instrument import setup_auto_instrumentation
 from .config import OTelConfig
-from .exceptions import InstrumentationError
-from .logging_config import setup_logging
+from .cost_calculator import CostCalculator
+from .gpu_metrics import GPUMetricsCollector
 
-# Setup logging
-logger = setup_logging(
-    level=os.getenv("GENAI_LOG_LEVEL", "INFO"),
-    log_file=os.getenv("GENAI_LOG_FILE")
+# Import instrumentors conditionally to avoid errors if dependencies aren't installed
+from .instrumentors import (
+    OpenAIInstrumentor,
+    AnthropicInstrumentor,
+    GoogleAIInstrumentor,
+    AWSBedrockInstrumentor,
+    AzureOpenAIInstrumentor,
+    CohereInstrumentor,
+    MistralAIInstrumentor,
+    TogetherAIInstrumentor,
+    GroqInstrumentor,
+    LangChainInstrumentor,
+    LlamaIndexInstrumentor,
+    HuggingFaceInstrumentor,
+    OllamaInstrumentor,
+    VertexAIInstrumentor,
+    ReplicateInstrumentor,
+    AnyscaleInstrumentor,
 )
+from .mcp_instrumentors.manager import MCPInstrumentorManager
+
+logger = logging.getLogger(__name__)
 
 
-def instrument(
-        service_name: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        enable_gpu_metrics: bool = True,
-        enable_cost_tracking: bool = True,
-        enable_auto_instrument: bool = True,
-        enable_mcp_instrumentation: bool = True,
-        fail_on_error: bool = False
-):
-    """
-    Single function to instrument your GenAI application.
+def instrument(**kwargs):
+    """Public function to initialize and start auto-instrumentation.
+
+    Loads configuration from environment variables or provided keyword arguments,
+    then sets up OpenTelemetry tracing and metrics.
 
     Args:
-        service_name: Service name for telemetry
-        endpoint: OTLP endpoint URL
-        enable_gpu_metrics: Enable GPU metrics collection
-        enable_cost_tracking: Enable cost calculation
-        enable_auto_instrument: Enable automatic instrumentation
-        enable_mcp_instrumentation: Enable MCP tool instrumentation
-        fail_on_error: If True, raise exceptions on instrumentation errors.
-                      If False, log errors and continue (production default)
+        **kwargs: Configuration parameters that can override environment variables.
+                  See OTelConfig for available parameters (e.g., service_name, endpoint).
 
-    Returns:
-        OTelConfig object
+    Example:
+        >>> from genai_otel import instrument
+        >>> instrument(service_name="my-app", endpoint="http://localhost:4318")
 
-    Raises:
-        InstrumentationError: If fail_on_error=True and setup fails
+    Environment Variables:
+        OTEL_SERVICE_NAME: Name of the service (default: "genai-app")
+        OTEL_EXPORTER_OTLP_ENDPOINT: OTLP endpoint (default: "http://localhost:4318")
+        GENAI_ENABLE_GPU_METRICS: Enable GPU metrics (default: "true")
+        GENAI_ENABLE_COST_TRACKING: Enable cost tracking (default: "true")
+        GENAI_ENABLE_MCP_INSTRUMENTATION: Enable MCP instrumentation (default: "true")
+        GENAI_FAIL_ON_ERROR: Fail if instrumentation errors occur (default: "false")
+        OTEL_EXPORTER_OTLP_HEADERS: OTLP headers in format "key1=val1,key2=val2"
+        GENAI_LOG_LEVEL: Logging level (default: "INFO")
+        GENAI_LOG_FILE: Log file path (optional)
     """
     try:
-        config = OTelConfig(
-            service_name=service_name,
-            endpoint=endpoint,
-            enable_gpu_metrics=enable_gpu_metrics,
-            enable_cost_tracking=enable_cost_tracking,
-            enable_mcp_instrumentation=enable_mcp_instrumentation
+        # Create config object, allowing kwargs to override env vars
+        config = OTelConfig(**kwargs)
+        setup_auto_instrumentation(config)
+        logger.info("GenAI OpenTelemetry instrumentation initialized successfully")
+    except Exception as e:
+        # Log the error and potentially re-raise based on fail_on_error
+        logger.error("Failed to initialize instrumentation: %s", e, exc_info=True)
+        fail_on_error = kwargs.get(
+            "fail_on_error", os.getenv("GENAI_FAIL_ON_ERROR", "false").lower() == "true"
         )
-
-        logger.info(
-            "Initializing GenAI instrumentation for service: %s", config.service_name
-        )
-        logger.debug("Configuration: endpoint=%s, gpu_metrics=%s, cost_tracking=%s, mcp=%s",
-                     config.endpoint, config.enable_gpu_metrics, config.enable_cost_tracking,
-                     config.enable_mcp_instrumentation)
-
-        if enable_auto_instrument:
-            setup_auto_instrumentation(config)
-
-        logger.info("✓ GenAI instrumentation initialized successfully for %s", config.service_name)
-        return config
-
-    except InstrumentationError as e:
-        logger.error("A known instrumentation error occurred: %s", e, exc_info=True)
         if fail_on_error:
             raise
-        logger.warning("Continuing without instrumentation due to a known error.")
-        return None
-    except Exception as e:
-        logger.error("An unexpected error occurred during instrumentation: %s", e, exc_info=True)
-        if fail_on_error:
-            raise InstrumentationError(f"Instrumentation setup failed due to an unexpected error: {e}") from e
-        logger.warning("Continuing without instrumentation due to an unexpected error.")
-        return None
+
+
+__all__ = [
+    # Version info
+    "__version__",
+    "__author__",
+    "__email__",
+    "__license__",
+    # Core functions
+    "instrument",
+    "setup_auto_instrumentation",
+    # Configuration
+    "OTelConfig",
+    # Utilities
+    "CostCalculator",
+    "GPUMetricsCollector",
+    # Instrumentors
+    "OpenAIInstrumentor",
+    "AnthropicInstrumentor",
+    "GoogleAIInstrumentor",
+    "AWSBedrockInstrumentor",
+    "AzureOpenAIInstrumentor",
+    "CohereInstrumentor",
+    "MistralAIInstrumentor",
+    "TogetherAIInstrumentor",
+    "GroqInstrumentor",
+    "LangChainInstrumentor",
+    "LlamaIndexInstrumentor",
+    "HuggingFaceInstrumentor",
+    "OllamaInstrumentor",
+    "VertexAIInstrumentor",
+    "ReplicateInstrumentor",
+    "AnyscaleInstrumentor",
+    # MCP Manager
+    "MCPInstrumentorManager",
+]

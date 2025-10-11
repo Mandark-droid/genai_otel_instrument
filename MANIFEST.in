@@ -1,3 +1,11 @@
 include README.md
 include LICENSE
-include example_usage.py  # If you want to include it
+include CHANGELOG.md
+include genai_otel/llm_pricing.json
+include genai_otel/py.typed
+recursive-include genai_otel *.py
+recursive-include tests *.py
+exclude tests/__pycache__
+exclude genai_otel/__pycache__
+global-exclude *.pyc
+global-exclude __pycache__

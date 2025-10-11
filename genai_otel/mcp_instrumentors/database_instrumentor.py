@@ -1,3 +1,10 @@
+"""OpenTelemetry instrumentor for various database clients.
+
+This module provides the `DatabaseInstrumentor` class, which automatically
+instruments popular Python database libraries such as SQLAlchemy, psycopg2,
+pymongo, and mysql, enabling tracing of database operations within GenAI applications.
+"""
+
 import logging
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
@@ -8,7 +15,7 @@ from ..config import OTelConfig
 logger = logging.getLogger(__name__)
 
 
-class DatabaseInstrumentor:
+class DatabaseInstrumentor:  # pylint: disable=R0903
     """Instrument various database clients"""
 
     def __init__(self, config: OTelConfig):
@@ -57,5 +64,5 @@ class DatabaseInstrumentor:
             logger.debug("MySQL-python not installed, skipping instrumentation.")
         except Exception as e:
             logger.warning(f"MySQL instrumentation failed: {e}")
-        
+
         return instrumented_count
