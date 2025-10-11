@@ -163,7 +163,7 @@ fi
 
 # Install the package directly without upgrading pip
 print_info "Installing package in temporary environment..."
-pip install mysql opentelemetry-instrumentation-mysql
+pip install sqlalchemy mysql opentelemetry-instrumentation-mysql
 pip install dist/*.whl
 print_status $? "Package installed successfully"
 
