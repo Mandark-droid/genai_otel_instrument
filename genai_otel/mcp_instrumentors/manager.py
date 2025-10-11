@@ -1,3 +1,12 @@
+"""Manager for OpenTelemetry instrumentation of Model Context Protocol (MCP) tools.
+
+This module provides the `MCPInstrumentorManager` class, which orchestrates
+the automatic instrumentation of various MCP tools, including databases, caching
+layers, message queues, vector databases, and generic API calls. It ensures
+that these components are integrated into the OpenTelemetry tracing and metrics
+system.
+"""
+
 import logging
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
@@ -11,14 +20,14 @@ from .api_instrumentor import APIInstrumentor
 logger = logging.getLogger(__name__)
 
 
-class MCPInstrumentorManager:
+class MCPInstrumentorManager:  # pylint: disable=R0903
     """Manager for MCP (Model Context Protocol) tool instrumentation"""
 
     def __init__(self, config: OTelConfig):
         self.config = config
         self.instrumentors = []
 
-    def instrument_all(self, fail_on_error: bool = False):
+    def instrument_all(self, fail_on_error: bool = False):  # pylint: disable=R0912, R0915
         """Instrument all detected MCP tools"""
 
         success_count = 0
@@ -30,7 +39,7 @@ class MCPInstrumentorManager:
             RequestsInstrumentor().instrument()
             HTTPXClientInstrumentor().instrument()
             api_instrumentor = APIInstrumentor(self.config)
-            api_instrumentor.instrument()
+            api_instrumentor.instrument(self.config)
             logger.info("✓ HTTP/API instrumentation enabled")
             success_count += 1
         except ImportError as e:
@@ -107,6 +116,5 @@ class MCPInstrumentorManager:
                 raise
 
         logger.info(
-            f"MCP instrumentation summary: {success_count} succeeded, "
-            f"{failure_count} failed"
+            f"MCP instrumentation summary: {success_count} succeeded, " f"{failure_count} failed"
         )

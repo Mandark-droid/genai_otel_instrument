@@ -1,6 +1,13 @@
+"""OpenTelemetry instrumentor for the Together AI SDK.
+
+This instrumentor automatically traces completion calls to Together AI models,
+capturing relevant attributes such as the model name.
+"""
+
+from typing import Dict, Optional
+
 from .base import BaseInstrumentor
 from ..config import OTelConfig
-from typing import Dict, Optional
 
 
 class TogetherAIInstrumentor(BaseInstrumentor):
