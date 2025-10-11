@@ -1,9 +1,11 @@
 """Tests for OpenAI instrumentor."""
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from genai_otel.instrumentors.openai_instrumentor import OpenAIInstrumentor
+
 from genai_otel.config import OTelConfig
+from genai_otel.instrumentors.openai_instrumentor import OpenAIInstrumentor
 
 
 class TestOpenAIInstrumentor:

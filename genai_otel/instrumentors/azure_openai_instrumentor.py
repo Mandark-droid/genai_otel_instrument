@@ -4,11 +4,11 @@ This instrumentor automatically traces calls to Azure OpenAI models, capturing
 relevant attributes such as model name and token usage.
 """
 
-from typing import Dict, Optional
 import logging
+from typing import Dict, Optional
 
-from .base import BaseInstrumentor
 from ..config import OTelConfig
+from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
 

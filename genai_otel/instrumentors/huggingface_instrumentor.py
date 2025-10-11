@@ -4,10 +4,11 @@ This instrumentor automatically traces calls made through HuggingFace pipelines,
 capturing relevant attributes such as the model name and task type.
 """
 
-from typing import Dict, Optional
 import logging
-from .base import BaseInstrumentor
+from typing import Dict, Optional
+
 from ..config import OTelConfig
+from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
 
