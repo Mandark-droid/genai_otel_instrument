@@ -81,6 +81,32 @@ def setup_logging():
         logger.info("Logging level updated. New level: %s", log_level_str)
 
 
+# Update the GPU metrics import section
+try:
+    from .gpu_metrics import GPUMetricsCollector, create_gpu_collector
+
+    GPU_METRICS_AVAILABLE = True
+except ImportError:
+    GPU_METRICS_AVAILABLE = False
+
+    # Create a dummy collector for when GPU metrics are not available
+    class DummyGPUMetricsCollector:
+        def __init__(self, enabled=True):
+            self.enabled = False
+
+        def get_metrics(self):
+            return {"gpu_available": False}
+
+        def start_collecting(self, interval=30):
+            pass
+
+        def stop_collecting(self):
+            pass
+
+    GPUMetricsCollector = DummyGPUMetricsCollector
+    create_gpu_collector = lambda enabled=False: DummyGPUMetricsCollector()
+
+
 def setup_auto_instrumentation(config: OTelConfig):
     """Set up OpenTelemetry with auto-instrumentation for LLM frameworks and MCP tools.
 
@@ -148,7 +174,9 @@ def setup_auto_instrumentation(config: OTelConfig):
     # Start GPU metrics collection if enabled
     if config.enable_gpu_metrics:
         try:
-            gpu_collector = GPUMetricsCollector(meter_provider.get_meter("genai.gpu"))
+            gpu_collector = create_gpu_collector(enabled=config.enable_gpu_metrics)
+
+            # gpu_collector = GPUMetricsCollector(meter_provider.get_meter("genai.gpu"))
             gpu_collector.start()
             logger.info("GPU metrics collection started.")
         except Exception as e:

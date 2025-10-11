@@ -7,8 +7,10 @@ that these components are integrated into the OpenTelemetry tracing and metrics
 system.
 """
 
+import asyncio
 import logging
 
+import httpx
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
