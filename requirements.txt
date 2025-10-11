@@ -1,0 +1,36 @@
+# Core OpenTelemetry Libraries
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+opentelemetry-instrumentation>=0.41b0
+opentelemetry-exporter-otlp>=1.20.0
+opentelemetry-semantic-conventions>=0.41b0
+
+# OpenTelemetry Instrumentations
+opentelemetry-instrumentation-requests>=0.41b0
+opentelemetry-instrumentation-httpx>=0.41b0
+opentelemetry-instrumentation-sqlalchemy>=0.41b0
+opentelemetry-instrumentation-redis>=0.41b0
+opentelemetry-instrumentation-kafka-python>=0.41b0
+opentelemetry-instrumentation-pymongo>=0.41b0
+opentelemetry-instrumentation-psycopg2>=0.41b0
+opentelemetry-instrumentation-mysql>=0.41b0
+
+# General Utilities
+wrapt>=1.14.0
+tiktoken>=0.5.0
+
+# GPU Metrics
+pynvml>=11.5.0
+
+# LLM Provider SDKs (Directly used by instrumentors)
+openai
+anthropic
+google-generativeai
+boto3
+requests
+httpx
+psycopg2
+redis
+pinecone
+kafka
+langchain

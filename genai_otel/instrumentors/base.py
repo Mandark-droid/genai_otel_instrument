@@ -1,20 +1,31 @@
-from abc import ABC, abstractmethod
-from opentelemetry import trace, metrics
-from opentelemetry.trace import Status, StatusCode
-import wrapt
-import time
+"""Base classes for OpenTelemetry instrumentors for GenAI libraries and tools.
+
+This module defines the `BaseInstrumentor` abstract base class, which provides
+common functionality and a standardized interface for instrumenting various
+Generative AI (GenAI) libraries and Model Context Protocol (MCP) tools.
+It includes methods for creating OpenTelemetry spans, recording metrics,
+and handling configuration and cost calculation.
+"""
+
 import logging
+import time
+from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Optional
+
+import wrapt
+from opentelemetry import metrics, trace
+from opentelemetry.trace import Status, StatusCode
+
 from ..config import OTelConfig
 from ..cost_calculator import CostCalculator
 
 logger = logging.getLogger(__name__)
 
 
-class BaseInstrumentor(ABC):
+class BaseInstrumentor(ABC):  # pylint: disable=R0902
     """Abstract base class for all LLM library instrumentors.
 
-    Provides common functionality for setting up OpenTelemetry spans, metrics, 
+    Provides common functionality for setting up OpenTelemetry spans, metrics,
     and handling common instrumentation patterns.
     """
 
@@ -29,26 +40,19 @@ class BaseInstrumentor(ABC):
         try:
             # Create common metrics
             self.request_counter = self.meter.create_counter(
-                "genai.requests",
-                description="Number of LLM requests"
+                "genai.requests", description="Number of LLM requests"
             )
             self.token_counter = self.meter.create_counter(
-                "genai.tokens",
-                description="Number of tokens processed"
+                "genai.tokens", description="Number of tokens processed"
             )
             self.latency_histogram = self.meter.create_histogram(
-                "genai.latency",
-                description="Request latency in seconds",
-                unit="s"
+                "genai.latency", description="Request latency in seconds", unit="s"
             )
             self.cost_counter = self.meter.create_counter(
-                "genai.cost",
-                description="Estimated cost in USD",
-                unit="USD"
+                "genai.cost", description="Estimated cost in USD", unit="USD"
             )
             self.error_counter = self.meter.create_counter(
-                "genai.errors",
-                description="Number of errors"
+                "genai.errors", description="Number of errors"
             )
         except Exception as e:
             logger.error(f"Failed to create metrics: {e}", exc_info=True)
@@ -61,13 +65,10 @@ class BaseInstrumentor(ABC):
         Args:
             config (OTelConfig): The OpenTelemetry configuration object.
         """
-        pass
 
     def create_span_wrapper(
-            self,
-            span_name: str,
-            extract_attributes: Optional[Callable[[Any, Any, Any], Dict]] = None
-    ) -> Callable:
+        self, span_name: str, extract_attributes: Optional[Callable[[Any, Any, Any], Dict]] = None
+    ) -> Callable:  # pylint: disable=R1702
         """Create a decorator that instruments a function with an OpenTelemetry span.
 
         This method uses `wrapt.decorator` to wrap a target function. It handles:
@@ -79,7 +80,7 @@ class BaseInstrumentor(ABC):
 
         Args:
             span_name (str): The name for the OpenTelemetry span.
-            extract_attributes (Optional[Callable[[Any, Any, Any], Dict]]): A callable that takes 
+            extract_attributes (Optional[Callable[[Any, Any, Any], Dict]]): A callable that takes
                 (instance, args, kwargs) and returns a dictionary of attributes to set on the span.
 
         Returns:
@@ -114,7 +115,9 @@ class BaseInstrumentor(ABC):
                                     except Exception as e:
                                         logger.warning(f"Failed to set attribute {key}: {e}")
                             except Exception as e:
-                                logger.warning(f"Failed to extract attributes for span '{span_name}': {e}")
+                                logger.warning(
+                                    f"Failed to extract attributes for span '{span_name}': {e}"
+                                )
 
                         # Call the original function
                         result = wrapped(*args, **kwargs)
@@ -133,18 +136,17 @@ class BaseInstrumentor(ABC):
                         # Handle exceptions during the wrapped function execution
                         # Record error metrics
                         try:
-                            self.error_counter.add(1, {
-                                "operation": span_name,
-                                "error_type": type(e).__name__
-                            })
-                        except:
+                            self.error_counter.add(
+                                1, {"operation": span_name, "error_type": type(e).__name__}
+                            )
+                        except Exception:
                             # Avoid failing if error metric recording fails
                             pass
 
                         # Set span status to ERROR and record the exception
                         span.set_status(Status(StatusCode.ERROR, str(e)))
                         span.record_exception(e)
-                        raise # Re-raise the original exception
+                        raise  # Re-raise the original exception
 
             except Exception as e:
                 # Handle exceptions that occur during span creation itself
@@ -178,15 +180,13 @@ class BaseInstrumentor(ABC):
                 # Record token counts if available and positive
                 if isinstance(prompt_tokens, (int, float)) and prompt_tokens > 0:
                     self.token_counter.add(
-                        prompt_tokens,
-                        {"token_type": "prompt", "operation": span.name}
+                        prompt_tokens, {"token_type": "prompt", "operation": span.name}
                     )
                     span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
 
                 if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
                     self.token_counter.add(
-                        completion_tokens,
-                        {"token_type": "completion", "operation": span.name}
+                        completion_tokens, {"token_type": "completion", "operation": span.name}
                     )
                     span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
 
@@ -212,7 +212,7 @@ class BaseInstrumentor(ABC):
         """Abstract method to extract token usage information from a function result.
 
         Subclasses must implement this to parse the specific library's response object
-        and return a dictionary containing 'prompt_tokens', 'completion_tokens', 
+        and return a dictionary containing 'prompt_tokens', 'completion_tokens',
         and optionally 'total_tokens'.
 
         Args:
@@ -221,4 +221,3 @@ class BaseInstrumentor(ABC):
         Returns:
             Optional[Dict[str, int]]: A dictionary with token counts, or None if usage cannot be extracted.
         """
-        pass

@@ -1,3 +1,12 @@
+"""Configuration management for the GenAI OpenTelemetry instrumentation library.
+
+This module defines the `OTelConfig` dataclass, which encapsulates all configurable
+parameters for the OpenTelemetry setup, including service name, exporter endpoint,
+enablement flags for various features (GPU metrics, cost tracking, MCP instrumentation),
+and error handling behavior. Configuration values are primarily loaded from
+environment variables, with sensible defaults provided.
+"""
+
 import os
 from dataclasses import dataclass, field
 from typing import Optional, Dict
@@ -12,17 +21,25 @@ class OTelConfig:
 
     Loads settings from environment variables with sensible defaults.
     """
+
     service_name: str = field(default_factory=lambda: os.getenv("OTEL_SERVICE_NAME", "genai-app"))
-    endpoint: str = field(default_factory=lambda: os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"))
+    endpoint: str = field(
+        default_factory=lambda: os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
+    )
     enable_gpu_metrics: bool = field(
-        default_factory=lambda: os.getenv("GENAI_ENABLE_GPU_METRICS", "true").lower() == "true")
+        default_factory=lambda: os.getenv("GENAI_ENABLE_GPU_METRICS", "true").lower() == "true"
+    )
     enable_cost_tracking: bool = field(
-        default_factory=lambda: os.getenv("GENAI_ENABLE_COST_TRACKING", "true").lower() == "true")
+        default_factory=lambda: os.getenv("GENAI_ENABLE_COST_TRACKING", "true").lower() == "true"
+    )
     enable_mcp_instrumentation: bool = field(
-        default_factory=lambda: os.getenv("GENAI_ENABLE_MCP_INSTRUMENTATION", "true").lower() == "true")
+        default_factory=lambda: os.getenv("GENAI_ENABLE_MCP_INSTRUMENTATION", "true").lower()
+        == "true"
+    )
     # Add fail_on_error configuration
     fail_on_error: bool = field(
-        default_factory=lambda: os.getenv("GENAI_FAIL_ON_ERROR", "false").lower() == "true")
+        default_factory=lambda: os.getenv("GENAI_FAIL_ON_ERROR", "false").lower() == "true"
+    )
     headers: Optional[Dict[str, str]] = None
 
     def __post_init__(self):
@@ -33,4 +50,7 @@ class OTelConfig:
                 try:
                     self.headers = dict(h.split("=") for h in headers_str.split(","))
                 except ValueError:
-                    logger.error(f"Failed to parse OTEL_EXPORTER_OTLP_HEADERS: '{headers_str}'. Expected format 'key1=value1,key2=value2'.")
+                    logger.error(
+                        "Failed to parse OTEL_EXPORTER_OTLP_HEADERS: '%s'. Expected format 'key1=value1,key2=value2'.",
+                        headers_str,
+                    )

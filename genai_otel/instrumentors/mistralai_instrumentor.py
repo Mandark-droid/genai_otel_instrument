@@ -1,6 +1,13 @@
+"""OpenTelemetry instrumentor for the Mistral AI SDK.
+
+This instrumentor automatically traces chat calls to Mistral AI models,
+capturing relevant attributes such as the model name and token usage.
+"""
+
+from typing import Dict, Optional
+
 from .base import BaseInstrumentor
 from ..config import OTelConfig
-from typing import Dict, Optional
 
 
 class MistralAIInstrumentor(BaseInstrumentor):
@@ -36,6 +43,6 @@ class MistralAIInstrumentor(BaseInstrumentor):
             return {
                 "prompt_tokens": result.usage.prompt_tokens,
                 "completion_tokens": result.usage.completion_tokens,
-                "total_tokens": result.usage.total_tokens
+                "total_tokens": result.usage.total_tokens,
             }
         return None
