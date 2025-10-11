@@ -3,6 +3,7 @@ import time
 import logging
 from typing import Optional
 from opentelemetry.metrics import Meter
+import pynvml
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,6 @@ class GPUMetricsCollector:
         self.nvml = None
 
         try:
-            import pynvml
             pynvml.nvmlInit()
             self.nvml = pynvml
             self.gpu_available = True
@@ -32,7 +32,7 @@ class GPUMetricsCollector:
 
         except ImportError:
             logger.info("pynvml not installed, GPU metrics not available")
-        except Exception as e:
+        except pynvml.NVMLError as e:
             logger.warning(f"GPU metrics not available: {e}")
 
     def _create_metrics(self):
@@ -89,7 +89,7 @@ class GPUMetricsCollector:
                 value = metric_func(handle, i)
                 if value is not None:
                     observations.append((value, {"gpu_id": str(i)}))
-            except Exception as e:
+            except pynvml.NVMLError as e:
                 logger.debug(f"Failed to collect {metric_name} for GPU {i}: {e}")
 
         return observations
@@ -147,5 +147,5 @@ class GPUMetricsCollector:
             try:
                 self.nvml.nvmlShutdown()
                 logger.info("GPU metrics collection stopped")
-            except Exception as e:
+            except pynvml.NVMLError as e:
                 logger.error(f"Error stopping GPU metrics: {e}")
