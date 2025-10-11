@@ -1,15 +1,41 @@
+"""OpenTelemetry instrumentor for HuggingFace Transformers library.
+
+This instrumentor automatically traces calls made through HuggingFace pipelines,
+capturing relevant attributes such as the model name and task type.
+"""
+
+from typing import Dict, Optional
+import logging
 from .base import BaseInstrumentor
 from ..config import OTelConfig
-from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class HuggingFaceInstrumentor(BaseInstrumentor):
     """Instrumentor for HuggingFace Transformers"""
 
+    def __init__(self):
+        """Initialize the instrumentor."""
+        super().__init__()
+        self._transformers_available = False
+        self._check_availability()
+
+    def _check_availability(self):
+        """Check if Transformers library is available."""
+        try:
+            import transformers
+
+            self._transformers_available = True
+            logger.debug("Transformers library detected and available for instrumentation")
+        except ImportError:
+            logger.debug("Transformers library not installed, instrumentation will be skipped")
+            self._transformers_available = False
+
     def instrument(self, config: OTelConfig):
         self.config = config
         try:
-            from transformers import pipeline, PreTrainedModel
+            from transformers import pipeline
 
             original_pipeline = pipeline
 
@@ -34,7 +60,6 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                 pipe.__call__ = wrapped_call
                 return pipe
 
-            import transformers
             transformers.pipeline = wrapped_pipeline
 
         except ImportError:

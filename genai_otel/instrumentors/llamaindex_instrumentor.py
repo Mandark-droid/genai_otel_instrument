@@ -1,6 +1,13 @@
+"""OpenTelemetry instrumentor for the LlamaIndex framework.
+
+This instrumentor automatically traces query engine operations within LlamaIndex,
+capturing relevant attributes such as the query text.
+"""
+
+from typing import Dict, Optional
+
 from .base import BaseInstrumentor
 from ..config import OTelConfig
-from typing import Dict, Optional
 
 
 class LlamaIndexInstrumentor(BaseInstrumentor):

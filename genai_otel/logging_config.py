@@ -1,4 +1,5 @@
 """Centralized logging configuration"""
+
 import logging
 import sys
 from typing import Optional
@@ -14,8 +15,8 @@ def setup_logging(level: str = "INFO", log_file: Optional[str] = None):
 
     logging.basicConfig(
         level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=handlers
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=handlers,
     )
 
     # Set library logger

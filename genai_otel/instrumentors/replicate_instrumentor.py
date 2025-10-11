@@ -1,6 +1,13 @@
+"""OpenTelemetry instrumentor for the Replicate API client.
+
+This instrumentor automatically traces calls to Replicate models, capturing
+relevant attributes such as the model name.
+"""
+
+from typing import Dict, Optional
+
 from .base import BaseInstrumentor
 from ..config import OTelConfig
-from typing import Dict, Optional
 
 
 class ReplicateInstrumentor(BaseInstrumentor):
