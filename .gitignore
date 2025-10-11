@@ -345,7 +345,10 @@ dmypy.json
 # OS
 .DS_Store
 Thumbs.db
-
+htmlcov
+genai_otel_instrument.egg-info
+scripts/.coverage
 # Project specific
 *.log
 .genai_otel_instrument.egg-info/
+.coverage

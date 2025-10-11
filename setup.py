@@ -28,7 +28,9 @@ setup(
         "opentelemetry-semantic-conventions>=0.41b0",
         "opentelemetry-instrumentation-requests>=0.41b0",
         "opentelemetry-instrumentation-httpx>=0.41b0",
+        "opentelemetry-instrumentation-mysql>=0.41b0",
         "wrapt>=1.14.0",
+        "httpx>=0.23.0"
     ],
 
     # Optional dependencies
@@ -60,14 +62,19 @@ setup(
         "databases": [
             "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
             "opentelemetry-instrumentation-redis>=0.41b0",
+            "redis",
             "opentelemetry-instrumentation-pymongo>=0.41b0",
+            "pymongo",
             "opentelemetry-instrumentation-psycopg2>=0.41b0",
+            "psycopg2-binary",
             "opentelemetry-instrumentation-mysql>=0.41b0",
+            "mysql-connector-python",
         ],
 
         # Message queue instrumentation
         "messaging": [
             "opentelemetry-instrumentation-kafka-python>=0.41b0",
+            "kafka-python",
         ],
 
         # Vector databases
@@ -146,7 +153,8 @@ setup(
             "pymongo",
             "nvidia-ml-py",
             "mysql",
-            "mysql-connector-python"
+            "mysql-connector-python",
+            "httpx"
         ],
 
         # Development dependencies
