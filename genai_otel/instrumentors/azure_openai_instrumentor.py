@@ -1,11 +1,37 @@
+"""OpenTelemetry instrumentor for Azure OpenAI SDK.
+
+This instrumentor automatically traces calls to Azure OpenAI models, capturing
+relevant attributes such as model name and token usage.
+"""
+
+from typing import Dict, Optional
+import logging
+
 from .base import BaseInstrumentor
 from ..config import OTelConfig
-import wrapt
-from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class AzureOpenAIInstrumentor(BaseInstrumentor):
     """Instrumentor for Azure OpenAI"""
+
+    def __init__(self):
+        """Initialize the instrumentor."""
+        super().__init__()
+        self._azure_openai_available = False
+        self._check_availability()
+
+    def _check_availability(self):
+        """Check if Azure AI OpenAI library is available."""
+        try:
+            import azure.ai.openai  # Moved to top
+
+            self._azure_openai_available = True
+            logger.debug("Azure AI OpenAI library detected and available for instrumentation")
+        except ImportError:
+            logger.debug("Azure AI OpenAI library not installed, instrumentation will be skipped")
+            self._azure_openai_available = False
 
     def instrument(self, config: OTelConfig):
         self.config = config
@@ -37,6 +63,6 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
             return {
                 "prompt_tokens": result.usage.prompt_tokens,
                 "completion_tokens": result.usage.completion_tokens,
-                "total_tokens": result.usage.total_tokens
+                "total_tokens": result.usage.total_tokens,
             }
         return None

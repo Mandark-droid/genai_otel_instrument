@@ -1,6 +1,13 @@
+"""OpenTelemetry instrumentor for Google Vertex AI SDK.
+
+This instrumentor automatically traces content generation calls to Vertex AI models,
+capturing relevant attributes such as the model name.
+"""
+
+from typing import Dict, Optional
+
 from .base import BaseInstrumentor
 from ..config import OTelConfig
-from typing import Dict, Optional
 
 
 class VertexAIInstrumentor(BaseInstrumentor):
@@ -9,7 +16,6 @@ class VertexAIInstrumentor(BaseInstrumentor):
     def instrument(self, config: OTelConfig):
         self.config = config
         try:
-            import vertexai
             from vertexai.preview.generative_models import GenerativeModel
 
             original_generate = GenerativeModel.generate_content

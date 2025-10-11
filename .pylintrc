@@ -1,0 +1,44 @@
+[MASTER]
+init-hook='import sys; sys.path.append(".")'
+ignore=CVS,.git,__pycache__,.pytest_cache,build,dist,*.egg-info
+jobs=1
+
+[MESSAGES CONTROL]
+disable=
+    C0111,  # missing-docstring
+    C0103,  # invalid-name
+    R0913,  # too-many-arguments
+    R0914,  # too-many-locals
+    W0511,  # fixme
+    C0301,  # line-too-long (handled by black)
+    C0330,  # bad-continuation (handled by black)
+
+[REPORTS]
+output-format=colorized
+reports=no
+
+[FORMAT]
+max-line-length=100
+indent-string='    '
+
+[BASIC]
+good-names=i,j,k,e,f,ex,_,logger,df,db,id
+
+[DESIGN]
+max-args=8
+max-attributes=12
+max-locals=20
+min-public-methods=1
+
+[SIMILARITIES]
+min-similarity-lines=10
+ignore-comments=yes
+ignore-docstrings=yes
+ignore-imports=yes
+
+[TYPECHECK]
+generated-members=REQUEST,acl_users,aq_parent
+ignored-modules=pynvml
+
+[IMPORTS]
+allow-wildcard-with-all=no

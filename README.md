@@ -48,6 +48,8 @@ response = client.chat.completions.create(...)
 genai-instrument python your_app.py
 ```
 
+For a more comprehensive demonstration of various LLM providers and MCP tools, refer to `example_usage.py` in the project root. Note that running this example requires setting up relevant API keys and external services (e.g., databases, Redis, Pinecone).
+
 ## What Gets Instrumented?
 
 ### LLM Providers (Auto-detected)
@@ -177,10 +179,10 @@ Works with any OpenTelemetry-compatible backend:
 ```bash
 genai-otel-instrument/
 ├── setup.py
-├── MANIFEST.in  # New
+├── MANIFEST.in
 ├── README.md
-├── LICENSE  # New
-├── example_usage.py  # Optional
+├── LICENSE
+├── example_usage.py
 └── genai_otel/
     ├── __init__.py
     ├── config.py

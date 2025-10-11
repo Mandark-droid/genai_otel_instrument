@@ -1,3 +1,14 @@
+"""Module for OpenTelemetry instrumentors for various LLM providers and frameworks.
+
+This package contains individual instrumentor classes for different Generative AI
+libraries and frameworks, allowing for automatic tracing and metric collection
+of their operations.
+
+All imports are done lazily to avoid ImportError when optional dependencies
+are not installed.
+"""
+
+# Import instrumentors only - they handle their own dependency checking
 from .openai_instrumentor import OpenAIInstrumentor
 from .anthropic_instrumentor import AnthropicInstrumentor
 from .google_ai_instrumentor import GoogleAIInstrumentor
@@ -14,3 +25,22 @@ from .anyscale_instrumentor import AnyscaleInstrumentor
 from .langchain_instrumentor import LangChainInstrumentor
 from .llamaindex_instrumentor import LlamaIndexInstrumentor
 from .huggingface_instrumentor import HuggingFaceInstrumentor
+
+__all__ = [
+    "OpenAIInstrumentor",
+    "AnthropicInstrumentor",
+    "GoogleAIInstrumentor",
+    "AWSBedrockInstrumentor",
+    "AzureOpenAIInstrumentor",
+    "CohereInstrumentor",
+    "MistralAIInstrumentor",
+    "TogetherAIInstrumentor",
+    "GroqInstrumentor",
+    "OllamaInstrumentor",
+    "VertexAIInstrumentor",
+    "ReplicateInstrumentor",
+    "AnyscaleInstrumentor",
+    "LangChainInstrumentor",
+    "LlamaIndexInstrumentor",
+    "HuggingFaceInstrumentor",
+]

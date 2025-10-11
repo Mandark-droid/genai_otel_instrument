@@ -1,12 +1,23 @@
+"""OpenTelemetry instrumentor for various vector database clients.
+
+This module provides the `VectorDBInstrumentor` class, which automatically
+instruments popular Python vector database libraries such as Pinecone, Weaviate,
+Qdrant, ChromaDB, Milvus, and FAISS, enabling tracing of vector search and
+related operations within GenAI applications.
+"""
+
 import logging
+from typing import Dict, Optional, Any
+
 import wrapt
 from opentelemetry import trace
+
 from ..config import OTelConfig
 
 logger = logging.getLogger(__name__)
 
 
-class VectorDBInstrumentor:
+class VectorDBInstrumentor:  # pylint: disable=R0903
     """Instrument vector database clients"""
 
     def __init__(self, config: OTelConfig):
@@ -30,7 +41,7 @@ class VectorDBInstrumentor:
             instrumented_count += 1
         return instrumented_count
 
-    def _instrument_pinecone(self):
+    def _instrument_pinecone(self):  # pylint: disable=W0212
         """Instrument Pinecone"""
         try:
             import pinecone
@@ -62,17 +73,15 @@ class VectorDBInstrumentor:
         try:
             import weaviate
 
-            original_query = weaviate.Client.query
-
             @wrapt.decorator
-            def wrapped_query(wrapped, instance, args, kwargs):
+            def wrapped_query(wrapped, instance, args, kwargs):  # pylint: disable=W0613
                 with self.tracer.start_as_current_span("weaviate.query") as span:
                     span.set_attribute("db.system", "weaviate")
                     span.set_attribute("db.operation", "query")
                     result = wrapped(*args, **kwargs)
                     return result
 
-            weaviate.Client.query = wrapped_query(weaviate.Client.query)
+            weaviate.Client.query = wrapped_query(weaviate.Client.query)  # pylint: disable=E1120
             logger.info("Weaviate instrumentation enabled")
             return True
 
@@ -183,4 +192,3 @@ class VectorDBInstrumentor:
 
         except ImportError:
             return False
-

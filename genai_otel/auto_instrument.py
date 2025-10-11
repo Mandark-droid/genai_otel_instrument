@@ -1,5 +1,14 @@
-import sys
+"""Module for setting up OpenTelemetry auto-instrumentation for GenAI applications.
+
+This module provides the core logic for initializing OpenTelemetry tracing and metrics
+providers, configuring exporters, and automatically instrumenting various LLM libraries
+and Model Context Protocol (MCP) tools based on the provided configuration.
+"""
+
 import logging
+import os
+import sys
+
 from opentelemetry import trace, metrics
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -9,8 +18,9 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.semconv.resource import ResourceAttributes
-import os
 
+from .config import OTelConfig
+from .gpu_metrics import GPUMetricsCollector
 from .instrumentors import (
     OpenAIInstrumentor,
     AnthropicInstrumentor,
@@ -30,13 +40,11 @@ from .instrumentors import (
     AnyscaleInstrumentor,
 )
 from .mcp_instrumentors import MCPInstrumentorManager
-from .gpu_metrics import GPUMetricsCollector
-from .config import OTelConfig
 
 logger = logging.getLogger(__name__)
 
 
-def setup_logging(config: OTelConfig):
+def setup_logging():
     """Configure logging based on environment variables.
 
     Sets up logging handlers and formatters based on GENAI_LOG_LEVEL and GENAI_LOG_FILE.
@@ -47,80 +55,73 @@ def setup_logging(config: OTelConfig):
     log_level = getattr(logging, log_level_str, logging.INFO)
     log_file = os.getenv("GENAI_LOG_FILE")
 
-    # Basic configuration: set level and format
     logging_kwargs = {
         "level": log_level,
         "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     }
     if log_file:
-        # Ensure the directory for the log file exists
         log_dir = os.path.dirname(log_file)
         if log_dir and not os.path.exists(log_dir):
             try:
                 os.makedirs(log_dir)
-                logger.info(f"Created log directory: {log_dir}")
+                logger.info("Created log directory: %s", log_dir)
             except OSError as e:
-                logger.error(f"Failed to create log directory {log_dir}: {e}", exc_info=True)
-                # Fallback to console logging if directory creation fails
+                logger.error("Failed to create log directory %s: %s", log_dir, e, exc_info=True)
                 log_file = None
-        
-        if log_file: # Only add filename if directory creation was successful or not needed
-            logging_kwargs["filename"] = log_file
-            logging_kwargs["filemode"] = "a" # Append mode
 
-    # Only configure if no handlers are already set up to avoid re-configuration issues
-    # This is important if the logging system is configured elsewhere.
+        if log_file:
+            logging_kwargs["filename"] = log_file
+            logging_kwargs["filemode"] = "a"
+
     if not logging.getLogger().handlers:
         logging.basicConfig(**logging_kwargs)
-        logger.info(f"Logging configured. Level: {log_level_str}, File: {log_file or 'console'}")
+        logger.info("Logging configured. Level: %s, File: %s", log_level_str, log_file or "console")
     else:
-        # If handlers exist, try to update the level of the root logger
-        # Note: This might not affect all existing handlers if they have fixed levels.
         logging.getLogger().setLevel(log_level)
-        logger.info(f"Logging level updated. New level: {log_level_str}")
+        logger.info("Logging level updated. New level: %s", log_level_str)
 
 
 def setup_auto_instrumentation(config: OTelConfig):
     """Set up OpenTelemetry with auto-instrumentation for LLM frameworks and MCP tools.
 
-    This function initializes the OpenTelemetry tracer and meter providers, 
-    configures exporters, and then attempts to instrument various LLM libraries 
+    This function initializes the OpenTelemetry tracer and meter providers,
+    configures exporters, and then attempts to instrument various LLM libraries
     and MCP tools based on the provided configuration.
 
     Args:
         config (OTelConfig): The OpenTelemetry configuration object.
     """
-    setup_logging(config) # Call logging setup first to ensure logs from here are captured.
+    setup_logging()  # Call logging setup first to ensure logs from here are captured.
 
     logger.info("Starting auto-instrumentation setup...")
 
     # Create resource
-    resource = Resource.create({
-        ResourceAttributes.SERVICE_NAME: config.service_name,
-        ResourceAttributes.SERVICE_VERSION: "1.0.0", # Consider making this configurable or dynamic
-        "telemetry.sdk.language": "python",
-    })
+    resource = Resource.create(
+        {
+            ResourceAttributes.SERVICE_NAME: config.service_name,
+            ResourceAttributes.SERVICE_VERSION: "1.0.0",  # Consider making this configurable or dynamic
+            "telemetry.sdk.language": "python",
+        }
+    )
 
     # Set up tracing
     try:
         tracer_provider = TracerProvider(resource=resource)
         span_exporter = OTLPSpanExporter(
-            endpoint=f"{config.endpoint}/v1/traces",
-            headers=config.headers or {}
+            endpoint=f"{config.endpoint}/v1/traces", headers=config.headers or {}
         )
         tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
         trace.set_tracer_provider(tracer_provider)
         logger.info("OpenTelemetry tracing configured.")
     except Exception as e:
-        logger.error(f"Failed to configure OpenTelemetry tracing: {e}", exc_info=True)
+        logger.error("Failed to configure OpenTelemetry tracing: %s", e, exc_info=True)
         if config.fail_on_error:
             raise
 
     # Set up metrics
     try:
         metric_exporter = OTLPMetricExporter(
-            endpoint=f"{config.endpoint}/v1/metrics",
-            headers=config.headers or {}
+            endpoint=f"{config.endpoint}/v1/metrics", headers=config.headers or {}
         )
         metric_reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=30000)
         meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
@@ -173,7 +174,7 @@ def _auto_instrument_llm_libraries(config: OTelConfig):
         "openai": OpenAIInstrumentor,
         "anthropic": AnthropicInstrumentor,
         "google.generativeai": GoogleAIInstrumentor,
-        "boto3": AWSBedrockInstrumentor, # boto3 is used for AWS services like Bedrock
+        "boto3": AWSBedrockInstrumentor,  # boto3 is used for AWS services like Bedrock
         "azure.ai.openai": AzureOpenAIInstrumentor,
         "cohere": CohereInstrumentor,
         "mistralai": MistralAIInstrumentor,
@@ -185,7 +186,7 @@ def _auto_instrument_llm_libraries(config: OTelConfig):
         "anyscale": AnyscaleInstrumentor,
         "langchain": LangChainInstrumentor,
         "llama_index": LlamaIndexInstrumentor,
-        "transformers": HuggingFaceInstrumentor, # HuggingFace often uses transformers
+        "transformers": HuggingFaceInstrumentor,  # HuggingFace often uses transformers
     }
 
     for module_name, InstrumentorClass in llm_library_map.items():
@@ -193,10 +194,12 @@ def _auto_instrument_llm_libraries(config: OTelConfig):
             try:
                 instrumentor = InstrumentorClass()
                 instrumentor.instrument(config=config)
-                logger.info(f"{module_name} instrumentation enabled")
-                instrumentors.append(instrumentor) # Keep track if needed, though not used here
+                logger.info("%s instrumentation enabled", module_name)
+                instrumentors.append(instrumentor)
             except ImportError as e:
-                logger.debug("Skipping instrumentation for %s due to missing dependency: %s", module_name, e)
+                logger.debug(
+                    "Skipping instrumentation for %s due to missing dependency: %s", module_name, e
+                )
                 if config.fail_on_error:
                     raise
             except Exception as e:
