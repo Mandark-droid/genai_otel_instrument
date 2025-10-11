@@ -1,9 +1,9 @@
 """CLI tool for running instrumented applications"""
 
-import sys
 import argparse
-import runpy
 import logging
+import runpy
+import sys
 
 from genai_otel import instrument
 

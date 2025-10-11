@@ -8,7 +8,7 @@ It supports various LLM providers, frameworks, and common data stores (MCP tools
 import logging
 import os
 
-from .__version__ import __version__, __author__, __email__, __license__
+from .__version__ import __author__, __email__, __license__, __version__
 
 # Re-exporting key components for easier access
 from .auto_instrument import setup_auto_instrumentation
@@ -18,22 +18,22 @@ from .gpu_metrics import GPUMetricsCollector
 
 # Import instrumentors conditionally to avoid errors if dependencies aren't installed
 from .instrumentors import (
-    OpenAIInstrumentor,
     AnthropicInstrumentor,
-    GoogleAIInstrumentor,
+    AnyscaleInstrumentor,
     AWSBedrockInstrumentor,
     AzureOpenAIInstrumentor,
     CohereInstrumentor,
-    MistralAIInstrumentor,
-    TogetherAIInstrumentor,
+    GoogleAIInstrumentor,
     GroqInstrumentor,
+    HuggingFaceInstrumentor,
     LangChainInstrumentor,
     LlamaIndexInstrumentor,
-    HuggingFaceInstrumentor,
+    MistralAIInstrumentor,
     OllamaInstrumentor,
-    VertexAIInstrumentor,
+    OpenAIInstrumentor,
     ReplicateInstrumentor,
-    AnyscaleInstrumentor,
+    TogetherAIInstrumentor,
+    VertexAIInstrumentor,
 )
 from .mcp_instrumentors.manager import MCPInstrumentorManager
 

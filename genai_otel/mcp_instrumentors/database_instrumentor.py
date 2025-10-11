@@ -6,10 +6,12 @@ pymongo, and mysql, enabling tracing of database operations within GenAI applica
 """
 
 import logging
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+
+from opentelemetry.instrumentation.mysql import MySQLInstrumentor
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 from opentelemetry.instrumentation.pymongo import PymongoInstrumentor
-from opentelemetry.instrumentation.mysql import MySQLInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+
 from ..config import OTelConfig
 
 logger = logging.getLogger(__name__)
