@@ -11,7 +11,7 @@ import time
 from typing import Optional
 
 import pynvml  # Moved to top
-from opentelemetry.metrics import Meter, ObservableGauge, ObservableCounter
+from opentelemetry.metrics import Meter, ObservableCounter, ObservableGauge
 
 logger = logging.getLogger(__name__)
 

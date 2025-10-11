@@ -5,12 +5,11 @@ generation and chat functionalities, capturing relevant attributes such as
 the model name.
 """
 
-from typing import Dict, Optional
 import logging
+from typing import Dict, Optional
 
-
-from .base import BaseInstrumentor
 from ..config import OTelConfig
+from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
 

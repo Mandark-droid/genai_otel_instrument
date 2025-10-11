@@ -8,14 +8,16 @@ system.
 """
 
 import logging
-from opentelemetry.instrumentation.requests import RequestsInstrumentor
+
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+
 from ..config import OTelConfig
-from .database_instrumentor import DatabaseInstrumentor
-from .redis_instrumentor import RedisInstrumentor
-from .kafka_instrumentor import KafkaInstrumentor
-from .vector_db_instrumentor import VectorDBInstrumentor
 from .api_instrumentor import APIInstrumentor
+from .database_instrumentor import DatabaseInstrumentor
+from .kafka_instrumentor import KafkaInstrumentor
+from .redis_instrumentor import RedisInstrumentor
+from .vector_db_instrumentor import VectorDBInstrumentor
 
 logger = logging.getLogger(__name__)
 

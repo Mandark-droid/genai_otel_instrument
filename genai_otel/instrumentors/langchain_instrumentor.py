@@ -4,12 +4,11 @@ This instrumentor automatically traces various components within LangChain,
 including chains and agents, capturing relevant attributes for observability.
 """
 
+import logging
 from typing import Dict, Optional
 
-import logging
-
-from .base import BaseInstrumentor
 from ..config import OTelConfig
+from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
 

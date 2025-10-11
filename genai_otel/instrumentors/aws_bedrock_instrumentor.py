@@ -1,8 +1,9 @@
-from typing import Dict, Optional, Any
 import json
 import logging
-from .base import BaseInstrumentor
+from typing import Any, Dict, Optional
+
 from ..config import OTelConfig
+from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
 

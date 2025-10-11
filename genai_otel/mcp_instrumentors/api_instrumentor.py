@@ -15,8 +15,8 @@ import requests
 import wrapt
 
 from genai_otel.instrumentors.base import BaseInstrumentor
-from ..config import OTelConfig
 
+from ..config import OTelConfig
 
 logger = logging.getLogger(__name__)
 

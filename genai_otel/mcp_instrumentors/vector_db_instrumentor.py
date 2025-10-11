@@ -7,7 +7,7 @@ related operations within GenAI applications.
 """
 
 import logging
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
 import wrapt
 from opentelemetry import trace

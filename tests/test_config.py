@@ -1,7 +1,9 @@
 """Tests for configuration module."""
 
 import os
+
 import pytest
+
 from genai_otel.config import OTelConfig
 
 

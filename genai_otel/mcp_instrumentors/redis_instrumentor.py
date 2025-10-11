@@ -6,7 +6,9 @@ within GenAI applications.
 """
 
 import logging
+
 from opentelemetry.instrumentation.redis import RedisInstrumentor as OTelRedisInstrumentor
+
 from ..config import OTelConfig
 
 logger = logging.getLogger(__name__)
