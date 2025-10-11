@@ -51,22 +51,27 @@ def instrument(
         )
 
         logger.info(
-            f"Initializing GenAI instrumentation for service: {config.service_name}"
+            "Initializing GenAI instrumentation for service: %s", config.service_name
         )
-        logger.debug(f"Configuration: endpoint={config.endpoint}, "
-                     f"gpu_metrics={config.enable_gpu_metrics}, "
-                     f"cost_tracking={config.enable_cost_tracking}, "
-                     f"mcp={config.enable_mcp_instrumentation}")
+        logger.debug("Configuration: endpoint=%s, gpu_metrics=%s, cost_tracking=%s, mcp=%s",
+                     config.endpoint, config.enable_gpu_metrics, config.enable_cost_tracking,
+                     config.enable_mcp_instrumentation)
 
         if enable_auto_instrument:
             setup_auto_instrumentation(config)
 
-        logger.info(f"✓ GenAI instrumentation initialized successfully for {config.service_name}")
+        logger.info("✓ GenAI instrumentation initialized successfully for %s", config.service_name)
         return config
 
-    except Exception as e:
-        logger.error(f"Failed to initialize GenAI instrumentation: {e}", exc_info=True)
+    except InstrumentationError as e:
+        logger.error("A known instrumentation error occurred: %s", e, exc_info=True)
         if fail_on_error:
-            raise InstrumentationError(f"Instrumentation setup failed: {e}") from e
-        logger.warning("Continuing without instrumentation due to initialization error")
+            raise
+        logger.warning("Continuing without instrumentation due to a known error.")
+        return None
+    except Exception as e:
+        logger.error("An unexpected error occurred during instrumentation: %s", e, exc_info=True)
+        if fail_on_error:
+            raise InstrumentationError(f"Instrumentation setup failed due to an unexpected error: {e}") from e
+        logger.warning("Continuing without instrumentation due to an unexpected error.")
         return None
