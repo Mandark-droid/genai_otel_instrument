@@ -7,8 +7,8 @@ properly traced and attributed within the OpenTelemetry ecosystem.
 
 from typing import Dict, Optional
 
-from .base import BaseInstrumentor
 from ..config import OTelConfig
+from .base import BaseInstrumentor
 
 
 class AnyscaleInstrumentor(BaseInstrumentor):

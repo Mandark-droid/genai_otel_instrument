@@ -9,35 +9,35 @@ import logging
 import os
 import sys
 
-from opentelemetry import trace, metrics
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.semconv.resource import ResourceAttributes
 
 from .config import OTelConfig
 from .gpu_metrics import GPUMetricsCollector
 from .instrumentors import (
-    OpenAIInstrumentor,
     AnthropicInstrumentor,
-    GoogleAIInstrumentor,
+    AnyscaleInstrumentor,
     AWSBedrockInstrumentor,
     AzureOpenAIInstrumentor,
     CohereInstrumentor,
-    MistralAIInstrumentor,
-    TogetherAIInstrumentor,
+    GoogleAIInstrumentor,
     GroqInstrumentor,
+    HuggingFaceInstrumentor,
     LangChainInstrumentor,
     LlamaIndexInstrumentor,
-    HuggingFaceInstrumentor,
+    MistralAIInstrumentor,
     OllamaInstrumentor,
-    VertexAIInstrumentor,
+    OpenAIInstrumentor,
     ReplicateInstrumentor,
-    AnyscaleInstrumentor,
+    TogetherAIInstrumentor,
+    VertexAIInstrumentor,
 )
 from .mcp_instrumentors import MCPInstrumentorManager
 

@@ -1,8 +1,10 @@
 """Tests for cost calculator module."""
 
-import pytest
-from unittest.mock import patch, mock_open
 import json
+from unittest.mock import mock_open, patch
+
+import pytest
+
 from genai_otel.cost_calculator import CostCalculator
 
 

@@ -6,10 +6,10 @@ and token usage.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
-from .base import BaseInstrumentor
 from ..config import OTelConfig
+from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
 

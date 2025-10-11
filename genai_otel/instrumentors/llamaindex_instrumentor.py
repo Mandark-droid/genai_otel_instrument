@@ -6,8 +6,8 @@ capturing relevant attributes such as the query text.
 
 from typing import Dict, Optional
 
-from .base import BaseInstrumentor
 from ..config import OTelConfig
+from .base import BaseInstrumentor
 
 
 class LlamaIndexInstrumentor(BaseInstrumentor):
