@@ -6,7 +6,9 @@ queue operations within GenAI applications.
 """
 
 import logging
+
 from opentelemetry.instrumentation.kafka import KafkaInstrumentor as OTelKafkaInstrumentor
+
 from ..config import OTelConfig
 
 logger = logging.getLogger(__name__)

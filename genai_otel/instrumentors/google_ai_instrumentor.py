@@ -5,12 +5,10 @@ relevant attributes such as the model name and token usage.
 """
 
 import logging
-from typing import Dict, Optional, Any
-
-
-from .base import BaseInstrumentor
+from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
+from .base import BaseInstrumentor
 
 
 class GoogleAIInstrumentor(BaseInstrumentor):

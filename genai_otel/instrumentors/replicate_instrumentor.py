@@ -6,8 +6,8 @@ relevant attributes such as the model name.
 
 from typing import Dict, Optional
 
-from .base import BaseInstrumentor
 from ..config import OTelConfig
+from .base import BaseInstrumentor
 
 
 class ReplicateInstrumentor(BaseInstrumentor):
