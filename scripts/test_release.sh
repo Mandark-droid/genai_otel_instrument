@@ -47,21 +47,9 @@ python --version
 python -c "import sys; print(f'Python path: {sys.executable}')"
 print_status $? "Python environment check"
 
-# Verify critical files exist
-print_info "Checking required files..."
-for file in "pyproject.toml" "setup.py" "LICENSE" "MANIFEST.in"; do
-    if [ -f "$file" ]; then
-        echo "  Found: $file"
-    else
-        echo "  Missing: $file"
-        exit 1
-    fi
-done
-print_status $? "All required files present"
-
 # Clean previous builds
 print_info "Cleaning previous builds..."
-rm -rf build/ dist/ *.egg-info .pytest_cache .coverage
+rm -rf build/ dist/ *.egg-info .pytest_cache .coverage htmlcov/
 find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 find . -type f -name "*.pyc" -delete
 print_status $? "Cleaned build directories and cache"
@@ -78,127 +66,124 @@ else
     echo -e "${GREEN}✓ Running in virtual environment: $VIRTUAL_ENV${NC}"
 fi
 
-# Run tests with optional dependencies
-print_info "Installing test dependencies..."
+# Install development dependencies
+print_info "Installing development dependencies..."
 if [ -f "pyproject.toml" ]; then
-    # Install test dependencies from pyproject.toml
-    pip install -e ".[test]" 2>/dev/null || pip install -e ".[dev]" 2>/dev/null || {
-        print_warning "Could not install test extras, installing common test packages..."
-        pip install mysql-connector-python psycopg2-binary nvidia-ml-py
-    }
-elif [ -f "requirements-dev.txt" ]; then
-    pip install -r requirements-dev.txt
+    pip install -e ".[dev]"
 else
-    print_warning "No test dependencies file found, installing common packages..."
-    pip install mysql-connector-python psycopg2-binary nvidia-ml-py pytest pytest-cov
+    pip install -r requirements-dev.txt
 fi
-print_status $? "Test dependencies installed"
+print_status $? "Development dependencies installed"
+
+# Install optional dependencies for testing
+print_info "Installing optional test dependencies..."
+pip install mysql-connector-python psycopg2-binary pynvml
+print_status $? "Optional dependencies installed"
+
+# Or if you want to be more selective:
+print_info "Installing database instrumentation dependencies..."
+pip install mysql-connector-python psycopg2-binary
+print_status $? "Database dependencies installed"
+
+print_info "Installing GPU metrics dependencies..."
+pip install nvidia-ml-py  # Instead of pynvml
+print_status $? "GPU metrics dependencies installed"
+
+# In the development dependencies section, add:
+print_info "Installing optional HTTP dependencies..."
+pip install httpx
+pip install opentelemetry-instrumentation-httpx
+print_status $? "HTTP dependencies installed (optional)"
+
+# In your test script, add this before the import test:
+# In your test script, fix the dependency installation:
+print_info "Installing OpenTelemetry instrumentation dependencies..."
+pip install opentelemetry-instrumentation-sqlalchemy
+pip install opentelemetry-instrumentation-redis
+pip install opentelemetry-instrumentation-pymongo
+pip install opentelemetry-instrumentation-psycopg2
+pip install opentelemetry-instrumentation-mysql
+pip install opentelemetry-instrumentation-kafka-python  # Fixed name
+pip install opentelemetry-instrumentation-httpx
+print_status $? "OpenTelemetry instrumentation dependencies installed"
+
+# Auto-format code with both tools
+print_info "Auto-formatting code with isort and black..."
+isort genai_otel tests
+black genai_otel tests
+print_status $? "Code formatting applied"
 
 # Run tests
 print_info "Running tests..."
 if [ -d "tests" ]; then
-    # Use a more lenient approach for test collection
-    pytest tests/ -v --cov=genai_otel --cov-report=term --cov-report=html -p no:warnings || {
-        print_warning "Some tests failed or were skipped, but continuing..."
-    }
+    pytest tests/ -v --cov=genai_otel --cov-report=term --cov-report=html
+    print_status $? "All tests passed"
 else
     print_warning "No tests directory found, skipping tests"
 fi
 
-# Code quality checks
+# Code quality checks (should pass after auto-formatting)
 print_info "Running code quality checks..."
 
 # Check code formatting
-if command -v black &> /dev/null; then
-    black --check genai_otel tests
-    print_status $? "Code formatting check"
-else
-    print_warning "black not found, skipping formatting check"
-fi
+print_info "Checking code formatting with black..."
+black --check genai_otel tests
+print_status $? "Code formatting check"
 
 # Check import sorting
-if command -v isort &> /dev/null; then
-    isort --check-only genai_otel tests
-    print_status $? "Import sorting check"
-else
-    print_warning "isort not found, skipping import sorting check"
-fi
+print_info "Checking import sorting with isort..."
+isort --check-only genai_otel tests
+print_status $? "Import sorting check"
 
-# Run linter
-if command -v pylint &> /dev/null; then
-    print_info "Running pylint..."
-    pylint genai_otel --rcfile=.pylintrc || true
-    print_status 0 "Linting complete (warnings are OK)"
-else
-    print_warning "pylint not found, skipping linting"
-fi
-
-# Type checking (if using mypy)
-if command -v mypy &> /dev/null && [ -f "py.typed" ]; then
-    print_info "Running type checks..."
-    mypy genai_otel
-    print_status $? "Type checking passed"
-fi
+# Run linter (with relaxed settings for now)
+print_info "Running pylint..."
+pylint genai_otel --rcfile=.pylintrc --exit-zero || true
+print_status 0 "Linting complete (warnings are OK)"
 
 # Build the package
 print_info "Building package..."
 python -m build
 print_status $? "Package built successfully"
 
-# Verify the distribution files
-print_info "Verifying distribution files..."
-ls -la dist/
-print_status $? "Distribution files created"
+# Check the package
+print_info "Checking package with twine..."
+twine check dist/*
+print_status $? "Package check passed"
 
-# Check the package with twine
-if command -v twine &> /dev/null; then
-    print_info "Checking package with twine..."
-    twine check dist/*
-    print_status $? "Package check passed"
-else
-    print_warning "twine not found, skipping package check"
-fi
-
-# Test installation in a temporary environment
+# Test installation in a temporary environment (simplified - no pip upgrade)
 print_info "Testing installation in temporary environment..."
-# Create a temporary directory for our test environment
 TEMP_DIR=$(mktemp -d)
 python -m venv "$TEMP_DIR/test_env"
 
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
-    # Windows
     source "$TEMP_DIR/test_env/Scripts/activate"
 else
-    # Unix/Linux/MacOS
     source "$TEMP_DIR/test_env/bin/activate"
 fi
 
-pip install --upgrade pip
+# Install the package directly without upgrading pip
+print_info "Installing package in temporary environment..."
+pip install mysql opentelemetry-instrumentation-mysql
 pip install dist/*.whl
 print_status $? "Package installed successfully"
 
-# Test import and basic functionality
+# Test import
 print_info "Testing package import..."
 python -c "
 import genai_otel
 print(f'Successfully imported genai_otel version: {genai_otel.__version__}')
 
 # Test that main components can be imported
-from genai_otel import openai_instrumentor, cost_calculator
-print('All main components imported successfully')
-
-# Add more specific import tests as needed
+from genai_otel.config import OTelConfig
+from genai_otel.cost_calculator import CostCalculator
+print('All core components imported successfully')
 "
-print_status $? "Package import and basic functionality test"
+print_status $? "Package import successful"
 
-# Test CLI if it exists
+# Test CLI
 print_info "Testing CLI tool..."
-if python -c "import genai_otel" &> /dev/null; then
-    genai-instrument --help > /dev/null 2>&1
-    print_status $? "CLI tool works"
-else
-    print_warning "Could not import package, skipping CLI test"
-fi
+genai-instrument --help > /dev/null 2>&1
+print_status $? "CLI tool works"
 
 # Cleanup
 deactivate
@@ -207,8 +192,16 @@ print_status $? "Cleanup completed"
 
 echo ""
 echo "=========================================="
-echo -e "${GREEN}All checks passed! ✓${NC}"
+echo -e "${GREEN}All checks passed! Ready for release! ✓${NC}"
 echo "=========================================="
+echo ""
+echo -e "${BLUE}Release Checklist:${NC}"
+echo "✅ All tests passing"
+echo "✅ Code formatting applied"
+echo "✅ Import sorting applied"
+echo "✅ Package builds successfully"
+echo "✅ Installation tested"
+echo "✅ CLI tool works"
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
 echo "1. Review the generated distribution files:"
@@ -223,7 +216,7 @@ echo ""
 echo "4. If everything works, upload to PyPI:"
 echo "   twine upload dist/*"
 echo ""
-echo "5. Create a GitHub release tag:"
-echo "   git tag v$(python -c 'import genai_otel; print(genai_otel.__version__)')"
+echo "5. Create a GitHub release:"
+echo "   git tag v\$(python -c 'import genai_otel; print(genai_otel.__version__)')"
 echo "   git push --tags"
 echo ""

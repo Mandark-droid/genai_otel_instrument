@@ -8,6 +8,8 @@ It supports various LLM providers, frameworks, and common data stores (MCP tools
 import logging
 import os
 
+import httpx
+
 from .__version__ import __author__, __email__, __license__, __version__
 
 # Re-exporting key components for easier access

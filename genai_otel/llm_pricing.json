@@ -1,0 +1,98 @@
+{
+"gpt-4": {
+"prompt": 30.0,
+"completion": 60.0
+},
+"gpt-4-turbo": {
+"prompt": 10.0,
+"completion": 30.0
+},
+"gpt-4o": {
+"prompt": 5.0,
+"completion": 15.0
+},
+"gpt-3.5-turbo": {
+"prompt": 0.5,
+"completion": 1.5
+},
+"gpt-4o-mini": {
+"prompt": 0.15,
+"completion": 0.6
+},
+"claude-3-opus": {
+"prompt": 15.0,
+"completion": 75.0
+},
+"claude-3-sonnet": {
+"prompt": 3.0,
+"completion": 15.0
+},
+"claude-3-haiku": {
+"prompt": 0.8,
+"completion": 4.0
+},
+"claude-3.5-sonnet": {
+"prompt": 3.0,
+"completion": 15.0
+},
+"gemini-pro": {
+"prompt": 0.5,
+"completion": 1.5
+},
+"gemini-ultra": {
+"prompt": 10.0,
+"completion": 30.0
+},
+"gemini-1.5-pro": {
+"prompt": 1.25,
+"completion": 5.0
+},
+"gemini-1.5-flash": {
+"prompt": 0.075,
+"completion": 0.3
+},
+"command": {
+"prompt": 1.0,
+"completion": 2.0
+},
+"command-light": {
+"prompt": 0.3,
+"completion": 0.6
+},
+"command-r": {
+"prompt": 0.5,
+"completion": 1.5
+},
+"command-r-plus": {
+"prompt": 2.5,
+"completion": 10.0
+},
+"mistral-tiny": {
+"prompt": 0.14,
+"completion": 0.42
+},
+"mistral-small": {
+"prompt": 0.6,
+"completion": 1.8
+},
+"mistral-medium": {
+"prompt": 2.5,
+"completion": 7.5
+},
+"mistral-large": {
+"prompt": 4.0,
+"completion": 12.0
+},
+"claude-v2": {
+"prompt": 8.0,
+"completion": 24.0
+},
+"titan-text-lite": {
+"prompt": 0.3,
+"completion": 0.4
+},
+"titan-text-express": {
+"prompt": 1.0,
+"completion": 1.0
+}
+}

@@ -6,5 +6,6 @@ generic API clients, enabling automatic tracing and metric collection of their o
 """
 
 # pylint: disable=R0801
+import httpx
 
 from .manager import MCPInstrumentorManager

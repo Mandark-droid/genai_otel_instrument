@@ -1,106 +1,138 @@
-"""Module for collecting GPU metrics using pynvml and reporting them via OpenTelemetry.
-
-This module provides the `GPUMetricsCollector` class, which periodically collects
-GPU utilization, memory usage, and temperature, and exports these as OpenTelemetry
-metrics. It relies on the `pynvml` library for interacting with NVIDIA GPUs.
-"""
+# genai_otel/gpu_metrics.py
 
 import logging
 import threading
 import time
-from typing import Optional
-
-import pynvml  # Moved to top
-from opentelemetry.metrics import Meter, ObservableCounter, ObservableGauge
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# Try to import GPU monitoring libraries
+try:
+    # import nvidia-ml-py as nvml
+    import pynvml as nvml
+
+    HAS_NVML = True
+    logger.debug("nvidia-ml-py available for GPU monitoring")
+except ImportError:
+    try:
+        # Fallback to pynvml for backward compatibility
+        import pynvml as nvml
+
+        HAS_NVML = True
+        logger.warning(
+            "pynvml is deprecated. Please install nvidia-ml-py instead for GPU monitoring."
+        )
+    except ImportError:
+        HAS_NVML = False
+        logger.debug("GPU monitoring not available (nvidia-ml-py or pynvml not installed)")
+
 
 class GPUMetricsCollector:
-    """Collects and reports GPU metrics using pynvml."""
+    """Collect GPU metrics if available."""
 
-    def __init__(self, meter: Meter):
-        """Initializes the GPUMetricsCollector.
+    def __init__(self, enabled: bool = True):
+        self.enabled = enabled and HAS_NVML
+        self._stop_event = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+        self._metrics: Dict[str, Any] = {}
 
-        Args:
-            meter (Meter): The OpenTelemetry meter to use for recording metrics.
-        """
-        self.meter = meter
-        self.running = False
-        self.thread: Optional[threading.Thread] = None
-        self.gpu_utilization_counter: Optional[ObservableCounter] = None
-        self.gpu_memory_used_gauge: Optional[ObservableGauge] = None
-        self.gpu_temperature_gauge: Optional[ObservableGauge] = None
+        if self.enabled:
+            try:
+                nvml.nvmlInit()
+                self.device_count = nvml.nvmlDeviceGetCount()
+                logger.info(f"GPU monitoring enabled for {self.device_count} devices")
+            except Exception as e:
+                logger.warning(f"Failed to initialize GPU monitoring: {e}")
+                self.enabled = False
+        else:
+            logger.debug("GPU monitoring disabled")
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get current GPU metrics."""
+        if not self.enabled:
+            return {"gpu_available": False}
 
         try:
-            self.gpu_utilization_counter = self.meter.create_counter(
-                "genai.gpu.utilization", description="GPU utilization percentage", unit="%"
-            )
-            self.gpu_memory_used_gauge = self.meter.create_observable_gauge(
-                "genai.gpu.memory.used", description="GPU memory used in MiB", unit="MiB"
-            )
-            self.gpu_temperature_gauge = self.meter.create_observable_gauge(
-                "genai.gpu.temperature", description="GPU temperature in Celsius", unit="Cel"
-            )
+            metrics = {"gpu_available": True, "devices": []}
+
+            for i in range(self.device_count):
+                try:
+                    handle = nvml.nvmlDeviceGetHandleByIndex(i)
+
+                    # Get utilization
+                    utilization = nvml.nvmlDeviceGetUtilizationRates(handle)
+
+                    # Get memory info
+                    memory = nvml.nvmlDeviceGetMemoryInfo(handle)
+
+                    # Get temperature
+                    temp = nvml.nvmlDeviceGetTemperature(handle, nvml.NVML_TEMPERATURE_GPU)
+
+                    device_metrics = {
+                        "device_id": i,
+                        "utilization_gpu": utilization.gpu,
+                        "utilization_memory": utilization.memory,
+                        "memory_used": memory.used,
+                        "memory_total": memory.total,
+                        "memory_free": memory.free,
+                        "temperature": temp,
+                    }
+                    metrics["devices"].append(device_metrics)
+
+                except Exception as e:
+                    logger.warning(f"Failed to get metrics for GPU {i}: {e}")
+                    continue
+
+            return metrics
+
         except Exception as e:
-            logger.error("Failed to create GPU metrics instruments: %s", e, exc_info=True)
+            logger.warning(f"Failed to collect GPU metrics: {e}")
+            return {"gpu_available": False, "error": str(e)}
 
-    def _collect_metrics(self):
-        """Collects GPU metrics and records them."""
-        try:
-            pynvml.nvmlInit()
-            device_count = pynvml.nvmlDeviceGetCount()
+    def start_collecting(self, interval: int = 30):
+        """Start collecting metrics in background thread."""
+        if not self.enabled:
+            return
 
-            for i in range(device_count):
-                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
-                device_name = pynvml.nvmlDeviceGetName(handle).decode("utf-8")
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._collect_loop, args=(interval,), daemon=True)
+        self._thread.start()
+        logger.debug(f"Started GPU metrics collection with {interval}s interval")
 
-                utilization = pynvml.nvmlDeviceGetUtilizationRates(handle)
-                gpu_util = utilization.gpu
-                if self.gpu_utilization_counter:
-                    self.gpu_utilization_counter.add(
-                        gpu_util, {"gpu_id": str(i), "gpu_name": device_name}
-                    )
+    def _collect_loop(self, interval: int):
+        """Background collection loop."""
+        while not self._stop_event.is_set():
+            try:
+                self._metrics = self.get_metrics()
+            except Exception as e:
+                logger.warning(f"Error in GPU metrics collection: {e}")
 
-                memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-                gpu_memory_used = memory_info.used / (1024**2)
-                if self.gpu_memory_used_gauge:
-                    self.gpu_memory_used_gauge.add(
-                        gpu_memory_used, {"gpu_id": str(i), "gpu_name": device_name}
-                    )
+            self._stop_event.wait(interval)
 
-                gpu_temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
-                if self.gpu_temperature_gauge:
-                    self.gpu_temperature_gauge.add(
-                        gpu_temp, {"gpu_id": str(i), "gpu_name": device_name}
-                    )
+    def stop_collecting(self):
+        """Stop background collection."""
+        if self._thread:
+            self._stop_event.set()
+            self._thread.join(timeout=5)
+            self._thread = None
+            logger.debug("Stopped GPU metrics collection")
 
-            pynvml.nvmlShutdown()
+    def __del__(self):
+        """Cleanup on destruction."""
+        self.stop_collecting()
+        if self.enabled:
+            try:
+                nvml.nvmlShutdown()
+            except:
+                pass
 
-        except pynvml.NVMLError as e:
-            logger.error("NVMLError occurred: %s", e, exc_info=True)
-        except Exception as e:
-            logger.error("An error occurred during GPU metrics collection: %s", e, exc_info=True)
 
-    def _run(self):
-        """The main loop for collecting metrics periodically."""
-        while self.running:
-            self._collect_metrics()
-            time.sleep(15)
-
-    def start(self):
-        """Starts the GPU metrics collection in a separate thread."""
-        if not self.running and self.gpu_utilization_counter:
-            self.running = True
-            self.thread = threading.Thread(target=self._run, daemon=True)
-            self.thread.start()
-            logger.info("GPU metrics collection thread started.")
-        elif not self.gpu_utilization_counter:
-            logger.warning("GPU metrics instruments not initialized. Cannot start collection.")
-
-    def stop(self):
-        """Stops the GPU metrics collection thread."""
-        self.running = False
-        if self.thread and self.thread.is_alive():
-            self.thread.join()
-            logger.info("GPU metrics collection thread stopped.")
+# Convenience function that handles missing dependencies
+def create_gpu_collector(enabled: bool = True) -> Optional[GPUMetricsCollector]:
+    """Create a GPU collector if dependencies are available."""
+    if not HAS_NVML:
+        if enabled:
+            logger.debug("GPU monitoring requested but nvidia-ml-py not available")
+        return None
+    return GPUMetricsCollector(enabled=enabled)

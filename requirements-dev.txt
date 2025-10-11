@@ -38,3 +38,4 @@ opentelemetry-instrumentation-kafka-python
 mysql-connector-python
 psycopg2-binary
 nvidia-ml-py
+httpx>=0.23.0
