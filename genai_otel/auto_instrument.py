@@ -1,312 +1,126 @@
-"""Module for setting up OpenTelemetry auto-instrumentation for GenAI applications.
-
-This module provides the core logic for initializing OpenTelemetry tracing and metrics
-providers, configuring exporters, and automatically instrumenting various LLM libraries
-and Model Context Protocol (MCP) tools based on the provided configuration.
-"""
+"""Module for setting up OpenTelemetry auto-instrumentation for GenAI applications."""
 
 import logging
-import os
 import sys
 
-from opentelemetry import metrics, trace
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-from opentelemetry.semconv.resource import ResourceAttributes
+from opentelemetry import metrics
 
 from .config import OTelConfig
 from .gpu_metrics import GPUMetricsCollector
-from .instrumentors import (
-    AnthropicInstrumentor,
-    AnyscaleInstrumentor,
-    AWSBedrockInstrumentor,
-    AzureOpenAIInstrumentor,
-    CohereInstrumentor,
-    GoogleAIInstrumentor,
-    GroqInstrumentor,
-    HuggingFaceInstrumentor,
-    LangChainInstrumentor,
-    LlamaIndexInstrumentor,
-    MistralAIInstrumentor,
-    OllamaInstrumentor,
-    OpenAIInstrumentor,
-    ReplicateInstrumentor,
-    TogetherAIInstrumentor,
-    VertexAIInstrumentor,
-)
 from .mcp_instrumentors import MCPInstrumentorManager
+from .otel_setup import configure_opentelemetry
+
+# Import instrumentors - fix the import path based on your actual structure
+try:
+    from .instrumentors import (
+        AnthropicInstrumentor,
+        AnyscaleInstrumentor,
+        AWSBedrockInstrumentor,
+        AzureOpenAIInstrumentor,
+        CohereInstrumentor,
+        GoogleAIInstrumentor,
+        GroqInstrumentor,
+        HuggingFaceInstrumentor,
+        LangChainInstrumentor,
+        LlamaIndexInstrumentor,
+        MistralAIInstrumentor,
+        OllamaInstrumentor,
+        OpenAIInstrumentor,
+        ReplicateInstrumentor,
+        TogetherAIInstrumentor,
+        VertexAIInstrumentor,
+    )
+except ImportError:
+    # Fallback for testing or if instrumentors are in different structure
+    from genai_otel.instrumentors import (
+        AnthropicInstrumentor,
+        AnyscaleInstrumentor,
+        AWSBedrockInstrumentor,
+        AzureOpenAIInstrumentor,
+        CohereInstrumentor,
+        GoogleAIInstrumentor,
+        GroqInstrumentor,
+        HuggingFaceInstrumentor,
+        LangChainInstrumentor,
+        LlamaIndexInstrumentor,
+        MistralAIInstrumentor,
+        OllamaInstrumentor,
+        OpenAIInstrumentor,
+        ReplicateInstrumentor,
+        TogetherAIInstrumentor,
+        VertexAIInstrumentor,
+    )
 
 logger = logging.getLogger(__name__)
 
-
-def setup_logging():
-    """Configure logging based on environment variables.
-
-    Sets up logging handlers and formatters based on GENAI_LOG_LEVEL and GENAI_LOG_FILE.
-    If GENAI_LOG_FILE is set, logs are written to that file; otherwise, they are logged to the console.
-    The logging level is determined by GENAI_LOG_LEVEL (defaults to INFO).
-    """
-    log_level_str = os.getenv("GENAI_LOG_LEVEL", "INFO").upper()
-    log_level = getattr(logging, log_level_str, logging.INFO)
-    log_file = os.getenv("GENAI_LOG_FILE")
-
-    logging_kwargs = {
-        "level": log_level,
-        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    }
-    if log_file:
-        log_dir = os.path.dirname(log_file)
-        if log_dir and not os.path.exists(log_dir):
-            try:
-                os.makedirs(log_dir)
-                logger.info("Created log directory: %s", log_dir)
-            except OSError as e:
-                logger.error("Failed to create log directory %s: %s", log_dir, e, exc_info=True)
-                log_file = None
-
-        if log_file:
-            logging_kwargs["filename"] = log_file
-            logging_kwargs["filemode"] = "a"
-
-    if not logging.getLogger().handlers:
-        logging.basicConfig(**logging_kwargs)
-        logger.info("Logging configured. Level: %s, File: %s", log_level_str, log_file or "console")
-    else:
-        logging.getLogger().setLevel(log_level)
-        logger.info("Logging level updated. New level: %s", log_level_str)
-
-
-def _create_otlp_span_exporter(endpoint: str, headers: dict):
-    """Create OTLP span exporter with proper error handling.
-
-    Args:
-        endpoint: The OTLP endpoint URL
-        headers: Headers to send with requests
-
-    Returns:
-        An OTLP span exporter or ConsoleSpanExporter as fallback
-    """
-    try:
-        import httpx
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
-        # Ensure endpoint is properly formatted
-        if not endpoint.endswith("/v1/traces"):
-            if endpoint.endswith("/"):
-                endpoint = endpoint + "v1/traces"
-            else:
-                endpoint = endpoint + "/v1/traces"
-
-        # Create a proper httpx client with timeout
-        client = httpx.Client(timeout=10.0)
-
-        return OTLPSpanExporter(
-            endpoint=endpoint,
-            headers=headers or {},
-            timeout=10,
-            session=client,  # Provide proper HTTP client
-        )
-    except Exception as e:
-        logger.warning(
-            "Failed to create OTLP span exporter (endpoint: %s): %s. "
-            "Falling back to console exporter.",
-            endpoint,
-            e,
-        )
-        return ConsoleSpanExporter()
-
-
-def _create_otlp_metric_exporter(endpoint: str, headers: dict):
-    """Create OTLP metric exporter with proper error handling.
-
-    Args:
-        endpoint: The OTLP endpoint URL
-        headers: Headers to send with requests
-
-    Returns:
-        An OTLP metric exporter or ConsoleMetricExporter as fallback
-    """
-    try:
-        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-
-        # Ensure endpoint is properly formatted
-        if not endpoint.endswith("/v1/metrics"):
-            if endpoint.endswith("/"):
-                endpoint = endpoint + "v1/metrics"
-            else:
-                endpoint = endpoint + "/v1/metrics"
-
-        return OTLPMetricExporter(
-            endpoint=endpoint, headers=headers or {}, timeout=10  # Add timeout to prevent hanging
-        )
-    except Exception as e:
-        logger.warning(
-            "Failed to create OTLP metric exporter (endpoint: %s): %s. "
-            "Falling back to console exporter.",
-            endpoint,
-            e,
-        )
-        return ConsoleMetricExporter()
+# Defines the available instrumentors. This is now at the module level for easier mocking in tests.
+INSTRUMENTORS = {
+    "openai": OpenAIInstrumentor,
+    "anthropic": AnthropicInstrumentor,
+    "google.generativeai": GoogleAIInstrumentor,
+    "boto3": AWSBedrockInstrumentor,
+    "azure.ai.openai": AzureOpenAIInstrumentor,
+    "cohere": CohereInstrumentor,
+    "mistralai": MistralAIInstrumentor,
+    "together": TogetherAIInstrumentor,
+    "groq": GroqInstrumentor,
+    "ollama": OllamaInstrumentor,
+    "vertexai": VertexAIInstrumentor,
+    "replicate": ReplicateInstrumentor,
+    "anyscale": AnyscaleInstrumentor,
+    "langchain": LangChainInstrumentor,
+    "llama_index": LlamaIndexInstrumentor,
+    "transformers": HuggingFaceInstrumentor,
+}
 
 
 def setup_auto_instrumentation(config: OTelConfig):
-    """Set up OpenTelemetry with auto-instrumentation for LLM frameworks and MCP tools.
-
-    This function initializes the OpenTelemetry tracer and meter providers,
-    configures exporters, and then attempts to instrument various LLM libraries
-    and MCP tools based on the provided configuration.
-
-    Args:
-        config (OTelConfig): The OpenTelemetry configuration object.
     """
-    setup_logging()  # Call logging setup first to ensure logs from here are captured.
-
+    Set up OpenTelemetry with auto-instrumentation for LLM frameworks and MCP tools.
+    """
     logger.info("Starting auto-instrumentation setup...")
 
-    # Create resource
-    resource = Resource.create(
-        {
-            ResourceAttributes.SERVICE_NAME: config.service_name,
-            ResourceAttributes.SERVICE_VERSION: "1.0.0",
-            "telemetry.sdk.language": "python",
-            "telemetry.sdk.name": "genai-otel-instrument",
-        }
-    )
+    # Configure OpenTelemetry SDK (TracerProvider, MeterProvider, etc.)
+    configure_opentelemetry(config)
 
-    # Set up tracing
-    try:
-        tracer_provider = TracerProvider(resource=resource)
-
-        # Create span exporter with error handling
-        span_exporter = _create_otlp_span_exporter(config.endpoint, config.headers)
-
-        tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-        trace.set_tracer_provider(tracer_provider)
-        logger.info("OpenTelemetry tracing configured with endpoint: %s", config.endpoint)
-    except Exception as e:
-        logger.error("Failed to configure OpenTelemetry tracing: %s", e, exc_info=True)
-        if config.fail_on_error:
-            raise
+    # Auto-instrument LLM libraries based on the configuration
+    for name in config.enabled_instrumentors:
+        if name in INSTRUMENTORS:
+            try:
+                instrumentor_class = INSTRUMENTORS[name]
+                instrumentor = instrumentor_class()
+                instrumentor.instrument(config=config)
+                logger.info(f"{name} instrumentation enabled")
+            except Exception as e:
+                logger.error(f"Failed to instrument {name}: {e}", exc_info=True)
+                if config.fail_on_error:
+                    raise
         else:
-            logger.warning("Continuing without tracing due to configuration error")
+            logger.warning(f"Unknown instrumentor '{name}' requested.")
 
-    # Set up metrics
-    try:
-        # Create metric exporter with error handling
-        metric_exporter = _create_otlp_metric_exporter(config.endpoint, config.headers)
-
-        metric_reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=30000)
-        meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-        metrics.set_meter_provider(meter_provider)
-        logger.info("OpenTelemetry metrics configured")
-    except Exception as e:
-        logger.error("Failed to configure OpenTelemetry metrics: %s", e, exc_info=True)
-        if config.fail_on_error:
-            raise
-        else:
-            logger.warning("Continuing without metrics due to configuration error")
-
-    # Auto-instrument LLM libraries
-    _auto_instrument_llm_libraries(config)
-
-    # Auto-instrument MCP tools (databases, APIs, message queues, vector DBs)
+    # Auto-instrument MCP tools (databases, APIs, etc.)
     if config.enable_mcp_instrumentation:
         try:
-            _auto_instrument_mcp_tools(config)
+            mcp_manager = MCPInstrumentorManager(config)
+            mcp_manager.instrument_all(config.fail_on_error)  # This is the correct method name
             logger.info("MCP tools instrumentation enabled and set up.")
         except Exception as e:
-            logger.error("Failed to set up MCP tools instrumentation: %s", e, exc_info=True)
+            logger.error(
+                f"Failed to set up MCP tools instrumentation: {e}", exc_info=True
+            )  # Fixed f-string
             if config.fail_on_error:
                 raise
 
     # Start GPU metrics collection if enabled
     if config.enable_gpu_metrics:
         try:
+            meter_provider = metrics.get_meter_provider()
             gpu_collector = GPUMetricsCollector(meter_provider.get_meter("genai.gpu"), config)
             gpu_collector.start()
             logger.info("GPU metrics collection started.")
         except Exception as e:
-            logger.error("Failed to start GPU metrics collection: %s", e, exc_info=True)
+            logger.error(f"Failed to start GPU metrics collection: {e}", exc_info=True)
             if config.fail_on_error:
                 raise
 
     logger.info("Auto-instrumentation setup complete")
-
-
-def _auto_instrument_llm_libraries(config: OTelConfig):
-    """Automatically instrument detected LLM libraries.
-
-    Checks for the presence of various LLM libraries in sys.modules or attempts to import them.
-    If found, corresponding instrumentors are instantiated and their `instrument` method is called.
-    Handles ImportErrors and other exceptions during instrumentation, respecting `config.fail_on_error`.
-    """
-    instrumentors = []
-
-    # List of libraries and their corresponding instrumentor classes
-    llm_library_map = {
-        "openai": OpenAIInstrumentor,
-        "anthropic": AnthropicInstrumentor,
-        "google.generativeai": GoogleAIInstrumentor,
-        "boto3": AWSBedrockInstrumentor,
-        "azure.ai.openai": AzureOpenAIInstrumentor,
-        "cohere": CohereInstrumentor,
-        "mistralai": MistralAIInstrumentor,
-        "together": TogetherAIInstrumentor,
-        "groq": GroqInstrumentor,
-        "ollama": OllamaInstrumentor,
-        "vertexai": VertexAIInstrumentor,
-        "replicate": ReplicateInstrumentor,
-        "anyscale": AnyscaleInstrumentor,
-        "langchain": LangChainInstrumentor,
-        "llama_index": LlamaIndexInstrumentor,
-        "transformers": HuggingFaceInstrumentor,
-    }
-
-    for module_name, InstrumentorClass in llm_library_map.items():
-        if module_name in sys.modules or _try_import(module_name):
-            try:
-                instrumentor = InstrumentorClass()
-                instrumentor.instrument(config=config)
-                if hasattr(instrumentor, "_instrumented") and instrumentor._instrumented:
-                    logger.info("%s instrumentation enabled", module_name)
-                    instrumentors.append(instrumentor)
-                else:
-                    logger.debug("%s library not available, skipping instrumentation", module_name)
-            except ImportError as e:
-                logger.debug(
-                    "Skipping instrumentation for %s due to missing dependency: %s", module_name, e
-                )
-                if config.fail_on_error:
-                    raise
-            except Exception as e:
-                logger.error("Failed to instrument %s: %s", module_name, e, exc_info=True)
-                if config.fail_on_error:
-                    raise
-
-
-def _auto_instrument_mcp_tools(config: OTelConfig):
-    """Automatically instrument MCP tools (databases, APIs, message queues, vector DBs).
-
-    Initializes and runs the MCPInstrumentorManager if MCP instrumentation is enabled.
-    """
-    mcp_manager = MCPInstrumentorManager(config)
-    mcp_manager.instrument_all()
-
-
-def _try_import(module_name: str) -> bool:
-    """Try to import a module and return success status.
-
-    Args:
-        module_name (str): The name of the module to import.
-
-    Returns:
-        bool: True if the module was imported successfully, False otherwise.
-    """
-    try:
-        __import__(module_name)
-        return True
-    except ImportError:
-        return False
