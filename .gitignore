@@ -352,3 +352,5 @@ scripts/.coverage
 *.log
 .genai_otel_instrument.egg-info/
 .coverage
+rough_notes.txt
+*.backup
