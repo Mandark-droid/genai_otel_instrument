@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "genai-otel-instrument"
-version = "0.1.0"
+version = "0.1.0.3"
 description = "Comprehensive OpenTelemetry auto-instrumentation for LLM/GenAI applications"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -38,34 +38,37 @@ classifiers = [
 ]
 
 dependencies = [
-    "opentelemetry-api>=1.20.0",
-    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-api>=1.20.0,<2.0.0",
+    "opentelemetry-sdk>=1.20.0,<2.0.0",
     "opentelemetry-instrumentation>=0.41b0",
-    "opentelemetry-exporter-otlp>=1.20.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.20.0,<2.0.0",
     "opentelemetry-semantic-conventions>=0.41b0",
+    "opentelemetry-exporter-otlp>=1.20.0",
     "opentelemetry-instrumentation-requests>=0.41b0",
     "opentelemetry-instrumentation-httpx>=0.41b0",
     "wrapt>=1.14.0",
     "httpx>=0.23.0",
-    "mysql-connector-python",
+    "mysql-connector-python>=9.0.0",
     "mysql==0.0.3",
     "opentelemetry-instrumentation-psycopg2>=0.41b0",
     "psycopg2-binary",
-     "opentelemetry-instrumentation-redis>=0.41b0",
+    "opentelemetry-instrumentation-redis>=0.41b0",
     "redis",
     "opentelemetry-instrumentation-pymongo>=0.41b0",
     "pymongo",
     "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
     "opentelemetry-instrumentation-kafka-python>=0.41b0",
-    "kafka-python",
+    "kafka-python"
+
 ]
 
 [project.optional-dependencies]
 # GPU metrics support
 gpu = [
     "pynvml>=11.5.0",
+    "codecarbon>=2.3.0"
 ]
-
+co2 = ["codecarbon>=2.3.0"]
 # Individual LLM providers
 openai = ["openai>=1.0.0"]
 anthropic = ["anthropic>=0.18.0"]
@@ -95,7 +98,7 @@ databases = [
     "opentelemetry-instrumentation-psycopg2>=0.41b0",
     "psycopg2-binary",
     "opentelemetry-instrumentation-mysql>=0.41b0",
-    "mysql-connector-python",
+    "mysql-connector-python>=9.0.0"
 ]
 
 # Message queue instrumentation

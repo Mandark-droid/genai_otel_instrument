@@ -19,40 +19,25 @@ setup(
         'genai_otel': ['llm_pricing.json', 'py.typed'],
     },
 
-    # Core dependencies only
+    # CORE DEPENDENCIES ONLY - Absolutely minimal!
     install_requires=[
-        "opentelemetry-api>=1.20.0",
-        "opentelemetry-sdk>=1.20.0",
+        "opentelemetry-api>=1.20.0,<2.0.0",
+        "opentelemetry-sdk>=1.20.0,<2.0.0",
         "opentelemetry-instrumentation>=0.41b0",
-        "opentelemetry-exporter-otlp>=1.20.0",
+        "opentelemetry-exporter-otlp-proto-http>=1.20.0,<2.0.0",
         "opentelemetry-semantic-conventions>=0.41b0",
-        "opentelemetry-instrumentation-requests>=0.41b0",
-        "opentelemetry-instrumentation-httpx>=0.41b0",
-        "opentelemetry-instrumentation-mysql>=0.41b0",
         "wrapt>=1.14.0",
-        "httpx>=0.23.0",
-        "mysql-connector-python",
-        "mysql==0.0.3",
-        "opentelemetry-instrumentation-psycopg2>=0.41b0",
-        "psycopg2-binary",
-        "opentelemetry-instrumentation-redis>=0.41b0",
-        "redis",
-        "opentelemetry-instrumentation-pymongo>=0.41b0",
-        "pymongo",
-        "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
-        "sqlalchemy",
-        "opentelemetry-instrumentation-kafka-python>=0.41b0",
-        "kafka-python",
-
+        # Don't pin protobuf - let OpenTelemetry manage it
     ],
 
     # Optional dependencies
     extras_require={
         # GPU metrics support
         "gpu": [
-            "pynvml>=11.5.0",
+            "nvidia-ml-py>=11.495.46",
+             "codecarbon>=2.3.0",
         ],
-
+        "co2": ["codecarbon>=2.3.0"],
         # Individual LLM providers
         "openai": ["openai>=1.0.0"],
         "anthropic": ["anthropic>=0.18.0"],
@@ -71,24 +56,35 @@ setup(
         "llamaindex": ["llama-index>=0.9.0"],
         "huggingface": ["transformers>=4.30.0"],
 
-        # Database instrumentations
+        # HTTP instrumentation
+        "http": [
+            "opentelemetry-instrumentation-requests>=0.41b0",
+            "opentelemetry-instrumentation-httpx>=0.41b0",
+            "httpx>=0.23.0",
+        ],
+
+        # Database instrumentations - FIXED versions to avoid protobuf conflicts
         "databases": [
             "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
-            "sqlalchemy"
+            "sqlalchemy>=1.4.0,<3.0.0",
             "opentelemetry-instrumentation-redis>=0.41b0",
-            "redis",
+            "redis>=4.0.0",
             "opentelemetry-instrumentation-pymongo>=0.41b0",
-            "pymongo",
+            "pymongo>=4.0.0",
             "opentelemetry-instrumentation-psycopg2>=0.41b0",
-            "psycopg2-binary",
+            "psycopg2-binary>=2.9.0",
+        ],
+
+        # MySQL separate (has protobuf conflict)
+        "mysql": [
             "opentelemetry-instrumentation-mysql>=0.41b0",
-            "mysql-connector-python",
+            "mysql-connector-python>=9.0.0",  # v9+ uses protobuf 5.x
         ],
 
         # Message queue instrumentation
         "messaging": [
             "opentelemetry-instrumentation-kafka-python>=0.41b0",
-            "kafka-python",
+            "kafka-python>=2.0.0",
         ],
 
         # Vector databases
@@ -119,14 +115,21 @@ setup(
             "transformers>=4.30.0",
         ],
 
-        # All MCP tools
+        # All MCP tools (excluding MySQL to avoid conflicts)
         "all-mcp": [
+            "opentelemetry-instrumentation-requests>=0.41b0",
+            "opentelemetry-instrumentation-httpx>=0.41b0",
+            "httpx>=0.23.0",
             "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
+            "sqlalchemy>=1.4.0,<3.0.0",
             "opentelemetry-instrumentation-redis>=0.41b0",
+            "redis>=4.0.0",
             "opentelemetry-instrumentation-pymongo>=0.41b0",
+            "pymongo>=4.0.0",
             "opentelemetry-instrumentation-psycopg2>=0.41b0",
-            "opentelemetry-instrumentation-mysql>=0.41b0",
+            "psycopg2-binary>=2.9.0",
             "opentelemetry-instrumentation-kafka-python>=0.41b0",
+            "kafka-python>=2.0.0",
             "pinecone-client>=2.0.0",
             "weaviate-client>=3.0.0",
             "qdrant-client>=1.0.0",
@@ -135,8 +138,9 @@ setup(
             "faiss-cpu>=1.7.0",
         ],
 
-        # Everything
+        # Everything (excluding MySQL by default due to conflicts)
         "all": [
+            # LLM providers
             "openai>=1.0.0",
             "anthropic>=0.18.0",
             "google-generativeai>=0.3.0",
@@ -151,24 +155,31 @@ setup(
             "langchain>=0.1.0",
             "llama-index>=0.9.0",
             "transformers>=4.30.0",
-            "pynvml>=11.5.0",
+            # GPU
+            "nvidia-ml-py>=11.495.46",
+            # HTTP
+            "opentelemetry-instrumentation-requests>=0.41b0",
+            "opentelemetry-instrumentation-httpx>=0.41b0",
+            "httpx>=0.23.0",
+            # Databases (no MySQL)
             "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
+            "sqlalchemy>=1.4.0,<3.0.0",
             "opentelemetry-instrumentation-redis>=0.41b0",
+            "redis>=4.0.0",
             "opentelemetry-instrumentation-pymongo>=0.41b0",
+            "pymongo>=4.0.0",
             "opentelemetry-instrumentation-psycopg2>=0.41b0",
-            "opentelemetry-instrumentation-mysql>=0.41b0",
+            "psycopg2-binary>=2.9.0",
+            # Messaging
             "opentelemetry-instrumentation-kafka-python>=0.41b0",
+            "kafka-python>=2.0.0",
+            # Vector DBs
             "pinecone-client>=2.0.0",
             "weaviate-client>=3.0.0",
             "qdrant-client>=1.0.0",
             "chromadb>=0.4.0",
             "pymilvus>=2.3.0",
             "faiss-cpu>=1.7.0",
-            "pymongo",
-            "nvidia-ml-py",
-            "mysql",
-            "mysql-connector-python",
-            "httpx"
         ],
 
         # Development dependencies
@@ -176,6 +187,7 @@ setup(
             "pytest>=7.0.0",
             "pytest-cov>=4.0.0",
             "pytest-mock>=3.10.0",
+            "pytest-asyncio>=0.21.0",
             "black>=23.0.0",
             "isort>=5.12.0",
             "pylint>=2.17.0",
@@ -221,5 +233,4 @@ setup(
     ],
     keywords="opentelemetry observability llm genai instrumentation tracing metrics monitoring",
     zip_safe=False,
-    scripts=['scripts/test_release.sh'],
 )
