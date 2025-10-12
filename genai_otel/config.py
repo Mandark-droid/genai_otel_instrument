@@ -10,9 +10,42 @@ environment variables, with sensible defaults provided.
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+
+# Default list of instrumentors to enable if not specified by the user.
+# This maintains the "instrument everything available" behavior.
+DEFAULT_INSTRUMENTORS = [
+    "openai",
+    "anthropic",
+    "google.generativeai",
+    "boto3",
+    "azure.ai.openai",
+    "cohere",
+    "mistralai",
+    "together",
+    "groq",
+    "ollama",
+    "vertexai",
+    "replicate",
+    "anyscale",
+    "langchain",
+    "llama_index",
+    "transformers",
+]
+
+
+def _get_enabled_instrumentors() -> List[str]:
+    """
+    Gets the list of enabled instrumentors from the environment variable.
+    Defaults to all supported instrumentors if the variable is not set.
+    """
+    enabled_str = os.getenv("GENAI_ENABLED_INSTRUMENTORS")
+    if enabled_str:
+        return [s.strip() for s in enabled_str.split(",")]
+    return DEFAULT_INSTRUMENTORS
 
 
 @dataclass
@@ -26,6 +59,7 @@ class OTelConfig:
     endpoint: str = field(
         default_factory=lambda: os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
     )
+    enabled_instrumentors: List[str] = field(default_factory=_get_enabled_instrumentors)
     enable_gpu_metrics: bool = field(
         default_factory=lambda: os.getenv("GENAI_ENABLE_GPU_METRICS", "true").lower() == "true"
     )
