@@ -76,36 +76,20 @@ fi
 print_status $? "Development dependencies installed"
 
 # Install optional dependencies for testing
-print_info "Installing optional test dependencies..."
-pip install mysql-connector-python psycopg2-binary pynvml
-print_status $? "Optional dependencies installed"
-
-# Or if you want to be more selective:
-print_info "Installing database instrumentation dependencies..."
-pip install mysql-connector-python psycopg2-binary
-print_status $? "Database dependencies installed"
-
-print_info "Installing GPU metrics dependencies..."
-pip install nvidia-ml-py  # Instead of pynvml
-print_status $? "GPU metrics dependencies installed"
-
-# In the development dependencies section, add:
-print_info "Installing optional HTTP dependencies..."
-pip install httpx
-pip install opentelemetry-instrumentation-httpx
-print_status $? "HTTP dependencies installed (optional)"
-
-# In your test script, add this before the import test:
-# In your test script, fix the dependency installation:
-print_info "Installing OpenTelemetry instrumentation dependencies..."
-pip install opentelemetry-instrumentation-sqlalchemy
-pip install opentelemetry-instrumentation-redis
-pip install opentelemetry-instrumentation-pymongo
-pip install opentelemetry-instrumentation-psycopg2
-pip install opentelemetry-instrumentation-mysql
-pip install opentelemetry-instrumentation-kafka-python  # Fixed name
-pip install opentelemetry-instrumentation-httpx
-print_status $? "OpenTelemetry instrumentation dependencies installed"
+print_info "Installing optional dependencies for testing..."
+pip install \
+    mysql-connector-python \
+    psycopg2-binary \
+    nvidia-ml-py \
+    httpx \
+    opentelemetry-instrumentation-sqlalchemy \
+    opentelemetry-instrumentation-redis \
+    opentelemetry-instrumentation-pymongo \
+    opentelemetry-instrumentation-psycopg2 \
+    opentelemetry-instrumentation-mysql \
+    opentelemetry-instrumentation-kafka-python \
+    opentelemetry-instrumentation-httpx
+print_status $? "Optional and instrumentation dependencies installed"
 
 # Auto-format code with both tools
 print_info "Auto-formatting code with isort and black..."
