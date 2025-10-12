@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 
 import wrapt
 from opentelemetry import trace
+from opentelemetry.trace import SpanKind, Status, StatusCode
 
 from ..config import OTelConfig
 
@@ -41,32 +42,96 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
             instrumented_count += 1
         return instrumented_count
 
-    def _instrument_pinecone(self):  # pylint: disable=W0212
-        """Instrument Pinecone"""
+    def _instrument_pinecone(self):
+        """Instrument Pinecone operations"""
         try:
             import pinecone
 
-            original_query = pinecone.Index.query
+            # Check Pinecone version to handle API differences
+            pinecone_version = getattr(pinecone, "__version__", "0.0.0")
 
-            def wrapped_query(instance, *args, **kwargs):
-                with self.tracer.start_as_current_span("pinecone.query") as span:
-                    span.set_attribute("db.system", "pinecone")
-                    span.set_attribute("db.operation", "query")
-                    span.set_attribute("vector.index", instance._index_name)
+            # Pinecone 3.0+ uses a different API structure
+            if hasattr(pinecone, "Pinecone"):
+                # New API (3.0+)
+                logger.info("Detected Pinecone 3.0+ API")
+                original_init = pinecone.Pinecone.__init__
 
-                    top_k = kwargs.get("top_k", args[1] if len(args) > 1 else None)
-                    if top_k:
-                        span.set_attribute("vector.top_k", top_k)
+                def traced_init(self, *args, **kwargs):
+                    result = original_init(self, *args, **kwargs)
+                    # Wrap index method
+                    if hasattr(self, "Index"):
+                        original_index = self.Index
 
-                    result = original_query(instance, *args, **kwargs)
+                        def traced_index(*idx_args, **idx_kwargs):
+                            idx = original_index(*idx_args, **idx_kwargs)
+                            # Wrap index operations
+                            if hasattr(idx, "query"):
+                                idx.query = self._wrap_pinecone_method(
+                                    idx.query, "pinecone.index.query"
+                                )
+                            if hasattr(idx, "upsert"):
+                                idx.upsert = self._wrap_pinecone_method(
+                                    idx.upsert, "pinecone.index.upsert"
+                                )
+                            if hasattr(idx, "delete"):
+                                idx.delete = self._wrap_pinecone_method(
+                                    idx.delete, "pinecone.index.delete"
+                                )
+                            return idx
+
+                        self.Index = traced_index
                     return result
 
-            pinecone.Index.query = wrapped_query
+                pinecone.Pinecone.__init__ = traced_init
+
+            elif hasattr(pinecone, "Index"):
+                # Old API (2.x)
+                logger.info("Detected Pinecone 2.x API")
+                original_query = pinecone.Index.query
+                original_upsert = pinecone.Index.upsert
+                original_delete = pinecone.Index.delete
+
+                pinecone.Index.query = self._wrap_pinecone_method(original_query, "pinecone.query")
+                pinecone.Index.upsert = self._wrap_pinecone_method(
+                    original_upsert, "pinecone.upsert"
+                )
+                pinecone.Index.delete = self._wrap_pinecone_method(
+                    original_delete, "pinecone.delete"
+                )
+            else:
+                logger.warning("Could not detect Pinecone API version. Skipping instrumentation.")
+                return False
+
             logger.info("Pinecone instrumentation enabled")
             return True
 
         except ImportError:
+            logger.debug("Pinecone not installed, skipping instrumentation")
             return False
+        except Exception as e:
+            logger.error(f"Failed to instrument Pinecone: {e}")
+            return False
+
+    def _wrap_pinecone_method(self, original_method, operation_name):
+        """Wrap a Pinecone method with tracing"""
+
+        def wrapper(*args, **kwargs):
+            tracer = trace.get_tracer(__name__)
+            with tracer.start_as_current_span(
+                operation_name,
+                kind=SpanKind.CLIENT,
+                attributes={"db.system": "pinecone", "db.operation": operation_name.split(".")[-1]},
+            ) as span:
+                try:
+                    result = original_method(*args, **kwargs)
+                    span.set_status(Status(StatusCode.OK))
+                    return result
+                except Exception as e:
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
+                    span.record_exception(e)
+                    raise
+
+        return wrapper
 
     def _instrument_weaviate(self):
         """Instrument Weaviate"""

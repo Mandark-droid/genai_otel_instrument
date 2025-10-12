@@ -10,13 +10,11 @@ import os
 import sys
 
 from opentelemetry import metrics, trace
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.semconv.resource import ResourceAttributes
 
 from .config import OTelConfig
@@ -81,30 +79,77 @@ def setup_logging():
         logger.info("Logging level updated. New level: %s", log_level_str)
 
 
-# Update the GPU metrics import section
-try:
-    from .gpu_metrics import GPUMetricsCollector, create_gpu_collector
+def _create_otlp_span_exporter(endpoint: str, headers: dict):
+    """Create OTLP span exporter with proper error handling.
 
-    GPU_METRICS_AVAILABLE = True
-except ImportError:
-    GPU_METRICS_AVAILABLE = False
+    Args:
+        endpoint: The OTLP endpoint URL
+        headers: Headers to send with requests
 
-    # Create a dummy collector for when GPU metrics are not available
-    class DummyGPUMetricsCollector:
-        def __init__(self, enabled=True):
-            self.enabled = False
+    Returns:
+        An OTLP span exporter or ConsoleSpanExporter as fallback
+    """
+    try:
+        import httpx
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-        def get_metrics(self):
-            return {"gpu_available": False}
+        # Ensure endpoint is properly formatted
+        if not endpoint.endswith("/v1/traces"):
+            if endpoint.endswith("/"):
+                endpoint = endpoint + "v1/traces"
+            else:
+                endpoint = endpoint + "/v1/traces"
 
-        def start_collecting(self, interval=30):
-            pass
+        # Create a proper httpx client with timeout
+        client = httpx.Client(timeout=10.0)
 
-        def stop_collecting(self):
-            pass
+        return OTLPSpanExporter(
+            endpoint=endpoint,
+            headers=headers or {},
+            timeout=10,
+            session=client,  # Provide proper HTTP client
+        )
+    except Exception as e:
+        logger.warning(
+            "Failed to create OTLP span exporter (endpoint: %s): %s. "
+            "Falling back to console exporter.",
+            endpoint,
+            e,
+        )
+        return ConsoleSpanExporter()
 
-    GPUMetricsCollector = DummyGPUMetricsCollector
-    create_gpu_collector = lambda enabled=False: DummyGPUMetricsCollector()
+
+def _create_otlp_metric_exporter(endpoint: str, headers: dict):
+    """Create OTLP metric exporter with proper error handling.
+
+    Args:
+        endpoint: The OTLP endpoint URL
+        headers: Headers to send with requests
+
+    Returns:
+        An OTLP metric exporter or ConsoleMetricExporter as fallback
+    """
+    try:
+        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+
+        # Ensure endpoint is properly formatted
+        if not endpoint.endswith("/v1/metrics"):
+            if endpoint.endswith("/"):
+                endpoint = endpoint + "v1/metrics"
+            else:
+                endpoint = endpoint + "/v1/metrics"
+
+        return OTLPMetricExporter(
+            endpoint=endpoint, headers=headers or {}, timeout=10  # Add timeout to prevent hanging
+        )
+    except Exception as e:
+        logger.warning(
+            "Failed to create OTLP metric exporter (endpoint: %s): %s. "
+            "Falling back to console exporter.",
+            endpoint,
+            e,
+        )
+        return ConsoleMetricExporter()
 
 
 def setup_auto_instrumentation(config: OTelConfig):
@@ -125,38 +170,44 @@ def setup_auto_instrumentation(config: OTelConfig):
     resource = Resource.create(
         {
             ResourceAttributes.SERVICE_NAME: config.service_name,
-            ResourceAttributes.SERVICE_VERSION: "1.0.0",  # Consider making this configurable or dynamic
+            ResourceAttributes.SERVICE_VERSION: "1.0.0",
             "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "genai-otel-instrument",
         }
     )
 
     # Set up tracing
     try:
         tracer_provider = TracerProvider(resource=resource)
-        span_exporter = OTLPSpanExporter(
-            endpoint=f"{config.endpoint}/v1/traces", headers=config.headers or {}
-        )
+
+        # Create span exporter with error handling
+        span_exporter = _create_otlp_span_exporter(config.endpoint, config.headers)
+
         tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
         trace.set_tracer_provider(tracer_provider)
-        logger.info("OpenTelemetry tracing configured.")
+        logger.info("OpenTelemetry tracing configured with endpoint: %s", config.endpoint)
     except Exception as e:
         logger.error("Failed to configure OpenTelemetry tracing: %s", e, exc_info=True)
         if config.fail_on_error:
             raise
+        else:
+            logger.warning("Continuing without tracing due to configuration error")
 
     # Set up metrics
     try:
-        metric_exporter = OTLPMetricExporter(
-            endpoint=f"{config.endpoint}/v1/metrics", headers=config.headers or {}
-        )
+        # Create metric exporter with error handling
+        metric_exporter = _create_otlp_metric_exporter(config.endpoint, config.headers)
+
         metric_reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=30000)
         meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
         metrics.set_meter_provider(meter_provider)
-        logger.info("OpenTelemetry metrics configured.")
+        logger.info("OpenTelemetry metrics configured")
     except Exception as e:
-        logger.error(f"Failed to configure OpenTelemetry metrics: {e}", exc_info=True)
+        logger.error("Failed to configure OpenTelemetry metrics: %s", e, exc_info=True)
         if config.fail_on_error:
             raise
+        else:
+            logger.warning("Continuing without metrics due to configuration error")
 
     # Auto-instrument LLM libraries
     _auto_instrument_llm_libraries(config)
@@ -167,20 +218,18 @@ def setup_auto_instrumentation(config: OTelConfig):
             _auto_instrument_mcp_tools(config)
             logger.info("MCP tools instrumentation enabled and set up.")
         except Exception as e:
-            logger.error(f"Failed to set up MCP tools instrumentation: {e}", exc_info=True)
+            logger.error("Failed to set up MCP tools instrumentation: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
 
     # Start GPU metrics collection if enabled
     if config.enable_gpu_metrics:
         try:
-            gpu_collector = create_gpu_collector(enabled=config.enable_gpu_metrics)
-
-            # gpu_collector = GPUMetricsCollector(meter_provider.get_meter("genai.gpu"))
+            gpu_collector = GPUMetricsCollector(meter_provider.get_meter("genai.gpu"), config)
             gpu_collector.start()
             logger.info("GPU metrics collection started.")
         except Exception as e:
-            logger.error(f"Failed to start GPU metrics collection: {e}", exc_info=True)
+            logger.error("Failed to start GPU metrics collection: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
 
@@ -197,12 +246,11 @@ def _auto_instrument_llm_libraries(config: OTelConfig):
     instrumentors = []
 
     # List of libraries and their corresponding instrumentor classes
-    # This can be extended easily.
     llm_library_map = {
         "openai": OpenAIInstrumentor,
         "anthropic": AnthropicInstrumentor,
         "google.generativeai": GoogleAIInstrumentor,
-        "boto3": AWSBedrockInstrumentor,  # boto3 is used for AWS services like Bedrock
+        "boto3": AWSBedrockInstrumentor,
         "azure.ai.openai": AzureOpenAIInstrumentor,
         "cohere": CohereInstrumentor,
         "mistralai": MistralAIInstrumentor,
@@ -214,7 +262,7 @@ def _auto_instrument_llm_libraries(config: OTelConfig):
         "anyscale": AnyscaleInstrumentor,
         "langchain": LangChainInstrumentor,
         "llama_index": LlamaIndexInstrumentor,
-        "transformers": HuggingFaceInstrumentor,  # HuggingFace often uses transformers
+        "transformers": HuggingFaceInstrumentor,
     }
 
     for module_name, InstrumentorClass in llm_library_map.items():
@@ -222,8 +270,11 @@ def _auto_instrument_llm_libraries(config: OTelConfig):
             try:
                 instrumentor = InstrumentorClass()
                 instrumentor.instrument(config=config)
-                logger.info("%s instrumentation enabled", module_name)
-                instrumentors.append(instrumentor)
+                if hasattr(instrumentor, "_instrumented") and instrumentor._instrumented:
+                    logger.info("%s instrumentation enabled", module_name)
+                    instrumentors.append(instrumentor)
+                else:
+                    logger.debug("%s library not available, skipping instrumentation", module_name)
             except ImportError as e:
                 logger.debug(
                     "Skipping instrumentation for %s due to missing dependency: %s", module_name, e
@@ -241,8 +292,6 @@ def _auto_instrument_mcp_tools(config: OTelConfig):
 
     Initializes and runs the MCPInstrumentorManager if MCP instrumentation is enabled.
     """
-    # MCPInstrumentorManager is responsible for instrumenting various MCP tools.
-    # It should handle its own error logging and potentially respect fail_on_error.
     mcp_manager = MCPInstrumentorManager(config)
     mcp_manager.instrument_all()
 
