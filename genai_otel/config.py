@@ -42,8 +42,17 @@ class OTelConfig:
     )
     headers: Optional[Dict[str, str]] = None
 
+    enable_co2_tracking: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_CO2_TRACKING", "false").lower() == "true"
+    )
+    carbon_intensity: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_CARBON_INTENSITY", "475.0"))
+    )  # gCO2e/kWh
+
     def __post_init__(self):
         """Post-initialization hook to parse headers from environment variable."""
+        if self.enable_co2_tracking and self.carbon_intensity <= 0:
+            raise ValueError("Carbon intensity must be positive")
         if self.headers is None:
             headers_str = os.getenv("OTEL_EXPORTER_OTLP_HEADERS", "")
             if headers_str:

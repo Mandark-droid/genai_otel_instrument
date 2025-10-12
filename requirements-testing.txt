@@ -1,0 +1,48 @@
+# Requirements for running test_release.sh
+# Install with: pip install -r requirements-testing.txt
+
+# Core package (editable install)
+-e .
+
+# Testing dependencies
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+pytest-asyncio>=0.21.0
+
+# Code quality
+black>=23.0.0
+isort>=5.12.0
+pylint>=2.17.0
+
+# Build tools
+build>=0.10.0
+twine>=4.0.0
+
+# HTTP instrumentation
+opentelemetry-instrumentation-requests>=0.41b0
+opentelemetry-instrumentation-httpx>=0.41b0
+httpx>=0.23.0
+
+# Database instrumentation (without MySQL to avoid protobuf conflict)
+opentelemetry-instrumentation-sqlalchemy>=0.41b0
+sqlalchemy>=1.4.0,<3.0.0
+opentelemetry-instrumentation-redis>=0.41b0
+redis>=4.0.0
+opentelemetry-instrumentation-pymongo>=0.41b0
+pymongo>=4.0.0
+opentelemetry-instrumentation-psycopg2>=0.41b0
+psycopg2-binary>=2.9.0
+
+# Message queues
+opentelemetry-instrumentation-kafka-python>=0.41b0
+kafka-python>=2.0.0
+
+# LLM providers for testing
+openai>=1.0.0
+anthropic>=0.18.0
+google-generativeai>=0.3.0
+
+# Note: MySQL is excluded due to protobuf conflict
+# If you need MySQL testing, install separately:
+#   pip install opentelemetry-instrumentation-mysql mysql-connector-python>=9.0.0
