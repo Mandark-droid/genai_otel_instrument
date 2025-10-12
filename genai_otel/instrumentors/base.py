@@ -119,26 +119,26 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
             try:
                 # Start a new span
-                with self.tracer.start_as_current_span(span_name) as span:
+                initial_attributes = {}
+                if extract_attributes:
+                    try:
+                        extracted_attrs = extract_attributes(instance, args, kwargs)
+                        for key, value in extracted_attrs.items():
+                            if isinstance(value, (str, int, float, bool)):
+                                initial_attributes[key] = value
+                            else:
+                                initial_attributes[key] = str(value)
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to extract attributes for span '%s': %s", span_name, e
+                        )
+
+                with self.tracer.start_as_current_span(
+                    span_name, attributes=initial_attributes
+                ) as span:
                     start_time = time.time()
 
                     try:
-                        # Extract and set attributes if a callable is provided
-                        if extract_attributes:
-                            try:
-                                attrs = extract_attributes(instance, args, kwargs)
-                                for key, value in attrs.items():
-                                    try:
-                                        if isinstance(value, (str, int, float, bool)):
-                                            span.set_attribute(key, value)
-                                        else:
-                                            span.set_attribute(key, str(value))
-                                    except Exception as e:
-                                        logger.warning("Failed to set attribute %s: %s", key, e)
-                            except Exception as e:
-                                logger.warning(
-                                    "Failed to extract attributes for span '%s': %s", span_name, e
-                                )
 
                         # Call the original function
                         result = wrapped(*args, **kwargs)

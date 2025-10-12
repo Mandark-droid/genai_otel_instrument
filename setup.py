@@ -78,7 +78,7 @@ setup(
         # MySQL separate (has protobuf conflict)
         "mysql": [
             "opentelemetry-instrumentation-mysql>=0.41b0",
-            "mysql-connector-python>=9.0.0",  # v9+ uses protobuf 5.x
+            "mysql-connector-python>=8.0.0,<9.0.0",  # v9+ uses protobuf 5.x
         ],
 
         # Message queue instrumentation
