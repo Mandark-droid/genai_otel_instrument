@@ -106,7 +106,8 @@ def test_main_script_not_found(
     # Simulate FileNotFoundError during script execution
     mock_runpy.side_effect = FileNotFoundError(f"No such file or directory: '{script_to_run}'")
 
-    cli.main()
+    with pytest.raises(SystemExit):
+        cli.main()
 
     # Verify instrumentation was called
     mock_instrument.assert_called_once()
@@ -131,8 +132,8 @@ def test_main_script_execution_error(
     # Simulate a general exception during script execution
     mock_runpy.side_effect = Exception("An error occurred during script execution")
 
-    cli.main()
-
+    with pytest.raises(SystemExit):
+        cli.main()
     # Verify instrumentation was called
     mock_instrument.assert_called_once()
 

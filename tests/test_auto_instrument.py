@@ -57,6 +57,14 @@ def reset_mocks():
     MOCK_INSTRUMENTORS["cohere"].reset_mock()
     MOCK_INSTRUMENTORS["mistralai"].reset_mock()
 
+    # Re-assign return_value for mock classes
+    MOCK_INSTRUMENTORS["openai"].return_value = mock_openai_instance
+    MOCK_INSTRUMENTORS["anthropic"].return_value = mock_anthropic_instance
+    MOCK_INSTRUMENTORS["google.generativeai"].return_value = mock_google_instance
+    MOCK_INSTRUMENTORS["boto3"].return_value = mock_boto3_instance
+    MOCK_INSTRUMENTORS["cohere"].return_value = mock_cohere_instance
+    MOCK_INSTRUMENTORS["mistralai"].return_value = mock_mistralai_instance
+
 
 class TestAutoInstrumentation:
     """Test suite for auto_instrumentation functionality"""
