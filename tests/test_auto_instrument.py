@@ -626,13 +626,6 @@ class TestAutoInstrumentation:
                         "Unknown instrumentor 'unknown_llm' requested."
                     )
 
-    # Define a mock for the OpenAI instrumentor
-    mock_openai_instance = MagicMock()
-    MOCK_INSTRUMENTORS = {
-        "openai": mock_openai_instance,
-        # Add other known instrumentors if needed
-    }
-
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
     @patch("genai_otel.auto_instrument.OTLPMetricExporter")
     @patch("genai_otel.auto_instrument.OTLPSpanExporter")
