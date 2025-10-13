@@ -23,6 +23,7 @@ def reset_otel_redis_instrumentor_mock(mock_otel_redis_instrumentor):
     mock_instrumentor_class, mock_instrumentor_instance = mock_otel_redis_instrumentor
     yield
     mock_instrumentor_class.reset_mock()
+    mock_instrumentor_instance.uninstrument()
     mock_instrumentor_instance.reset_mock()
 
 
@@ -38,6 +39,7 @@ def test_instrument_success(redis_instrumentor, mock_otel_redis_instrumentor, ca
     """Test successful Redis instrumentation."""
     mock_instrumentor_class, mock_instrumentor_instance = mock_otel_redis_instrumentor
 
+    caplog.set_level(logging.INFO)
     redis_instrumentor.instrument()
 
     mock_instrumentor_class.assert_called_once()
