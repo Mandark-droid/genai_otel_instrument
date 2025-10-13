@@ -8,12 +8,20 @@ and handling configuration and cost calculation.
 """
 
 import logging
+import threading
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Optional
 
 import wrapt
 from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Status, StatusCode
 
 from ..config import OTelConfig
@@ -22,7 +30,7 @@ from ..cost_calculator import CostCalculator
 logger = logging.getLogger(__name__)
 # Global flag to track if shared metrics have been created
 _SHARED_METRICS_CREATED = False
-_SHARED_METRICS_LOCK = None
+_SHARED_METRICS_LOCK = threading.Lock()
 
 
 class BaseInstrumentor(ABC):  # pylint: disable=R0902
@@ -62,40 +70,41 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         """Ensure shared metrics are created only once across all instrumentor instances."""
         global _SHARED_METRICS_CREATED
 
-        if _SHARED_METRICS_CREATED:
-            return
+        with _SHARED_METRICS_LOCK:
+            if _SHARED_METRICS_CREATED:
+                return
 
-        try:
-            meter = metrics.get_meter(__name__)
+            try:
+                meter = metrics.get_meter(__name__)
 
-            # Create shared metrics once
-            cls._shared_request_counter = meter.create_counter(
-                "genai.requests", description="Number of LLM requests"
-            )
-            cls._shared_token_counter = meter.create_counter(
-                "genai.tokens", description="Number of tokens processed"
-            )
-            cls._shared_latency_histogram = meter.create_histogram(
-                "genai.latency", description="Request latency in seconds", unit="s"
-            )
-            cls._shared_cost_counter = meter.create_counter(
-                "genai.cost", description="Estimated cost in USD", unit="USD"
-            )
-            cls._shared_error_counter = meter.create_counter(
-                "genai.errors", description="Number of errors"
-            )
+                # Create shared metrics once
+                cls._shared_request_counter = meter.create_counter(
+                    "genai.requests", description="Number of LLM requests"
+                )
+                cls._shared_token_counter = meter.create_counter(
+                    "genai.tokens", description="Number of tokens processed"
+                )
+                cls._shared_latency_histogram = meter.create_histogram(
+                    "genai.latency", description="Request latency in seconds", unit="s"
+                )
+                cls._shared_cost_counter = meter.create_counter(
+                    "genai.cost", description="Estimated cost in USD", unit="USD"
+                )
+                cls._shared_error_counter = meter.create_counter(
+                    "genai.errors", description="Number of errors"
+                )
 
-            _SHARED_METRICS_CREATED = True
-            logger.debug("Shared metrics created successfully")
+                _SHARED_METRICS_CREATED = True
+                logger.debug("Shared metrics created successfully")
 
-        except Exception as e:
-            logger.error("Failed to create shared metrics: %s", e, exc_info=True)
-            # Create dummy metrics that do nothing to avoid crashes
-            cls._shared_request_counter = None
-            cls._shared_token_counter = None
-            cls._shared_latency_histogram = None
-            cls._shared_cost_counter = None
-            cls._shared_error_counter = None
+            except Exception as e:
+                logger.error("Failed to create shared metrics: %s", e, exc_info=True)
+                # Create dummy metrics that do nothing to avoid crashes
+                cls._shared_request_counter = None
+                cls._shared_token_counter = None
+                cls._shared_latency_histogram = None
+                cls._shared_cost_counter = None
+                cls._shared_error_counter = None
 
     @abstractmethod
     def instrument(self, config: OTelConfig):
@@ -142,6 +151,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
                         # Call the original function
                         result = wrapped(*args, **kwargs)
+
+                        if self.request_counter:
+                            self.request_counter.add(1, {"operation": span.name})
 
                         # Record metrics based on the result
                         try:
@@ -224,7 +236,6 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         model = span.attributes.get("gen_ai.request.model", "unknown")
                         cost = self.cost_calculator.calculate_cost(model, usage)
                         if cost > 0:
-                            span.set_attribute("gen_ai.cost.amount", cost)
                             self.cost_counter.add(cost, {"model": str(model)})
                     except Exception as e:
                         logger.warning("Failed to calculate cost for span '%s': %s", span.name, e)
