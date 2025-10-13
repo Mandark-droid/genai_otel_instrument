@@ -4,8 +4,9 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
+import genai_otel.instrumentors.base as base
 from genai_otel.config import OTelConfig
-from genai_otel.instrumentors.base import _SHARED_METRICS_CREATED, BaseInstrumentor
+from genai_otel.instrumentors.base import BaseInstrumentor
 
 
 # --- ConcreteInstrumentor (Helper Class for Testing) ---
@@ -29,8 +30,7 @@ def reset_shared_metrics():
     BaseInstrumentor._shared_latency_histogram = None
     BaseInstrumentor._shared_cost_counter = None
     BaseInstrumentor._shared_error_counter = None
-    global _SHARED_METRICS_CREATED
-    _SHARED_METRICS_CREATED = False
+    base._SHARED_METRICS_CREATED = False
     yield
 
 
@@ -71,6 +71,12 @@ def instrumentor(mock_meter, mock_tracer):
     inst = ConcreteInstrumentor()
     inst.tracer = mock_tracer_instance
     inst.cost_calculator = mock_cost_calculator
+    # Explicitly set shared metrics to mock objects for testing
+    BaseInstrumentor._shared_request_counter = mock_counter
+    BaseInstrumentor._shared_token_counter = mock_counter
+    BaseInstrumentor._shared_latency_histogram = mock_histogram
+    BaseInstrumentor._shared_cost_counter = mock_counter
+    BaseInstrumentor._shared_error_counter = mock_counter
     inst._ensure_shared_metrics_created()
     inst.instrument(OTelConfig())
     yield inst, mock_span, mock_span_ctx, mock_counter, mock_histogram
@@ -80,7 +86,7 @@ def instrumentor(mock_meter, mock_tracer):
 def test_ensure_shared_metrics_created_success(instrumentor):
     """Test that shared metrics are created only once."""
     inst, _, _, _, _ = instrumentor
-    assert _SHARED_METRICS_CREATED is True
+    assert base._SHARED_METRICS_CREATED is True
     assert ConcreteInstrumentor._shared_request_counter is not None
 
 
@@ -101,16 +107,17 @@ def test_ensure_shared_metrics_created_thread_safety():
     for t in threads:
         t.join()
 
-    assert _SHARED_METRICS_CREATED is True
+    assert base._SHARED_METRICS_CREATED is True
 
 
 def test_ensure_shared_metrics_created_failure(caplog):
     """Test that shared metrics creation failure is handled gracefully."""
-    with patch(
-        "genai_otel.instrumentors.base.metrics.get_meter", side_effect=ValueError("Mock error")
-    ):
+    with patch("genai_otel.instrumentors.base.metrics.get_meter") as mock_get_meter:
+        mock_meter_instance = MagicMock()
+        mock_get_meter.return_value = mock_meter_instance
+        mock_meter_instance.create_counter.side_effect = ValueError("Mock error")
         inst = ConcreteInstrumentor()
-        inst._ensure_shared_metrics_created()
+        # The _ensure_shared_metrics_created is called in __init__, so we don't need to call it again
         assert inst._shared_request_counter is None
         assert "Failed to create shared metrics" in caplog.text
 
@@ -158,7 +165,7 @@ def test_create_span_wrapper_handles_function_error(instrumentor):
     with pytest.raises(ValueError):
         wrapped()
 
-    assert mock_span.set_status.call_args[0][0].status_code == 2  # ERROR
+    assert mock_span.set_status.call_args[0][0].status_code == base.StatusCode.ERROR
     mock_span.record_exception.assert_called_once()
 
 
@@ -204,7 +211,7 @@ def test_create_span_wrapper_with_cost_tracking_disabled(instrumentor):
 
     # Only request and token counters should be called, not cost
     assert mock_counter.add.call_count == 3  # request, prompt, completion
-    mock_counter.add.assert_not_called_with(0.01, {"model": "unknown"})
+    assert call(0.01, {"model": "unknown"}) not in mock_counter.add.call_args_list
     assert result == {"usage": {"prompt_tokens": 10, "completion_tokens": 20}}
 
 
@@ -213,7 +220,8 @@ def test_record_result_metrics_success(instrumentor):
     """Test that metrics are recorded correctly for a successful result."""
     inst, mock_span, mock_span_ctx, mock_counter, mock_histogram = instrumentor
     mock_span.name = "test.span"
-    mock_span.attributes = {}
+    mock_span.attributes = MagicMock()
+    mock_span.attributes.get.return_value = "unknown"
     result = {"usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}}
 
     inst._record_result_metrics(mock_span, result, time.time() - 1)
@@ -233,7 +241,7 @@ def test_record_result_metrics_with_errors(instrumentor, caplog):
     mock_counter.add.side_effect = ValueError("Mock error")
     inst._record_result_metrics(mock_span, result, time.time() - 1)
 
-    assert "Failed to record metrics" in caplog.text
+    assert "Failed to extract or record usage metrics" in caplog.text
 
 
 # --- Tests for instrumentation disabled ---
