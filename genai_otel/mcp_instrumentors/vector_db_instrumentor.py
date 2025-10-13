@@ -54,35 +54,9 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
             if hasattr(pinecone, "Pinecone"):
                 # New API (3.0+)
                 logger.info("Detected Pinecone 3.0+ API")
-                original_init = pinecone.Pinecone.__init__
-
-                def traced_init(self, *args, **kwargs):
-                    result = original_init(self, *args, **kwargs)
-                    # Wrap index method
-                    if hasattr(self, "Index"):
-                        original_index = self.Index
-
-                        def traced_index(*idx_args, **idx_kwargs):
-                            idx = original_index(*idx_args, **idx_kwargs)
-                            # Wrap index operations
-                            if hasattr(idx, "query"):
-                                idx.query = self._wrap_pinecone_method(
-                                    idx.query, "pinecone.index.query"
-                                )
-                            if hasattr(idx, "upsert"):
-                                idx.upsert = self._wrap_pinecone_method(
-                                    idx.upsert, "pinecone.index.upsert"
-                                )
-                            if hasattr(idx, "delete"):
-                                idx.delete = self._wrap_pinecone_method(
-                                    idx.delete, "pinecone.index.delete"
-                                )
-                            return idx
-
-                        self.Index = traced_index
-                    return result
-
-                pinecone.Pinecone.__init__ = traced_init
+                wrapt.wrap_function_wrapper(
+                    "pinecone", "Pinecone.__init__", self._wrap_pinecone_init
+                )
 
             elif hasattr(pinecone, "Index"):
                 # Old API (2.x)
@@ -106,11 +80,37 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
             return True
 
         except ImportError:
-            logger.debug("Pinecone not installed, skipping instrumentation")
+            logger.info("Pinecone not installed, skipping instrumentation")
             return False
         except Exception as e:
             logger.error(f"Failed to instrument Pinecone: {e}")
             return False
+
+    def _wrap_pinecone_init(self, wrapped, instance, args, kwargs):
+        """Wrapper for Pinecone.__init__ to instrument index methods."""
+        result = wrapped(*args, **kwargs)
+        if hasattr(instance, "Index"):
+            original_index = instance.Index
+
+            @wrapt.decorator
+            def traced_index(wrapped_idx, idx_instance, idx_args, idx_kwargs):
+                idx = wrapped_idx(*idx_args, **idx_kwargs)
+                if hasattr(idx_instance, "query"):
+                    idx_instance.query = self._wrap_pinecone_method(
+                        idx_instance.query, "pinecone.index.query"
+                    )
+                if hasattr(idx_instance, "upsert"):
+                    idx_instance.upsert = self._wrap_pinecone_method(
+                        idx_instance.upsert, "pinecone.index.upsert"
+                    )
+                if hasattr(idx_instance, "delete"):
+                    idx_instance.delete = self._wrap_pinecone_method(
+                        idx_instance.delete, "pinecone.index.delete"
+                    )
+                return idx
+
+            instance.Index = traced_index(original_index)
+        return result
 
     def _wrap_pinecone_method(self, original_method, operation_name):
         """Wrap a Pinecone method with tracing"""

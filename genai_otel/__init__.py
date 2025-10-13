@@ -13,7 +13,7 @@ import httpx
 from .__version__ import __author__, __email__, __license__, __version__
 
 # Re-exporting key components for easier access
-from .auto_instrument import setup_auto_instrumentation
+from .auto_instrument import setup_auto_instrumentation  # Restoring direct import
 from .config import OTelConfig
 from .cost_calculator import CostCalculator
 from .gpu_metrics import GPUMetricsCollector
@@ -90,7 +90,7 @@ __all__ = [
     "__license__",
     # Core functions
     "instrument",
-    "setup_auto_instrumentation",
+    "setup_auto_instrumentation",  # Re-added to __all__
     # Configuration
     "OTelConfig",
     # Utilities
