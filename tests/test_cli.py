@@ -36,7 +36,7 @@ def mock_sys_argv():
 @pytest.fixture
 def mock_sys_exit():
     """Mock sys.exit to prevent script termination during tests."""
-    with mock.patch("genai_otel.cli.sys.exit") as m:
+    with mock.patch("genai_otel.cli.sys.exit", side_effect=SystemExit) as m:
         yield m
 
 
@@ -80,7 +80,8 @@ def test_main_instrumentation_failure(
     # Simulate instrumentation failure
     mock_instrument.side_effect = Exception("Instrumentation failed")
 
-    cli.main()
+    with pytest.raises(SystemExit):
+        cli.main()
 
     # Verify instrumentation was called
     mock_instrument.assert_called_once()
