@@ -3,12 +3,18 @@
 import logging
 import sys
 
-from opentelemetry import metrics
+from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from .config import OTelConfig
 from .gpu_metrics import GPUMetricsCollector
 from .mcp_instrumentors import MCPInstrumentorManager
-from .otel_setup import configure_opentelemetry
 
 # Import instrumentors - fix the import path based on your actual structure
 try:
@@ -77,11 +83,38 @@ INSTRUMENTORS = {
 def setup_auto_instrumentation(config: OTelConfig):
     """
     Set up OpenTelemetry with auto-instrumentation for LLM frameworks and MCP tools.
+
+    Args:
+        config: OTelConfig instance with configuration parameters.
     """
     logger.info("Starting auto-instrumentation setup...")
 
     # Configure OpenTelemetry SDK (TracerProvider, MeterProvider, etc.)
-    configure_opentelemetry(config)
+    resource = Resource.create({"service.name": config.service_name})
+
+    # Configure Tracing
+    tracer_provider = TracerProvider(resource=resource)
+    trace.set_tracer_provider(tracer_provider)
+
+    if config.endpoint:
+        span_exporter = OTLPSpanExporter(endpoint=config.endpoint, headers=config.headers)
+        tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
+        logger.info(f"OpenTelemetry tracing configured with endpoint: {config.endpoint}")
+    else:
+        logger.warning("No OTLP endpoint configured, traces will not be exported.")
+
+    # Configure Metrics
+    if config.endpoint:
+        metric_exporter = OTLPMetricExporter(endpoint=config.endpoint, headers=config.headers)
+        metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
+        meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+        metrics.set_meter_provider(meter_provider)
+        logger.info("OpenTelemetry metrics configured")
+    else:
+        # Still set a default meter provider even if not exporting
+        meter_provider = MeterProvider(resource=resource)
+        metrics.set_meter_provider(meter_provider)
+        logger.warning("No OTLP endpoint configured, metrics will not be exported.")
 
     # Auto-instrument LLM libraries based on the configuration
     for name in config.enabled_instrumentors:
@@ -102,12 +135,10 @@ def setup_auto_instrumentation(config: OTelConfig):
     if config.enable_mcp_instrumentation:
         try:
             mcp_manager = MCPInstrumentorManager(config)
-            mcp_manager.instrument_all(config.fail_on_error)  # This is the correct method name
+            mcp_manager.instrument_all(config.fail_on_error)
             logger.info("MCP tools instrumentation enabled and set up.")
         except Exception as e:
-            logger.error(
-                f"Failed to set up MCP tools instrumentation: {e}", exc_info=True
-            )  # Fixed f-string
+            logger.error(f"Failed to set up MCP tools instrumentation: {e}", exc_info=True)
             if config.fail_on_error:
                 raise
 
@@ -124,3 +155,23 @@ def setup_auto_instrumentation(config: OTelConfig):
                 raise
 
     logger.info("Auto-instrumentation setup complete")
+
+
+def instrument(**kwargs):
+    """
+    Convenience wrapper for setup_auto_instrumentation that accepts kwargs.
+
+    Set up OpenTelemetry with auto-instrumentation for LLM frameworks and MCP tools.
+
+    Args:
+        **kwargs: Keyword arguments to configure OTelConfig. These will override
+                  environment variables.
+
+    Example:
+        >>> instrument(service_name="my-app", endpoint="http://localhost:4318")
+    """
+    # Load configuration from environment variables or use provided kwargs
+    config = OTelConfig(**kwargs)
+
+    # Call the main setup function
+    setup_auto_instrumentation(config)
