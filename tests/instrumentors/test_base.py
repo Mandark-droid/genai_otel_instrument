@@ -65,6 +65,9 @@ def instrumentor(mock_meter, mock_tracer):
     mock_meter_instance, mock_counter, mock_histogram = mock_meter
     mock_tracer_instance, mock_span, mock_span_ctx = mock_tracer
 
+    mock_span.attributes = MagicMock()
+    mock_span.attributes.get.return_value = "unknown"
+
     mock_cost_calculator = MagicMock()
     mock_cost_calculator.calculate_cost.return_value = 0.01
 
@@ -221,7 +224,9 @@ def test_record_result_metrics_success(instrumentor):
     inst, mock_span, mock_span_ctx, mock_counter, mock_histogram = instrumentor
     mock_span.name = "test.span"
     mock_span.attributes = MagicMock()
-    mock_span.attributes.get.return_value = "unknown"
+    mock_span.attributes.get.side_effect = lambda key, default: (
+        default if key == "gen_ai.request.model" else MagicMock()
+    )
     result = {"usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}}
 
     inst._record_result_metrics(mock_span, result, time.time() - 1)
