@@ -38,6 +38,7 @@ class GPUMetricsCollector:
         self.meter = meter
         self.running = False
         self.thread: Optional[threading.Thread] = None
+        self._thread: Optional[threading.Thread] = None  # Initialize _thread
         self._stop_event = threading.Event()
         self.gpu_utilization_counter: Optional[ObservableCounter] = None
         self.gpu_memory_used_gauge: Optional[ObservableGauge] = None
@@ -47,12 +48,14 @@ class GPUMetricsCollector:
         self.gpu_available = False
 
         self.device_count = 0
+        self.nvml = None
         if NVML_AVAILABLE:
             try:
                 pynvml.nvmlInit()
                 self.device_count = pynvml.nvmlDeviceGetCount()
                 if self.device_count > 0:
                     self.gpu_available = True
+                self.nvml = pynvml
             except Exception as e:
                 logger.error("Failed to initialize NVML to get device count: %s", e)
 
@@ -202,4 +205,4 @@ class GPUMetricsCollector:
             self._thread.join(timeout=5)
             logger.info("CO2 metrics collection thread stopped.")
         if self.gpu_available:
-            self.nvml.nvmlShutdown()
+            pynvml.nvmlShutdown()
