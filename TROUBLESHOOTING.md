@@ -206,6 +206,26 @@ pip install genai-otel-instrument[all]
    }
    ```
 
+```bash
+
+---
+
+### Logging Configuration
+
+**Issue**: You want to adjust the logging level or manage log file output.
+
+**Solution**:
+
+1.  **Configure Log Level**:
+    *   Set the `GENAI_OTEL_LOG_LEVEL` environment variable to your desired level (e.g., `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). If not set, it defaults to `INFO`.
+    ```bash
+    export GENAI_OTEL_LOG_LEVEL=DEBUG
+    ```
+2.  **Log File Location and Rotation**:
+    *   By default, logs are written to `logs/genai_otel.log` within your project directory.
+    *   The logging system is configured for rotation, keeping up to 10 log files, each with a maximum size of 10MB. When a log file reaches 10MB, it's rotated, and a new file is created. The oldest log file is removed when the limit of 10 files is reached.
+    *   Ensure the `logs` directory has write permissions. If the directory does not exist, it will be created automatically.
+
 ---
 
 ### Warning: "pynvml package is deprecated"

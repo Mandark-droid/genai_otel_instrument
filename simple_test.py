@@ -23,11 +23,13 @@ logging.basicConfig(
 # --- Test Configuration ---
 os.environ.setdefault("OTEL_SERVICE_NAME", "genai-test-app")
 os.environ.setdefault("GENAI_ENABLE_COST_TRACKING", "true")
-os.environ.setdefault("GENAI_ENABLE_GPU_METRICS", "true")
+os.environ.setdefault("GENAI_ENABLE_GPU_METRICS", "false")
 os.environ.setdefault("GENAI_FAIL_ON_ERROR", "false")
-# Unset endpoint to avoid export errors if no collector is running
+    # Unset endpoint to avoid export errors if no collector is running
+    # and configure NoOp exporters to prevent AttributeError when no collector is running.
 os.environ.pop("OTEL_EXPORTER_OTLP_ENDPOINT", None)
-
+os.environ.setdefault("OTEL_TRACER_PROVIDER", "noop")
+os.environ.setdefault("OTEL_METRIC_READER", "noop")
 
 def print_header(title):
     print("\n" + "=" * 70)

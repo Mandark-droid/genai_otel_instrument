@@ -51,7 +51,7 @@ class APIInstrumentor(BaseInstrumentor):
         try:
             # Wrap requests.Session.request and requests.request
             wrapt.wrap_function_wrapper(requests, "request", self._wrap_api_call)
-            wrapt.wrap_function_wrapper(requests.Session, "request", self._wrap_api_call)
+            wrapt.wrap_function_wrapper(requests.Session(), "request", self._wrap_api_call)
             logger.info("requests library instrumented for API calls.")
         except ImportError:
             logger.debug("requests library not found, skipping instrumentation.")

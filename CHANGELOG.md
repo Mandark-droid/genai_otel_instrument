@@ -7,9 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Updated logging configuration to allow log level via environment variable and implement log rotation (Issue #XXX)
+
+### Tests
+
+- fixed tests for base/redis and auto instrument (a701603)
+
 ## [0.1.0] - 2025-10-11
 
 ### Added
+
 - Initial release of genai-otel-instrument
 - Automatic instrumentation for LLM providers:
   - OpenAI
@@ -43,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional dependencies for lean installations
 
 ### Features
+
 - Automatic span creation for LLM operations
 - Token usage tracking
 - Request latency measurement
