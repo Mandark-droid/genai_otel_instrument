@@ -354,3 +354,6 @@ scripts/.coverage
 .coverage
 rough_notes.txt
 *.backup
+GEMINI.md
+otel_traces.jsonl
+node_modules
