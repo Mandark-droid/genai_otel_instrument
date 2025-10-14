@@ -65,7 +65,7 @@ dependencies = [
 [project.optional-dependencies]
 # GPU metrics support
 gpu = [
-    "pynvml>=11.5.0",
+    "nvidia-ml-py>=11.495.46",
     "codecarbon>=2.3.0"
 ]
 co2 = ["codecarbon>=2.3.0"]

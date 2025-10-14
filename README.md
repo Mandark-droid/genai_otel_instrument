@@ -1,4 +1,3 @@
-"""
 # GenAI OpenTelemetry Auto-Instrumentation
 
 Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with zero-code setup.
@@ -103,8 +102,7 @@ GENAI_ENABLE_GPU_METRICS=true
 GENAI_ENABLE_COST_TRACKING=true
 GENAI_ENABLE_MCP_INSTRUMENTATION=true
 # Logging configuration
-GENAI_LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
-GENAI_LOG_FILE=/var/log/genai-otel.log  # Optional log file
+GENAI_OTEL_LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL. Logs are written to 'logs/genai_otel.log' with rotation (10 files, 10MB each).
 
 # Error handling
 GENAI_FAIL_ON_ERROR=false  # true to fail fast, false to continue on errors
@@ -123,6 +121,10 @@ genai_otel.instrument(
     enable_mcp_instrumentation=True
 )
 ```
+
+### Sample Environment File (`sample.env`)
+
+A `sample.env` file has been generated in the project root directory. This file contains commented-out examples of all supported environment variables, along with their default values or expected formats. You can copy this file to `.env` and uncomment/modify the variables to configure the instrumentation for your specific needs.
 
 ## Example: Full-Stack GenAI App
 
