@@ -43,3 +43,15 @@ The goal is to achieve >80% coverage for each module and ensure tests are create
 - [x] genai_otel/mcp_instrumentors/manager.py (Tests Created: Yes, Coverage > 80%: No)
 - [x] genai_otel/mcp_instrumentors/redis_instrumentor.py (Tests Created: Yes, Coverage > 80%: No) - Tests fixed.
 - [x] genai_otel/mcp_instrumentors/vector_db_instrumentor.py (Tests Created: Yes, Coverage > 80%: No)
+
+## New Features
+- [ ] auto_instrument.py: Add tests for SERVICE_INSTANCE_ID and environment attributes.
+- [ ] auto_instrument.py: Add tests for configurable timeout for OTLP exporters.
+- [ ] auto_instrument.py: Add tests for SmolagentsInstrumentor, MCPInstrumentor, and LiteLLMInstrumentor.
+- [ ] auto_instrument.py: Add tests for TraceContextTextMapPropagator.
+
+## OpenInference Instrumentors
+- [ ] openinference_instrumentor.py: Add tests for basic functionality.
+- [ ] openinference_instrumentor.py: Add tests for various LLM providers via OpenInference.
+- [ ] openinference_instrumentor.py: Add tests for MCP tools via OpenInference.
+- [ ] openinference_instrumentor.py: Add tests for LiteLLM integration.

@@ -45,7 +45,7 @@ try:
         enable_gpu_metrics=True,
         enable_cost_tracking=True,
         enable_mcp_instrumentation=True,
-        fail_on_error=False  # Don't fail if no collector running
+        fail_on_error=False,  # Don't fail if no collector running
     )
     print("OK Configuration created successfully")
     print(f"  Service name: {config.service_name}")

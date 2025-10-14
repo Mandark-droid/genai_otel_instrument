@@ -10,6 +10,9 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 💰 **Cost Tracking** - Automatic cost calculation per request
 🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature
 📊 **Complete Observability** - Traces, metrics, and rich span attributes
+➕ **Service Instance ID & Environment** - Identify your services and environments
+⏱️ **Configurable Exporter Timeout** - Set timeout for OTLP exporter
+🔗 **OpenInference Instrumentors** - Smolagents, MCP, and LiteLLM instrumentation
 
 ## Quick Start
 
@@ -67,6 +70,11 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 - **Vector Databases**: Pinecone, Weaviate, Qdrant, ChromaDB, Milvus, FAISS
 - **APIs**: HTTP/REST requests (requests, httpx)
 
+### OpenInference
+- Smolagents
+- MCP
+- LiteLLM
+
 ## Collected Telemetry
 
 ### Traces
@@ -101,6 +109,9 @@ OTEL_EXPORTER_OTLP_HEADERS=x-api-key=secret
 GENAI_ENABLE_GPU_METRICS=true
 GENAI_ENABLE_COST_TRACKING=true
 GENAI_ENABLE_MCP_INSTRUMENTATION=true
+OTEL_SERVICE_INSTANCE_ID=instance-1 # Optional service instance id
+OTEL_ENVIRONMENT=production # Optional environment
+OTEL_EXPORTER_OTLP_TIMEOUT=10.0 # Optional timeout for OTLP exporter
 # Logging configuration
 GENAI_OTEL_LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL. Logs are written to 'logs/genai_otel.log' with rotation (10 files, 10MB each).
 

@@ -1,14 +1,8 @@
-"""Module for calculating estimated costs of LLM API calls.
-
-This module provides the `CostCalculator` class, which loads pricing data
-from a JSON file and uses it to estimate the cost of LLM requests based on
-model name and token usage. It includes logic for normalizing model names
-to match pricing keys.
-"""
+"""Module for calculating estimated costs of LLM API calls."""
 
 import json
 import logging
-from typing import Dict
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -20,24 +14,18 @@ class CostCalculator:
 
     def __init__(self):
         """Initializes the CostCalculator by loading pricing data from a JSON file."""
-        self.pricing_data: Dict[str, Dict[str, float]] = {}
+        self.pricing_data: Dict[str, Any] = {}
         self._load_pricing()
 
     def _load_pricing(self):
-        """Load pricing data from the JSON configuration file.
-
-        Uses importlib.resources for Python 3.9+ or importlib_resources for older versions.
-        Falls back to pkg_resources if neither is available.
-        """
+        """Load pricing data from the JSON configuration file."""
         try:
-            # Try Python 3.9+ importlib.resources
             try:
                 from importlib.resources import files
 
                 pricing_file = files("genai_otel").joinpath(self.DEFAULT_PRICING_FILE)
                 data = json.loads(pricing_file.read_text(encoding="utf-8"))
             except (ImportError, AttributeError):
-                # Fallback for Python 3.8
                 try:
                     import importlib_resources
 
@@ -46,7 +34,6 @@ class CostCalculator:
                     )
                     data = json.loads(pricing_file.read_text(encoding="utf-8"))
                 except ImportError:
-                    # Final fallback to pkg_resources
                     import pkg_resources
 
                     pricing_file_path = pkg_resources.resource_filename(
@@ -55,15 +42,11 @@ class CostCalculator:
                     with open(pricing_file_path, "r", encoding="utf-8") as f:
                         data = json.load(f)
 
-            if "models" in data and isinstance(data["models"], dict):
-                self.pricing_data = data["models"]
-                logger.info(
-                    "Successfully loaded pricing data for %d models", len(self.pricing_data)
-                )
+            if isinstance(data, dict):
+                self.pricing_data = data
+                logger.info("Successfully loaded pricing data.")
             else:
-                logger.error(
-                    "Invalid format in pricing file. 'models' key not found or not a dictionary."
-                )
+                logger.error("Invalid format in pricing file. Root element is not a dictionary.")
         except FileNotFoundError:
             logger.warning(
                 "Pricing file '%s' not found. Cost tracking will be disabled.",
@@ -76,50 +59,127 @@ class CostCalculator:
         except Exception as e:
             logger.error("An unexpected error occurred while loading pricing: %s", e, exc_info=True)
 
-    def calculate_cost(self, model: str, usage: Dict[str, int]) -> float:
-        """Calculate cost in USD for a request based on model and token usage.
-
-        Args:
-            model (str): The name of the LLM model used.
-            usage (Dict[str, int]): A dictionary containing token usage, expected keys are
-                                    'prompt_tokens' and 'completion_tokens'.
-
-        Returns:
-            float: The estimated cost in USD, or 0.0 if pricing is unavailable or calculation fails.
-        """
+    def calculate_cost(
+        self,
+        model: str,
+        usage: Dict[str, Any],
+        call_type: str,
+    ) -> float:
+        """Calculate cost in USD for a request based on model, usage, and call type."""
         if not self.pricing_data:
             return 0.0
 
-        model_key = self._normalize_model_name(model)
+        if call_type == "chat":
+            return self._calculate_chat_cost(model, usage)
+        if call_type == "embedding":
+            return self._calculate_embedding_cost(model, usage)
+        if call_type == "image":
+            return self._calculate_image_cost(model, usage)
+        if call_type == "audio":
+            return self._calculate_audio_cost(model, usage)
 
-        if model_key not in self.pricing_data:
-            logger.debug("Pricing not found for model: %s (normalized: %s)", model, model_key)
+        logger.warning("Unknown call type '%s' for cost calculation.", call_type)
+        return 0.0
+
+    def _calculate_chat_cost(self, model: str, usage: Dict[str, int]) -> float:
+        """Calculate cost for chat models."""
+        model_key = self._normalize_model_name(model, "chat")
+        if not model_key:
+            logger.debug("Pricing not found for chat model: %s", model)
             return 0.0
 
-        pricing = self.pricing_data[model_key]
-        prompt_cost = (usage.get("prompt_tokens", 0) / 1_000_000) * pricing.get("prompt", 0.0)
-        completion_cost = (usage.get("completion_tokens", 0) / 1_000_000) * pricing.get(
-            "completion", 0.0
-        )
+        pricing = self.pricing_data["chat"][model_key]
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+
+        prompt_cost = (prompt_tokens / 1000) * pricing.get("promptPrice", 0.0)
+        completion_cost = (completion_tokens / 1000) * pricing.get("completionPrice", 0.0)
 
         return prompt_cost + completion_cost
 
-    def _normalize_model_name(self, model: str) -> str:
-        """Normalize model name to match pricing keys.
+    def _calculate_embedding_cost(self, model: str, usage: Dict[str, int]) -> float:
+        """Calculate cost for embedding models."""
+        model_key = self._normalize_model_name(model, "embeddings")
+        if not model_key:
+            logger.debug("Pricing not found for embedding model: %s", model)
+            return 0.0
 
-        Attempts to find a key in the pricing data that is a substring of the model name.
-        Prioritizes longer matches to avoid incorrect partial matches.
+        price_per_1k_tokens = self.pricing_data["embeddings"][model_key]
+        total_tokens = usage.get("prompt_tokens", 0) or usage.get("total_tokens", 0)
+        return (total_tokens / 1000) * price_per_1k_tokens
 
-        Args:
-            model (str): The input model name.
+    def _calculate_image_cost(self, model: str, usage: Dict[str, Any]) -> float:
+        """Calculate cost for image generation models."""
+        model_key = self._normalize_model_name(model, "images")
+        if not model_key:
+            logger.debug("Pricing not found for image model: %s", model)
+            return 0.0
 
-        Returns:
-            str: The normalized model name that matches a key in the pricing data,
-                 or the original model name if no match is found.
-        """
+        pricing_info = self.pricing_data["images"][model_key]
+        quality = usage.get("quality", "standard")
+        size = usage.get("size")
+        n = usage.get("n", 1)
+
+        if quality not in pricing_info:
+            logger.warning("Quality '%s' not found for image model %s", quality, model_key)
+            return 0.0
+
+        # Handle pricing per million pixels
+        if "1000000" in pricing_info[quality]:
+            price_per_million_pixels = pricing_info[quality]["1000000"]
+            height = usage.get("height", 0)
+            width = usage.get("width", 0)
+            return (height * width / 1_000_000) * price_per_million_pixels * n
+
+        if not size:
+            logger.warning("Image size not provided for model %s", model_key)
+            return 0.0
+
+        if size not in pricing_info[quality]:
+            logger.warning(
+                "Size '%s' not found for image model %s with quality '%s'", size, model_key, quality
+            )
+            return 0.0
+
+        price_per_image = pricing_info[quality][size]
+        return price_per_image * n
+
+    def _calculate_audio_cost(self, model: str, usage: Dict[str, int]) -> float:
+        """Calculate cost for audio models."""
+        model_key = self._normalize_model_name(model, "audio")
+        if not model_key:
+            logger.debug("Pricing not found for audio model: %s", model)
+            return 0.0
+
+        pricing = self.pricing_data["audio"][model_key]
+
+        if "characters" in usage:
+            # Price is per 1000 characters
+            return (usage["characters"] / 1000) * pricing
+        if "seconds" in usage:
+            # Price is per second
+            return usage["seconds"] * pricing
+
+        logger.warning(
+            "Could not determine usage unit for audio model %s. Expected 'characters' or 'seconds'.",
+            model_key,
+        )
+        return 0.0
+
+    def _normalize_model_name(self, model: str, category: str) -> Optional[str]:
+        """Normalize model name to match pricing keys for a specific category."""
+        if category not in self.pricing_data:
+            return None
+
         model = model.lower()
-        sorted_keys = sorted(self.pricing_data.keys(), key=len, reverse=True)
+
+        # Exact match
+        if model in self.pricing_data[category]:
+            return model
+
+        # Substring match
+        sorted_keys = sorted(self.pricing_data[category].keys(), key=len, reverse=True)
         for key in sorted_keys:
             if key in model:
                 return key
-        return model
+        return None

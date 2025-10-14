@@ -2,23 +2,22 @@ from setuptools import setup, find_packages
 import os
 
 # Read the README
-with open('README.md', 'r', encoding='utf-8') as f:
+with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
 # Read version from __version__.py
 version = {}
-with open(os.path.join('genai_otel', '__version__.py'), 'r', encoding='utf-8') as f:
+with open(os.path.join("genai_otel", "__version__.py"), "r", encoding="utf-8") as f:
     exec(f.read(), version)
 
 setup(
     name="genai-otel-instrument",
-    version=version['__version__'],
-    packages=find_packages(exclude=['tests', 'tests.*', 'docs']),
+    version=version["__version__"],
+    packages=find_packages(exclude=["tests", "tests.*", "docs"]),
     include_package_data=True,
     package_data={
-        'genai_otel': ['llm_pricing.json', 'py.typed'],
+        "genai_otel": ["llm_pricing.json", "py.typed"],
     },
-
     # CORE DEPENDENCIES ONLY - Absolutely minimal!
     install_requires=[
         "opentelemetry-api>=1.20.0,<2.0.0",
@@ -27,15 +26,19 @@ setup(
         "opentelemetry-exporter-otlp-proto-http>=1.20.0,<2.0.0",
         "opentelemetry-semantic-conventions>=0.41b0",
         "wrapt>=1.14.0",
+        "openinference-instrumentation==0.1.31",
+        "openinference-instrumentation-litellm==0.1.19",
+        "openinference-instrumentation-mcp==1.3.0",
+        "openinference-instrumentation-smolagents==0.1.11",
+        "openinference-semantic-conventions==0.1.17",
         # Don't pin protobuf - let OpenTelemetry manage it
     ],
-
     # Optional dependencies
     extras_require={
         # GPU metrics support
         "gpu": [
             "nvidia-ml-py>=11.495.46",
-             "codecarbon>=2.3.0",
+            "codecarbon>=2.3.0",
         ],
         "co2": ["codecarbon>=2.3.0"],
         # Individual LLM providers
@@ -50,19 +53,16 @@ setup(
         "groq": ["groq>=0.4.0"],
         "ollama": ["ollama>=0.1.0"],
         "replicate": ["replicate>=0.15.0"],
-
         # LLM Frameworks
         "langchain": ["langchain>=0.1.0"],
         "llamaindex": ["llama-index>=0.9.0"],
         "huggingface": ["transformers>=4.30.0"],
-
         # HTTP instrumentation
         "http": [
             "opentelemetry-instrumentation-requests>=0.41b0",
             "opentelemetry-instrumentation-httpx>=0.41b0",
             "httpx>=0.23.0",
         ],
-
         # Database instrumentations - FIXED versions to avoid protobuf conflicts
         "databases": [
             "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
@@ -74,19 +74,16 @@ setup(
             "opentelemetry-instrumentation-psycopg2>=0.41b0",
             "psycopg2-binary>=2.9.0",
         ],
-
         # MySQL separate (has protobuf conflict)
         "mysql": [
             "opentelemetry-instrumentation-mysql>=0.41b0",
             "mysql-connector-python>=8.0.0,<9.0.0",  # v9+ uses protobuf 5.x
         ],
-
         # Message queue instrumentation
         "messaging": [
             "opentelemetry-instrumentation-kafka-python>=0.41b0",
             "kafka-python>=2.0.0",
         ],
-
         # Vector databases
         "vector-dbs": [
             "pinecone-client>=2.0.0",
@@ -96,7 +93,6 @@ setup(
             "pymilvus>=2.3.0",
             "faiss-cpu>=1.7.0",
         ],
-
         # All LLM providers
         "all-providers": [
             "openai>=1.0.0",
@@ -114,7 +110,6 @@ setup(
             "llama-index>=0.9.0",
             "transformers>=4.30.0",
         ],
-
         # All MCP tools (excluding MySQL to avoid conflicts)
         "all-mcp": [
             "opentelemetry-instrumentation-requests>=0.41b0",
@@ -137,7 +132,6 @@ setup(
             "pymilvus>=2.3.0",
             "faiss-cpu>=1.7.0",
         ],
-
         # Everything (excluding MySQL by default due to conflicts)
         "all": [
             # LLM providers
@@ -180,8 +174,12 @@ setup(
             "chromadb>=0.4.0",
             "pymilvus>=2.3.0",
             "faiss-cpu>=1.7.0",
+            "openinference-instrumentation==0.1.31",
+            "openinference-instrumentation-litellm==0.1.19",
+            "openinference-instrumentation-mcp==1.3.0",
+            "openinference-instrumentation-smolagents==0.1.11",
+            "openinference-semantic-conventions==0.1.17",
         ],
-
         # Development dependencies
         "dev": [
             "pytest>=7.0.0",
@@ -196,13 +194,11 @@ setup(
             "twine>=4.0.0",
         ],
     },
-
     entry_points={
         "console_scripts": [
             "genai-instrument=genai_otel.cli:main",
         ],
     },
-
     # Metadata
     author="Kshitij Thakkar",
     author_email="kshitijthakkar@rocketmail.com",

@@ -6,7 +6,9 @@ import logging
 import genai_otel
 
 # Configure logging for the example
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 # --- Setup Auto-Instrumentation ---
 # Option 1: Using environment variables (recommended for zero-code setup)
@@ -78,7 +80,7 @@ if openai:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": "Hello! What is OpenTelemetry?"}],
-            max_tokens=100
+            max_tokens=100,
         )
         print(f"OpenAI Response (first 50 chars): {response.choices[0].message.content[:50]}...")
         print(f"OpenAI Usage: {response.usage}")
@@ -94,15 +96,14 @@ if anthropic:
         message = client.messages.create(
             model="claude-3-haiku-20240307",
             max_tokens=100,
-            messages=[
-                {
-                    "role": "user",
-                    "content": "Explain the concept of distributed tracing."
-                }
-            ]
+            messages=[{"role": "user", "content": "Explain the concept of distributed tracing."}],
         )
         # Handle both TextBlock and string content
-        content_text = message.content[0].text if hasattr(message.content[0], 'text') else str(message.content[0])
+        content_text = (
+            message.content[0].text
+            if hasattr(message.content[0], "text")
+            else str(message.content[0])
+        )
         print(f"Anthropic Response (first 50 chars): {content_text[:50]}...")
         print(f"Anthropic Usage: {message.usage}")
     except Exception as e:
@@ -115,7 +116,7 @@ if genai:
         print("\n--- Testing Google AI (Gemini) ---")
         # Ensure you have GOOGLE_API_KEY set in your environment or provide it here
         # genai.configure(api_key="YOUR_API_KEY")
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel("gemini-pro")
         response = model.generate_content("What are the benefits of observability?")
         print(f"Gemini Response (first 50 chars): {response.text[:50]}...")
         print(f"Gemini Usage: {response.usage_metadata}")
@@ -144,9 +145,9 @@ try:
     if redis:
         try:
             print("Testing redis instrumentation...")
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis(host="localhost", port=6379, decode_responses=True)
             r.ping()
-            r.set('example_key', 'example_value')
+            r.set("example_key", "example_value")
             print(f"Redis set: {r.get('example_key')}")
         except redis.exceptions.ConnectionError as e:
             print(f"Redis connection error: {e}. Ensure Redis is running on localhost:6379.")
@@ -198,6 +199,8 @@ except Exception as e:
 
 print("\n--- Example Usage Finished ---")
 print("\nNote: To test with actual API calls, ensure you have:")
-print("  - API keys set in environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY)")
+print(
+    "  - API keys set in environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY)"
+)
 print("  - Required services running (Redis, PostgreSQL, Kafka, etc.)")
 print("  - An OpenTelemetry collector endpoint configured (OTEL_EXPORTER_OTLP_ENDPOINT)")

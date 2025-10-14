@@ -79,9 +79,90 @@ class OTelConfig:
     enable_co2_tracking: bool = field(
         default_factory=lambda: os.getenv("GENAI_ENABLE_CO2_TRACKING", "false").lower() == "true"
     )
+    exporter_timeout: float = field(
+        default_factory=lambda: float(os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "60.0"))
+    )
     carbon_intensity: float = field(
         default_factory=lambda: float(os.getenv("GENAI_CARBON_INTENSITY", "475.0"))
     )  # gCO2e/kWh
+
+
+import os
+
+from opentelemetry import trace
+from opentelemetry.sdk.resources import (  # noqa: F401
+    DEPLOYMENT_ENVIRONMENT,
+    SERVICE_NAME,
+    TELEMETRY_SDK_NAME,
+    Resource,
+)
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    ConsoleSpanExporter,
+    SimpleSpanProcessor,
+)
+
+if os.environ.get("OTEL_EXPORTER_OTLP_PROTOCOL") == "grpc":
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+else:
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+# Global flag to check if the tracer provider initialization is complete.
+TRACER_SET = False
+
+
+def setup_tracing(
+    config: "OTelConfig",  # Use OTelConfig from this module
+    tracer_name: str,
+    disable_batch: bool = False,
+):
+    """
+    Sets up tracing with OpenTelemetry.
+    Initializes the tracer provider and configures the span processor and exporter.
+    """
+
+    # pylint: disable=global-statement
+    global TRACER_SET
+
+    try:
+        # Disable Haystack Auto Tracing
+        os.environ["HAYSTACK_AUTO_TRACE_ENABLED"] = "false"
+
+        if not TRACER_SET:
+            # Create a resource with the service name attribute.
+            resource = Resource.create(
+                attributes={
+                    SERVICE_NAME: config.service_name,
+                    DEPLOYMENT_ENVIRONMENT: os.getenv("ENVIRONMENT", "dev"),
+                    TELEMETRY_SDK_NAME: "openlit",
+                }
+            )
+
+            # Initialize the TracerProvider with the created resource.
+            trace.set_tracer_provider(TracerProvider(resource=resource))
+
+            # Configure the span exporter and processor based on whether the endpoint is effectively set.
+            if config.endpoint:
+                span_exporter = OTLPSpanExporter(headers=config.headers)
+                span_processor = (
+                    BatchSpanProcessor(span_exporter)
+                    if not disable_batch
+                    else SimpleSpanProcessor(span_exporter)
+                )
+            else:
+                span_exporter = ConsoleSpanExporter()
+                span_processor = SimpleSpanProcessor(span_exporter)
+
+            trace.get_tracer_provider().add_span_processor(span_processor)
+
+            TRACER_SET = True
+
+        return trace.get_tracer(tracer_name)
+
+    except Exception as e:
+        logger.error("Failed to initialize OpenTelemetry: %s", e, exc_info=True)
+        return None
 
     def __post_init__(self):
         """Post-initialization hook to parse headers from environment variable."""
