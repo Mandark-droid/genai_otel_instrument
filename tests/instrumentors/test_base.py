@@ -44,11 +44,14 @@ def instrumentor():
         mock_get_tracer.return_value = mock_tracer
         mock_span = MagicMock()
         mock_span.name = "test.span"  # Set a default name for the span
+        # FIX: Mock the attributes.get method of the mock_span
+        mock_span.attributes.get.return_value = (
+            "test_model"  # This should make it available when _record_result_metrics is called
+        )
         mock_span_ctx = MagicMock()
         mock_span_ctx.__enter__.return_value = mock_span
         mock_span_ctx.__exit__.return_value = None
         mock_tracer.start_as_current_span.return_value = mock_span_ctx
-
         inst = ConcreteInstrumentor()
         inst.instrument(OTelConfig())
 

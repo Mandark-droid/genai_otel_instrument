@@ -7,13 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Support for `SERVICE_INSTANCE_ID` and environment attributes in resource creation (Issue #XXX)
+- Configurable timeout for OTLP exporters via `OTEL_EXPORTER_OTLP_TIMEOUT` environment variable (Issue #XXX)
+- Added openinference instrumentation dependencies: `openinference-instrumentation==0.1.31`, `openinference-instrumentation-litellm==0.1.19`, `openinference-instrumentation-mcp==1.3.0`, `openinference-instrumentation-smolagents==0.1.11`, and `openinference-semantic-conventions==0.1.17` (Issue #XXX)
+- Explicit configuration of `TraceContextTextMapPropagator` for W3C trace context propagation (Issue #XXX)
+
 ### Changed
 
 - Updated logging configuration to allow log level via environment variable and implement log rotation (Issue #XXX)
 
 ### Tests
 
-- fixed tests for base/redis and auto instrument (a701603)
+- Fixed tests for base/redis and auto instrument (a701603)
 
 ## [0.1.0] - 2025-10-11
 
