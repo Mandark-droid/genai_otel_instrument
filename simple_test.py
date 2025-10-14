@@ -10,26 +10,27 @@ import os
 import sys
 from unittest.mock import patch
 from genai_otel.config import OTelConfig
+
 # Fix encoding for Windows console
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 # --- Test Configuration ---
 os.environ.setdefault("OTEL_SERVICE_NAME", "genai-test-app")
-os.environ.setdefault("GENAI_ENABLE_COST_TRACKING", "true")
+os.environ.setdefault("GENAI_ENABLE_COST_TRACKING", "false")
 os.environ.setdefault("GENAI_ENABLE_GPU_METRICS", "false")
 os.environ.setdefault("GENAI_FAIL_ON_ERROR", "false")
-    # Unset endpoint to avoid export errors if no collector is running
-    # and configure NoOp exporters to prevent AttributeError when no collector is running.
-os.environ.pop("OTEL_EXPORTER_OTLP_ENDPOINT", None)
+# Unset endpoint to avoid export errors if no collector is running
+# and configure NoOp exporters to prevent AttributeError when no collector is running.
+os.environ.pop("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
 os.environ.setdefault("OTEL_TRACER_PROVIDER", "noop")
 os.environ.setdefault("OTEL_METRIC_READER", "noop")
+
 
 def print_header(title):
     print("\n" + "=" * 70)
@@ -124,12 +125,12 @@ def main():
     }
     for component, attribute in checks.items():
         try:
-            parts = attribute.split('.')
+            parts = attribute.split(".")
             module = __import__(parts[0])
             obj = module
             for part in parts[1:]:
                 obj = getattr(obj, part)
-            
+
             # Check if the object has been wrapped by OpenTelemetry
             if hasattr(obj, "__wrapped__"):
                 print_status(f"{component}: Instrumented")
@@ -150,6 +151,4 @@ def main():
 if __name__ == "__main__":
     main()
     print("\nDone!")
-    print(
-        "\nNote: Any OTLP export errors at the end are expected if no collector is running."
-    )
+    print("\nNote: Any OTLP export errors at the end are expected if no collector is running.")
