@@ -3,6 +3,9 @@
 import logging
 import sys
 
+from openinference.instrumentation.litellm import LiteLLMInstrumentor
+from openinference.instrumentation.mcp import MCPInstrumentor
+from openinference.instrumentation.smolagents import SmolagentsInstrumentor
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -77,6 +80,9 @@ INSTRUMENTORS = {
     "langchain": LangChainInstrumentor,
     "llama_index": LlamaIndexInstrumentor,
     "transformers": HuggingFaceInstrumentor,
+    "smolagents": SmolagentsInstrumentor,
+    "mcp": MCPInstrumentor,
+    "litellm": LiteLLMInstrumentor,
 }
 
 
@@ -90,22 +96,51 @@ def setup_auto_instrumentation(config: OTelConfig):
     logger.info("Starting auto-instrumentation setup...")
 
     # Configure OpenTelemetry SDK (TracerProvider, MeterProvider, etc.)
-    resource = Resource.create({"service.name": config.service_name})
+    import os
+
+    service_instance_id = os.getenv("OTEL_SERVICE_INSTANCE_ID")
+    environment = os.getenv("OTEL_ENVIRONMENT")
+    resource_attributes = {"service.name": config.service_name}
+    if service_instance_id:
+        resource_attributes["service.instance.id"] = service_instance_id
+    if environment:
+        resource_attributes["environment"] = environment
+    resource = Resource.create(resource_attributes)
 
     # Configure Tracing
     tracer_provider = TracerProvider(resource=resource)
     trace.set_tracer_provider(tracer_provider)
+    from opentelemetry.propagate import set_global_textmap
+    from opentelemetry.trace.propagation.tracecontext import (
+        TraceContextTextMapPropagator,
+    )
+
+    set_global_textmap(TraceContextTextMapPropagator())
 
     if config.endpoint:
-        span_exporter = OTLPSpanExporter(endpoint=config.endpoint, headers=config.headers)
+        import os
+
+        timeout = float(os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "10.0"))
+        span_exporter = OTLPSpanExporter(
+            endpoint=config.endpoint, headers=config.headers, timeout=timeout
+        )
         tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
         logger.info(f"OpenTelemetry tracing configured with endpoint: {config.endpoint}")
-    else:
         logger.warning("No OTLP endpoint configured, traces will not be exported.")
 
     # Configure Metrics
+    import os
+
+    timeout = float(os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "10.0"))
+    span_exporter = OTLPSpanExporter(
+        endpoint=config.endpoint, headers=config.headers, timeout=timeout
+    )
+    tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
+    logger.info(f"OpenTelemetry tracing configured with endpoint: {config.endpoint}")
     if config.endpoint:
-        metric_exporter = OTLPMetricExporter(endpoint=config.endpoint, headers=config.headers)
+        metric_exporter = OTLPMetricExporter(
+            endpoint=config.endpoint, headers=config.headers, timeout=timeout
+        )
         metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
         meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
         metrics.set_meter_provider(meter_provider)
