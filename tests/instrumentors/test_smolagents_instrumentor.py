@@ -37,7 +37,7 @@ def test_smolagents_instrumentor_integration(MockSmolagentsInstrumentor):
         ), patch(
             "genai_otel.auto_instrument.BatchSpanProcessor"
         ), patch(
-            "opentelemetry.propagators.textmap.TraceContextTextMapPropagator"
+            "opentelemetry.trace.propagation.tracecontext.TraceContextTextMapPropagator"
         ), patch(
             "genai_otel.auto_instrument.OTLPMetricExporter"
         ), patch(
