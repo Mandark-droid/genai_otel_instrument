@@ -1,5 +1,6 @@
 # tests/test_auto_instrument.py
 import logging
+import os
 from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
@@ -115,62 +116,67 @@ class TestAutoInstrumentation:
         mock_periodic_exporting_metric_reader.return_value = mock_metric_reader_instance
         mock_span_processor_instance = MagicMock()
         mock_batch_span_processor.return_value = mock_span_processor_instance
-        # Act
-        with patch("genai_otel.auto_instrument.logger") as mock_logger:
-            with patch("genai_otel.auto_instrument.trace") as mock_trace:
-                with patch("genai_otel.auto_instrument.metrics") as mock_metrics:
-                    mock_metrics.get_meter_provider.return_value = mock_meter_provider_instance
-                    setup_auto_instrumentation(config)
-                    # Assertions
-                    mock_resource.create.assert_called_once_with({"service.name": "test-service"})
-                    mock_tracer_provider_class.assert_called_once_with(
-                        resource=mock_resource_instance
-                    )
-                    mock_trace.set_tracer_provider.assert_called_once_with(
-                        mock_tracer_provider_instance
-                    )
-                    mock_otlp_span_exporter.assert_called_once_with(
-                        endpoint="http://localhost:4318", headers=config.headers
-                    )
-                    mock_batch_span_processor.assert_called_once_with(mock_span_exporter_instance)
-                    mock_tracer_provider_instance.add_span_processor.assert_called_once_with(
-                        mock_span_processor_instance
-                    )
-                    mock_otlp_metric_exporter.assert_called_once_with(
-                        endpoint="http://localhost:4318", headers=config.headers
-                    )
-                    mock_periodic_exporting_metric_reader.assert_called_once_with(
-                        exporter=mock_metric_exporter_instance
-                    )
-                    mock_meter_provider_class.assert_called_once_with(
-                        resource=mock_resource_instance,
-                        metric_readers=[mock_metric_reader_instance],
-                    )
-                    mock_metrics.set_meter_provider.assert_called_once_with(
-                        mock_meter_provider_instance
-                    )
-                    mock_openai_instance.instrument.assert_called_once_with(config=config)
-                    mock_anthropic_instance.instrument.assert_called_once_with(config=config)
-                    mock_google_instance.assert_not_called()
-                    mock_gpu_collector.assert_called_once_with(mock_meter, config)
-                    mock_gpu_collector.return_value.start.assert_called_once()
-                    mock_mcp_manager.assert_called_once_with(config)
-                    mock_mcp_manager.return_value.instrument_all.assert_called_once_with(
-                        config.fail_on_error
-                    )
-                    # Check log messages
-                    mock_logger.info.assert_any_call("Starting auto-instrumentation setup...")
-                    mock_logger.info.assert_any_call(
-                        "OpenTelemetry tracing configured with endpoint: http://localhost:4318"
-                    )
-                    mock_logger.info.assert_any_call("OpenTelemetry metrics configured")
-                    mock_logger.info.assert_any_call("openai instrumentation enabled")
-                    mock_logger.info.assert_any_call("anthropic instrumentation enabled")
-                    mock_logger.info.assert_any_call(
-                        "MCP tools instrumentation enabled and set up."
-                    )
-                    mock_logger.info.assert_any_call("GPU metrics collection started.")
-                    mock_logger.info.assert_any_call("Auto-instrumentation setup complete")
+        with patch.dict("os.environ", {"OTEL_EXPORTER_OTLP_TIMEOUT": "10.0"}):
+            # Act
+            with patch("genai_otel.auto_instrument.logger") as mock_logger:
+                with patch("genai_otel.auto_instrument.trace") as mock_trace:
+                    with patch("genai_otel.auto_instrument.metrics") as mock_metrics:
+                        mock_metrics.get_meter_provider.return_value = mock_meter_provider_instance
+                        setup_auto_instrumentation(config)
+                        # Assertions
+                        mock_resource.create.assert_called_once_with(
+                            {"service.name": "test-service"}
+                        )
+                        mock_tracer_provider_class.assert_called_once_with(
+                            resource=mock_resource_instance
+                        )
+                        mock_trace.set_tracer_provider.assert_called_once_with(
+                            mock_tracer_provider_instance
+                        )
+                        mock_otlp_span_exporter.assert_called_once_with(
+                            endpoint="http://localhost:4318", headers=config.headers, timeout=10.0
+                        )
+                        mock_batch_span_processor.assert_called_once_with(
+                            mock_span_exporter_instance
+                        )
+                        mock_tracer_provider_instance.add_span_processor.assert_called_once_with(
+                            mock_span_processor_instance
+                        )
+                        mock_otlp_metric_exporter.assert_called_once_with(
+                            endpoint="http://localhost:4318", headers=config.headers, timeout=10.0
+                        )
+                        mock_periodic_exporting_metric_reader.assert_called_once_with(
+                            exporter=mock_metric_exporter_instance
+                        )
+                        mock_meter_provider_class.assert_called_once_with(
+                            resource=mock_resource_instance,
+                            metric_readers=[mock_metric_reader_instance],
+                        )
+                        mock_metrics.set_meter_provider.assert_called_once_with(
+                            mock_meter_provider_instance
+                        )
+                        mock_openai_instance.instrument.assert_called_once_with(config=config)
+                        mock_anthropic_instance.instrument.assert_called_once_with(config=config)
+                        mock_google_instance.assert_not_called()
+                        mock_gpu_collector.assert_called_once_with(mock_meter, config)
+                        mock_gpu_collector.return_value.start.assert_called_once()
+                        mock_mcp_manager.assert_called_once_with(config)
+                        mock_mcp_manager.return_value.instrument_all.assert_called_once_with(
+                            config.fail_on_error
+                        )
+                        # Check log messages
+                        mock_logger.info.assert_any_call("Starting auto-instrumentation setup...")
+                        mock_logger.info.assert_any_call(
+                            "OpenTelemetry tracing configured with endpoint: http://localhost:4318"
+                        )
+                        mock_logger.info.assert_any_call("OpenTelemetry metrics configured")
+                        mock_logger.info.assert_any_call("openai instrumentation enabled")
+                        mock_logger.info.assert_any_call("anthropic instrumentation enabled")
+                        mock_logger.info.assert_any_call(
+                            "MCP tools instrumentation enabled and set up."
+                        )
+                        mock_logger.info.assert_any_call("GPU metrics collection started.")
+                        mock_logger.info.assert_any_call("Auto-instrumentation setup complete")
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
     @patch("genai_otel.auto_instrument.OTLPMetricExporter")
