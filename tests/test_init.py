@@ -31,8 +31,7 @@ def test_instrument_success():
                     mock_setup_meter.assert_called_once_with(
                         "test-service",
                         "dev",  # from os.getenv("ENVIRONMENT", "dev")
-                        None,
-                        "http://test-endpoint",
+                        mock_config_instance.endpoint,
                         {},
                     )
                     mock_logger.info.assert_called_once_with(
@@ -61,7 +60,7 @@ def test_instrument_with_kwargs():
                     )
                     mock_setup_auto_instrumentation.assert_called_once_with(mock_config_instance)
                     mock_setup_meter.assert_called_once_with(
-                        "my-test-app", "dev", None, "http://localhost:8080", {}
+                        "my-test-app", "dev", mock_config_instance.endpoint, {}
                     )
                     mock_logger.info.assert_called_once_with(
                         "GenAI OpenTelemetry instrumentation initialized successfully"
@@ -202,7 +201,7 @@ def test_instrument_metrics_setup_failure():
                     mock_otel_config.assert_called_once_with()
                     mock_setup_auto_instrumentation.assert_called_once_with(mock_config_instance)
                     mock_setup_meter.assert_called_once_with(
-                        "test-service", "dev", None, "http://test-endpoint", {}
+                        "test-service", "dev", mock_config_instance.endpoint, {}
                     )
                     # Check that metrics error was logged
                     mock_logger.error.assert_any_call(

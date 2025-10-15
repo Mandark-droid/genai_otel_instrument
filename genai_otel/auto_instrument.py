@@ -117,6 +117,7 @@ def setup_auto_instrumentation(config: OTelConfig):
 
     set_global_textmap(TraceContextTextMapPropagator())
 
+    logger.debug(f"OTelConfig endpoint: {config.endpoint}")
     if config.endpoint:
         # Convert timeout to float safely
         timeout_str = os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "10.0")
@@ -142,9 +143,6 @@ def setup_auto_instrumentation(config: OTelConfig):
         logger.info("OpenTelemetry metrics configured")
     else:
         logger.warning("No OTLP endpoint configured, traces will not be exported.")
-        # Still set a default meter provider even if not exporting
-        meter_provider = MeterProvider(resource=resource)
-        metrics.set_meter_provider(meter_provider)
         logger.warning("No OTLP endpoint configured, metrics will not be exported.")
 
     # Auto-instrument LLM libraries based on the configuration
