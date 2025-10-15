@@ -167,9 +167,11 @@ class TestAutoInstrumentation:
                         # Check log messages
                         mock_logger.info.assert_any_call("Starting auto-instrumentation setup...")
                         mock_logger.info.assert_any_call(
-                            "OpenTelemetry tracing configured with endpoint: http://localhost:4318"
+                            "OpenTelemetry tracing configured with OTLP endpoint: http://localhost:4318"
                         )
-                        mock_logger.info.assert_any_call("OpenTelemetry metrics configured")
+                        mock_logger.info.assert_any_call(
+                            "OpenTelemetry metrics configured with OTLP exporter"
+                        )
                         mock_logger.info.assert_any_call("openai instrumentation enabled")
                         mock_logger.info.assert_any_call("anthropic instrumentation enabled")
                         mock_logger.info.assert_any_call(
@@ -221,11 +223,11 @@ class TestAutoInstrumentation:
                     mock_otlp_metric_exporter.assert_not_called()
                     mock_logger.info.assert_any_call("Starting auto-instrumentation setup...")
                     mock_logger.info.assert_any_call("Auto-instrumentation setup complete")
-                    mock_logger.warning.assert_any_call(
-                        "No OTLP endpoint configured, traces will not be exported."
+                    mock_logger.info.assert_any_call(
+                        "No OTLP endpoint configured, traces will be exported to console."
                     )
-                    mock_logger.warning.assert_any_call(
-                        "No OTLP endpoint configured, metrics will not be exported."
+                    mock_logger.info.assert_any_call(
+                        "No OTLP endpoint configured, metrics will be exported to console."
                     )
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
@@ -781,7 +783,14 @@ class TestEdgeCases:
                                     mock_meter_provider_class.assert_called_once()
 
                             # Should log warnings about no endpoint
-                            warning_logs = [
-                                args[0][0] for args in mock_logger.warning.call_args_list
-                            ]
-                            assert any("No OTLP endpoint configured" in log for log in warning_logs)
+                            info_logs = [args[0][0] for args in mock_logger.info.call_args_list]
+                            assert any(
+                                "No OTLP endpoint configured, traces will be exported to console."
+                                in log
+                                for log in info_logs
+                            )
+                            assert any(
+                                "No OTLP endpoint configured, metrics will be exported to console."
+                                in log
+                                for log in info_logs
+                            )

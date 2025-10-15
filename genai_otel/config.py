@@ -154,5 +154,3 @@ def setup_tracing(
     except Exception as e:
         logger.error("Failed to initialize OpenTelemetry: %s", e, exc_info=True)
         return None
-
-

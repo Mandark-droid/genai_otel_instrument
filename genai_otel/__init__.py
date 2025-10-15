@@ -39,7 +39,6 @@ from .instrumentors import (
 )
 from .mcp_instrumentors.manager import MCPInstrumentorManager
 
-
 logger = logging.getLogger(__name__)
 
 

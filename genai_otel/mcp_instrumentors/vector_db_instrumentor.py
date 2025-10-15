@@ -83,7 +83,13 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
             logger.info("Pinecone not installed, skipping instrumentation")
             return False
         except Exception as e:
-            logger.error(f"Failed to instrument Pinecone: {e}")
+            if "pinecone-client" in str(e) and "renamed" in str(e):
+                logger.error(
+                    "Failed to instrument Pinecone: %s. Please ensure only the `pinecone` package is installed (uninstall `pinecone-client` if present).",
+                    e,
+                )
+            else:
+                logger.error(f"Failed to instrument Pinecone: {e}", exc_info=True)
             return False
 
     def _wrap_pinecone_init(self, wrapped, instance, args, kwargs):

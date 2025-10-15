@@ -86,7 +86,7 @@ setup(
         ],
         # Vector databases
         "vector-dbs": [
-            "pinecone-client>=2.0.0",
+            "pinecone>=3.0.0",
             "weaviate-client>=3.0.0",
             "qdrant-client>=1.0.0",
             "chromadb>=0.4.0",
@@ -125,7 +125,7 @@ setup(
             "psycopg2-binary>=2.9.0",
             "opentelemetry-instrumentation-kafka-python>=0.41b0",
             "kafka-python>=2.0.0",
-            "pinecone-client>=2.0.0",
+            "pinecone>=3.0.0",
             "weaviate-client>=3.0.0",
             "qdrant-client>=1.0.0",
             "chromadb>=0.4.0",
@@ -168,7 +168,7 @@ setup(
             "opentelemetry-instrumentation-kafka-python>=0.41b0",
             "kafka-python>=2.0.0",
             # Vector DBs
-            "pinecone-client>=2.0.0",
+            "pinecone>=3.0.0",
             "weaviate-client>=3.0.0",
             "qdrant-client>=1.0.0",
             "chromadb>=0.4.0",
