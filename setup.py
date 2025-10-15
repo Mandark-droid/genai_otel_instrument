@@ -24,7 +24,7 @@ setup(
         "opentelemetry-sdk>=1.20.0,<2.0.0",
         "opentelemetry-instrumentation>=0.41b0",
         "opentelemetry-exporter-otlp-proto-http>=1.20.0,<2.0.0",
-        "opentelemetry-semantic-conventions>=0.41b0",
+        "opentelemetry-semantic-conventions>=0.58b0,<1.0.0",
         "wrapt>=1.14.0",
         "openinference-instrumentation==0.1.31",
         "openinference-instrumentation-litellm==0.1.19",
