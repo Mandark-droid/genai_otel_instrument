@@ -43,26 +43,44 @@ def instrumentor():
         mock_tracer = MagicMock()
         mock_get_tracer.return_value = mock_tracer
         mock_span = MagicMock()
-        mock_span.name = "test.span"  # Set a default name for the span
-        # FIX: Mock the attributes.get method of the mock_span
-        mock_span.attributes.get.return_value = (
-            "test_model"  # This should make it available when _record_result_metrics is called
-        )
+        mock_span.name = "test.span"
+        mock_span.attributes.get.return_value = "test_model"
         mock_span_ctx = MagicMock()
         mock_span_ctx.__enter__.return_value = mock_span
         mock_span_ctx.__exit__.return_value = None
         mock_tracer.start_as_current_span.return_value = mock_span_ctx
-        inst = ConcreteInstrumentor()
-        inst.instrument(OTelConfig())
 
-        # Mock dependencies
-        inst.tracer = mock_tracer
+        # Create instrumentor with cost tracking ENABLED
+        config = OTelConfig()
+        config.enable_cost_tracking = True  # Explicitly enable cost tracking
+
+        inst = ConcreteInstrumentor()
+        inst.instrument(config)  # Pass the config with cost tracking enabled
+
+        # Create mocks for ALL metrics
+        mock_request_counter = MagicMock()
+        mock_token_counter = MagicMock()
+        mock_latency_histogram = MagicMock()
+        mock_cost_counter = MagicMock()
+        mock_error_counter = MagicMock()
+
+        # Set BOTH instance attributes AND shared class attributes to the same mocks
+        inst.request_counter = mock_request_counter
+        inst.token_counter = mock_token_counter
+        inst.latency_histogram = mock_latency_histogram
+        inst.cost_counter = mock_cost_counter
+        inst.error_counter = mock_error_counter
+
+        # Also set the shared class attributes (these are used in _record_result_metrics)
+        BaseInstrumentor._shared_request_counter = mock_request_counter
+        BaseInstrumentor._shared_token_counter = mock_token_counter
+        BaseInstrumentor._shared_latency_histogram = mock_latency_histogram
+        BaseInstrumentor._shared_cost_counter = mock_cost_counter
+        BaseInstrumentor._shared_error_counter = mock_error_counter
+
+        # Mock cost calculator to return a positive cost
         inst.cost_calculator = MagicMock()
-        inst.cost_calculator.calculate_cost.return_value = 0.01
-        inst.request_counter = MagicMock()
-        inst.token_counter = MagicMock()
-        inst.latency_histogram = MagicMock()
-        inst.error_counter = MagicMock()
+        inst.cost_calculator.calculate_cost.return_value = 0.01  # Positive cost
 
         yield inst, mock_span, mock_span_ctx
 
