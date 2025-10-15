@@ -10,10 +10,10 @@ from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader, ConsoleMetricExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
 from .config import OTelConfig
 from .gpu_metrics import GPUMetricsCollector
@@ -131,7 +131,7 @@ def setup_auto_instrumentation(config: OTelConfig):
             endpoint=config.endpoint, headers=config.headers, timeout=timeout
         )
         tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-        logger.info(f"OpenTelemetry tracing configured with endpoint: {config.endpoint}")
+        logger.info(f"OpenTelemetry tracing configured with OTLP endpoint: {config.endpoint}")
 
         # Configure Metrics
         metric_exporter = OTLPMetricExporter(
@@ -140,10 +140,18 @@ def setup_auto_instrumentation(config: OTelConfig):
         metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
         meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
         metrics.set_meter_provider(meter_provider)
-        logger.info("OpenTelemetry metrics configured")
+        logger.info("OpenTelemetry metrics configured with OTLP exporter")
     else:
-        logger.warning("No OTLP endpoint configured, traces will not be exported.")
-        logger.warning("No OTLP endpoint configured, metrics will not be exported.")
+        # Configure Console Exporters if no OTLP endpoint is set
+        span_exporter = ConsoleSpanExporter()
+        tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
+        logger.info("No OTLP endpoint configured, traces will be exported to console.")
+
+        metric_exporter = ConsoleMetricExporter()
+        metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
+        meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+        metrics.set_meter_provider(meter_provider)
+        logger.info("No OTLP endpoint configured, metrics will be exported to console.")
 
     # Auto-instrument LLM libraries based on the configuration
     for name in config.enabled_instrumentors:

@@ -1,15 +1,24 @@
+import logging
+import os
+import sys
+import time
+from unittest.mock import patch
+
+# Set OTEL_EXPORTER_OTLP_ENDPOINT to an empty string before any genai_otel imports
+os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
+# Remove noop providers to allow console exporters to function
+if "OTEL_TRACER_PROVIDER" in os.environ:
+    del os.environ["OTEL_TRACER_PROVIDER"]
+if "OTEL_METRIC_READER" in os.environ:
+    del os.environ["OTEL_METRIC_READER"]
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Simple test script to verify genai_otel instrumentation without external dependencies
 """
 
-import logging
-import time
-import os
-import sys
-from unittest.mock import patch
-from genai_otel.config import OTelConfig
+
 
 # Fix encoding for Windows console
 if sys.platform == "win32":
@@ -25,11 +34,6 @@ os.environ.setdefault("OTEL_SERVICE_NAME", "genai-test-app")
 os.environ.setdefault("GENAI_ENABLE_COST_TRACKING", "false")
 os.environ.setdefault("GENAI_ENABLE_GPU_METRICS", "false")
 os.environ.setdefault("GENAI_FAIL_ON_ERROR", "false")
-# Unset endpoint to avoid export errors if no collector is running
-# and configure NoOp exporters to prevent AttributeError when no collector is running.
-os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:4318/v1/traces"
-os.environ.setdefault("OTEL_TRACER_PROVIDER", "noop")
-os.environ.setdefault("OTEL_METRIC_READER", "noop")
 
 
 def print_header(title):
@@ -45,12 +49,11 @@ def print_status(message, success=True):
 
 def main():
     print_header("GenAI OpenTelemetry Instrumentation - Simple Test")
-
+    import genai_otel
+    from genai_otel.config import OTelConfig
     # 1. Test Initialization
     print("\n1. Initializing instrumentation...")
     try:
-        import genai_otel
-
         genai_otel.instrument()
         print_status("Instrumentation initialized successfully")
     except Exception as e:
