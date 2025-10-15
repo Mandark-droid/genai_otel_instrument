@@ -57,55 +57,53 @@ def setup_meter(
     """
     global _meter_provider, _meter
 
-    # Get the current MeterProvider. If it's None, we need to initialize.
-    current_provider = metrics.get_meter_provider()
+    # Initialize Resource
+    resource_attributes = {
+        SERVICE_NAME: app_name,
+        DEPLOYMENT_ENVIRONMENT: env,
+        TELEMETRY_SDK_NAME: "openlit",
+    }
+    resource = Resource(attributes=resource_attributes)
 
-    if current_provider is None:
-        logger.debug("MeterProvider not found. Initializing new MeterProvider.")
-        # Initialize Resource
-        resource_attributes = {
-            SERVICE_NAME: app_name,
-            DEPLOYMENT_ENVIRONMENT: env,
-            TELEMETRY_SDK_NAME: "openlit",
-        }
-        resource = Resource(attributes=resource_attributes)
-
-        # Configure Exporter
-        exporters: list[MetricExporter] = []
+    exporter: Optional[MetricExporter] = None
+    if otlp_endpoint:
         try:
-            if otlp_endpoint:
-                metric_exporter = OTLPMetricExporter(endpoint=otlp_endpoint, headers=otlp_headers)
-                exporters.append(metric_exporter)
-                logger.info("Configured OTLP metric exporter for endpoint: %s", otlp_endpoint)
-            else:
-                console_exporter = ConsoleMetricExporter()
-                exporters.append(console_exporter)
-                logger.info("Configured Console metric exporter.")
-        except Exception as e:
-            logger.error("Failed to configure metric exporter: %s", e, exc_info=True)
-            return {"app_name": app_name, "env": env}, None
+            # Basic validation for otlp_endpoint (can be expanded)
+            if not isinstance(otlp_endpoint, str) or not otlp_endpoint.startswith(
+                ("http://", "https://")
+            ):
+                logger.error("Invalid OTLP endpoint format: %s", otlp_endpoint)
+                return {"app_name": app_name, "env": env}, None
 
-        if not exporters:
-            logger.error("No metric exporters configured. MeterProvider cannot be initialized.")
-            return {"app_name": app_name, "env": env}, None
+            # Basic validation for otlp_headers
+            if otlp_headers is not None and not isinstance(otlp_headers, dict):
+                logger.error("Invalid OTLP headers format. Must be a dictionary.")
+                return {"app_name": app_name, "env": env}, None
 
-        # Initialize the MeterProvider with a PeriodicExportingMetricReader
-        try:
-            metric_reader = PeriodicExportingMetricReader(exporters[0])
-            _meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-            metrics.set_meter_provider(_meter_provider)  # Set the global provider
-            _meter = _meter_provider.get_meter(__name__)  # Get the meter for this module
-            logger.info("MeterProvider and Meter initialized successfully.")
-            return {"app_name": app_name, "env": env}, _meter
+            exporter = OTLPMetricExporter(endpoint=otlp_endpoint, headers=otlp_headers)
+            logger.info("Configured OTLP metric exporter for endpoint: %s", otlp_endpoint)
         except Exception as e:
-            logger.error("Failed to initialize MeterProvider: %s", e, exc_info=True)
+            logger.error("Failed to configure OTLP metric exporter: %s", e, exc_info=True)
             return {"app_name": app_name, "env": env}, None
     else:
-        # If a MeterProvider already exists, use it.
-        logger.debug("MeterProvider already exists. Using existing instance.")
-        _meter_provider = current_provider  # Update our global reference if it was None
-        _meter = _meter_provider.get_meter(__name__)  # Get the meter from the existing provider
+        exporter = ConsoleMetricExporter()
+        logger.info("Configured Console metric exporter.")
+
+    if exporter is None:
+        logger.error("No metric exporter could be configured. MeterProvider cannot be initialized.")
+        return {"app_name": app_name, "env": env}, None
+
+    # Initialize the MeterProvider with a PeriodicExportingMetricReader
+    try:
+        metric_reader = PeriodicExportingMetricReader(exporter)
+        _meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+        metrics.set_meter_provider(_meter_provider)  # Set the global provider
+        _meter = _meter_provider.get_meter(__name__)  # Get the meter for this module
+        logger.info("MeterProvider and Meter initialized successfully.")
         return {"app_name": app_name, "env": env}, _meter
+    except Exception as e:
+        logger.error("Failed to initialize MeterProvider: %s", e, exc_info=True)
+        return {"app_name": app_name, "env": env}, None
 
 
 _DB_CLIENT_OPERATION_DURATION_BUCKETS = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 10]
