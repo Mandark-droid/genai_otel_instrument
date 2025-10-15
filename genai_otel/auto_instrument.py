@@ -118,26 +118,21 @@ def setup_auto_instrumentation(config: OTelConfig):
     set_global_textmap(TraceContextTextMapPropagator())
 
     if config.endpoint:
-        import os
+        # Convert timeout to float safely
+        timeout_str = os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "10.0")
+        try:
+            timeout = float(timeout_str)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid timeout value '{timeout_str}', using default 10.0")
+            timeout = 10.0
 
-        timeout = float(os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "10.0"))
         span_exporter = OTLPSpanExporter(
             endpoint=config.endpoint, headers=config.headers, timeout=timeout
         )
         tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
         logger.info(f"OpenTelemetry tracing configured with endpoint: {config.endpoint}")
-        logger.warning("No OTLP endpoint configured, traces will not be exported.")
 
-    # Configure Metrics
-    import os
-
-    timeout = float(os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "10.0"))
-    span_exporter = OTLPSpanExporter(
-        endpoint=config.endpoint, headers=config.headers, timeout=timeout
-    )
-    tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-    logger.info(f"OpenTelemetry tracing configured with endpoint: {config.endpoint}")
-    if config.endpoint:
+        # Configure Metrics
         metric_exporter = OTLPMetricExporter(
             endpoint=config.endpoint, headers=config.headers, timeout=timeout
         )
@@ -146,6 +141,7 @@ def setup_auto_instrumentation(config: OTelConfig):
         metrics.set_meter_provider(meter_provider)
         logger.info("OpenTelemetry metrics configured")
     else:
+        logger.warning("No OTLP endpoint configured, traces will not be exported.")
         # Still set a default meter provider even if not exporting
         meter_provider = MeterProvider(resource=resource)
         metrics.set_meter_provider(meter_provider)

@@ -171,15 +171,16 @@ class CostCalculator:
         if category not in self.pricing_data:
             return None
 
-        model = model.lower()
+        normalized_model = model.lower()
 
-        # Exact match
-        if model in self.pricing_data[category]:
-            return model
+        # Exact match (case-insensitive)
+        for key in self.pricing_data[category]:
+            if normalized_model == key.lower():
+                return key
 
-        # Substring match
+        # Substring match (case-insensitive)
         sorted_keys = sorted(self.pricing_data[category].keys(), key=len, reverse=True)
         for key in sorted_keys:
-            if key in model:
+            if key.lower() in normalized_model:
                 return key
         return None
