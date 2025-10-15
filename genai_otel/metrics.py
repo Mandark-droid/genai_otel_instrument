@@ -35,75 +35,17 @@ _meter_provider: Optional[MeterProvider] = None
 _meter: Optional[Meter] = None
 
 
-def setup_meter(
-    app_name: str,
-    env: str,
-    otlp_endpoint: Optional[str] = None,
-    otlp_headers: Optional[Dict[str, str]] = None,
-) -> Tuple[Dict[str, Any], Optional[Meter]]:
+def get_meter() -> Meter:
     """
-    Sets up the OpenTelemetry MeterProvider and Meter.
-
-    Args:
-        app_name: The name of the application.
-        env: The environment (e.g., 'dev', 'prod').
-        otlp_endpoint: The OTLP endpoint URL. If empty, Console exporter is used.
-        otlp_headers: Optional headers for the OTLP request.
-
-    Returns:
-        A tuple containing:
-        - A dictionary with metrics configuration.
-        - The configured Meter object, or None if initialization fails.
+    Returns the globally configured Meter.
     """
-    global _meter_provider, _meter
+    return metrics.get_meter(__name__)
 
-    # Initialize Resource
-    resource_attributes = {
-        SERVICE_NAME: app_name,
-        DEPLOYMENT_ENVIRONMENT: env,
-        TELEMETRY_SDK_NAME: "openlit",
-    }
-    resource = Resource(attributes=resource_attributes)
-
-    exporter: Optional[MetricExporter] = None
-    if otlp_endpoint:
-        try:
-            # Basic validation for otlp_endpoint (can be expanded)
-            if not isinstance(otlp_endpoint, str) or not otlp_endpoint.startswith(
-                ("http://", "https://")
-            ):
-                logger.error("Invalid OTLP endpoint format: %s", otlp_endpoint)
-                return {"app_name": app_name, "env": env}, None
-
-            # Basic validation for otlp_headers
-            if otlp_headers is not None and not isinstance(otlp_headers, dict):
-                logger.error("Invalid OTLP headers format. Must be a dictionary.")
-                return {"app_name": app_name, "env": env}, None
-
-            exporter = OTLPMetricExporter(endpoint=otlp_endpoint, headers=otlp_headers)
-            logger.info("Configured OTLP metric exporter for endpoint: %s", otlp_endpoint)
-        except Exception as e:
-            logger.error("Failed to configure OTLP metric exporter: %s", e, exc_info=True)
-            return {"app_name": app_name, "env": env}, None
-    else:
-        exporter = ConsoleMetricExporter()
-        logger.info("Configured Console metric exporter.")
-
-    if exporter is None:
-        logger.error("No metric exporter could be configured. MeterProvider cannot be initialized.")
-        return {"app_name": app_name, "env": env}, None
-
-    # Initialize the MeterProvider with a PeriodicExportingMetricReader
-    try:
-        metric_reader = PeriodicExportingMetricReader(exporter)
-        _meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-        metrics.set_meter_provider(_meter_provider)  # Set the global provider
-        _meter = _meter_provider.get_meter(__name__)  # Get the meter for this module
-        logger.info("MeterProvider and Meter initialized successfully.")
-        return {"app_name": app_name, "env": env}, _meter
-    except Exception as e:
-        logger.error("Failed to initialize MeterProvider: %s", e, exc_info=True)
-        return {"app_name": app_name, "env": env}, None
+def get_meter_provider() -> MeterProvider:
+    """
+    Returns the globally configured MeterProvider.
+    """
+    return metrics.get_meter_provider()
 
 
 _DB_CLIENT_OPERATION_DURATION_BUCKETS = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 10]
