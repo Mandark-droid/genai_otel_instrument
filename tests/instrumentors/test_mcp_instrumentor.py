@@ -35,7 +35,7 @@ def test_mcp_instrumentor_integration(MockMCPInstrumentor):
         ), patch(
             "genai_otel.auto_instrument.BatchSpanProcessor"
         ), patch(
-            "opentelemetry.propagators.textmap.TraceContextTextMapPropagator"
+            "opentelemetry.trace.propagation.tracecontext.TraceContextTextMapPropagator"
         ), patch(
             "genai_otel.auto_instrument.OTLPMetricExporter"
         ), patch(
