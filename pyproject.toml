@@ -111,7 +111,7 @@ messaging = [
 
 # Vector databases
 vector-dbs = [
-    "pinecone-client>=2.0.0",
+    "pinecone>=3.0.0",
     "weaviate-client>=3.0.0",
     "qdrant-client>=1.0.0",
     "chromadb>=0.4.0",
@@ -146,7 +146,7 @@ all-mcp = [
     "opentelemetry-instrumentation-psycopg2>=0.41b0",
     "opentelemetry-instrumentation-mysql>=0.41b0",
     "opentelemetry-instrumentation-kafka-python>=0.41b0",
-    "pinecone-client>=2.0.0",
+    "pinecone>=3.0.0",
     "weaviate-client>=3.0.0",
     "qdrant-client>=1.0.0",
     "chromadb>=0.4.0",
@@ -178,7 +178,7 @@ all = [
     "opentelemetry-instrumentation-psycopg2>=0.41b0",
     "opentelemetry-instrumentation-mysql>=0.41b0",
     "opentelemetry-instrumentation-kafka-python>=0.41b0",
-    "pinecone-client>=2.0.0",
+    "pinecone>=3.0.0",
     "weaviate-client>=3.0.0",
     "qdrant-client>=1.0.0",
     "chromadb>=0.4.0",
