@@ -1,13 +1,15 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
 ### Fixed
 
-- Resolved `AttributeError` related to `TraceContextTextMapPropagator` in test files by correcting import paths.
+- Fix HuggingFace instrumentation to correctly set span attributes and pass tests.
+- Resolve `AttributeError` related to `TraceContextTextMapPropagator` in test files by correcting import paths.
 - Fixed `setup_meter` function in `genai_otel/metrics.py` to correctly configure OpenTelemetry MeterProvider with metric readers and handle invalid OTLP endpoint/headers gracefully.
 - Corrected `tests/test_metrics.py` to properly reset MeterProvider state between tests and accurately access metric exporter attributes, resolving `TypeError` and `AssertionError`s.
 - Fixed `cost_counter` not being called in `tests/instrumentors/test_base.py` by ensuring `BaseInstrumentor._shared_cost_counter` is patched with a distinct mock before `ConcreteInstrumentor` instantiation.
