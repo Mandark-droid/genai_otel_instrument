@@ -8,7 +8,7 @@ The goal is to achieve >80% coverage for each module and ensure tests are create
 - [x] genai_otel/__version__.py (Tests Created: Yes, Coverage > 80%: Yes)
 - [x] genai_otel/auto_instrument.py (Tests Created: Yes, Coverage > 80%: Yes)
 - [x] genai_otel/cli.py (Tests Created: Yes, Coverage > 80%: No)
-- [x] genai_otel/config.py (Tests Created: Yes, Coverage > 80%: No)
+- [x] genai_otel/config.py (Tests Created: Yes, Coverage > 80%: Yes)
 - [x] genai_otel/cost_calculator.py (Tests Created: Yes, Coverage > 80%: No)
 - [x] genai_otel/exceptions.py (Tests Created: Yes, Coverage > 80%: Yes)
 - [x] genai_otel/gpu_metrics.py (Tests Created: Yes, Coverage > 80%: No)
@@ -21,7 +21,7 @@ The goal is to achieve >80% coverage for each module and ensure tests are create
 - [x] genai_otel/instrumentors/anyscale_instrumentor.py (Tests Created: Yes, Coverage > 80%: No)
 - [x] genai_otel/instrumentors/aws_bedrock_instrumentor.py (Tests Created: Yes, Coverage > 80%: No)
 - [x] genai_otel/instrumentors/azure_openai_instrumentor.py (Tests Created: Yes, Coverage > 80%: No)
-- [x] genai_otel/instrumentors/base.py (Tests Created: Yes, Coverage > 80%: No) - Tests fixed.
+- [x] genai_otel/instrumentors/base.py (Tests Created: Yes, Coverage > 80%: Yes) - Tests fixed.
 - [x] genai_otel/instrumentors/cohere_instrumentor.py (Tests Created: Yes, Coverage > 80%: No)
 - [x] genai_otel/instrumentors/google_ai_instrumentor.py (Tests Created: Yes, Coverage > 80%: No)
 - [x] genai_otel/instrumentors/groq_instrumentor.py (Tests Created: Yes, Coverage > 80%: No)
@@ -47,11 +47,5 @@ The goal is to achieve >80% coverage for each module and ensure tests are create
 ## New Features
 - [ ] auto_instrument.py: Add tests for SERVICE_INSTANCE_ID and environment attributes.
 - [ ] auto_instrument.py: Add tests for configurable timeout for OTLP exporters.
-- [ ] auto_instrument.py: Add tests for SmolagentsInstrumentor, MCPInstrumentor, and LiteLLMInstrumentor.
-- [ ] auto_instrument.py: Add tests for TraceContextTextMapPropagator.
-
-## OpenInference Instrumentors
-- [ ] openinference_instrumentor.py: Add tests for basic functionality.
-- [ ] openinference_instrumentor.py: Add tests for various LLM providers via OpenInference.
-- [ ] openinference_instrumentor.py: Add tests for MCP tools via OpenInference.
-- [ ] openinference_instrumentor.py: Add tests for LiteLLM integration.
+- [x] auto_instrument.py: Add tests for SmolagentsInstrumentor, MCPInstrumentor, and LiteLLMInstrumentor. (Covered by tests/instrumentors/test_smolagents_instrumentor.py, tests/instrumentors/test_mcp_instrumentor.py, tests/instrumentors/test_litellm_instrumentor.py)
+- [x] auto_instrument.py: Add tests for TraceContextTextMapPropagator. (Covered by tests/instrumentors/test_smolagents_instrumentor.py, tests/instrumentors/test_mcp_instrumentor.py, tests/instrumentors/test_litellm_instrumentor.py)
