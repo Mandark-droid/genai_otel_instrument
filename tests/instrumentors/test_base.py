@@ -35,7 +35,7 @@ def reset_shared_metrics():
 
 
 @pytest.fixture
-def instrumentor():
+def instrumentor(monkeypatch):
     """Fixture to provide a clean instrumentor instance with mocked dependencies."""
     with patch("genai_otel.instrumentors.base.trace.get_tracer") as mock_get_tracer, patch(
         "genai_otel.instrumentors.base.metrics.get_meter"
@@ -50,33 +50,37 @@ def instrumentor():
         mock_span_ctx.__exit__.return_value = None
         mock_tracer.start_as_current_span.return_value = mock_span_ctx
 
-        # Create instrumentor with cost tracking ENABLED
-        config = OTelConfig()
-        config.enable_cost_tracking = True  # Explicitly enable cost tracking
-
-        inst = ConcreteInstrumentor()
-        inst.instrument(config)  # Pass the config with cost tracking enabled
-
-        # Create mocks for ALL metrics
+        # Create mocks for ALL metrics *before* instantiating ConcreteInstrumentor
         mock_request_counter = MagicMock()
         mock_token_counter = MagicMock()
         mock_latency_histogram = MagicMock()
         mock_cost_counter = MagicMock()
         mock_error_counter = MagicMock()
 
-        # Set BOTH instance attributes AND shared class attributes to the same mocks
-        inst.request_counter = mock_request_counter
-        inst.token_counter = mock_token_counter
-        inst.latency_histogram = mock_latency_histogram
-        inst.cost_counter = mock_cost_counter
-        inst.error_counter = mock_error_counter
+        # Configure mock_get_meter to return a meter instance that provides distinct mocks for each counter
+        mock_meter_instance = MagicMock()
+        mock_get_meter.return_value = mock_meter_instance
+        mock_meter_instance.create_counter.side_effect = [
+            mock_request_counter,
+            mock_token_counter,
+            mock_latency_histogram,
+            mock_cost_counter,
+            mock_error_counter,
+        ]
 
-        # Also set the shared class attributes (these are used in _record_result_metrics)
-        BaseInstrumentor._shared_request_counter = mock_request_counter
-        BaseInstrumentor._shared_token_counter = mock_token_counter
-        BaseInstrumentor._shared_latency_histogram = mock_latency_histogram
-        BaseInstrumentor._shared_cost_counter = mock_cost_counter
-        BaseInstrumentor._shared_error_counter = mock_error_counter
+        # Patch the class-level shared metrics with mocks
+        monkeypatch.setattr(BaseInstrumentor, "_shared_request_counter", mock_request_counter)
+        monkeypatch.setattr(BaseInstrumentor, "_shared_token_counter", mock_token_counter)
+        monkeypatch.setattr(BaseInstrumentor, "_shared_latency_histogram", mock_latency_histogram)
+        monkeypatch.setattr(BaseInstrumentor, "_shared_cost_counter", mock_cost_counter)
+        monkeypatch.setattr(BaseInstrumentor, "_shared_error_counter", mock_error_counter)
+
+        # Create instrumentor with cost tracking ENABLED
+        config = OTelConfig()
+        config.enable_cost_tracking = True  # Explicitly enable cost tracking
+
+        inst = ConcreteInstrumentor()
+        inst.instrument(config)  # Pass the config with cost tracking enabled
 
         # Mock cost calculator to return a positive cost
         inst.cost_calculator = MagicMock()
