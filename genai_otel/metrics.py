@@ -41,6 +41,7 @@ def get_meter() -> Meter:
     """
     return metrics.get_meter(__name__)
 
+
 def get_meter_provider() -> MeterProvider:
     """
     Returns the globally configured MeterProvider.
