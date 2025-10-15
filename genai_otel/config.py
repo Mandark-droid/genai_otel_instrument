@@ -135,7 +135,7 @@ def setup_tracing(
                 attributes={
                     SERVICE_NAME: config.service_name,
                     DEPLOYMENT_ENVIRONMENT: os.getenv("ENVIRONMENT", "dev"),
-                    TELEMETRY_SDK_NAME: "openlit",
+                    TELEMETRY_SDK_NAME: "genai_otel_instrument",
                 }
             )
 
