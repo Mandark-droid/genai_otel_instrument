@@ -234,7 +234,10 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 if self.config and self.config.enable_cost_tracking and self._shared_cost_counter:
                     try:
                         model = span.attributes.get("gen_ai.request.model", "unknown")
-                        cost = self.cost_calculator.calculate_cost(model, usage)
+                        # Assuming 'chat' as a default call_type for generic base instrumentor tests.
+                        # Specific instrumentors will provide the actual call_type.
+                        call_type = span.attributes.get("gen_ai.request.type", "chat")
+                        cost = self.cost_calculator.calculate_cost(model, usage, call_type)
                         if cost and cost > 0:
                             self._shared_cost_counter.add(cost, {"model": str(model)})
                     except Exception as e:
