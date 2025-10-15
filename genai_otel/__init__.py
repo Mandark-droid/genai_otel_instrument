@@ -38,7 +38,7 @@ from .instrumentors import (
     VertexAIInstrumentor,
 )
 from .mcp_instrumentors.manager import MCPInstrumentorManager
-from .metrics import setup_meter
+
 
 logger = logging.getLogger(__name__)
 
@@ -72,15 +72,6 @@ def instrument(**kwargs):
         # Create config object, allowing kwargs to override env vars
         config = OTelConfig(**kwargs)
         setup_auto_instrumentation(config)
-        metrics_dict, err = setup_meter(
-            config.service_name,
-            os.getenv("ENVIRONMENT", "dev"),
-            None,
-            config.endpoint,
-            config.headers,
-        )
-        if err:
-            logger.error("Failed to initialize metrics: %s", err)
         logger.info("GenAI OpenTelemetry instrumentation initialized successfully")
     except Exception as e:
         # Log the error and potentially re-raise based on fail_on_error
