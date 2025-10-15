@@ -1,10 +1,11 @@
 import os
-import pytest
-from unittest.mock import patch, DEFAULT
+from unittest.mock import DEFAULT, patch
 
+import pytest
 from opentelemetry import metrics
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, OTLPMetricExporter
+from opentelemetry.sdk.metrics.export import ConsoleMetricExporter
 
 from genai_otel.metrics import setup_meter
 
@@ -17,8 +18,10 @@ def mock_meter_provider(monkeypatch):
     mock_provider = MeterProvider()
     # Patch the get_meter_provider function to return our mock instance
     monkeypatch.setattr(metrics, "get_meter_provider", lambda: mock_provider)
-    # Patch set_meter_provider to do nothing, preventing actual global state changes
+    # Patch set_meter_provider to set our mock provider, allowing setup_meter to interact with it
     monkeypatch.setattr(metrics, "set_meter_provider", lambda provider: None)
+    # Clear any existing metric readers from previous tests
+    mock_provider._all_metric_readers.clear()
     # Return the mock provider for potential use in tests if needed
     return mock_provider
 
@@ -36,11 +39,12 @@ def test_setup_meter_with_otlp():
     assert metrics_dict is not None
 
     # Verify that the correct exporter is configured
-    meter_provider = metrics.get_meter_provider() # This will return our mock provider
+    meter_provider = metrics.get_meter_provider()  # This will return our mock provider
     assert meter_provider is not None
-    # Accessing _all_metric_readers as suggested by the error
-    assert len(meter_provider._all_metric_readers) == 1
-    assert isinstance(meter_provider._all_metric_readers[0].exporter, OTLPMetricExporter)
+    # Accessing _all_metric_readers correctly by converting to a list
+    readers = list(meter_provider._all_metric_readers)
+    assert len(readers) == 1
+    assert isinstance(readers[0]._exporter, OTLPMetricExporter)
 
 
 def test_setup_meter_with_console():
@@ -56,11 +60,13 @@ def test_setup_meter_with_console():
     assert metrics_dict is not None
 
     # Verify that the correct exporter is configured
-    meter_provider = metrics.get_meter_provider() # This will return our mock provider
+    meter_provider = metrics.get_meter_provider()  # This will return our mock provider
     assert meter_provider is not None
-    # Accessing _all_metric_readers as suggested by the error
-    assert len(meter_provider._all_metric_readers) == 1
-    assert isinstance(meter_provider._all_metric_readers[0].exporter, ConsoleMetricExporter)
+    # Accessing _all_metric_readers correctly by converting to a list
+    readers = list(meter_provider._all_metric_readers)
+    assert len(readers) == 1
+    assert isinstance(readers[0]._exporter, ConsoleMetricExporter)
+
 
 def test_setup_meter_singleton():
     """Test that setup_meter acts as a singleton for MeterProvider initialization."""
@@ -79,7 +85,6 @@ def test_setup_meter_singleton():
     assert meter1 is not None
     assert meter2 is not None
     assert provider1 is provider2  # Ensure the same provider instance is used
-    # Removed assertion for METER_SET as it's no longer defined
 
 
 def test_setup_meter_no_endpoint_and_headers():
@@ -96,8 +101,10 @@ def test_setup_meter_no_endpoint_and_headers():
 
     meter_provider = metrics.get_meter_provider()
     assert meter_provider is not None
-    assert len(meter_provider._all_metric_readers) == 1
-    assert isinstance(meter_provider._all_metric_readers[0].exporter, ConsoleMetricExporter)
+    # Accessing _all_metric_readers correctly by converting to a list
+    readers = list(meter_provider._all_metric_readers)
+    assert len(readers) == 1
+    assert isinstance(readers[0]._exporter, ConsoleMetricExporter)
 
 
 def test_setup_meter_with_otlp_headers_only():
@@ -114,8 +121,10 @@ def test_setup_meter_with_otlp_headers_only():
 
     meter_provider = metrics.get_meter_provider()
     assert meter_provider is not None
-    assert len(meter_provider._all_metric_readers) == 1
-    assert isinstance(meter_provider._all_metric_readers[0].exporter, OTLPMetricExporter)
+    # Accessing _all_metric_readers correctly by converting to a list
+    readers = list(meter_provider._all_metric_readers)
+    assert len(readers) == 1
+    assert isinstance(readers[0]._exporter, OTLPMetricExporter)
 
 
 def test_setup_meter_with_invalid_endpoint():
