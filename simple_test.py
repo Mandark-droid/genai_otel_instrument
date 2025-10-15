@@ -27,7 +27,7 @@ os.environ.setdefault("GENAI_ENABLE_GPU_METRICS", "false")
 os.environ.setdefault("GENAI_FAIL_ON_ERROR", "false")
 # Unset endpoint to avoid export errors if no collector is running
 # and configure NoOp exporters to prevent AttributeError when no collector is running.
-os.environ.pop("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
+os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:4318/v1/traces"
 os.environ.setdefault("OTEL_TRACER_PROVIDER", "noop")
 os.environ.setdefault("OTEL_METRIC_READER", "noop")
 
@@ -84,7 +84,7 @@ def main():
 
         calculator = CostCalculator()
         usage = {"prompt_tokens": 1000, "completion_tokens": 500}
-        cost = calculator.calculate_cost("gpt-4o", usage)
+        cost = calculator.calculate_cost("gpt-4o", usage, "chat")
         assert cost > 0
         print_status(f"Cost calculation working. Test cost: ${cost:.6f}")
     except Exception as e:
