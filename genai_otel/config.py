@@ -108,9 +108,6 @@ if os.environ.get("OTEL_EXPORTER_OTLP_PROTOCOL") == "grpc":
 else:
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-# Global flag to check if the tracer provider initialization is complete.
-TRACER_SET = False
-
 
 def setup_tracing(
     config: "OTelConfig",  # Use OTelConfig from this module
@@ -122,47 +119,80 @@ def setup_tracing(
     Initializes the tracer provider and configures the span processor and exporter.
     """
 
-    # pylint: disable=global-statement
-    global TRACER_SET
-
     try:
         # Disable Haystack Auto Tracing
         os.environ["HAYSTACK_AUTO_TRACE_ENABLED"] = "false"
 
-        if not TRACER_SET:
-            # Create a resource with the service name attribute.
-            resource = Resource.create(
-                attributes={
-                    SERVICE_NAME: config.service_name,
-                    DEPLOYMENT_ENVIRONMENT: os.getenv("ENVIRONMENT", "dev"),
-                    TELEMETRY_SDK_NAME: "genai_otel_instrument",
-                }
+        # Create a resource with the service name attribute.
+        resource = Resource.create(
+            attributes={
+                SERVICE_NAME: config.service_name,
+                DEPLOYMENT_ENVIRONMENT: os.getenv("ENVIRONMENT", "dev"),
+                TELEMETRY_SDK_NAME: "genai_otel_instrument",
+            }
+        )
+
+        # Initialize the TracerProvider with the created resource.
+        trace.set_tracer_provider(TracerProvider(resource=resource))
+
+        # Configure the span exporter and processor based on whether the endpoint is effectively set.
+        if config.endpoint:
+            span_exporter = OTLPSpanExporter(headers=config.headers)
+            span_processor = (
+                BatchSpanProcessor(span_exporter)
+                if not disable_batch
+                else SimpleSpanProcessor(span_exporter)
             )
+        else:
+            span_exporter = ConsoleSpanExporter()
+            span_processor = SimpleSpanProcessor(span_exporter)
 
-            # Initialize the TracerProvider with the created resource.
-            trace.set_tracer_provider(TracerProvider(resource=resource))
-
-            # Configure the span exporter and processor based on whether the endpoint is effectively set.
-            if config.endpoint:
-                span_exporter = OTLPSpanExporter(headers=config.headers)
-                span_processor = (
-                    BatchSpanProcessor(span_exporter)
-                    if not disable_batch
-                    else SimpleSpanProcessor(span_exporter)
-                )
-            else:
-                span_exporter = ConsoleSpanExporter()
-                span_processor = SimpleSpanProcessor(span_exporter)
-
-            trace.get_tracer_provider().add_span_processor(span_processor)
-
-            TRACER_SET = True
+        trace.get_tracer_provider().add_span_processor(span_processor)
 
         return trace.get_tracer(tracer_name)
 
     except Exception as e:
         logger.error("Failed to initialize OpenTelemetry: %s", e, exc_info=True)
         return None
+
+
+@dataclass
+class OTelConfig:
+    """Configuration for OpenTelemetry instrumentation.
+
+    Loads settings from environment variables with sensible defaults.
+    """
+
+    service_name: str = field(default_factory=lambda: os.getenv("OTEL_SERVICE_NAME", "genai-app"))
+    endpoint: str = field(
+        default_factory=lambda: os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
+    )
+    enabled_instrumentors: List[str] = field(default_factory=_get_enabled_instrumentors)
+    enable_gpu_metrics: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_GPU_METRICS", "true").lower() == "true"
+    )
+    enable_cost_tracking: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_COST_TRACKING", "true").lower() == "true"
+    )
+    enable_mcp_instrumentation: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_MCP_INSTRUMENTATION", "true").lower()
+        == "true"
+    )
+    # Add fail_on_error configuration
+    fail_on_error: bool = field(
+        default_factory=lambda: os.getenv("GENAI_FAIL_ON_ERROR", "false").lower() == "true"
+    )
+    headers: Optional[Dict[str, str]] = None
+
+    enable_co2_tracking: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_CO2_TRACKING", "false").lower() == "true"
+    )
+    exporter_timeout: float = field(
+        default_factory=lambda: float(os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "60.0"))
+    )
+    carbon_intensity: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_CARBON_INTENSITY", "475.0"))
+    )  # gCO2e/kWh
 
     def __post_init__(self):
         """Post-initialization hook to parse headers from environment variable."""
