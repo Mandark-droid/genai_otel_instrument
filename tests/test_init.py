@@ -13,114 +13,96 @@ def test_instrument_success():
     # Mock the actual implementation paths, not the re-exported names
     with patch("genai_otel.OTelConfig") as mock_otel_config:
         with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
-            with patch("genai_otel.setup_meter") as mock_setup_meter:
-                with patch("genai_otel.logger") as mock_logger:
-                    mock_config_instance = MagicMock(spec=OTelConfig)
-                    mock_otel_config.return_value = mock_config_instance
-                    # Mock the config attributes that setup_meter uses
-                    mock_config_instance.service_name = "test-service"
-                    mock_config_instance.endpoint = "http://test-endpoint"
-                    mock_config_instance.headers = {}
-                    mock_setup_meter.return_value = ({}, None)  # Mock successful metrics setup
+            with patch("genai_otel.logger") as mock_logger:
+                mock_config_instance = MagicMock(spec=OTelConfig)
+                mock_otel_config.return_value = mock_config_instance
+                # Mock the config attributes that setup_auto_instrumentation uses
+                mock_config_instance.service_name = "test-service"
+                mock_config_instance.endpoint = "http://test-endpoint"
+                mock_config_instance.headers = {}
 
-                    instrument()
+                instrument()
 
-                    mock_otel_config.assert_called_once_with()
-                    mock_setup_auto_instrumentation.assert_called_once_with(mock_config_instance)
-                    # Verify setup_meter was called with correct arguments from config
-                    mock_setup_meter.assert_called_once_with(
-                        "test-service",
-                        "dev",  # from os.getenv("ENVIRONMENT", "dev")
-                        mock_config_instance.endpoint,
-                        {},
-                    )
-                    mock_logger.info.assert_called_once_with(
-                        "GenAI OpenTelemetry instrumentation initialized successfully"
-                    )
+                mock_otel_config.assert_called_once_with()
+                mock_setup_auto_instrumentation.assert_called_once_with(mock_config_instance)
+                mock_logger.info.assert_called_once_with(
+                    "GenAI OpenTelemetry instrumentation initialized successfully"
+                )
 
 
 def test_instrument_with_kwargs():
     """Test instrumentation with custom keyword arguments."""
     with patch("genai_otel.OTelConfig") as mock_otel_config:
         with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
-            with patch("genai_otel.setup_meter") as mock_setup_meter:
-                with patch("genai_otel.logger") as mock_logger:
-                    mock_config_instance = MagicMock(spec=OTelConfig)
-                    mock_otel_config.return_value = mock_config_instance
-                    # Mock the config attributes that setup_meter uses
-                    mock_config_instance.service_name = "my-test-app"
-                    mock_config_instance.endpoint = "http://localhost:8080"
-                    mock_config_instance.headers = {}
-                    mock_setup_meter.return_value = ({}, None)
+            with patch("genai_otel.logger") as mock_logger:
+                mock_config_instance = MagicMock(spec=OTelConfig)
+                mock_otel_config.return_value = mock_config_instance
+                # Mock the config attributes that setup_auto_instrumentation uses
+                mock_config_instance.service_name = "my-test-app"
+                mock_config_instance.endpoint = "http://localhost:8080"
+                mock_config_instance.headers = {}
 
-                    instrument(service_name="my-test-app", endpoint="http://localhost:8080")
+                instrument(service_name="my-test-app", endpoint="http://localhost:8080")
 
-                    mock_otel_config.assert_called_once_with(
-                        service_name="my-test-app", endpoint="http://localhost:8080"
-                    )
-                    mock_setup_auto_instrumentation.assert_called_once_with(mock_config_instance)
-                    mock_setup_meter.assert_called_once_with(
-                        "my-test-app", "dev", mock_config_instance.endpoint, {}
-                    )
-                    mock_logger.info.assert_called_once_with(
-                        "GenAI OpenTelemetry instrumentation initialized successfully"
-                    )
+                mock_otel_config.assert_called_once_with(
+                    service_name="my-test-app", endpoint="http://localhost:8080"
+                )
+                mock_setup_auto_instrumentation.assert_called_once_with(mock_config_instance)
+                mock_logger.info.assert_called_once_with(
+                    "GenAI OpenTelemetry instrumentation initialized successfully"
+                )
 
 
 def test_instrument_failure_no_fail_on_error():
     """Test instrumentation failure when fail_on_error is False (default)."""
     with patch("genai_otel.OTelConfig") as mock_otel_config:
         with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
-            with patch("genai_otel.setup_meter") as mock_setup_meter:
-                with patch("genai_otel.logger") as mock_logger:
-                    mock_config_instance = MagicMock(spec=OTelConfig)
-                    mock_otel_config.return_value = mock_config_instance
-                    mock_setup_auto_instrumentation.side_effect = Exception("Test error")
-                    # Still need to mock config attributes even if setup_auto_instrumentation fails
-                    mock_config_instance.service_name = "test-service"
-                    mock_config_instance.endpoint = "http://test-endpoint"
-                    mock_config_instance.headers = {}
-                    mock_setup_meter.return_value = ({}, None)
+            with patch("genai_otel.logger") as mock_logger:
+                mock_config_instance = MagicMock(spec=OTelConfig)
+                mock_otel_config.return_value = mock_config_instance
+                mock_setup_auto_instrumentation.side_effect = Exception("Test error")
+                # Still need to mock config attributes even if setup_auto_instrumentation fails
+                mock_config_instance.service_name = "test-service"
+                mock_config_instance.endpoint = "http://test-endpoint"
+                mock_config_instance.headers = {}
 
-                    # Should not raise when fail_on_error is False (default)
-                    instrument()
+                # Should not raise when fail_on_error is False (default)
+                instrument()
 
-                    mock_logger.error.assert_called_once()
-                    # Check the actual call arguments - the error message is the first positional argument
-                    error_call_args = mock_logger.error.call_args[0]
-                    assert len(error_call_args) >= 1
-                    assert "Failed to initialize instrumentation" in error_call_args[0]
-                    # Check that exc_info is passed as a keyword argument
-                    call_kwargs = mock_logger.error.call_args[1]
-                    assert call_kwargs.get("exc_info") is True
+                mock_logger.error.assert_called_once()
+                # Check the actual call arguments - the error message is the first positional argument
+                error_call_args = mock_logger.error.call_args[0]
+                assert len(error_call_args) >= 1
+                assert "Failed to initialize instrumentation" in error_call_args[0]
+                # Check that exc_info is passed as a keyword argument
+                call_kwargs = mock_logger.error.call_args[1]
+                assert call_kwargs.get("exc_info") is True
 
 
 def test_instrument_failure_with_fail_on_error_kwarg():
     """Test instrumentation failure when fail_on_error is True via kwarg."""
     with patch("genai_otel.OTelConfig") as mock_otel_config:
         with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
-            with patch("genai_otel.setup_meter") as mock_setup_meter:
-                with patch("genai_otel.logger") as mock_logger:
-                    mock_config_instance = MagicMock(spec=OTelConfig)
-                    mock_otel_config.return_value = mock_config_instance
-                    mock_setup_auto_instrumentation.side_effect = Exception("Test error")
-                    # Still need to mock config attributes even if setup_auto_instrumentation fails
-                    mock_config_instance.service_name = "test-service"
-                    mock_config_instance.endpoint = "http://test-endpoint"
-                    mock_config_instance.headers = {}
-                    mock_setup_meter.return_value = ({}, None)
+            with patch("genai_otel.logger") as mock_logger:
+                mock_config_instance = MagicMock(spec=OTelConfig)
+                mock_otel_config.return_value = mock_config_instance
+                mock_setup_auto_instrumentation.side_effect = Exception("Test error")
+                # Still need to mock config attributes even if setup_auto_instrumentation fails
+                mock_config_instance.service_name = "test-service"
+                mock_config_instance.endpoint = "http://test-endpoint"
+                mock_config_instance.headers = {}
 
-                    with pytest.raises(Exception, match="Test error"):
-                        instrument(fail_on_error=True)
+                with pytest.raises(Exception, match="Test error"):
+                    instrument(fail_on_error=True)
 
-                    mock_logger.error.assert_called_once()
-                    # Check the actual call arguments - the error message is the first positional argument
-                    error_call_args = mock_logger.error.call_args[0]
-                    assert len(error_call_args) >= 1
-                    assert "Failed to initialize instrumentation" in error_call_args[0]
-                    # Check that exc_info is passed as a keyword argument
-                    call_kwargs = mock_logger.error.call_args[1]
-                    assert call_kwargs.get("exc_info") is True
+                mock_logger.error.assert_called_once()
+                # Check the actual call arguments - the error message is the first positional argument
+                error_call_args = mock_logger.error.call_args[0]
+                assert len(error_call_args) >= 1
+                assert "Failed to initialize instrumentation" in error_call_args[0]
+                # Check that exc_info is passed as a keyword argument
+                call_kwargs = mock_logger.error.call_args[1]
+                assert call_kwargs.get("exc_info") is True
 
 
 def test_instrument_failure_with_fail_on_error_env_var(monkeypatch):
@@ -129,28 +111,26 @@ def test_instrument_failure_with_fail_on_error_env_var(monkeypatch):
 
     with patch("genai_otel.OTelConfig") as mock_otel_config:
         with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
-            with patch("genai_otel.setup_meter") as mock_setup_meter:
-                with patch("genai_otel.logger") as mock_logger:
-                    mock_config_instance = MagicMock(spec=OTelConfig)
-                    mock_otel_config.return_value = mock_config_instance
-                    mock_setup_auto_instrumentation.side_effect = Exception("Test error")
-                    # Still need to mock config attributes even if setup_auto_instrumentation fails
-                    mock_config_instance.service_name = "test-service"
-                    mock_config_instance.endpoint = "http://test-endpoint"
-                    mock_config_instance.headers = {}
-                    mock_setup_meter.return_value = ({}, None)
+            with patch("genai_otel.logger") as mock_logger:
+                mock_config_instance = MagicMock(spec=OTelConfig)
+                mock_otel_config.return_value = mock_config_instance
+                mock_setup_auto_instrumentation.side_effect = Exception("Test error")
+                # Still need to mock config attributes even if setup_auto_instrumentation fails
+                mock_config_instance.service_name = "test-service"
+                mock_config_instance.endpoint = "http://test-endpoint"
+                mock_config_instance.headers = {}
 
-                    with pytest.raises(Exception, match="Test error"):
-                        instrument()
+                with pytest.raises(Exception, match="Test error"):
+                    instrument()
 
-                    mock_logger.error.assert_called_once()
-                    # Check the actual call arguments - the error message is the first positional argument
-                    error_call_args = mock_logger.error.call_args[0]
-                    assert len(error_call_args) >= 1
-                    assert "Failed to initialize instrumentation" in error_call_args[0]
-                    # Check that exc_info is passed as a keyword argument
-                    call_kwargs = mock_logger.error.call_args[1]
-                    assert call_kwargs.get("exc_info") is True
+                mock_logger.error.assert_called_once()
+                # Check the actual call arguments - the error message is the first positional argument
+                error_call_args = mock_logger.error.call_args[0]
+                assert len(error_call_args) >= 1
+                assert "Failed to initialize instrumentation" in error_call_args[0]
+                # Check that exc_info is passed as a keyword argument
+                call_kwargs = mock_logger.error.call_args[1]
+                assert call_kwargs.get("exc_info") is True
 
 
 def test_instrument_kwargs_override_env_vars(monkeypatch):
@@ -160,57 +140,48 @@ def test_instrument_kwargs_override_env_vars(monkeypatch):
 
     with patch("genai_otel.OTelConfig") as mock_otel_config:
         with patch("genai_otel.setup_auto_instrumentation"):
-            with patch("genai_otel.setup_meter") as mock_setup_meter:
-                with patch("genai_otel.logger"):
-                    mock_config_instance = MagicMock(spec=OTelConfig)
-                    mock_otel_config.return_value = mock_config_instance
-                    # Mock the config attributes that setup_meter uses
-                    mock_config_instance.service_name = "kwarg-service"
-                    mock_config_instance.endpoint = "http://kwarg-endpoint"
-                    mock_config_instance.headers = {}
-                    mock_setup_meter.return_value = ({}, None)
+            with patch("genai_otel.logger"):
+                mock_config_instance = MagicMock(spec=OTelConfig)
+                mock_otel_config.return_value = mock_config_instance
+                # Mock the config attributes that setup_auto_instrumentation uses
+                mock_config_instance.service_name = "kwarg-service"
+                mock_config_instance.endpoint = "http://kwarg-endpoint"
+                mock_config_instance.headers = {}
 
-                    # Call with kwargs that should override env vars
-                    instrument(service_name="kwarg-service", endpoint="http://kwarg-endpoint")
+                # Call with kwargs that should override env vars
+                instrument(service_name="kwarg-service", endpoint="http://kwarg-endpoint")
 
-                    # Verify OTelConfig was called with kwargs (overriding env vars)
-                    mock_otel_config.assert_called_once_with(
-                        service_name="kwarg-service", endpoint="http://kwarg-endpoint"
-                    )
+                # Verify OTelConfig was called with kwargs (overriding env vars)
+                mock_otel_config.assert_called_once_with(
+                    service_name="kwarg-service", endpoint="http://kwarg-endpoint"
+                )
 
 
 def test_instrument_metrics_setup_failure():
     """Test instrumentation when metrics setup fails but doesn't break everything."""
     with patch("genai_otel.OTelConfig") as mock_otel_config:
         with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
-            with patch("genai_otel.setup_meter") as mock_setup_meter:
-                with patch("genai_otel.logger") as mock_logger:
-                    mock_config_instance = MagicMock(spec=OTelConfig)
-                    mock_otel_config.return_value = mock_config_instance
-                    # Mock the config attributes that setup_meter uses
-                    mock_config_instance.service_name = "test-service"
-                    mock_config_instance.endpoint = "http://test-endpoint"
-                    mock_config_instance.headers = {}
-                    mock_setup_meter.return_value = (
-                        None,
-                        "Metrics error",
-                    )  # Simulate metrics failure
+            with patch("genai_otel.logger") as mock_logger:
+                mock_config_instance = MagicMock(spec=OTelConfig)
+                mock_otel_config.return_value = mock_config_instance
+                # Simulate a failure during metrics setup within setup_auto_instrumentation
+                mock_setup_auto_instrumentation.side_effect = Exception("Metrics setup error")
+                # Mock the config attributes
+                mock_config_instance.service_name = "test-service"
+                mock_config_instance.endpoint = "http://test-endpoint"
+                mock_config_instance.headers = {}
 
-                    instrument()
+                instrument()
 
-                    mock_otel_config.assert_called_once_with()
-                    mock_setup_auto_instrumentation.assert_called_once_with(mock_config_instance)
-                    mock_setup_meter.assert_called_once_with(
-                        "test-service", "dev", mock_config_instance.endpoint, {}
-                    )
-                    # Check that metrics error was logged
-                    mock_logger.error.assert_any_call(
-                        "Failed to initialize metrics: %s", "Metrics error"
-                    )
-                    # But overall instrumentation should still succeed
-                    mock_logger.info.assert_called_once_with(
-                        "GenAI OpenTelemetry instrumentation initialized successfully"
-                    )
+                mock_otel_config.assert_called_once_with()
+                mock_setup_auto_instrumentation.assert_called_once_with(mock_config_instance)
+                # Check that the overall instrumentation failure was logged
+                mock_logger.error.assert_called_once()
+                error_call_args = mock_logger.error.call_args[0]
+                assert len(error_call_args) >= 1
+                assert "Failed to initialize instrumentation" in error_call_args[0]
+                call_kwargs = mock_logger.error.call_args[1]
+                assert call_kwargs.get("exc_info") is True
 
 
 def test_top_level_exports():
