@@ -63,7 +63,9 @@ class APIInstrumentor(BaseInstrumentor):
         #     if self.config.fail_on_error:
         #         raise
 
-        logger.warning("requests library instrumentation disabled to prevent OTLP exporter conflicts")
+        logger.warning(
+            "requests library instrumentation disabled to prevent OTLP exporter conflicts"
+        )
 
         try:
             # Wrap httpx.Client.request
