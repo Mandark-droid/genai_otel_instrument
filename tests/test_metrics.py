@@ -2,11 +2,8 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from opentelemetry import metrics, trace
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.metrics import set_meter_provider, NoOpMeterProvider
+from opentelemetry.trace import set_tracer_provider, NoOpTracerProvider
 
 import genai_otel
 from genai_otel.config import OTelConfig
@@ -31,6 +28,8 @@ def reset_otel_metrics():
             del os.environ[var]
 
     # Reset the global MeterProvider and TracerProvider to NoOp providers
+    set_meter_provider(NoOpMeterProvider())
+    set_tracer_provider(NoOpTracerProvider())
     yield
 
 

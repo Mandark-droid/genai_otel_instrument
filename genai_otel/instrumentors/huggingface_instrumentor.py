@@ -42,6 +42,7 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
 
         try:
             import importlib
+
             transformers_module = importlib.import_module("transformers")
             original_pipeline = transformers_module.pipeline
 
