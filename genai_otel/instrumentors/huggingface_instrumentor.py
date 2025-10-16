@@ -48,24 +48,36 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
 
             def wrapped_pipeline(*args, **kwargs):
                 pipe = original_pipeline(*args, **kwargs)
-                original_call = pipe.__call__
 
-                def wrapped_call(self, *call_args, **call_kwargs):
-                    with config.tracer.start_as_current_span("huggingface.pipeline") as span:
-                        task = getattr(self, "task", "unknown")
-                        model = getattr(getattr(self, "model", None), "name_or_path", "unknown")
+                class WrappedPipeline:
+                    def __init__(self, original_pipe):
+                        self._original_pipe = original_pipe
 
-                        span.set_attribute("gen_ai.system", "huggingface")
-                        span.set_attribute("gen_ai.request.model", model)
-                        span.set_attribute("huggingface.task", task)
+                    def __call__(self, *call_args, **call_kwargs):
+                        with config.tracer.start_as_current_span("huggingface.pipeline") as span:
+                            task = getattr(self._original_pipe, "task", "unknown")
+                            model = getattr(
+                                getattr(self._original_pipe, "model", None),
+                                "name_or_path",
+                                "unknown",
+                            )
 
-                        config.request_counter.add(1, {"model": model, "provider": "huggingface"})
+                            span.set_attribute("gen_ai.system", "huggingface")
+                            span.set_attribute("gen_ai.request.model", model)
+                            span.set_attribute("huggingface.task", task)
 
-                        result = original_call(*call_args, **call_kwargs)
-                        return result
+                            config.request_counter.add(
+                                1, {"model": model, "provider": "huggingface"}
+                            )
 
-                pipe.__call__ = types.MethodType(wrapped_call, pipe)
-                return pipe
+                            result = self._original_pipe(*call_args, **call_kwargs)
+                            return result
+
+                    def __getattr__(self, name):
+                        # Delegate all other attribute access to the original pipe
+                        return getattr(self._original_pipe, name)
+
+                return WrappedPipeline(pipe)
 
             transformers_module.pipeline = wrapped_pipeline
 

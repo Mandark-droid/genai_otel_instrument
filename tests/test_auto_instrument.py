@@ -134,7 +134,7 @@ class TestAutoInstrumentation:
                             mock_tracer_provider_instance
                         )
                         mock_otlp_span_exporter.assert_called_once_with(
-                            endpoint="http://localhost:4318", headers=config.headers, timeout=10.0
+                            endpoint="http://localhost:4318", headers=config.headers, timeout=10.0, session=ANY
                         )
                         mock_batch_span_processor.assert_called_once_with(
                             mock_span_exporter_instance
@@ -143,7 +143,7 @@ class TestAutoInstrumentation:
                             mock_span_processor_instance
                         )
                         mock_otlp_metric_exporter.assert_called_once_with(
-                            endpoint="http://localhost:4318", headers=config.headers, timeout=10.0
+                            endpoint="http://localhost:4318", headers=config.headers, timeout=10.0, session=ANY
                         )
                         mock_periodic_exporting_metric_reader.assert_called_once_with(
                             exporter=mock_metric_exporter_instance

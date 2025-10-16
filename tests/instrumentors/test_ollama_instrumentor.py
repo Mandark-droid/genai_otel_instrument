@@ -1,5 +1,5 @@
 import sys
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -14,9 +14,10 @@ def instrumentor():
 def test_init_available():
     """Test initialization when ollama is available"""
     # Create a fresh instrumentor with ollama available
-    with patch.dict('sys.modules', {'ollama': MagicMock()}):
+    with patch.dict("sys.modules", {"ollama": MagicMock()}):
         # Re-import to get a fresh instrumentor that sees ollama as available
         from genai_otel.instrumentors.ollama_instrumentor import OllamaInstrumentor
+
         fresh_instrumentor = OllamaInstrumentor()
         assert fresh_instrumentor._ollama_available is True
 
@@ -24,12 +25,13 @@ def test_init_available():
 def test_init_not_available():
     """Test initialization when ollama is not available"""
     # Create a fresh instrumentor without ollama
-    with patch.dict('sys.modules', {'ollama': None}):
+    with patch.dict("sys.modules", {"ollama": None}):
         # Force reload by removing the module if it exists
-        if 'genai_otel.instrumentors.ollama_instrumentor' in sys.modules:
-            del sys.modules['genai_otel.instrumentors.ollama_instrumentor']
+        if "genai_otel.instrumentors.ollama_instrumentor" in sys.modules:
+            del sys.modules["genai_otel.instrumentors.ollama_instrumentor"]
 
         from genai_otel.instrumentors.ollama_instrumentor import OllamaInstrumentor
+
         fresh_instrumentor = OllamaInstrumentor()
         assert fresh_instrumentor._ollama_available is False
 
@@ -75,6 +77,8 @@ def test_instrument_available(instrumentor):
     # Verify original function was called using the stored reference
     instrumentor._original_generate.assert_called_once_with(model="test_model")
     assert result == {"response": "test"}
+
+
 def test_instrument_not_available(instrumentor):
     """Test instrumentation when ollama is not available"""
     mock_config = Mock()
