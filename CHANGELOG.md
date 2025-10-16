@@ -8,12 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Corrected indentation and patch targets in `tests/instrumentors/test_ollama_instrumentor.py` to resolve `IndentationError` and `AttributeError`.
+- Fixed test failures in `tests/test_metrics.py` by ensuring proper reset of OpenTelemetry providers and correcting assertions.
+- Updated `genai_otel/instrumentors/ollama_instrumentor.py` to align with corrected test logic.
+- Addressed test failures in `tests/instrumentors/test_huggingface_instrumentor.py` related to missing attributes and call assertions.
 - Fix HuggingFace instrumentation to correctly set span attributes and pass tests.
 - Resolve `AttributeError` related to `TraceContextTextMapPropagator` in test files by correcting import paths.
 - Fixed `setup_meter` function in `genai_otel/metrics.py` to correctly configure OpenTelemetry MeterProvider with metric readers and handle invalid OTLP endpoint/headers gracefully.
 - Corrected `tests/test_metrics.py` to properly reset MeterProvider state between tests and accurately access metric exporter attributes, resolving `TypeError` and `AssertionError`s.
 - Fixed `cost_counter` not being called in `tests/instrumentors/test_base.py` by ensuring `BaseInstrumentor._shared_cost_counter` is patched with a distinct mock before `ConcreteInstrumentor` instantiation.
 - Resolved `setup_tracing` failures in `tests/test_config.py` by correcting `genai_otel/config.py`'s `setup_tracing` function and adjusting the `reset_tracer` fixture to mock `TracerProvider` correctly.
+- Refined Hugging Face instrumentation tests for better attribute handling and mock accuracy.
+- Improved `tests/test_metrics.py` by ensuring proper isolation of OpenTelemetry providers using `NoOp` implementations in the `reset_otel` fixture.
 
 ### Added
 
@@ -29,51 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 
 - Fixed tests for base/redis and auto instrument (a701603)
-
-## [0.1.0] - 2025-10-11
-
-### Added
-
-- Initial release of genai-otel-instrument
-- Automatic instrumentation for LLM providers:
-  - OpenAI
-  - Anthropic (Claude)
-  - Google AI (Gemini)
-  - AWS Bedrock
-  - Azure OpenAI
-  - Cohere
-  - Mistral AI
-  - Together AI
-  - Groq
-  - Ollama
-  - Vertex AI
-  - Replicate
-  - Anyscale
-- Framework support:
-  - LangChain
-  - LlamaIndex
-  - HuggingFace Transformers
-- MCP (Model Context Protocol) tool instrumentation:
-  - Database clients (PostgreSQL, MySQL, MongoDB, SQLAlchemy)
-  - Redis caching
-  - Kafka message queues
-  - Vector databases (Pinecone, Weaviate, Qdrant, ChromaDB, Milvus, FAISS)
-  - Generic API calls
-- GPU metrics collection support (NVIDIA GPUs via pynvml)
-- Cost tracking and estimation for LLM API calls
-- OpenTelemetry trace and metrics export
-- CLI tool for running instrumented applications
-- Comprehensive configuration via environment variables
-- Optional dependencies for lean installations
-
-### Features
-
-- Automatic span creation for LLM operations
-- Token usage tracking
-- Request latency measurement
-- Error tracking and reporting
-- Configurable fail-on-error behavior
-- Extensive logging configuration
 
 [Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/Mandark-droid/genai_otel_instrument/releases/tag/v0.1.0
