@@ -119,6 +119,16 @@ def setup_auto_instrumentation(config: OTelConfig):
 
     logger.debug(f"OTelConfig endpoint: {config.endpoint}")
     if config.endpoint:
+        import requests
+
+        # Create a requests session that is not instrumented
+        uninstrumented_session = requests.Session()
+
+        # Suppress instrumentation on the session
+        from opentelemetry.instrumentation.requests import RequestsInstrumentor
+
+        RequestsInstrumentor.uninstrument_session(uninstrumented_session)
+
         # Convert timeout to float safely
         timeout_str = os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "10.0")
         try:
@@ -128,14 +138,20 @@ def setup_auto_instrumentation(config: OTelConfig):
             timeout = 10.0
 
         span_exporter = OTLPSpanExporter(
-            endpoint=config.endpoint, headers=config.headers, timeout=timeout
+            endpoint=config.endpoint,
+            headers=config.headers,
+            timeout=timeout,
+            session=uninstrumented_session,
         )
         tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
         logger.info(f"OpenTelemetry tracing configured with OTLP endpoint: {config.endpoint}")
 
         # Configure Metrics
         metric_exporter = OTLPMetricExporter(
-            endpoint=config.endpoint, headers=config.headers, timeout=timeout
+            endpoint=config.endpoint,
+            headers=config.headers,
+            timeout=timeout,
+            session=uninstrumented_session,
         )
         metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
         meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])

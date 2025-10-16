@@ -1,6 +1,6 @@
 import sys
 import unittest
-from unittest.mock import MagicMock, call, patch, create_autospec
+from unittest.mock import MagicMock, call, create_autospec, patch
 
 from genai_otel.instrumentors.huggingface_instrumentor import HuggingFaceInstrumentor
 
@@ -78,8 +78,7 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
             # Call the wrapped pipeline
             pipe = transformers.pipeline("text-generation", model="gpt2")
 
-            # Verify we got a pipe object
-            self.assertIsInstance(pipe, MockPipe)
+            # Verify the wrapper delegates attributes correctly
             self.assertEqual(pipe.task, "text-generation")
             self.assertEqual(pipe.model.name_or_path, "gpt2")
 
@@ -93,11 +92,13 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
             config.tracer.start_as_current_span.assert_called_once_with("huggingface.pipeline")
 
             # Verify span attributes were set
-            mock_span.set_attribute.assert_has_calls([
-                call("gen_ai.system", "huggingface"),
-                call("gen_ai.request.model", "gpt2"),
-                call("huggingface.task", "text-generation"),
-            ])
+            mock_span.set_attribute.assert_has_calls(
+                [
+                    call("gen_ai.system", "huggingface"),
+                    call("gen_ai.request.model", "gpt2"),
+                    call("huggingface.task", "text-generation"),
+                ]
+            )
 
             # Verify metrics were recorded
             config.request_counter.add.assert_called_once_with(
@@ -145,11 +146,13 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
             self.assertEqual(result, "output")
 
             # Verify span attributes fall back to "unknown"
-            mock_span.set_attribute.assert_has_calls([
-                call("gen_ai.system", "huggingface"),
-                call("gen_ai.request.model", "unknown"),
-                call("huggingface.task", "unknown"),
-            ])
+            mock_span.set_attribute.assert_has_calls(
+                [
+                    call("gen_ai.system", "huggingface"),
+                    call("gen_ai.request.model", "unknown"),
+                    call("huggingface.task", "unknown"),
+                ]
+            )
 
             # Verify request counter
             config.request_counter.add.assert_called_once_with(

@@ -23,13 +23,14 @@ class OllamaInstrumentor(BaseInstrumentor):
         self._ollama_available = False
         self._ollama_module = None
         self._original_generate = None  # Add this
-        self._original_chat = None      # Add this
+        self._original_chat = None  # Add this
         self._check_availability()
 
     def _check_availability(self):
         """Check if Ollama library is available."""
         try:
             import ollama
+
             self._ollama_available = True
             self._ollama_module = ollama
             logger.debug("Ollama library detected and available for instrumentation")
