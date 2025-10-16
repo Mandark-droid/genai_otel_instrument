@@ -21,56 +21,60 @@ class OllamaInstrumentor(BaseInstrumentor):
         """Initialize the instrumentor."""
         super().__init__()
         self._ollama_available = False
+        self._ollama_module = None
+        self._original_generate = None  # Add this
+        self._original_chat = None      # Add this
         self._check_availability()
 
     def _check_availability(self):
         """Check if Ollama library is available."""
         try:
             import ollama
-
             self._ollama_available = True
+            self._ollama_module = ollama
             logger.debug("Ollama library detected and available for instrumentation")
         except ImportError:
             logger.debug("Ollama library not installed, instrumentation will be skipped")
             self._ollama_available = False
+            self._ollama_module = None
 
     def instrument(self, config: OTelConfig):
+        """Instrument the Ollama library."""
         self.config = config
-        try:
-            import ollama
 
-            original_generate = ollama.generate
-            original_chat = ollama.chat
+        if not self._ollama_available or self._ollama_module is None:
+            return
 
-            def wrapped_generate(*args, **kwargs):
-                with self.tracer.start_as_current_span("ollama.generate") as span:
-                    model = kwargs.get("model", "unknown")
+        # Store original methods
+        self._original_generate = self._ollama_module.generate
+        self._original_chat = self._ollama_module.chat
 
-                    span.set_attribute("gen_ai.system", "ollama")
-                    span.set_attribute("gen_ai.request.model", model)
+        def wrapped_generate(*args, **kwargs):
+            with self.tracer.start_as_current_span("ollama.generate") as span:
+                model = kwargs.get("model", "unknown")
 
-                    self.request_counter.add(1, {"model": model, "provider": "ollama"})
+                span.set_attribute("gen_ai.system", "ollama")
+                span.set_attribute("gen_ai.request.model", model)
 
-                    result = original_generate(*args, **kwargs)
-                    return result
+                self.request_counter.add(1, {"model": model, "provider": "ollama"})
 
-            def wrapped_chat(*args, **kwargs):
-                with self.tracer.start_as_current_span("ollama.chat") as span:
-                    model = kwargs.get("model", "unknown")
+                result = self._original_generate(*args, **kwargs)
+                return result
 
-                    span.set_attribute("gen_ai.system", "ollama")
-                    span.set_attribute("gen_ai.request.model", model)
+        def wrapped_chat(*args, **kwargs):
+            with self.tracer.start_as_current_span("ollama.chat") as span:
+                model = kwargs.get("model", "unknown")
 
-                    self.request_counter.add(1, {"model": model, "provider": "ollama"})
+                span.set_attribute("gen_ai.system", "ollama")
+                span.set_attribute("gen_ai.request.model", model)
 
-                    result = original_chat(*args, **kwargs)
-                    return result
+                self.request_counter.add(1, {"model": model, "provider": "ollama"})
 
-            ollama.generate = wrapped_generate
-            ollama.chat = wrapped_chat
+                result = self._original_chat(*args, **kwargs)
+                return result
 
-        except ImportError:
-            pass
+        self._ollama_module.generate = wrapped_generate
+        self._ollama_module.chat = wrapped_chat
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         return None
