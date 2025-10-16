@@ -48,17 +48,22 @@ class APIInstrumentor(BaseInstrumentor):
             config (OTelConfig): The OpenTelemetry configuration object.
         """
         self.config = config  # Store the config
-        try:
-            # Wrap requests.Session.request and requests.request
-            wrapt.wrap_function_wrapper(requests, "request", self._wrap_api_call)
-            wrapt.wrap_function_wrapper(requests.sessions.Session, "request", self._wrap_api_call)
-            logger.info("requests library instrumented for API calls.")
-        except ImportError:
-            logger.debug("requests library not found, skipping instrumentation.")
-        except Exception as e:
-            logger.error("Failed to instrument requests library: %s", e, exc_info=True)
-            if self.config.fail_on_error:
-                raise
+
+        # CRITICAL: Do NOT wrap requests library when using OTLP HTTP exporters
+        # Wrapping requests.Session breaks OTLP exporters that use it internally
+        # try:
+        #     # Wrap requests.Session.request and requests.request
+        #     wrapt.wrap_function_wrapper(requests, "request", self._wrap_api_call)
+        #     wrapt.wrap_function_wrapper(requests.sessions.Session, "request", self._wrap_api_call)
+        #     logger.info("requests library instrumented for API calls.")
+        # except ImportError:
+        #     logger.debug("requests library not found, skipping instrumentation.")
+        # except Exception as e:
+        #     logger.error("Failed to instrument requests library: %s", e, exc_info=True)
+        #     if self.config.fail_on_error:
+        #         raise
+
+        logger.warning("requests library instrumentation disabled to prevent OTLP exporter conflicts")
 
         try:
             # Wrap httpx.Client.request
