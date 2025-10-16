@@ -100,7 +100,7 @@ print_status $? "Code formatting applied"
 # Run tests
 print_info "Running tests..."
 if [ -d "tests" ]; then
-    pytest tests/ -v --cov=genai_otel --cov-report=term --cov-report=html
+    pytest tests/ -v --cov=genai_otel --cov-report=term --cov-report=html --cov-report=term-missing
     print_status $? "All tests passed"
 else
     print_warning "No tests directory found, skipping tests"

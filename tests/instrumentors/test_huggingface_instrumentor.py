@@ -195,6 +195,26 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
         HuggingFaceInstrumentor()
         mock_check.assert_called_once()
 
+    # ------------------------------------------------------------------
+    # 7. Test ImportError during instrument() method
+    # ------------------------------------------------------------------
+    def test_instrument_importlib_fails(self):
+        """Test that ImportError during instrumentation is handled gracefully."""
+        # Setup: transformers is available during init but fails during instrument
+        with patch.dict("sys.modules", {"transformers": MagicMock()}):
+            instrumentor = HuggingFaceInstrumentor()
+            self.assertTrue(instrumentor._transformers_available)
+
+            config = MagicMock()
+            config.tracer = MagicMock()
+
+            # Mock importlib.import_module to raise ImportError
+            with patch("importlib.import_module", side_effect=ImportError("Module not found")):
+                # Act - should not raise, should handle gracefully
+                instrumentor.instrument(config)
+
+                # Should complete without errors (pass block executes)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
