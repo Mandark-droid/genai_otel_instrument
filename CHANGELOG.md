@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **CRITICAL: Fixed OTLP HTTP exporter configuration issues**
+  - Fixed `AttributeError: 'function' object has no attribute 'ok'` caused by requests library instrumentation conflicting with OTLP exporters
+  - Disabled `RequestsInstrumentor` in MCP manager to prevent breaking OTLP HTTP exporters that use requests internally
+  - Disabled requests wrapping in `APIInstrumentor` to avoid class-level Session patching
+  - Fixed endpoint configuration to use environment variables so exporters correctly append `/v1/traces` and `/v1/metrics` paths
+  - Updated logging to show full endpoints for both trace and metrics exporters
 - Corrected indentation and patch targets in `tests/instrumentors/test_ollama_instrumentor.py` to resolve `IndentationError` and `AttributeError`.
 - Fixed test failures in `tests/test_metrics.py` by ensuring proper reset of OpenTelemetry providers and correcting assertions.
 - Updated `genai_otel/instrumentors/ollama_instrumentor.py` to align with corrected test logic.
@@ -30,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: Disabled automatic requests library instrumentation** due to conflicts with OTLP HTTP exporters. Users should use `httpx` library for HTTP calls to get automatic tracing, or switch to OTLP gRPC exporters.
 - Updated logging configuration to allow log level via environment variable and implement log rotation (Issue #XXX)
 
 ### Tests

@@ -40,11 +40,23 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
         # HTTP/API instrumentation
         try:
             logger.info("Instrumenting HTTP/API calls")
-            RequestsInstrumentor().instrument()
+            # CRITICAL: Do NOT instrument requests library when using OTLP HTTP exporters
+            # RequestsInstrumentor patches requests.Session at class level, breaking OTLP exporters
+            # that use requests internally. The OTEL_PYTHON_REQUESTS_EXCLUDED_URLS doesn't help
+            # because it only works at request-time, not at instrumentation-time.
+            #
+            # TODO: Find a way to instrument user requests without breaking OTLP exporters
+            # RequestsInstrumentor().instrument()
+
+            logger.warning(
+                "Requests library instrumentation is disabled to prevent conflicts with OTLP exporters"
+            )
+
+            # HTTPx is safe to instrument
             HTTPXClientInstrumentor().instrument()
             api_instrumentor = APIInstrumentor(self.config)
             api_instrumentor.instrument(self.config)
-            logger.info("✓ HTTP/API instrumentation enabled")
+            logger.info("✓ HTTP/API instrumentation enabled (requests library excluded)")
             success_count += 1
         except ImportError as e:
             failure_count += 1
