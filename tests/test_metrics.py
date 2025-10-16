@@ -69,3 +69,22 @@ def test_instrumentation_with_environment():
     provider = get_meter_provider()
     assert provider is not None
     assert not isinstance(provider, NoOpMeterProvider)
+
+
+def test_grpc_protocol_import():
+    """Test that grpc protocol import path is covered."""
+    # Set environment variable before importing the module
+    os.environ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "grpc"
+
+    # Force reimport to trigger the grpc path
+    import importlib
+    import genai_otel.metrics
+    importlib.reload(genai_otel.metrics)
+
+    # Should import successfully
+    from genai_otel.metrics import get_meter
+    meter = get_meter()
+    assert meter is not None
+
+    # Clean up
+    del os.environ["OTEL_EXPORTER_OTLP_PROTOCOL"]
