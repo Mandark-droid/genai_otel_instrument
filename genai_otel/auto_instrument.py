@@ -148,8 +148,8 @@ def setup_auto_instrumentation(config: OTelConfig):
             config.endpoint,
             f"{base_url}/v1/traces",
             f"{base_url}/v1/metrics",
-            config.endpoint.rstrip('/') + '/v1/traces',
-            config.endpoint.rstrip('/') + '/v1/metrics'
+            config.endpoint.rstrip("/") + "/v1/traces",
+            config.endpoint.rstrip("/") + "/v1/metrics",
         ]
 
         # Add to environment variable (comma-separated)
@@ -168,7 +168,9 @@ def setup_auto_instrumentation(config: OTelConfig):
             headers=config.headers,
         )
         tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-        logger.info(f"OpenTelemetry tracing configured with OTLP endpoint: {span_exporter._endpoint}")
+        logger.info(
+            f"OpenTelemetry tracing configured with OTLP endpoint: {span_exporter._endpoint}"
+        )
 
         # Configure Metrics
         metric_exporter = OTLPMetricExporter(
@@ -177,7 +179,9 @@ def setup_auto_instrumentation(config: OTelConfig):
         metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
         meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
         metrics.set_meter_provider(meter_provider)
-        logger.info(f"OpenTelemetry metrics configured with OTLP endpoint: {metric_exporter._endpoint}")
+        logger.info(
+            f"OpenTelemetry metrics configured with OTLP endpoint: {metric_exporter._endpoint}"
+        )
     else:
         # Configure Console Exporters if no OTLP endpoint is set
         span_exporter = ConsoleSpanExporter()
