@@ -70,6 +70,8 @@ class MistralAIInstrumentor(BaseInstrumentor):
                         )
                         raise
 
+            return wrapped_chat
+
         except Exception as e:
             logger.debug(f"Could not instrument MistralAI chat: {e}")
 
@@ -109,6 +111,8 @@ class MistralAIInstrumentor(BaseInstrumentor):
                             },
                         )
                         raise
+
+            return wrapped_embeddings
 
         except Exception as e:
             logger.debug(f"Could not instrument MistralAI embeddings: {e}")

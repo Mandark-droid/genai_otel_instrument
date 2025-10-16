@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/test_logging_config.py::test_setup_logging_closes_existing_handlers -v --cov=genai_otel/logging_config --cov-report=term-missing)",
+      "Bash(pytest:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

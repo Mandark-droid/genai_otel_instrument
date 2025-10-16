@@ -802,3 +802,96 @@ class TestEdgeCases:
                                 in log
                                 for log in info_logs
                             )
+
+    @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
+    def test_setup_with_service_instance_id(self):
+        """Test that SERVICE_INSTANCE_ID environment variable is used."""
+        config = OTelConfig(
+            service_name="test-service",
+            endpoint="http://localhost:4318",
+            enabled_instrumentors=[],
+            enable_gpu_metrics=False,
+            enable_mcp_instrumentation=False,
+        )
+
+        with patch.dict("os.environ", {"OTEL_SERVICE_INSTANCE_ID": "instance-123"}):
+            with patch("genai_otel.auto_instrument.TracerProvider") as mock_tracer_provider:
+                with patch("genai_otel.auto_instrument.MeterProvider"):
+                    with patch("genai_otel.auto_instrument.trace"):
+                        with patch("genai_otel.auto_instrument.metrics"):
+                            with patch("genai_otel.auto_instrument.Resource") as mock_resource:
+                                setup_auto_instrumentation(config)
+
+                                # Verify Resource.create was called with service.instance.id
+                                resource_attrs = mock_resource.create.call_args[0][0]
+                                assert resource_attrs["service.name"] == "test-service"
+                                assert resource_attrs["service.instance.id"] == "instance-123"
+
+    @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
+    def test_setup_with_environment_attribute(self):
+        """Test that OTEL_ENVIRONMENT environment variable is used."""
+        config = OTelConfig(
+            service_name="test-service",
+            endpoint="http://localhost:4318",
+            enabled_instrumentors=[],
+            enable_gpu_metrics=False,
+            enable_mcp_instrumentation=False,
+        )
+
+        with patch.dict("os.environ", {"OTEL_ENVIRONMENT": "production"}):
+            with patch("genai_otel.auto_instrument.TracerProvider"):
+                with patch("genai_otel.auto_instrument.MeterProvider"):
+                    with patch("genai_otel.auto_instrument.trace"):
+                        with patch("genai_otel.auto_instrument.metrics"):
+                            with patch("genai_otel.auto_instrument.Resource") as mock_resource:
+                                setup_auto_instrumentation(config)
+
+                                # Verify Resource.create was called with environment
+                                resource_attrs = mock_resource.create.call_args[0][0]
+                                assert resource_attrs["service.name"] == "test-service"
+                                assert resource_attrs["environment"] == "production"
+
+    @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
+    def test_setup_with_invalid_timeout(self):
+        """Test timeout handling when OTEL_EXPORTER_OTLP_TIMEOUT is invalid."""
+        config = OTelConfig(
+            service_name="test-service",
+            endpoint="http://localhost:4318",
+            enabled_instrumentors=[],
+            enable_gpu_metrics=False,
+            enable_mcp_instrumentation=False,
+        )
+
+        with patch.dict("os.environ", {"OTEL_EXPORTER_OTLP_TIMEOUT": "invalid"}):
+            with patch("genai_otel.auto_instrument.logger") as mock_logger:
+                with patch("genai_otel.auto_instrument.TracerProvider"):
+                    with patch("genai_otel.auto_instrument.MeterProvider"):
+                        with patch("genai_otel.auto_instrument.trace"):
+                            with patch("genai_otel.auto_instrument.metrics"):
+                                setup_auto_instrumentation(config)
+
+                                # Verify warning was logged about invalid timeout
+                                mock_logger.warning.assert_called_once()
+                                warning_msg = mock_logger.warning.call_args[0][0]
+                                assert "Invalid timeout value 'invalid'" in warning_msg
+
+
+def test_instrument_wrapper_function():
+    """Test the instrument() convenience wrapper function."""
+    from genai_otel.auto_instrument import instrument
+
+    with patch("genai_otel.auto_instrument.setup_auto_instrumentation") as mock_setup:
+        with patch("genai_otel.auto_instrument.OTelConfig") as mock_config_class:
+            mock_config_instance = MagicMock()
+            mock_config_class.return_value = mock_config_instance
+
+            # Call instrument with kwargs
+            instrument(service_name="test-service", endpoint="http://localhost:4318")
+
+            # Verify OTelConfig was instantiated with the kwargs
+            mock_config_class.assert_called_once_with(
+                service_name="test-service", endpoint="http://localhost:4318"
+            )
+
+            # Verify setup_auto_instrumentation was called with the config
+            mock_setup.assert_called_once_with(mock_config_instance)
