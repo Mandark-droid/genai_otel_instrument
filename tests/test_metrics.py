@@ -1,8 +1,9 @@
 import os
+
 import pytest
 from opentelemetry import metrics, trace
-from opentelemetry.metrics import set_meter_provider, NoOpMeterProvider
-from opentelemetry.trace import set_tracer_provider, NoOpTracerProvider
+from opentelemetry.metrics import NoOpMeterProvider, set_meter_provider
+from opentelemetry.trace import NoOpTracerProvider, set_tracer_provider
 
 import genai_otel
 from genai_otel.metrics import get_meter, get_meter_provider
@@ -68,4 +69,3 @@ def test_instrumentation_with_environment():
     provider = get_meter_provider()
     assert provider is not None
     assert not isinstance(provider, NoOpMeterProvider)
-
