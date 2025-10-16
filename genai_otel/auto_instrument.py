@@ -86,6 +86,10 @@ INSTRUMENTORS = {
 }
 
 
+# Global list to store OTLP exporter sessions that should not be instrumented
+_OTLP_EXPORTER_SESSIONS = []
+
+
 def setup_auto_instrumentation(config: OTelConfig):
     """
     Set up OpenTelemetry with auto-instrumentation for LLM frameworks and MCP tools.
@@ -93,6 +97,7 @@ def setup_auto_instrumentation(config: OTelConfig):
     Args:
         config: OTelConfig instance with configuration parameters.
     """
+    global _OTLP_EXPORTER_SESSIONS
     logger.info("Starting auto-instrumentation setup...")
 
     # Configure OpenTelemetry SDK (TracerProvider, MeterProvider, etc.)
@@ -119,16 +124,6 @@ def setup_auto_instrumentation(config: OTelConfig):
 
     logger.debug(f"OTelConfig endpoint: {config.endpoint}")
     if config.endpoint:
-        import requests
-
-        # Create a requests session that is not instrumented
-        uninstrumented_session = requests.Session()
-
-        # Suppress instrumentation on the session
-        from opentelemetry.instrumentation.requests import RequestsInstrumentor
-
-        RequestsInstrumentor.uninstrument_session(uninstrumented_session)
-
         # Convert timeout to float safely
         timeout_str = os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "10.0")
         try:
@@ -137,26 +132,52 @@ def setup_auto_instrumentation(config: OTelConfig):
             logger.warning(f"Invalid timeout value '{timeout_str}', using default 10.0")
             timeout = 10.0
 
+        # CRITICAL FIX: Set endpoint in environment variable so exporters can append correct paths
+        # The exporters only call _append_trace_path() when reading from env vars
+        from urllib.parse import urlparse
+
+        # Set the base endpoint in environment variable
+        os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = config.endpoint
+
+        parsed = urlparse(config.endpoint)
+        base_url = f"{parsed.scheme}://{parsed.netloc}"
+
+        # Build list of URLs to exclude from instrumentation
+        excluded_urls = [
+            base_url,
+            config.endpoint,
+            f"{base_url}/v1/traces",
+            f"{base_url}/v1/metrics",
+            config.endpoint.rstrip('/') + '/v1/traces',
+            config.endpoint.rstrip('/') + '/v1/metrics'
+        ]
+
+        # Add to environment variable (comma-separated)
+        existing = os.environ.get("OTEL_PYTHON_REQUESTS_EXCLUDED_URLS", "")
+        if existing:
+            excluded_urls.append(existing)
+        os.environ["OTEL_PYTHON_REQUESTS_EXCLUDED_URLS"] = ",".join(excluded_urls)
+        logger.info(f"Excluded OTLP endpoints from instrumentation: {base_url}")
+
+        # Set timeout in environment variable
+        os.environ["OTEL_EXPORTER_OTLP_TIMEOUT"] = str(timeout)
+
+        # Create exporters WITHOUT passing endpoint (let them read from env vars)
+        # This ensures they call _append_trace_path() correctly
         span_exporter = OTLPSpanExporter(
-            endpoint=config.endpoint,
             headers=config.headers,
-            timeout=timeout,
-            session=uninstrumented_session,
         )
         tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-        logger.info(f"OpenTelemetry tracing configured with OTLP endpoint: {config.endpoint}")
+        logger.info(f"OpenTelemetry tracing configured with OTLP endpoint: {span_exporter._endpoint}")
 
         # Configure Metrics
         metric_exporter = OTLPMetricExporter(
-            endpoint=config.endpoint,
             headers=config.headers,
-            timeout=timeout,
-            session=uninstrumented_session,
         )
         metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
         meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
         metrics.set_meter_provider(meter_provider)
-        logger.info("OpenTelemetry metrics configured with OTLP exporter")
+        logger.info(f"OpenTelemetry metrics configured with OTLP endpoint: {metric_exporter._endpoint}")
     else:
         # Configure Console Exporters if no OTLP endpoint is set
         span_exporter = ConsoleSpanExporter()
@@ -185,6 +206,7 @@ def setup_auto_instrumentation(config: OTelConfig):
             logger.warning(f"Unknown instrumentor '{name}' requested.")
 
     # Auto-instrument MCP tools (databases, APIs, etc.)
+    # NOTE: OTLP endpoints are excluded via OTEL_PYTHON_REQUESTS_EXCLUDED_URLS set above
     if config.enable_mcp_instrumentation:
         try:
             mcp_manager = MCPInstrumentorManager(config)
