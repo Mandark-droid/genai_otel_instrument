@@ -280,3 +280,98 @@ def test_create_span_wrapper_with_instrumentation_disabled(instrumentor):
     inst.tracer.start_as_current_span.assert_not_called()
     original_function.assert_called_once_with("arg1", kwarg1="kwarg_value")
     assert result == {"usage": None}
+
+
+def test_extract_attributes_with_non_primitive_value(instrumentor):
+    """Test that non-primitive attribute values are converted to strings."""
+    inst, mock_span, mock_span_ctx = instrumentor
+    original_function = MagicMock(return_value={"usage": None})
+
+    # Create an extract_attributes function that returns a non-primitive value
+    def extract_attrs(instance, args, kwargs):
+        return {
+            "string_attr": "test",
+            "int_attr": 42,
+            "list_attr": [1, 2, 3],  # Non-primitive - should be converted to string
+            "dict_attr": {"key": "value"},  # Non-primitive - should be converted to string
+        }
+
+    wrapped = inst.create_span_wrapper("test.span", extract_attributes=extract_attrs)(original_function)
+
+    result = wrapped()
+
+    # Verify that start_as_current_span was called with attributes including stringified non-primitives
+    call_args = inst.tracer.start_as_current_span.call_args
+    attributes = call_args[1]["attributes"]
+    assert attributes["string_attr"] == "test"
+    assert attributes["int_attr"] == 42
+    assert attributes["list_attr"] == "[1, 2, 3]"
+    assert attributes["dict_attr"] == "{'key': 'value'}"
+
+
+def test_record_result_metrics_exception_in_wrapper(instrumentor, caplog):
+    """Test that exceptions in _record_result_metrics call are caught and logged."""
+    inst, mock_span, mock_span_ctx = instrumentor
+    original_function = MagicMock(return_value={"usage": {"prompt_tokens": 10}})
+
+    # Make _record_result_metrics raise an exception
+    with patch.object(inst, "_record_result_metrics", side_effect=RuntimeError("Test error")):
+        wrapped = inst.create_span_wrapper("test.span")(original_function)
+        result = wrapped()
+
+        # Should still return the result and not crash
+        assert result == {"usage": {"prompt_tokens": 10}}
+        assert "Failed to record metrics for span 'test.span'" in caplog.text
+
+
+def test_error_counter_exception_handling(instrumentor):
+    """Test that exceptions in error_counter.add are silently caught."""
+    inst, mock_span, mock_span_ctx = instrumentor
+    original_function = MagicMock(side_effect=ValueError("Test error"))
+
+    # Make error_counter.add raise an exception
+    inst.error_counter.add.side_effect = RuntimeError("Counter error")
+
+    wrapped = inst.create_span_wrapper("test.span")(original_function)
+
+    # Should still raise the original exception, not the counter error
+    with pytest.raises(ValueError, match="Test error"):
+        wrapped()
+
+    # Verify error_counter.add was called (before it raised)
+    inst.error_counter.add.assert_called_once()
+
+
+def test_latency_histogram_exception_handling(instrumentor, caplog):
+    """Test that exceptions in latency_histogram.record are caught and logged."""
+    inst, mock_span, mock_span_ctx = instrumentor
+    original_function = MagicMock(return_value={"usage": None})
+
+    # Make latency_histogram.record raise an exception
+    inst.latency_histogram.record.side_effect = RuntimeError("Histogram error")
+
+    wrapped = inst.create_span_wrapper("test.span")(original_function)
+    result = wrapped()
+
+    # Should still return the result
+    assert result == {"usage": None}
+    assert "Failed to record latency for span 'test.span'" in caplog.text
+
+
+def test_cost_calculation_exception_handling(instrumentor, caplog):
+    """Test that exceptions in cost calculation are caught and logged."""
+    inst, mock_span, mock_span_ctx = instrumentor
+    mock_span.attributes.get.return_value = "test_model"
+    original_function = MagicMock(
+        return_value={"usage": {"prompt_tokens": 10, "completion_tokens": 20}}
+    )
+
+    # Make cost_calculator.calculate_cost raise an exception
+    inst.cost_calculator.calculate_cost.side_effect = RuntimeError("Cost calculation error")
+
+    wrapped = inst.create_span_wrapper("test.span")(original_function)
+    result = wrapped()
+
+    # Should still return the result
+    assert result == {"usage": {"prompt_tokens": 10, "completion_tokens": 20}}
+    assert "Failed to calculate cost for span 'test.span'" in caplog.text
