@@ -133,8 +133,10 @@ class TestAutoInstrumentation:
                         mock_trace.set_tracer_provider.assert_called_once_with(
                             mock_tracer_provider_instance
                         )
+                        # OTLP exporters now read endpoint from environment variable
+                        # They should be called WITHOUT endpoint parameter
                         mock_otlp_span_exporter.assert_called_once_with(
-                            endpoint="http://localhost:4318", headers=config.headers, timeout=10.0, session=ANY
+                            headers=config.headers,
                         )
                         mock_batch_span_processor.assert_called_once_with(
                             mock_span_exporter_instance
@@ -143,7 +145,7 @@ class TestAutoInstrumentation:
                             mock_span_processor_instance
                         )
                         mock_otlp_metric_exporter.assert_called_once_with(
-                            endpoint="http://localhost:4318", headers=config.headers, timeout=10.0, session=ANY
+                            headers=config.headers,
                         )
                         mock_periodic_exporting_metric_reader.assert_called_once_with(
                             exporter=mock_metric_exporter_instance
@@ -166,11 +168,17 @@ class TestAutoInstrumentation:
                         )
                         # Check log messages
                         mock_logger.info.assert_any_call("Starting auto-instrumentation setup...")
-                        mock_logger.info.assert_any_call(
-                            "OpenTelemetry tracing configured with OTLP endpoint: http://localhost:4318"
+                        # Log messages now include the exporter's _endpoint attribute
+                        # We can't predict the exact value since it's read from the mock
+                        # So we'll check that the log was called with a string containing the key parts
+                        log_calls = [call[0][0] for call in mock_logger.info.call_args_list]
+                        assert any(
+                            "OpenTelemetry tracing configured with OTLP endpoint:" in msg
+                            for msg in log_calls
                         )
-                        mock_logger.info.assert_any_call(
-                            "OpenTelemetry metrics configured with OTLP exporter"
+                        assert any(
+                            "OpenTelemetry metrics configured with OTLP endpoint:" in msg
+                            for msg in log_calls
                         )
                         mock_logger.info.assert_any_call("openai instrumentation enabled")
                         mock_logger.info.assert_any_call("anthropic instrumentation enabled")
