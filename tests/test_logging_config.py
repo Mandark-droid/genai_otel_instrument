@@ -310,3 +310,22 @@ def test_setup_logging_explicit_level_overrides_env_var(setup_log_env):
 
     logger = setup_logging(level="WARNING", log_dir=log_dir, log_file_name=log_file_name)
     assert logger.level == logging.WARNING
+
+
+def test_setup_logging_closes_existing_handlers():
+    """Test that existing handlers are properly closed when setup_logging is called again."""
+    with patch("logging.getLogger") as mock_get_logger:
+        mock_logger = MagicMock()
+        mock_get_logger.return_value = mock_logger
+
+        # Create mock handlers with close method
+        mock_handler1 = MagicMock()
+        mock_handler2 = MagicMock()
+        mock_logger.handlers = [mock_handler1, mock_handler2]
+
+        # Call setup_logging - should close existing handlers
+        setup_logging()
+
+        # Verify both handlers were closed
+        mock_handler1.close.assert_called_once()
+        mock_handler2.close.assert_called_once()

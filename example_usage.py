@@ -22,8 +22,8 @@ logging.basicConfig(
 try:
     # This will load configuration from environment variables or use defaults.
     # If you want to override, you can pass arguments like:
-    # genai_otel.instrument(service_name="my-example-app", endpoint="http://localhost:4318")
-    genai_otel.instrument()
+    genai_otel.instrument(service_name="heal-geni-otel-instrument", endpoint="http://192.168.13.124:7318")
+    #genai_otel.instrument()
     print("GenAI OpenTelemetry instrumentation setup complete.")
 except Exception as e:
     print(f"Failed to setup GenAI OpenTelemetry instrumentation: {e}")
