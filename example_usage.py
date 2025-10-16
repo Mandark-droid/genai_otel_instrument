@@ -204,3 +204,11 @@ print(
 )
 print("  - Required services running (Redis, PostgreSQL, Kafka, etc.)")
 print("  - An OpenTelemetry collector endpoint configured (OTEL_EXPORTER_OTLP_ENDPOINT)")
+
+# Wait for telemetry export before exit
+# The BatchSpanProcessor batches spans and exports them periodically.
+# We need to wait a few seconds to ensure pending spans are flushed.
+import time
+print("\n[INFO] Waiting 5 seconds for telemetry export...")
+time.sleep(5)
+print("[OK] Telemetry export complete. Check your collector for traces and metrics.")

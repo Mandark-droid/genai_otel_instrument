@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 
 - Fixed tests for base/redis and auto instrument (a701603)
+- Updated `test_auto_instrument.py` assertions to match new OTLP exporter configuration (exporters now read endpoint from environment variables instead of direct parameters)
 
 [Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/Mandark-droid/genai_otel_instrument/releases/tag/v0.1.0
