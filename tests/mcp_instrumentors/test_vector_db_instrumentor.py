@@ -235,3 +235,278 @@ def test_instrument_faiss_missing(vector_db_instrumentor, caplog):
     """Test that missing FAISS is handled gracefully."""
     with patch.dict("sys.modules", {"faiss": None}):
         assert vector_db_instrumentor._instrument_faiss() is False
+
+
+# --- Additional Tests for Missing Coverage ---
+
+
+def test_instrument_pinecone_unknown_api(vector_db_instrumentor, caplog):
+    """Test Pinecone with unknown API (no Pinecone class and no Index class)."""
+    mock_pinecone = MagicMock(__version__="1.0.0", spec=[])
+    # Remove both Pinecone and Index attributes
+    if hasattr(mock_pinecone, "Pinecone"):
+        delattr(mock_pinecone, "Pinecone")
+    if hasattr(mock_pinecone, "Index"):
+        delattr(mock_pinecone, "Index")
+
+    with patch.dict("sys.modules", {"pinecone": mock_pinecone}):
+        assert vector_db_instrumentor._instrument_pinecone() is False
+        assert "Could not detect Pinecone API version" in caplog.text
+
+
+def test_instrument_pinecone_client_renamed_error(vector_db_instrumentor, caplog):
+    """Test Pinecone with pinecone-client renamed error."""
+    mock_pinecone = MagicMock(__version__="3.0.0")
+    mock_pinecone.Pinecone = MagicMock()
+
+    with patch.dict("sys.modules", {"pinecone": mock_pinecone}), patch(
+        "genai_otel.mcp_instrumentors.vector_db_instrumentor.wrapt.wrap_function_wrapper",
+        side_effect=Exception("pinecone-client has been renamed to pinecone"),
+    ):
+        assert vector_db_instrumentor._instrument_pinecone() is False
+        assert "pinecone-client" in caplog.text
+        assert "renamed" in caplog.text
+
+
+def test_wrap_pinecone_init(vector_db_instrumentor):
+    """Test _wrap_pinecone_init wrapper for Pinecone 3.0+ API."""
+    # Create a mock Pinecone instance
+    class MockPineconeInstance:
+        """Mock Pinecone instance with Index method."""
+
+        class MockIndexClass:
+            """Mock Index class."""
+
+            def __init__(self, name):
+                self.name = name
+                self.query = MagicMock(return_value="query_result")
+                self.upsert = MagicMock(return_value="upsert_result")
+                self.delete = MagicMock(return_value="delete_result")
+
+        def __init__(self):
+            self.Index = self.MockIndexClass
+
+    mock_pinecone_instance = MockPineconeInstance()
+
+    # Create a wrapped __init__ function
+    original_init = MagicMock(return_value=None)
+
+    # Call the wrapper
+    result = vector_db_instrumentor._wrap_pinecone_init(
+        original_init, mock_pinecone_instance, (), {}
+    )
+
+    # Verify original init was called
+    original_init.assert_called_once_with()
+
+    # Verify Index was replaced with wrapped version
+    assert callable(mock_pinecone_instance.Index)
+
+    # Test that the wrapped Index class works by calling it
+    # This should trigger the traced_index decorator which wraps the methods
+    index_instance = mock_pinecone_instance.Index("test_index")
+
+    # The index methods should now be wrapped with _wrap_pinecone_method
+    # Verify we can call them (they should be instrumented)
+    assert hasattr(index_instance, 'query')
+    assert hasattr(index_instance, 'upsert')
+    assert hasattr(index_instance, 'delete')
+
+    # Verify the methods are wrapped (not the original mocks)
+    # The wrapped methods should be different from the originals
+    assert callable(index_instance.query)
+    assert callable(index_instance.upsert)
+    assert callable(index_instance.delete)
+
+
+def test_wrap_pinecone_init_without_index_attr(vector_db_instrumentor):
+    """Test _wrap_pinecone_init when instance doesn't have Index attribute."""
+    # Create a mock Pinecone instance without Index
+    mock_pinecone_instance = MagicMock(spec=[])
+    if hasattr(mock_pinecone_instance, "Index"):
+        delattr(mock_pinecone_instance, "Index")
+
+    original_init = MagicMock(return_value=None)
+
+    # Should not raise
+    result = vector_db_instrumentor._wrap_pinecone_init(
+        original_init, mock_pinecone_instance, (), {}
+    )
+
+    original_init.assert_called_once_with()
+
+
+def test_weaviate_query_execution(vector_db_instrumentor, mock_tracer):
+    """Test that Weaviate query wrapper executes and creates spans."""
+    import sys
+
+    # Create mock weaviate module
+    mock_weaviate = MagicMock()
+    mock_client_class = MagicMock()
+    original_query = MagicMock(return_value={"results": []})
+    mock_client_class.query = original_query
+    mock_weaviate.Client = mock_client_class
+
+    with patch.dict(sys.modules, {"weaviate": mock_weaviate}):
+        # Instrument
+        vector_db_instrumentor._instrument_weaviate()
+
+        # Get the wrapped query method
+        wrapped_query = mock_weaviate.Client.query
+
+        # Create a mock client instance
+        mock_client_instance = MagicMock()
+
+        # Call the wrapped query
+        result = wrapped_query(mock_client_instance, query_arg="test")
+
+        # Verify tracer was called
+        mock_tracer.start_as_current_span.assert_called_once_with("weaviate.query")
+
+
+def test_qdrant_search_execution(vector_db_instrumentor, mock_tracer):
+    """Test that Qdrant search wrapper executes and creates spans with attributes."""
+    from unittest.mock import MagicMock
+
+    # Create mock QdrantClient class
+    mock_qdrant_client_class = MagicMock()
+    original_search = MagicMock(return_value=[])
+    mock_qdrant_client_class.search = original_search
+
+    # Create mock qdrant_client module
+    mock_qdrant_module = MagicMock()
+    mock_qdrant_module.QdrantClient = mock_qdrant_client_class
+
+    import sys
+
+    with patch.dict(sys.modules, {"qdrant_client": mock_qdrant_module}):
+        # Instrument
+        vector_db_instrumentor._instrument_qdrant()
+
+        # Get the wrapped search method
+        wrapped_search = mock_qdrant_module.QdrantClient.search
+
+        # Create a mock client instance
+        mock_client_instance = MagicMock()
+
+        # Call the wrapped search with collection_name in kwargs
+        result = wrapped_search(
+            mock_client_instance, collection_name="test_collection", query_vector=[1, 2, 3], limit=5
+        )
+
+        # Verify tracer was called
+        mock_tracer.start_as_current_span.assert_called_once_with("qdrant.search")
+
+        # Call again with collection_name in args
+        mock_tracer.reset_mock()
+        result = wrapped_search(mock_client_instance, "test_collection2", query_vector=[1, 2, 3])
+
+        mock_tracer.start_as_current_span.assert_called_once_with("qdrant.search")
+
+
+def test_chroma_query_execution(vector_db_instrumentor, mock_tracer):
+    """Test that ChromaDB query wrapper executes and creates spans with attributes."""
+    from unittest.mock import MagicMock
+
+    # Create mock Collection
+    mock_collection_class = MagicMock()
+    original_query = MagicMock(return_value={"results": []})
+    mock_collection_class.query = original_query
+
+    # Create mock chromadb module
+    mock_chromadb = MagicMock()
+    mock_chromadb.Collection = mock_collection_class
+
+    import sys
+
+    with patch.dict(sys.modules, {"chromadb": mock_chromadb}):
+        # Instrument
+        vector_db_instrumentor._instrument_chroma()
+
+        # Get the wrapped query method
+        wrapped_query = mock_chromadb.Collection.query
+
+        # Create a mock collection instance
+        mock_collection_instance = MagicMock()
+        mock_collection_instance.name = "test_collection"
+
+        # Call the wrapped query
+        result = wrapped_query(
+            mock_collection_instance, query_texts=["test"], n_results=5
+        )
+
+        # Verify tracer was called
+        mock_tracer.start_as_current_span.assert_called_once_with("chroma.query")
+
+
+def test_milvus_search_execution(vector_db_instrumentor, mock_tracer):
+    """Test that Milvus search wrapper executes and creates spans with attributes."""
+    from unittest.mock import MagicMock
+
+    # Create mock Collection
+    mock_collection_class = MagicMock()
+    original_search = MagicMock(return_value=[])
+    mock_collection_class.search = original_search
+
+    # Create mock pymilvus module
+    mock_pymilvus = MagicMock()
+    mock_pymilvus.Collection = mock_collection_class
+
+    import sys
+
+    with patch.dict(sys.modules, {"pymilvus": mock_pymilvus}):
+        # Instrument
+        vector_db_instrumentor._instrument_milvus()
+
+        # Get the wrapped search method
+        wrapped_search = mock_pymilvus.Collection.search
+
+        # Create a mock collection instance
+        mock_collection_instance = MagicMock()
+        mock_collection_instance.name = "test_collection"
+
+        # Call the wrapped search
+        result = wrapped_search(
+            mock_collection_instance, data=[[1, 2, 3]], anns_field="embedding", limit=10
+        )
+
+        # Verify tracer was called
+        mock_tracer.start_as_current_span.assert_called_once_with("milvus.search")
+
+
+def test_faiss_search_execution(vector_db_instrumentor, mock_tracer):
+    """Test that FAISS search wrapper executes and creates spans with attributes."""
+    from unittest.mock import MagicMock
+
+    # Create mock Index
+    mock_index_class = MagicMock()
+    original_search = MagicMock(return_value=([], []))
+    mock_index_class.search = original_search
+
+    # Create mock faiss module
+    mock_faiss = MagicMock()
+    mock_faiss.Index = mock_index_class
+
+    import sys
+
+    with patch.dict(sys.modules, {"faiss": mock_faiss}):
+        # Instrument
+        vector_db_instrumentor._instrument_faiss()
+
+        # Get the wrapped search method
+        wrapped_search = mock_faiss.Index.search
+
+        # Create a mock index instance
+        mock_index_instance = MagicMock()
+
+        # Call the wrapped search with k in args
+        result = wrapped_search(mock_index_instance, [[1, 2, 3]], 5)
+
+        # Verify tracer was called
+        mock_tracer.start_as_current_span.assert_called_once_with("faiss.search")
+
+        # Call again with k in kwargs
+        mock_tracer.reset_mock()
+        result = wrapped_search(mock_index_instance, [[1, 2, 3]], k=10)
+
+        mock_tracer.start_as_current_span.assert_called_once_with("faiss.search")

@@ -1,5 +1,6 @@
-from setuptools import setup, find_packages
 import os
+
+from setuptools import find_packages, setup
 
 # Read the README
 with open("README.md", "r", encoding="utf-8") as f:
@@ -31,7 +32,7 @@ setup(
         "openinference-instrumentation-mcp==1.3.0",
         "openinference-instrumentation-smolagents==0.1.11",
         "openinference-semantic-conventions==0.1.17",
-        "requests>=2.20.0"
+        "requests>=2.20.0",
         # Don't pin protobuf - let OpenTelemetry manage it
     ],
     # Optional dependencies

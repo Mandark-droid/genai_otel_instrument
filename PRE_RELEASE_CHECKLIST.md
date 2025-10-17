@@ -7,6 +7,7 @@ Complete this checklist before publishing to PyPI.
 - [ ] CHANGELOG.md is updated with version info
 - [ ] All code has docstrings
 - [ ] Usage examples are provided
+- [ ] Create an examples folder with one example for each supported instrumented library and also one demo folder
 - [ ] Installation instructions are clear
 
 ## Code Quality
