@@ -38,7 +38,7 @@ ignore-imports=yes
 
 [TYPECHECK]
 generated-members=REQUEST,acl_users,aq_parent
-ignored-modules=pynvml
+ignored-modules=pynvml  # nvidia-ml-py package
 
 [IMPORTS]
 allow-wildcard-with-all=no

@@ -110,7 +110,7 @@ pip install genai-otel-instrument[all]
 
 **Cause**: GPU metrics are enabled but:
 - No NVIDIA GPU present
-- `pynvml` not installed
+- `nvidia-ml-py` not installed
 - GPU drivers not properly configured
 
 **Solution**:
@@ -133,12 +133,12 @@ pip install genai-otel-instrument[all]
 3. **Check GPU availability**:
    ```python
    try:
-       import pynvml
+       import pynvml  # nvidia-ml-py package
        pynvml.nvmlInit()
        print(f"GPUs available: {pynvml.nvmlDeviceGetCount()}")
        pynvml.nvmlShutdown()
    except:
-       print("No GPU or pynvml not available")
+       print("No GPU or nvidia-ml-py not available")
    ```
 
 ---
