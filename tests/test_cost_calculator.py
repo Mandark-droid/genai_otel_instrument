@@ -87,6 +87,72 @@ class TestCostCalculator(unittest.TestCase):
         # Test no match
         self.assertIsNone(self.calculator._normalize_model_name("no-match", "chat"))
 
+    def test_normalize_model_name_category_not_found(self):
+        # Test when category doesn't exist
+        self.assertIsNone(self.calculator._normalize_model_name("gpt-4o", "nonexistent"))
+
+    def test_calculate_cost_with_empty_pricing_data(self):
+        # Test when pricing data is empty
+        self.calculator.pricing_data = {}
+        usage = {"prompt_tokens": 1000, "completion_tokens": 2000}
+        cost = self.calculator.calculate_cost("gpt-4o", usage, "chat")
+        self.assertEqual(cost, 0.0)
+
+    def test_calculate_embedding_cost_with_total_tokens(self):
+        """Test embedding cost calculation using total_tokens instead of prompt_tokens"""
+        usage = {"total_tokens": 5000}
+        cost = self.calculator.calculate_cost("text-embedding-ada-002", usage, "embedding")
+        expected_cost = (5000 / 1000) * 0.0001
+        self.assertAlmostEqual(cost, expected_cost)
+
+    def test_calculate_embedding_cost_unknown_model(self):
+        """Test embedding cost with unknown model"""
+        usage = {"prompt_tokens": 5000}
+        cost = self.calculator._calculate_embedding_cost("unknown-embedding-model", usage)
+        self.assertEqual(cost, 0.0)
+
+    def test_calculate_image_cost_quality_not_found(self):
+        """Test image cost when quality is not in pricing"""
+        usage = {"size": "1024x1024", "quality": "ultra_hd", "n": 1}
+        cost = self.calculator._calculate_image_cost("dall-e-3", usage)
+        self.assertEqual(cost, 0.0)
+
+    def test_calculate_image_cost_no_size_provided(self):
+        """Test image cost when size is not provided and no per-pixel pricing"""
+        usage = {"quality": "standard", "n": 1}
+        cost = self.calculator._calculate_image_cost("dall-e-3", usage)
+        self.assertEqual(cost, 0.0)
+
+    def test_calculate_image_cost_size_not_found(self):
+        """Test image cost when size is not in pricing"""
+        usage = {"size": "2048x2048", "quality": "standard", "n": 1}
+        cost = self.calculator._calculate_image_cost("dall-e-3", usage)
+        self.assertEqual(cost, 0.0)
+
+    def test_calculate_image_cost_unknown_model(self):
+        """Test image cost with unknown model"""
+        usage = {"size": "1024x1024", "quality": "standard", "n": 1}
+        cost = self.calculator._calculate_image_cost("unknown-image-model", usage)
+        self.assertEqual(cost, 0.0)
+
+    def test_calculate_audio_cost_unknown_model(self):
+        """Test audio cost with unknown model"""
+        usage = {"characters": 2000}
+        cost = self.calculator._calculate_audio_cost("unknown-audio-model", usage)
+        self.assertEqual(cost, 0.0)
+
+    def test_calculate_audio_cost_no_usage_unit(self):
+        """Test audio cost when usage doesn't have characters or seconds"""
+        usage = {"tokens": 1000}
+        cost = self.calculator._calculate_audio_cost("tts-1", usage)
+        self.assertEqual(cost, 0.0)
+
+    def test_calculate_chat_cost_unknown_model(self):
+        """Test chat cost with unknown model"""
+        usage = {"prompt_tokens": 1000, "completion_tokens": 2000}
+        cost = self.calculator._calculate_chat_cost("unknown-chat-model", usage)
+        self.assertEqual(cost, 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

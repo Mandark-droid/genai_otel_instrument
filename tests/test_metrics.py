@@ -78,11 +78,14 @@ def test_grpc_protocol_import():
 
     # Force reimport to trigger the grpc path
     import importlib
+
     import genai_otel.metrics
+
     importlib.reload(genai_otel.metrics)
 
     # Should import successfully
     from genai_otel.metrics import get_meter
+
     meter = get_meter()
     assert meter is not None
 

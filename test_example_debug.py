@@ -1,11 +1,11 @@
 """Debug script to test why example_usage.py doesn't send traces"""
-import os
+
 import logging
+import os
 
 # Set up logging FIRST to see all messages
 logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 print("=== Testing example_usage.py configuration ===\n")
@@ -27,11 +27,13 @@ print("  - enabled_instrumentors: all (openai, anthropic, google, etc.)")
 print("  - enable_mcp_instrumentation: true\n")
 
 import genai_otel
+
 genai_otel.instrument()
 print("[OK] Instrumentation complete - no AttributeError!\n")
 
 # Create a test span
 from opentelemetry import trace
+
 tracer = trace.get_tracer(__name__)
 
 with tracer.start_as_current_span("test-operation") as span:
@@ -41,6 +43,7 @@ with tracer.start_as_current_span("test-operation") as span:
 
 # Wait for export
 import time
+
 print("[INFO] Waiting 5 seconds for span export...")
 time.sleep(5)
 

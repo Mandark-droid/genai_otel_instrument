@@ -1,8 +1,9 @@
 # Example usage for GenAI OpenTelemetry Auto-Instrumentation
 
+import logging
 import os
 import sys
-import logging
+
 import genai_otel
 
 # Configure logging for the example
@@ -22,8 +23,10 @@ logging.basicConfig(
 try:
     # This will load configuration from environment variables or use defaults.
     # If you want to override, you can pass arguments like:
-    genai_otel.instrument(service_name="heal-geni-otel-instrument", endpoint="http://192.168.13.124:7318")
-    #genai_otel.instrument()
+    genai_otel.instrument(
+        service_name="heal-geni-otel-instrument", endpoint="http://192.168.13.124:7318"
+    )
+    # genai_otel.instrument()
     print("GenAI OpenTelemetry instrumentation setup complete.")
 except Exception as e:
     print(f"Failed to setup GenAI OpenTelemetry instrumentation: {e}")
@@ -209,6 +212,7 @@ print("  - An OpenTelemetry collector endpoint configured (OTEL_EXPORTER_OTLP_EN
 # The BatchSpanProcessor batches spans and exports them periodically.
 # We need to wait a few seconds to ensure pending spans are flushed.
 import time
+
 print("\n[INFO] Waiting 5 seconds for telemetry export...")
 time.sleep(5)
 print("[OK] Telemetry export complete. Check your collector for traces and metrics.")

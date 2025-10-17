@@ -59,9 +59,7 @@ class TestVertexAIInstrumentor(unittest.TestCase):
             mock_instance._model_name = "gemini-pro"
 
             # Call the wrapped generate_content method
-            result = mock_vertexai.GenerativeModel.generate_content(
-                mock_instance, "Test prompt"
-            )
+            result = mock_vertexai.GenerativeModel.generate_content(mock_instance, "Test prompt")
 
             # Assertions
             self.assertEqual(result, "generated content")
@@ -113,9 +111,7 @@ class TestVertexAIInstrumentor(unittest.TestCase):
             mock_instance = MagicMock(spec=[])  # spec=[] means no attributes
 
             # Call the wrapped generate_content method
-            result = mock_vertexai.GenerativeModel.generate_content(
-                mock_instance, "Test prompt"
-            )
+            result = mock_vertexai.GenerativeModel.generate_content(mock_instance, "Test prompt")
 
             # Assertions
             self.assertEqual(result, "generated content")
