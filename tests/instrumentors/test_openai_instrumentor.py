@@ -15,7 +15,9 @@ class TestOpenAIInstrumentor(unittest.TestCase):
             instrumentor = OpenAIInstrumentor()
 
             self.assertTrue(instrumentor._openai_available)
-            mock_logger.debug.assert_called_with("OpenAI library detected and available for instrumentation")
+            mock_logger.debug.assert_called_with(
+                "OpenAI library detected and available for instrumentation"
+            )
 
     @patch("genai_otel.instrumentors.openai_instrumentor.logger")
     def test_init_with_openai_not_available(self, mock_logger):
@@ -24,7 +26,9 @@ class TestOpenAIInstrumentor(unittest.TestCase):
             instrumentor = OpenAIInstrumentor()
 
             self.assertFalse(instrumentor._openai_available)
-            mock_logger.debug.assert_called_with("OpenAI library not installed, instrumentation will be skipped")
+            mock_logger.debug.assert_called_with(
+                "OpenAI library not installed, instrumentation will be skipped"
+            )
 
     @patch("genai_otel.instrumentors.openai_instrumentor.logger")
     def test_instrument_when_openai_not_available(self, mock_logger):
@@ -35,11 +39,14 @@ class TestOpenAIInstrumentor(unittest.TestCase):
 
             instrumentor.instrument(config)
 
-            mock_logger.debug.assert_any_call("Skipping OpenAI instrumentation - library not available")
+            mock_logger.debug.assert_any_call(
+                "Skipping OpenAI instrumentation - library not available"
+            )
 
     @patch("genai_otel.instrumentors.openai_instrumentor.logger")
     def test_instrument_with_openai_available(self, mock_logger):
         """Test that instrument wraps OpenAI client when available."""
+
         # Create a real class (not a MagicMock) so we can set __init__
         class MockOpenAI:
             def __init__(self):
@@ -239,6 +246,7 @@ class TestOpenAIInstrumentor(unittest.TestCase):
     @patch("genai_otel.instrumentors.openai_instrumentor.logger")
     def test_wrapped_init_calls_instrument_client(self, mock_logger):
         """Test that the wrapped __init__ calls _instrument_client on the instance."""
+
         # Create a real class (not a MagicMock) so we can set __init__
         class MockOpenAI:
             def __init__(self):

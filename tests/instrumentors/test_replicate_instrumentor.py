@@ -111,7 +111,9 @@ class TestReplicateInstrumentor(unittest.TestCase):
             mock_span.set_attribute.assert_any_call("gen_ai.request.model", "unknown")
 
             # Verify request counter was called with "unknown" model
-            mock_request_counter.add.assert_called_once_with(1, {"model": "unknown", "provider": "replicate"})
+            mock_request_counter.add.assert_called_once_with(
+                1, {"model": "unknown", "provider": "replicate"}
+            )
 
     def test_wrapped_run_with_kwargs(self):
         """Test that wrapped run handles kwargs properly."""

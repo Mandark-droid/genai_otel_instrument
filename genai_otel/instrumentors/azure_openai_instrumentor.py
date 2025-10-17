@@ -59,7 +59,7 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
             pass
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
-        if hasattr(result, "usage"):
+        if hasattr(result, "usage") and result.usage:
             return {
                 "prompt_tokens": result.usage.prompt_tokens,
                 "completion_tokens": result.usage.completion_tokens,
