@@ -32,6 +32,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
 
     def test_instrument_with_google_available(self):
         """Test that instrument wraps GenerativeModel when available."""
+
         # Create mock GenerativeModel
         class MockGenerativeModel:
             def generate_content(self, *args, **kwargs):
@@ -41,10 +42,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         mock_genai = MagicMock()
         mock_genai.GenerativeModel = MockGenerativeModel
 
-        with patch.dict("sys.modules", {
-            "google": MagicMock(),
-            "google.generativeai": mock_genai
-        }):
+        with patch.dict("sys.modules", {"google": MagicMock(), "google.generativeai": mock_genai}):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig()
 
@@ -52,6 +50,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
             def mock_wrapper(original_func):
                 def wrapper(*args, **kwargs):
                     return original_func(*args, **kwargs)
+
                 return wrapper
 
             instrumentor.create_span_wrapper = MagicMock(return_value=mock_wrapper)
@@ -63,7 +62,9 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
             instrumentor.create_span_wrapper.assert_called_once()
             call_kwargs = instrumentor.create_span_wrapper.call_args[1]
             self.assertEqual(call_kwargs["span_name"], "google.generativeai.generate_content")
-            self.assertEqual(call_kwargs["extract_attributes"], instrumentor._extract_google_ai_attributes)
+            self.assertEqual(
+                call_kwargs["extract_attributes"], instrumentor._extract_google_ai_attributes
+            )
 
             # Verify generate_content was replaced
             self.assertIsNotNone(mock_genai.GenerativeModel.generate_content)
@@ -75,10 +76,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         mock_genai = MagicMock()
         mock_genai.GenerativeModel = MagicMock(spec=[])  # Empty spec means no attributes
 
-        with patch.dict("sys.modules", {
-            "google": MagicMock(),
-            "google.generativeai": mock_genai
-        }):
+        with patch.dict("sys.modules", {"google": MagicMock(), "google.generativeai": mock_genai}):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig()
 
@@ -92,12 +90,11 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         """Test that exceptions are logged when fail_on_error is False."""
         # Create mock that raises
         mock_genai = MagicMock()
-        type(mock_genai).GenerativeModel = property(lambda self: (_ for _ in ()).throw(RuntimeError("Access failed")))
+        type(mock_genai).GenerativeModel = property(
+            lambda self: (_ for _ in ()).throw(RuntimeError("Access failed"))
+        )
 
-        with patch.dict("sys.modules", {
-            "google": MagicMock(),
-            "google.generativeai": mock_genai
-        }):
+        with patch.dict("sys.modules", {"google": MagicMock(), "google.generativeai": mock_genai}):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig(fail_on_error=False)
 
@@ -106,6 +103,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
 
     def test_instrument_with_exception_fail_on_error_true(self):
         """Test that exceptions are raised when fail_on_error is True."""
+
         # Create mock GenerativeModel
         class MockGenerativeModel:
             def generate_content(self, *args, **kwargs):
@@ -115,15 +113,14 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         mock_genai = MagicMock()
         mock_genai.GenerativeModel = MockGenerativeModel
 
-        with patch.dict("sys.modules", {
-            "google": MagicMock(),
-            "google.generativeai": mock_genai
-        }):
+        with patch.dict("sys.modules", {"google": MagicMock(), "google.generativeai": mock_genai}):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig(fail_on_error=True)
 
             # Mock create_span_wrapper to raise exception
-            instrumentor.create_span_wrapper = MagicMock(side_effect=RuntimeError("Wrapper creation failed"))
+            instrumentor.create_span_wrapper = MagicMock(
+                side_effect=RuntimeError("Wrapper creation failed")
+            )
 
             with self.assertRaises(RuntimeError) as context:
                 instrumentor.instrument(config)

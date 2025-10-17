@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Jaeger - for trace visualization
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: genai-otel-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4318:4318"    # OTLP HTTP receiver
+      - "4317:4317"    # OTLP gRPC receiver
+    networks:
+      - genai-otel-network
+
+  # Demo application
+  demo-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: genai-otel-demo-app
+    environment:
+      - OTEL_SERVICE_NAME=genai-demo-app
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GENAI_ENABLE_GPU_METRICS=false
+      - GENAI_ENABLE_COST_TRACKING=true
+      - GENAI_ENABLE_MCP_INSTRUMENTATION=true
+      - GENAI_OTEL_LOG_LEVEL=INFO
+    depends_on:
+      - jaeger
+    networks:
+      - genai-otel-network
+
+networks:
+  genai-otel-network:
+    driver: bridge

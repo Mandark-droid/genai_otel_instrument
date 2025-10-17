@@ -27,7 +27,8 @@ class ReplicateInstrumentor(BaseInstrumentor):
                     span.set_attribute("gen_ai.system", "replicate")
                     span.set_attribute("gen_ai.request.model", model)
 
-                    self.request_counter.add(1, {"model": model, "provider": "replicate"})
+                    if self.request_counter:
+                        self.request_counter.add(1, {"model": model, "provider": "replicate"})
 
                     result = original_run(*args, **kwargs)
                     return result

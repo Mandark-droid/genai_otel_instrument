@@ -270,6 +270,7 @@ def test_instrument_pinecone_client_renamed_error(vector_db_instrumentor, caplog
 
 def test_wrap_pinecone_init(vector_db_instrumentor):
     """Test _wrap_pinecone_init wrapper for Pinecone 3.0+ API."""
+
     # Create a mock Pinecone instance
     class MockPineconeInstance:
         """Mock Pinecone instance with Index method."""
@@ -308,9 +309,9 @@ def test_wrap_pinecone_init(vector_db_instrumentor):
 
     # The index methods should now be wrapped with _wrap_pinecone_method
     # Verify we can call them (they should be instrumented)
-    assert hasattr(index_instance, 'query')
-    assert hasattr(index_instance, 'upsert')
-    assert hasattr(index_instance, 'delete')
+    assert hasattr(index_instance, "query")
+    assert hasattr(index_instance, "upsert")
+    assert hasattr(index_instance, "delete")
 
     # Verify the methods are wrapped (not the original mocks)
     # The wrapped methods should be different from the originals
@@ -431,9 +432,7 @@ def test_chroma_query_execution(vector_db_instrumentor, mock_tracer):
         mock_collection_instance.name = "test_collection"
 
         # Call the wrapped query
-        result = wrapped_query(
-            mock_collection_instance, query_texts=["test"], n_results=5
-        )
+        result = wrapped_query(mock_collection_instance, query_texts=["test"], n_results=5)
 
         # Verify tracer was called
         mock_tracer.start_as_current_span.assert_called_once_with("chroma.query")

@@ -39,12 +39,11 @@ class TestCohereInstrumentor(unittest.TestCase):
 
             instrumentor.instrument(config)
 
-            mock_logger.debug.assert_any_call(
-                "Skipping instrumentation - library not available"
-            )
+            mock_logger.debug.assert_any_call("Skipping instrumentation - library not available")
 
     def test_instrument_with_cohere_available(self):
         """Test that instrument wraps cohere client when available."""
+
         # Create a real class to mock Cohere Client
         class MockCohereClient:
             def __init__(self, *args, **kwargs):

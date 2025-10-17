@@ -73,10 +73,11 @@ class AnthropicInstrumentor(BaseInstrumentor):
             client: The Anthropic client instance to instrument.
         """
         if hasattr(client, "messages") and hasattr(client.messages, "create"):
+            original_create = client.messages.create
             instrumented_create_method = self.create_span_wrapper(
                 span_name="anthropic.messages.create",
                 extract_attributes=self._extract_anthropic_attributes,
-            )
+            )(original_create)
             client.messages.create = instrumented_create_method
 
     def _extract_anthropic_attributes(

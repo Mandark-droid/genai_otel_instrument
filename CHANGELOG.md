@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **CRITICAL: Fixed instrumentor null check issues**
+  - Added null checks for metrics (`request_counter`, `token_counter`, `cost_counter`) in all instrumentors to prevent `AttributeError: 'NoneType' object has no attribute 'add'`
+  - Fixed 9 instrumentors: Ollama, AzureOpenAI, MistralAI, Groq, Cohere, VertexAI, TogetherAI, Replicate
+- **CRITICAL: Fixed wrapt decorator issues in OpenAI and Anthropic instrumentors**
+  - Fixed `IndexError: tuple index out of range` by properly applying `create_span_wrapper()` decorator to original methods
+  - OpenAI instrumentor (`openai_instrumentor.py:82-86`)
+  - Anthropic instrumentor (`anthropic_instrumentor.py:76-80`)
+- **CRITICAL: Fixed OpenInference instrumentor initialization**
+  - Fixed smolagents, litellm, and mcp instrumentors not being called correctly (they don't accept config parameter)
+  - Added `OPENINFERENCE_INSTRUMENTORS` set to handle different instrumentation API
+  - Added smolagents, litellm, mcp to `DEFAULT_INSTRUMENTORS` list
 - **CRITICAL: Fixed OTLP HTTP exporter configuration issues**
   - Fixed `AttributeError: 'function' object has no attribute 'ok'` caused by requests library instrumentation conflicting with OTLP exporters
   - Disabled `RequestsInstrumentor` in MCP manager to prevent breaking OTLP HTTP exporters that use requests internally
@@ -29,14 +40,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Fine-grained HTTP instrumentation control**
+  - Added `enable_http_instrumentation` configuration option (default: `false`)
+  - Environment variable: `GENAI_ENABLE_HTTP_INSTRUMENTATION`
+  - Allows enabling HTTP/httpx instrumentation without disabling all MCP instrumentation (databases, vector DBs, Redis, Kafka)
 - Support for `SERVICE_INSTANCE_ID` and environment attributes in resource creation (Issue #XXX)
 - Configurable timeout for OTLP exporters via `OTEL_EXPORTER_OTLP_TIMEOUT` environment variable (Issue #XXX)
 - Added openinference instrumentation dependencies: `openinference-instrumentation==0.1.31`, `openinference-instrumentation-litellm==0.1.19`, `openinference-instrumentation-mcp==1.3.0`, `openinference-instrumentation-smolagents==0.1.11`, and `openinference-semantic-conventions==0.1.17` (Issue #XXX)
 - Explicit configuration of `TraceContextTextMapPropagator` for W3C trace context propagation (Issue #XXX)
+- Created examples for LiteLLM and Smolagents instrumentors
 
 ### Changed
 
-- **BREAKING: Disabled automatic requests library instrumentation** due to conflicts with OTLP HTTP exporters. Users should use `httpx` library for HTTP calls to get automatic tracing, or switch to OTLP gRPC exporters.
+- **HTTP instrumentation now opt-in instead of opt-out**
+  - HTTP/httpx instrumentation is now disabled by default (`enable_http_instrumentation=false`)
+  - MCP instrumentation remains enabled by default (databases, vector DBs, Redis, Kafka all work out of the box)
+  - Set `GENAI_ENABLE_HTTP_INSTRUMENTATION=true` or `enable_http_instrumentation=True` to enable HTTP tracing
+- **Updated Mistral AI example for new SDK (v1.0+)**
+  - Migrated from deprecated `mistralai.client.MistralClient` to new `mistralai.Mistral` API
 - Updated logging configuration to allow log level via environment variable and implement log rotation (Issue #XXX)
 
 ### Tests

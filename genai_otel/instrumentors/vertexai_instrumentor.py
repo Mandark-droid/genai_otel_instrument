@@ -27,7 +27,8 @@ class VertexAIInstrumentor(BaseInstrumentor):
                     span.set_attribute("gen_ai.system", "vertexai")
                     span.set_attribute("gen_ai.request.model", model_name)
 
-                    self.request_counter.add(1, {"model": model_name, "provider": "vertexai"})
+                    if self.request_counter:
+                        self.request_counter.add(1, {"model": model_name, "provider": "vertexai"})
 
                     result = original_generate(instance, *args, **kwargs)
                     return result

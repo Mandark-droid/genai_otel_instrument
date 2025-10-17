@@ -39,12 +39,11 @@ class TestLangChainInstrumentor(unittest.TestCase):
 
             instrumentor.instrument(config)
 
-            mock_logger.debug.assert_any_call(
-                "Skipping instrumentation - library not available"
-            )
+            mock_logger.debug.assert_any_call("Skipping instrumentation - library not available")
 
     def test_instrument_with_langchain_available(self):
         """Test that instrument wraps langchain components when available."""
+
         # Create mock Chain and AgentExecutor classes
         class MockChain:
             def __call__(self, *args, **kwargs):
@@ -62,13 +61,16 @@ class TestLangChainInstrumentor(unittest.TestCase):
         mock_chains_module.base.Chain = MockChain
         mock_agents_module.agent.AgentExecutor = MockAgentExecutor
 
-        with patch.dict("sys.modules", {
-            "langchain": mock_langchain,
-            "langchain.chains": mock_chains_module,
-            "langchain.chains.base": mock_chains_module.base,
-            "langchain.agents": mock_agents_module,
-            "langchain.agents.agent": mock_agents_module.agent,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "langchain": mock_langchain,
+                "langchain.chains": mock_chains_module,
+                "langchain.chains.base": mock_chains_module.base,
+                "langchain.agents": mock_agents_module,
+                "langchain.agents.agent": mock_agents_module.agent,
+            },
+        ):
             instrumentor = LangChainInstrumentor()
             config = OTelConfig()
 
@@ -104,6 +106,7 @@ class TestLangChainInstrumentor(unittest.TestCase):
 
     def test_wrapped_chain_call(self):
         """Test that wrapped Chain.__call__ creates spans correctly."""
+
         # Create mock Chain class
         class MockChain:
             def __call__(self, *args, **kwargs):
@@ -117,20 +120,25 @@ class TestLangChainInstrumentor(unittest.TestCase):
         mock_chains_module.base.Chain = MockChain
         mock_agents_module.agent.AgentExecutor = MagicMock()
 
-        with patch.dict("sys.modules", {
-            "langchain": mock_langchain,
-            "langchain.chains": mock_chains_module,
-            "langchain.chains.base": mock_chains_module.base,
-            "langchain.agents": mock_agents_module,
-            "langchain.agents.agent": mock_agents_module.agent,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "langchain": mock_langchain,
+                "langchain.chains": mock_chains_module,
+                "langchain.chains.base": mock_chains_module.base,
+                "langchain.agents": mock_agents_module,
+                "langchain.agents.agent": mock_agents_module.agent,
+            },
+        ):
             instrumentor = LangChainInstrumentor()
             instrumentor.tracer = MagicMock()
             config = OTelConfig()
 
             # Mock span
             mock_span = MagicMock()
-            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = (
+                mock_span
+            )
 
             # Instrument
             instrumentor.instrument(config)
@@ -143,13 +151,12 @@ class TestLangChainInstrumentor(unittest.TestCase):
             instrumentor.tracer.start_as_current_span.assert_called_once_with(
                 "langchain.chain.MockChain"
             )
-            mock_span.set_attribute.assert_called_once_with(
-                "langchain.chain.type", "MockChain"
-            )
+            mock_span.set_attribute.assert_called_once_with("langchain.chain.type", "MockChain")
             self.assertEqual(result, {"result": "chain_output"})
 
     def test_wrapped_agent_call(self):
         """Test that wrapped AgentExecutor.__call__ creates spans correctly."""
+
         # Create mock AgentExecutor class
         class MockAgentExecutor:
             def __init__(self):
@@ -166,20 +173,25 @@ class TestLangChainInstrumentor(unittest.TestCase):
         mock_chains_module.base.Chain = MagicMock()
         mock_agents_module.agent.AgentExecutor = MockAgentExecutor
 
-        with patch.dict("sys.modules", {
-            "langchain": mock_langchain,
-            "langchain.chains": mock_chains_module,
-            "langchain.chains.base": mock_chains_module.base,
-            "langchain.agents": mock_agents_module,
-            "langchain.agents.agent": mock_agents_module.agent,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "langchain": mock_langchain,
+                "langchain.chains": mock_chains_module,
+                "langchain.chains.base": mock_chains_module.base,
+                "langchain.agents": mock_agents_module,
+                "langchain.agents.agent": mock_agents_module.agent,
+            },
+        ):
             instrumentor = LangChainInstrumentor()
             instrumentor.tracer = MagicMock()
             config = OTelConfig()
 
             # Mock span
             mock_span = MagicMock()
-            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = (
+                mock_span
+            )
 
             # Instrument
             instrumentor.instrument(config)
@@ -192,13 +204,12 @@ class TestLangChainInstrumentor(unittest.TestCase):
             instrumentor.tracer.start_as_current_span.assert_called_once_with(
                 "langchain.agent.execute"
             )
-            mock_span.set_attribute.assert_called_once_with(
-                "langchain.agent.name", "test_agent"
-            )
+            mock_span.set_attribute.assert_called_once_with("langchain.agent.name", "test_agent")
             self.assertEqual(result, {"result": "agent_output"})
 
     def test_wrapped_agent_call_with_unknown_agent(self):
         """Test that wrapped AgentExecutor.__call__ handles missing agent name."""
+
         # Create mock AgentExecutor class without agent attribute
         class MockAgentExecutor:
             def __call__(self, *args, **kwargs):
@@ -212,20 +223,25 @@ class TestLangChainInstrumentor(unittest.TestCase):
         mock_chains_module.base.Chain = MagicMock()
         mock_agents_module.agent.AgentExecutor = MockAgentExecutor
 
-        with patch.dict("sys.modules", {
-            "langchain": mock_langchain,
-            "langchain.chains": mock_chains_module,
-            "langchain.chains.base": mock_chains_module.base,
-            "langchain.agents": mock_agents_module,
-            "langchain.agents.agent": mock_agents_module.agent,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "langchain": mock_langchain,
+                "langchain.chains": mock_chains_module,
+                "langchain.chains.base": mock_chains_module.base,
+                "langchain.agents": mock_agents_module,
+                "langchain.agents.agent": mock_agents_module.agent,
+            },
+        ):
             instrumentor = LangChainInstrumentor()
             instrumentor.tracer = MagicMock()
             config = OTelConfig()
 
             # Mock span
             mock_span = MagicMock()
-            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = (
+                mock_span
+            )
 
             # Instrument
             instrumentor.instrument(config)
@@ -235,9 +251,7 @@ class TestLangChainInstrumentor(unittest.TestCase):
             result = agent("input")
 
             # Verify span was created with "unknown" agent name
-            mock_span.set_attribute.assert_called_once_with(
-                "langchain.agent.name", "unknown"
-            )
+            mock_span.set_attribute.assert_called_once_with("langchain.agent.name", "unknown")
 
     def test_extract_usage(self):
         """Test that _extract_usage returns None."""

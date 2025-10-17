@@ -34,6 +34,9 @@ DEFAULT_INSTRUMENTORS = [
     "langchain",
     "llama_index",
     "transformers",
+    "smolagents",
+    "mcp",
+    "litellm",
 ]
 
 
@@ -68,6 +71,10 @@ class OTelConfig:
     )
     enable_mcp_instrumentation: bool = field(
         default_factory=lambda: os.getenv("GENAI_ENABLE_MCP_INSTRUMENTATION", "true").lower()
+        == "true"
+    )
+    enable_http_instrumentation: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_HTTP_INSTRUMENTATION", "false").lower()
         == "true"
     )
     # Add fail_on_error configuration
