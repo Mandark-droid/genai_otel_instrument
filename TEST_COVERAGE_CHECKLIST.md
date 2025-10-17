@@ -3,7 +3,7 @@
 This checklist tracks the progress of improving test coverage for the `genai_otel` library.
 **GOAL: Achieve 100% coverage for all modules before release**
 
-## Current Status: ~78% Overall Coverage (287+ tests passing)
+## Current Status: 98% Overall Coverage (371 tests passing)
 
 ## Core Modules
 - [x] genai_otel/__init__.py (Tests: Yes, Coverage: 100% ✅)
@@ -61,9 +61,9 @@ This checklist tracks the progress of improving test coverage for the `genai_ote
 8. ~~**anthropic_instrumentor.py** - 54% coverage (26 missing lines)~~ ✅ **COMPLETED - 95%**
 9. ~~**langchain_instrumentor.py** - 48% coverage (24 missing lines)~~ ✅ **COMPLETED - 100%**
 10. ~~**cohere_instrumentor.py** - 56% coverage (20 missing lines)~~ ✅ **COMPLETED - 96%**
-11. **google_ai_instrumentor.py** - 59% coverage (18 missing lines)
-12. **azure_openai_instrumentor.py** - 59% coverage (16 missing lines)
-13. **database_instrumentor.py** - 64% coverage (16 missing lines)
+11. ~~**google_ai_instrumentor.py** - 59% coverage (18 missing lines)~~ ✅ **COMPLETED - 100%**
+12. ~~**azure_openai_instrumentor.py** - 59% coverage (16 missing lines)~~ ✅ **COMPLETED - 100%**
+13. ~~**database_instrumentor.py** - 64% coverage (16 missing lines)~~ ✅ **COMPLETED - 100%**
 
 ### LOW PRIORITY (Small Gaps - Quick Wins)
 14. **gpu_metrics.py** - 92% coverage (11 missing lines)
@@ -83,7 +83,7 @@ This checklist tracks the progress of improving test coverage for the `genai_ote
 28. ~~**metrics.py** - 96% coverage (1 missing line)~~ ✅ **COMPLETED - 100%**
 
 ## New Features Testing
-- [ ] auto_instrument.py: Add tests for SERVICE_INSTANCE_ID and environment attributes (lines 106-112)
-- [ ] auto_instrument.py: Add tests for configurable timeout for OTLP exporters (lines 128-133)
+- [x] auto_instrument.py: Add tests for SERVICE_INSTANCE_ID and environment attributes (lines 106-112) ✅ **ALREADY EXISTS**
+- [x] auto_instrument.py: Add tests for configurable timeout for OTLP exporters (lines 128-133) ✅ **ALREADY EXISTS**
 - [x] auto_instrument.py: Tests for SmolagentsInstrumentor, MCPInstrumentor, LiteLLMInstrumentor ✅
 - [x] auto_instrument.py: Tests for TraceContextTextMapPropagator ✅
