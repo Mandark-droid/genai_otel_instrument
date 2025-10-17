@@ -359,3 +359,4 @@ otel_traces.jsonl
 node_modules
 scripts/test_basic_openai.py
 CLAUDE.md
+.claude
