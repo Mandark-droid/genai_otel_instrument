@@ -57,7 +57,8 @@ class OllamaInstrumentor(BaseInstrumentor):
                 span.set_attribute("gen_ai.system", "ollama")
                 span.set_attribute("gen_ai.request.model", model)
 
-                self.request_counter.add(1, {"model": model, "provider": "ollama"})
+                if self.request_counter:
+                    self.request_counter.add(1, {"model": model, "provider": "ollama"})
 
                 result = self._original_generate(*args, **kwargs)
                 return result
@@ -69,7 +70,8 @@ class OllamaInstrumentor(BaseInstrumentor):
                 span.set_attribute("gen_ai.system", "ollama")
                 span.set_attribute("gen_ai.request.model", model)
 
-                self.request_counter.add(1, {"model": model, "provider": "ollama"})
+                if self.request_counter:
+                    self.request_counter.add(1, {"model": model, "provider": "ollama"})
 
                 result = self._original_chat(*args, **kwargs)
                 return result

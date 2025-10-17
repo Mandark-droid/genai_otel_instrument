@@ -47,7 +47,8 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
                     span.set_attribute("gen_ai.system", "azure_openai")
                     span.set_attribute("gen_ai.request.model", model)
 
-                    self.request_counter.add(1, {"model": model, "provider": "azure_openai"})
+                    if self.request_counter:
+                        self.request_counter.add(1, {"model": model, "provider": "azure_openai"})
 
                     result = original_complete(instance, *args, **kwargs)
                     self._record_result_metrics(span, result, 0)

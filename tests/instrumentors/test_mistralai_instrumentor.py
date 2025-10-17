@@ -16,7 +16,9 @@ class TestMistralAIInstrumentor(unittest.TestCase):
         mock_client = MagicMock()
         mock_mistralai.client.MistralClient = mock_client
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client}):
+        with patch.dict(
+            "sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client}
+        ):
             instrumentor = MistralAIInstrumentor()
             config = OTelConfig()
 
@@ -41,7 +43,9 @@ class TestMistralAIInstrumentor(unittest.TestCase):
         with patch("builtins.__import__", side_effect=ImportError("No module named 'mistralai'")):
             instrumentor.instrument(config)
 
-            mock_logger.warning.assert_called_with("mistralai package not available, skipping instrumentation")
+            mock_logger.warning.assert_called_with(
+                "mistralai package not available, skipping instrumentation"
+            )
 
     @patch("genai_otel.instrumentors.mistralai_instrumentor.logger")
     def test_instrument_with_exception(self, mock_logger):
@@ -49,7 +53,9 @@ class TestMistralAIInstrumentor(unittest.TestCase):
         mock_mistralai = MagicMock()
         mock_mistralai.client.MistralClient = MagicMock()
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client}):
+        with patch.dict(
+            "sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client}
+        ):
             instrumentor = MistralAIInstrumentor()
             config = OTelConfig()
 
@@ -62,7 +68,12 @@ class TestMistralAIInstrumentor(unittest.TestCase):
             instrumentor.instrument(config)
 
             # Should log error
-            self.assertTrue(any("Failed to instrument mistralai" in str(call) for call in mock_logger.error.call_args_list))
+            self.assertTrue(
+                any(
+                    "Failed to instrument mistralai" in str(call)
+                    for call in mock_logger.error.call_args_list
+                )
+            )
 
     def test_instrument_chat_success(self):
         """Test that _instrument_chat successfully wraps the chat method."""
@@ -79,11 +90,19 @@ class TestMistralAIInstrumentor(unittest.TestCase):
                 nonlocal captured_wrapper
                 captured_wrapper = wrapper_func
                 return wrapper_func
+
             return decorator
 
         mock_wrapt.patch_function_wrapper = capture_wrapper
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client, "wrapt": mock_wrapt}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "mistralai": mock_mistralai,
+                "mistralai.client": mock_mistralai.client,
+                "wrapt": mock_wrapt,
+            },
+        ):
             instrumentor = MistralAIInstrumentor()
             instrumentor.tracer = MagicMock()
             instrumentor.request_counter = MagicMock()
@@ -110,7 +129,9 @@ class TestMistralAIInstrumentor(unittest.TestCase):
 
             # Mock span
             mock_span = MagicMock()
-            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = (
+                mock_span
+            )
 
             # Call the wrapper
             result = captured_wrapper(mock_wrapped, None, (), {"model": "mistral-tiny"})
@@ -144,11 +165,19 @@ class TestMistralAIInstrumentor(unittest.TestCase):
                 nonlocal captured_wrapper
                 captured_wrapper = wrapper_func
                 return wrapper_func
+
             return decorator
 
         mock_wrapt.patch_function_wrapper = capture_wrapper
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client, "wrapt": mock_wrapt}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "mistralai": mock_mistralai,
+                "mistralai.client": mock_mistralai.client,
+                "wrapt": mock_wrapt,
+            },
+        ):
             instrumentor = MistralAIInstrumentor()
             instrumentor.tracer = MagicMock()
             instrumentor.request_counter = MagicMock()
@@ -163,7 +192,9 @@ class TestMistralAIInstrumentor(unittest.TestCase):
 
             # Mock span
             mock_span = MagicMock()
-            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = (
+                mock_span
+            )
 
             # Call the wrapper - should raise
             with self.assertRaises(ValueError):
@@ -188,11 +219,19 @@ class TestMistralAIInstrumentor(unittest.TestCase):
                 nonlocal captured_wrapper
                 captured_wrapper = wrapper_func
                 return wrapper_func
+
             return decorator
 
         mock_wrapt.patch_function_wrapper = capture_wrapper
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client, "wrapt": mock_wrapt}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "mistralai": mock_mistralai,
+                "mistralai.client": mock_mistralai.client,
+                "wrapt": mock_wrapt,
+            },
+        ):
             instrumentor = MistralAIInstrumentor()
             instrumentor.tracer = MagicMock()
             instrumentor.request_counter = MagicMock()
@@ -211,7 +250,9 @@ class TestMistralAIInstrumentor(unittest.TestCase):
 
             # Mock span
             mock_span = MagicMock()
-            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = (
+                mock_span
+            )
 
             # Call the wrapper without model
             captured_wrapper(mock_wrapped, None, (), {})
@@ -234,11 +275,19 @@ class TestMistralAIInstrumentor(unittest.TestCase):
                 nonlocal captured_wrapper
                 captured_wrapper = wrapper_func
                 return wrapper_func
+
             return decorator
 
         mock_wrapt.patch_function_wrapper = capture_wrapper
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client, "wrapt": mock_wrapt}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "mistralai": mock_mistralai,
+                "mistralai.client": mock_mistralai.client,
+                "wrapt": mock_wrapt,
+            },
+        ):
             instrumentor = MistralAIInstrumentor()
             instrumentor.tracer = MagicMock()
             instrumentor.request_counter = MagicMock()
@@ -263,7 +312,9 @@ class TestMistralAIInstrumentor(unittest.TestCase):
 
             # Mock span
             mock_span = MagicMock()
-            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = (
+                mock_span
+            )
 
             # Call the wrapper
             result = captured_wrapper(mock_wrapped, None, (), {"model": "mistral-embed"})
@@ -294,11 +345,19 @@ class TestMistralAIInstrumentor(unittest.TestCase):
                 nonlocal captured_wrapper
                 captured_wrapper = wrapper_func
                 return wrapper_func
+
             return decorator
 
         mock_wrapt.patch_function_wrapper = capture_wrapper
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client, "wrapt": mock_wrapt}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "mistralai": mock_mistralai,
+                "mistralai.client": mock_mistralai.client,
+                "wrapt": mock_wrapt,
+            },
+        ):
             instrumentor = MistralAIInstrumentor()
             instrumentor.tracer = MagicMock()
             instrumentor.request_counter = MagicMock()
@@ -312,7 +371,9 @@ class TestMistralAIInstrumentor(unittest.TestCase):
 
             # Mock span
             mock_span = MagicMock()
-            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = (
+                mock_span
+            )
 
             # Call the wrapper - should raise
             with self.assertRaises(ValueError):
@@ -337,11 +398,19 @@ class TestMistralAIInstrumentor(unittest.TestCase):
                 nonlocal captured_wrapper
                 captured_wrapper = wrapper_func
                 return wrapper_func
+
             return decorator
 
         mock_wrapt.patch_function_wrapper = capture_wrapper
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client, "wrapt": mock_wrapt}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "mistralai": mock_mistralai,
+                "mistralai.client": mock_mistralai.client,
+                "wrapt": mock_wrapt,
+            },
+        ):
             instrumentor = MistralAIInstrumentor()
             instrumentor.tracer = MagicMock()
             instrumentor.request_counter = MagicMock()
@@ -360,7 +429,9 @@ class TestMistralAIInstrumentor(unittest.TestCase):
 
             # Mock span
             mock_span = MagicMock()
-            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = (
+                mock_span
+            )
 
             # Call the wrapper without model
             captured_wrapper(mock_wrapped, None, (), {})
@@ -378,7 +449,14 @@ class TestMistralAIInstrumentor(unittest.TestCase):
         mock_wrapt = MagicMock()
         mock_wrapt.patch_function_wrapper.side_effect = RuntimeError("Wrapping failed")
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client, "wrapt": mock_wrapt}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "mistralai": mock_mistralai,
+                "mistralai.client": mock_mistralai.client,
+                "wrapt": mock_wrapt,
+            },
+        ):
             instrumentor = MistralAIInstrumentor()
 
             # Should not raise, just log
@@ -396,7 +474,14 @@ class TestMistralAIInstrumentor(unittest.TestCase):
         mock_wrapt = MagicMock()
         mock_wrapt.patch_function_wrapper.side_effect = RuntimeError("Wrapping failed")
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "mistralai.client": mock_mistralai.client, "wrapt": mock_wrapt}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "mistralai": mock_mistralai,
+                "mistralai.client": mock_mistralai.client,
+                "wrapt": mock_wrapt,
+            },
+        ):
             instrumentor = MistralAIInstrumentor()
 
             # Should not raise, just log
@@ -429,8 +514,12 @@ class TestMistralAIInstrumentor(unittest.TestCase):
         mock_span.set_attribute.assert_any_call("gen_ai.usage.cost", 0.05)
 
         # Verify token counter
-        instrumentor.token_counter.add.assert_any_call(10, {"type": "input", "provider": "mistralai"})
-        instrumentor.token_counter.add.assert_any_call(20, {"type": "output", "provider": "mistralai"})
+        instrumentor.token_counter.add.assert_any_call(
+            10, {"type": "input", "provider": "mistralai"}
+        )
+        instrumentor.token_counter.add.assert_any_call(
+            20, {"type": "output", "provider": "mistralai"}
+        )
 
         # Verify cost counter
         instrumentor.cost_counter.add.assert_called_with(0.05, {"provider": "mistralai"})
@@ -545,7 +634,9 @@ class TestMistralAIInstrumentor(unittest.TestCase):
 
         # Create mock result that raises exception when accessing usage
         result = MagicMock()
-        type(result).usage = property(lambda self: (_ for _ in ()).throw(RuntimeError("Test error")))
+        type(result).usage = property(
+            lambda self: (_ for _ in ()).throw(RuntimeError("Test error"))
+        )
 
         usage = instrumentor._extract_usage(result)
 

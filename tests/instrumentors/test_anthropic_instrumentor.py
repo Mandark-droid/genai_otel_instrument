@@ -46,6 +46,7 @@ class TestAnthropicInstrumentor(unittest.TestCase):
     @patch("genai_otel.instrumentors.anthropic_instrumentor.logger")
     def test_instrument_with_anthropic_available(self, mock_logger):
         """Test that instrument wraps anthropic client when available."""
+
         # Create a real class to mock Anthropic
         class MockAnthropicClass:
             def __init__(self, *args, **kwargs):
@@ -78,7 +79,9 @@ class TestAnthropicInstrumentor(unittest.TestCase):
         # Create a mock that raises when accessed
         mock_anthropic = MagicMock()
         # Make accessing Anthropic raise an exception
-        type(mock_anthropic).Anthropic = property(lambda self: (_ for _ in ()).throw(RuntimeError("Access failed")))
+        type(mock_anthropic).Anthropic = property(
+            lambda self: (_ for _ in ()).throw(RuntimeError("Access failed"))
+        )
 
         with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
             instrumentor = AnthropicInstrumentor()
@@ -95,7 +98,9 @@ class TestAnthropicInstrumentor(unittest.TestCase):
         # Create a mock that raises when accessed
         mock_anthropic = MagicMock()
         # Make accessing Anthropic raise an exception
-        type(mock_anthropic).Anthropic = property(lambda self: (_ for _ in ()).throw(RuntimeError("Access failed")))
+        type(mock_anthropic).Anthropic = property(
+            lambda self: (_ for _ in ()).throw(RuntimeError("Access failed"))
+        )
 
         with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
             instrumentor = AnthropicInstrumentor()
@@ -177,8 +182,8 @@ class TestAnthropicInstrumentor(unittest.TestCase):
             "messages": [
                 {"role": "user", "content": "Hello"},
                 {"role": "assistant", "content": "Hi there!"},
-                {"role": "user", "content": "How are you?"}
-            ]
+                {"role": "user", "content": "How are you?"},
+            ],
         }
 
         attrs = instrumentor._extract_anthropic_attributes(None, None, kwargs)
@@ -191,9 +196,7 @@ class TestAnthropicInstrumentor(unittest.TestCase):
         """Test that _extract_anthropic_attributes uses 'unknown' as default."""
         instrumentor = AnthropicInstrumentor()
 
-        kwargs = {
-            "messages": [{"role": "user", "content": "Hello"}]
-        }
+        kwargs = {"messages": [{"role": "user", "content": "Hello"}]}
 
         attrs = instrumentor._extract_anthropic_attributes(None, None, kwargs)
 
@@ -205,9 +208,7 @@ class TestAnthropicInstrumentor(unittest.TestCase):
         """Test that _extract_anthropic_attributes handles missing messages."""
         instrumentor = AnthropicInstrumentor()
 
-        kwargs = {
-            "model": "claude-3-sonnet-20240229"
-        }
+        kwargs = {"model": "claude-3-sonnet-20240229"}
 
         attrs = instrumentor._extract_anthropic_attributes(None, None, kwargs)
 

@@ -64,7 +64,8 @@ class CohereInstrumentor(BaseInstrumentor):
                 span.set_attribute("gen_ai.system", "cohere")
                 span.set_attribute("gen_ai.request.model", model)
 
-                self.request_counter.add(1, {"model": model, "provider": "cohere"})
+                if self.request_counter:
+                    self.request_counter.add(1, {"model": model, "provider": "cohere"})
 
                 result = original_generate(*args, **kwargs)
                 return result
