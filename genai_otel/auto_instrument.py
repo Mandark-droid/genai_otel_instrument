@@ -194,13 +194,22 @@ def setup_auto_instrumentation(config: OTelConfig):
         metrics.set_meter_provider(meter_provider)
         logger.info("No OTLP endpoint configured, metrics will be exported to console.")
 
+    # OpenInference instrumentors that use different API (no config parameter)
+    OPENINFERENCE_INSTRUMENTORS = {"smolagents", "mcp", "litellm"}
+
     # Auto-instrument LLM libraries based on the configuration
     for name in config.enabled_instrumentors:
         if name in INSTRUMENTORS:
             try:
                 instrumentor_class = INSTRUMENTORS[name]
                 instrumentor = instrumentor_class()
-                instrumentor.instrument(config=config)
+
+                # OpenInference instrumentors don't take config parameter
+                if name in OPENINFERENCE_INSTRUMENTORS:
+                    instrumentor.instrument()
+                else:
+                    instrumentor.instrument(config=config)
+
                 logger.info(f"{name} instrumentation enabled")
             except Exception as e:
                 logger.error(f"Failed to instrument {name}: {e}", exc_info=True)
