@@ -37,35 +37,38 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
         success_count = 0
         failure_count = 0
 
-        # HTTP/API instrumentation
-        try:
-            logger.info("Instrumenting HTTP/API calls")
-            # CRITICAL: Do NOT instrument requests library when using OTLP HTTP exporters
-            # RequestsInstrumentor patches requests.Session at class level, breaking OTLP exporters
-            # that use requests internally. The OTEL_PYTHON_REQUESTS_EXCLUDED_URLS doesn't help
-            # because it only works at request-time, not at instrumentation-time.
-            #
-            # TODO: Find a way to instrument user requests without breaking OTLP exporters
-            # RequestsInstrumentor().instrument()
+        # HTTP/API instrumentation (disabled by default to avoid conflicts)
+        if self.config.enable_http_instrumentation:
+            try:
+                logger.info("Instrumenting HTTP/API calls")
+                # CRITICAL: Do NOT instrument requests library when using OTLP HTTP exporters
+                # RequestsInstrumentor patches requests.Session at class level, breaking OTLP exporters
+                # that use requests internally. The OTEL_PYTHON_REQUESTS_EXCLUDED_URLS doesn't help
+                # because it only works at request-time, not at instrumentation-time.
+                #
+                # TODO: Find a way to instrument user requests without breaking OTLP exporters
+                # RequestsInstrumentor().instrument()
 
-            logger.warning(
-                "Requests library instrumentation is disabled to prevent conflicts with OTLP exporters"
-            )
+                logger.warning(
+                    "Requests library instrumentation is disabled to prevent conflicts with OTLP exporters"
+                )
 
-            # HTTPx is safe to instrument
-            HTTPXClientInstrumentor().instrument()
-            api_instrumentor = APIInstrumentor(self.config)
-            api_instrumentor.instrument(self.config)
-            logger.info("✓ HTTP/API instrumentation enabled (requests library excluded)")
-            success_count += 1
-        except ImportError as e:
-            failure_count += 1
-            logger.debug(f"✗ HTTP/API instrumentation skipped due to missing dependency: {e}")
-        except Exception as e:
-            failure_count += 1
-            logger.error(f"✗ Failed to instrument HTTP/API: {e}", exc_info=True)
-            if fail_on_error:
-                raise
+                # HTTPx is safe to instrument
+                HTTPXClientInstrumentor().instrument()
+                api_instrumentor = APIInstrumentor(self.config)
+                api_instrumentor.instrument(self.config)
+                logger.info("✓ HTTP/API instrumentation enabled (requests library excluded)")
+                success_count += 1
+            except ImportError as e:
+                failure_count += 1
+                logger.debug(f"✗ HTTP/API instrumentation skipped due to missing dependency: {e}")
+            except Exception as e:
+                failure_count += 1
+                logger.error(f"✗ Failed to instrument HTTP/API: {e}", exc_info=True)
+                if fail_on_error:
+                    raise
+        else:
+            logger.info("HTTP/API instrumentation disabled (enable_http_instrumentation=False)")
 
         # Database instrumentation
         try:

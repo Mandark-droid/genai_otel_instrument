@@ -68,7 +68,7 @@ This checklist tracks the progress of improving test coverage for the `genai_ote
 ### LOW PRIORITY (Small Gaps - Quick Wins)
 14. **gpu_metrics.py** - 92% coverage (11 missing lines)
 15. ~~**vertexai_instrumentor.py** - 50% coverage (11 missing lines)~~ ✅ **ALREADY COMPLETED - 100%**
-16. [ ] Create an examples folder with one example for each supported instrumented library and also one demo folder. Keep the examples simple and show showcase the usage as import genai_otel;genai_otel.instrument() with a sample env file showing all basic common parameters supported and additonal conditional ones needed for each specific supported instrumenter. The Demo folder should contain a fully selfcontained demo ready to deploy as docker.
+16. [x] Create an examples folder with one example for each supported instrumented library and also one demo folder ✅ **COMPLETED** - Created examples/ with OpenAI, Anthropic, LangChain examples + fully self-contained Docker demo with Jaeger
 17. ~~**openai_instrumentor.py** - 83% coverage (10 missing lines)~~ ✅ **COMPLETED - 100%**
 18. ~~**replicate_instrumentor.py** - 55% coverage (10 missing lines)~~ ✅ **COMPLETED - 100%**
 19. ~~**togetherai_instrumentor.py** - 55% coverage (10 missing lines)~~ ✅ **COMPLETED - 100%**

@@ -46,6 +46,7 @@ class TestGroqInstrumentor(unittest.TestCase):
     @patch("genai_otel.instrumentors.groq_instrumentor.logger")
     def test_instrument_with_groq_available(self, mock_logger):
         """Test that instrument wraps groq client when available."""
+
         # Create a real class to mock Groq
         class MockGroqClass:
             def __init__(self, *args, **kwargs):
@@ -79,7 +80,9 @@ class TestGroqInstrumentor(unittest.TestCase):
         # Create a mock that raises when __init__ is accessed
         mock_groq = MagicMock()
         # Make Groq raise an exception when trying to access __init__
-        type(mock_groq.Groq).__init__ = property(lambda self: (_ for _ in ()).throw(RuntimeError("Access failed")))
+        type(mock_groq.Groq).__init__ = property(
+            lambda self: (_ for _ in ()).throw(RuntimeError("Access failed"))
+        )
 
         with patch.dict("sys.modules", {"groq": mock_groq}):
             instrumentor = GroqInstrumentor()
@@ -96,7 +99,9 @@ class TestGroqInstrumentor(unittest.TestCase):
         # Create a mock that raises when __init__ is accessed
         mock_groq = MagicMock()
         # Make Groq raise an exception when trying to access __init__
-        type(mock_groq.Groq).__init__ = property(lambda self: (_ for _ in ()).throw(RuntimeError("Access failed")))
+        type(mock_groq.Groq).__init__ = property(
+            lambda self: (_ for _ in ()).throw(RuntimeError("Access failed"))
+        )
 
         with patch.dict("sys.modules", {"groq": mock_groq}):
             instrumentor = GroqInstrumentor()
@@ -132,11 +137,11 @@ class TestGroqInstrumentor(unittest.TestCase):
 
         # Create mock client
         mock_client = MagicMock()
-        original_create = MagicMock(return_value=MagicMock(usage=MagicMock(
-            prompt_tokens=10,
-            completion_tokens=20,
-            total_tokens=30
-        )))
+        original_create = MagicMock(
+            return_value=MagicMock(
+                usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
+            )
+        )
         mock_client.chat.completions.create = original_create
 
         # Mock tracer and metrics
@@ -153,9 +158,7 @@ class TestGroqInstrumentor(unittest.TestCase):
         result = mock_client.chat.completions.create(model="llama-3.1-70b")
 
         # Verify tracer was called
-        instrumentor.tracer.start_as_current_span.assert_called_once_with(
-            "groq.chat.completions"
-        )
+        instrumentor.tracer.start_as_current_span.assert_called_once_with("groq.chat.completions")
 
         # Verify span attributes were set
         mock_span.set_attribute.assert_any_call("gen_ai.system", "groq")
