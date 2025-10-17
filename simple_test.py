@@ -19,7 +19,6 @@ Simple test script to verify genai_otel instrumentation without external depende
 """
 
 
-
 # Fix encoding for Windows console
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
@@ -51,6 +50,7 @@ def main():
     print_header("GenAI OpenTelemetry Instrumentation - Simple Test")
     import genai_otel
     from genai_otel.config import OTelConfig
+
     # 1. Test Initialization
     print("\n1. Initializing instrumentation...")
     try:
@@ -62,7 +62,7 @@ def main():
 
     # 2. Test OpenTelemetry Integration
     print("\n2. Testing OpenTelemetry integration...")
-    from opentelemetry import trace, metrics
+    from opentelemetry import metrics, trace
 
     try:
         tracer = trace.get_tracer(__name__)
@@ -96,7 +96,7 @@ def main():
     # 4. Test GPU Metrics
     print("\n4. Testing GPU metrics...")
     try:
-        from genai_otel.gpu_metrics import GPUMetricsCollector, NVML_AVAILABLE
+        from genai_otel.gpu_metrics import NVML_AVAILABLE, GPUMetricsCollector
 
         if NVML_AVAILABLE:
             # This is a simplified check; we don't need a real meter for this test

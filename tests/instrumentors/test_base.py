@@ -296,7 +296,9 @@ def test_extract_attributes_with_non_primitive_value(instrumentor):
             "dict_attr": {"key": "value"},  # Non-primitive - should be converted to string
         }
 
-    wrapped = inst.create_span_wrapper("test.span", extract_attributes=extract_attrs)(original_function)
+    wrapped = inst.create_span_wrapper("test.span", extract_attributes=extract_attrs)(
+        original_function
+    )
 
     result = wrapped()
 

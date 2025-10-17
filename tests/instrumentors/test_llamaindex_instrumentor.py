@@ -96,7 +96,9 @@ class TestLlamaIndexInstrumentor(unittest.TestCase):
 
             # Call with kwargs
             mock_instance = MagicMock()
-            result = mock_base_query_engine_class.query(mock_instance, query_str="test query via kwargs")
+            result = mock_base_query_engine_class.query(
+                mock_instance, query_str="test query via kwargs"
+            )
 
             # Assertions
             self.assertEqual(result, "query result")
