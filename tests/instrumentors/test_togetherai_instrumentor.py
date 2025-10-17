@@ -53,7 +53,9 @@ class TestTogetherAIInstrumentor(unittest.TestCase):
             self.assertNotEqual(mock_together.Complete.create, original_create)
 
             # Call the wrapped create function
-            result = mock_together.Complete.create(model="mistralai/Mixtral-8x7B-v0.1", prompt="Test prompt")
+            result = mock_together.Complete.create(
+                model="mistralai/Mixtral-8x7B-v0.1", prompt="Test prompt"
+            )
 
             # Assertions
             self.assertEqual(result, "completion result")
@@ -111,7 +113,9 @@ class TestTogetherAIInstrumentor(unittest.TestCase):
             mock_span.set_attribute.assert_any_call("gen_ai.request.model", "unknown")
 
             # Verify request counter was called with "unknown" model
-            mock_request_counter.add.assert_called_once_with(1, {"model": "unknown", "provider": "together"})
+            mock_request_counter.add.assert_called_once_with(
+                1, {"model": "unknown", "provider": "together"}
+            )
 
     def test_wrapped_complete_with_args_and_kwargs(self):
         """Test that wrapped complete handles both args and kwargs properly."""

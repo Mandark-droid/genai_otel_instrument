@@ -28,8 +28,8 @@ except ImportError as e:
 # Test 2: Import main components
 print("\nTest 2: Importing main components...")
 try:
-    from genai_otel import instrument, OTelConfig
-    from genai_otel.instrumentors import OpenAIInstrumentor, AnthropicInstrumentor
+    from genai_otel import OTelConfig, instrument
+    from genai_otel.instrumentors import AnthropicInstrumentor, OpenAIInstrumentor
 
     print("OK Main components imported successfully")
 except ImportError as e:
@@ -79,9 +79,9 @@ except Exception as e:
 print("\nTest 5: Checking instrumentor availability...")
 try:
     from genai_otel.instrumentors import (
-        OpenAIInstrumentor,
         AnthropicInstrumentor,
         GoogleAIInstrumentor,
+        OpenAIInstrumentor,
     )
 
     # Create instrumentors

@@ -53,11 +53,14 @@ def test_grpc_exporter_import(monkeypatch):
 
     # Force reimport to trigger the grpc path
     import importlib
+
     import genai_otel.config
+
     importlib.reload(genai_otel.config)
 
     # Should import successfully
     from genai_otel.config import setup_tracing
+
     config = OTelConfig(service_name="test-service", endpoint="http://localhost:4317")
     tracer = setup_tracing(config, "test-tracer")
     assert tracer is not None

@@ -1,6 +1,7 @@
 """Quick test to verify exporter configuration works"""
-import os
+
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,6 +20,7 @@ try:
 except Exception as e:
     print(f"✗ Instrumentation failed: {e}")
     import traceback
+
     traceback.print_exc()
     exit(1)
 
@@ -33,6 +35,7 @@ with tracer.start_as_current_span("test-span") as span:
 
 # Wait a bit for export
 import time
+
 time.sleep(2)
 
 print("✓ Test completed - check for any export errors above")
