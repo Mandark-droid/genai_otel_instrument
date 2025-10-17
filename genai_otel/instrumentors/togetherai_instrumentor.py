@@ -27,7 +27,8 @@ class TogetherAIInstrumentor(BaseInstrumentor):
                     span.set_attribute("gen_ai.system", "together")
                     span.set_attribute("gen_ai.request.model", model)
 
-                    self.request_counter.add(1, {"model": model, "provider": "together"})
+                    if self.request_counter:
+                        self.request_counter.add(1, {"model": model, "provider": "together"})
 
                     result = original_complete(*args, **kwargs)
                     return result

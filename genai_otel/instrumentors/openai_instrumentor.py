@@ -79,10 +79,11 @@ class OpenAIInstrumentor(BaseInstrumentor):
             and hasattr(client.chat, "completions")
             and hasattr(client.chat.completions, "create")
         ):
+            original_create = client.chat.completions.create
             instrumented_create_method = self.create_span_wrapper(
                 span_name="openai.chat.completion",
                 extract_attributes=self._extract_openai_attributes,
-            )
+            )(original_create)
             client.chat.completions.create = instrumented_create_method
 
     def _extract_openai_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:

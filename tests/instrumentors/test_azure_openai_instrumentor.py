@@ -10,31 +10,22 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
 
     def test_init_with_azure_openai_available(self):
         """Test that __init__ detects azure.ai.openai availability."""
-        with patch.dict("sys.modules", {
-            "azure": MagicMock(),
-            "azure.ai": MagicMock(),
-            "azure.ai.openai": MagicMock()
-        }):
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": MagicMock()},
+        ):
             instrumentor = AzureOpenAIInstrumentor()
             self.assertTrue(instrumentor._azure_openai_available)
 
     def test_init_with_azure_openai_not_available(self):
         """Test that __init__ handles missing azure.ai.openai gracefully."""
-        with patch.dict("sys.modules", {
-            "azure": None,
-            "azure.ai": None,
-            "azure.ai.openai": None
-        }):
+        with patch.dict("sys.modules", {"azure": None, "azure.ai": None, "azure.ai.openai": None}):
             instrumentor = AzureOpenAIInstrumentor()
             self.assertFalse(instrumentor._azure_openai_available)
 
     def test_instrument_with_azure_openai_not_available(self):
         """Test that instrument skips when azure.ai.openai is not available."""
-        with patch.dict("sys.modules", {
-            "azure": None,
-            "azure.ai": None,
-            "azure.ai.openai": None
-        }):
+        with patch.dict("sys.modules", {"azure": None, "azure.ai": None, "azure.ai.openai": None}):
             instrumentor = AzureOpenAIInstrumentor()
             config = OTelConfig()
 
@@ -56,11 +47,10 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
         mock_azure_openai = MagicMock()
         mock_azure_openai.OpenAIClient = MockOpenAIClient
 
-        with patch.dict("sys.modules", {
-            "azure": MagicMock(),
-            "azure.ai": MagicMock(),
-            "azure.ai.openai": mock_azure_openai
-        }):
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": mock_azure_openai},
+        ):
             instrumentor = AzureOpenAIInstrumentor()
             config = OTelConfig()
 
@@ -87,11 +77,10 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
                 raise ImportError("Test import error")
             return MagicMock()
 
-        with patch.dict("sys.modules", {
-            "azure": MagicMock(),
-            "azure.ai": MagicMock(),
-            "azure.ai.openai": mock_azure_openai
-        }):
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": mock_azure_openai},
+        ):
             instrumentor = AzureOpenAIInstrumentor()
             config = OTelConfig()
 
@@ -118,11 +107,10 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
         mock_azure_openai = MagicMock()
         mock_azure_openai.OpenAIClient = MockOpenAIClient
 
-        with patch.dict("sys.modules", {
-            "azure": MagicMock(),
-            "azure.ai": MagicMock(),
-            "azure.ai.openai": mock_azure_openai
-        }):
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": mock_azure_openai},
+        ):
             instrumentor = AzureOpenAIInstrumentor()
             config = OTelConfig()
 
@@ -154,7 +142,9 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
             mock_span.set_attribute.assert_any_call("gen_ai.request.model", "gpt-4")
 
             # Verify request counter was incremented
-            mock_counter.add.assert_called_once_with(1, {"model": "gpt-4", "provider": "azure_openai"})
+            mock_counter.add.assert_called_once_with(
+                1, {"model": "gpt-4", "provider": "azure_openai"}
+            )
 
             # Verify _record_result_metrics was called
             instrumentor._record_result_metrics.assert_called_once()
@@ -173,11 +163,10 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
         mock_azure_openai = MagicMock()
         mock_azure_openai.OpenAIClient = MockOpenAIClient
 
-        with patch.dict("sys.modules", {
-            "azure": MagicMock(),
-            "azure.ai": MagicMock(),
-            "azure.ai.openai": mock_azure_openai
-        }):
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": mock_azure_openai},
+        ):
             instrumentor = AzureOpenAIInstrumentor()
             config = OTelConfig()
 
@@ -203,15 +192,16 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
 
             # Verify span attributes were set with "unknown" model
             mock_span.set_attribute.assert_any_call("gen_ai.request.model", "unknown")
-            mock_counter.add.assert_called_once_with(1, {"model": "unknown", "provider": "azure_openai"})
+            mock_counter.add.assert_called_once_with(
+                1, {"model": "unknown", "provider": "azure_openai"}
+            )
 
     def test_extract_usage_with_usage_object(self):
         """Test that _extract_usage extracts token counts from response."""
-        with patch.dict("sys.modules", {
-            "azure": MagicMock(),
-            "azure.ai": MagicMock(),
-            "azure.ai.openai": MagicMock()
-        }):
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": MagicMock()},
+        ):
             instrumentor = AzureOpenAIInstrumentor()
 
             # Create mock result with usage
@@ -230,11 +220,10 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
 
     def test_extract_usage_without_usage_object(self):
         """Test that _extract_usage returns None when usage is missing."""
-        with patch.dict("sys.modules", {
-            "azure": MagicMock(),
-            "azure.ai": MagicMock(),
-            "azure.ai.openai": MagicMock()
-        }):
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": MagicMock()},
+        ):
             instrumentor = AzureOpenAIInstrumentor()
 
             # Create mock result without usage attribute
@@ -246,11 +235,10 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
 
     def test_extract_usage_with_none_usage(self):
         """Test that _extract_usage returns None when usage is None."""
-        with patch.dict("sys.modules", {
-            "azure": MagicMock(),
-            "azure.ai": MagicMock(),
-            "azure.ai.openai": MagicMock()
-        }):
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": MagicMock()},
+        ):
             instrumentor = AzureOpenAIInstrumentor()
 
             # Create mock result with None usage

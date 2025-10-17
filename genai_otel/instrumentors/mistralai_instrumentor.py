@@ -48,9 +48,10 @@ class MistralAIInstrumentor(BaseInstrumentor):
                     span.set_attribute("gen_ai.request.model", model)
                     span.set_attribute("llm.request.type", "chat")
 
-                    self.request_counter.add(
-                        1, {"model": model, "provider": "mistralai", "operation": "chat"}
-                    )
+                    if self.request_counter:
+                        self.request_counter.add(
+                            1, {"model": model, "provider": "mistralai", "operation": "chat"}
+                        )
 
                     try:
                         result = wrapped(*args, **kwargs)
@@ -59,15 +60,16 @@ class MistralAIInstrumentor(BaseInstrumentor):
                     except Exception as e:
                         span.set_attribute("error", True)
                         span.set_attribute("error.message", str(e))
-                        self.request_counter.add(
-                            1,
-                            {
-                                "model": model,
-                                "provider": "mistralai",
-                                "operation": "chat",
-                                "error": "true",
-                            },
-                        )
+                        if self.request_counter:
+                            self.request_counter.add(
+                                1,
+                                {
+                                    "model": model,
+                                    "provider": "mistralai",
+                                    "operation": "chat",
+                                    "error": "true",
+                                },
+                            )
                         raise
 
             return wrapped_chat
@@ -90,9 +92,10 @@ class MistralAIInstrumentor(BaseInstrumentor):
                     span.set_attribute("gen_ai.request.model", model)
                     span.set_attribute("llm.request.type", "embeddings")
 
-                    self.request_counter.add(
-                        1, {"model": model, "provider": "mistralai", "operation": "embeddings"}
-                    )
+                    if self.request_counter:
+                        self.request_counter.add(
+                            1, {"model": model, "provider": "mistralai", "operation": "embeddings"}
+                        )
 
                     try:
                         result = wrapped(*args, **kwargs)
@@ -101,15 +104,16 @@ class MistralAIInstrumentor(BaseInstrumentor):
                     except Exception as e:
                         span.set_attribute("error", True)
                         span.set_attribute("error.message", str(e))
-                        self.request_counter.add(
-                            1,
-                            {
-                                "model": model,
-                                "provider": "mistralai",
-                                "operation": "embeddings",
-                                "error": "true",
-                            },
-                        )
+                        if self.request_counter:
+                            self.request_counter.add(
+                                1,
+                                {
+                                    "model": model,
+                                    "provider": "mistralai",
+                                    "operation": "embeddings",
+                                    "error": "true",
+                                },
+                            )
                         raise
 
             return wrapped_embeddings
@@ -130,17 +134,20 @@ class MistralAIInstrumentor(BaseInstrumentor):
                 span.set_attribute("gen_ai.usage.total_tokens", usage.get("total_tokens", 0))
 
                 # Record token metrics
-                self.token_counter.add(
-                    usage.get("prompt_tokens", 0), {"type": "input", "provider": "mistralai"}
-                )
-                self.token_counter.add(
-                    usage.get("completion_tokens", 0), {"type": "output", "provider": "mistralai"}
-                )
+                if self.token_counter:
+                    self.token_counter.add(
+                        usage.get("prompt_tokens", 0), {"type": "input", "provider": "mistralai"}
+                    )
+                    self.token_counter.add(
+                        usage.get("completion_tokens", 0),
+                        {"type": "output", "provider": "mistralai"},
+                    )
 
                 # Calculate and record cost
                 if cost > 0:
                     span.set_attribute("gen_ai.usage.cost", cost)
-                    self.cost_counter.add(cost, {"provider": "mistralai"})
+                    if self.cost_counter:
+                        self.cost_counter.add(cost, {"provider": "mistralai"})
 
     def _record_embedding_metrics(self, span, result):
         """Record metrics from embeddings result"""
@@ -150,10 +157,11 @@ class MistralAIInstrumentor(BaseInstrumentor):
                 span.set_attribute("gen_ai.usage.prompt_tokens", usage.get("prompt_tokens", 0))
                 span.set_attribute("gen_ai.usage.total_tokens", usage.get("total_tokens", 0))
 
-                self.token_counter.add(
-                    usage.get("prompt_tokens", 0),
-                    {"type": "input", "provider": "mistralai", "operation": "embeddings"},
-                )
+                if self.token_counter:
+                    self.token_counter.add(
+                        usage.get("prompt_tokens", 0),
+                        {"type": "input", "provider": "mistralai", "operation": "embeddings"},
+                    )
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract usage information from Mistral AI response"""
