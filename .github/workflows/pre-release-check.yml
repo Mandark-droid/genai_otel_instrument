@@ -1,0 +1,136 @@
+name: Pre-Release Validation
+
+# This workflow mimics the manual test_release.sh script
+# Run it before creating a release to validate everything works
+
+on:
+  workflow_dispatch:  # Manual trigger only
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags
+
+jobs:
+  pre-release-validation:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.9", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Display environment info
+      run: |
+        echo "=========================================="
+        echo "Pre-Release Validation"
+        echo "=========================================="
+        python --version
+        python -c "import sys; print(f'Python path: {sys.executable}')"
+
+    - name: Install development dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Auto-format code
+      run: |
+        echo "→ Auto-formatting code with isort and black..."
+        isort genai_otel tests
+        black genai_otel tests
+        echo "✓ Code formatting applied"
+
+    - name: Run full test suite
+      run: |
+        echo "→ Running tests..."
+        pytest tests/ -v --cov=genai_otel --cov-report=term --cov-report=html --cov-report=term-missing
+        echo "✓ All tests passed"
+
+    - name: Code quality checks
+      run: |
+        echo "→ Running code quality checks..."
+        black --check genai_otel tests
+        isort --check-only genai_otel tests
+        pylint genai_otel --rcfile=.pylintrc --exit-zero || true
+        echo "✓ Code quality checks complete"
+
+    - name: Build package
+      run: |
+        echo "→ Building package..."
+        pip install build twine
+        python -m build
+        echo "✓ Package built successfully"
+
+    - name: Check package with twine
+      run: |
+        echo "→ Checking package with twine..."
+        twine check dist/*
+        echo "✓ Package check passed"
+
+    - name: Test installation in isolated environment
+      shell: bash
+      run: |
+        echo "→ Testing installation in temporary environment..."
+
+        # Create temporary virtual environment
+        python -m venv test_release_env
+
+        # Activate based on OS
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          source test_release_env/Scripts/activate
+        else
+          source test_release_env/bin/activate
+        fi
+
+        # Install the built wheel
+        pip install dist/*.whl
+
+        # Test imports
+        python -c "
+import genai_otel
+print(f'Successfully imported genai_otel version: {genai_otel.__version__}')
+
+# Test that main components can be imported
+from genai_otel.config import OTelConfig
+from genai_otel.cost_calculator import CostCalculator
+from genai_otel.auto_instrument import setup_auto_instrumentation
+print('✓ All core components imported successfully')
+        "
+
+        # Test CLI tool
+        genai-instrument --help > /dev/null 2>&1
+        echo "✓ CLI tool works"
+
+        # Cleanup
+        deactivate
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+      with:
+        name: dist-packages
+        path: dist/
+
+    - name: Summary
+      if: success()
+      run: |
+        echo ""
+        echo "=========================================="
+        echo "✓ All Pre-Release Checks Passed!"
+        echo "=========================================="
+        echo ""
+        echo "Release Checklist:"
+        echo "✅ All tests passing"
+        echo "✅ Code formatting applied"
+        echo "✅ Import sorting applied"
+        echo "✅ Package builds successfully"
+        echo "✅ Installation tested"
+        echo "✅ CLI tool works"
+        echo ""
+        echo "Ready for release! 🚀"
