@@ -37,9 +37,10 @@ def reset_shared_metrics():
 @pytest.fixture
 def instrumentor(monkeypatch):
     """Fixture to provide a clean instrumentor instance with mocked dependencies."""
-    with patch("genai_otel.instrumentors.base.trace.get_tracer") as mock_get_tracer, patch(
-        "genai_otel.instrumentors.base.metrics.get_meter"
-    ) as mock_get_meter:
+    with (
+        patch("genai_otel.instrumentors.base.trace.get_tracer") as mock_get_tracer,
+        patch("genai_otel.instrumentors.base.metrics.get_meter") as mock_get_meter,
+    ):
         mock_tracer = MagicMock()
         mock_get_tracer.return_value = mock_tracer
         mock_span = MagicMock()

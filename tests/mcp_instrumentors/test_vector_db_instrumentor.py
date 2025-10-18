@@ -51,18 +51,13 @@ def test_vector_db_instrumentor_init(vector_db_instrumentor):
 # --- Tests for VectorDBInstrumentor.instrument ---
 def test_instrument_all_libraries(vector_db_instrumentor, caplog):
     """Test that instrument() attempts to instrument all supported libraries."""
-    with patch.object(
-        vector_db_instrumentor, "_instrument_pinecone", return_value=True
-    ), patch.object(
-        vector_db_instrumentor, "_instrument_weaviate", return_value=True
-    ), patch.object(
-        vector_db_instrumentor, "_instrument_qdrant", return_value=True
-    ), patch.object(
-        vector_db_instrumentor, "_instrument_chroma", return_value=True
-    ), patch.object(
-        vector_db_instrumentor, "_instrument_milvus", return_value=True
-    ), patch.object(
-        vector_db_instrumentor, "_instrument_faiss", return_value=True
+    with (
+        patch.object(vector_db_instrumentor, "_instrument_pinecone", return_value=True),
+        patch.object(vector_db_instrumentor, "_instrument_weaviate", return_value=True),
+        patch.object(vector_db_instrumentor, "_instrument_qdrant", return_value=True),
+        patch.object(vector_db_instrumentor, "_instrument_chroma", return_value=True),
+        patch.object(vector_db_instrumentor, "_instrument_milvus", return_value=True),
+        patch.object(vector_db_instrumentor, "_instrument_faiss", return_value=True),
     ):
 
         instrumented_count = vector_db_instrumentor.instrument()
@@ -71,18 +66,13 @@ def test_instrument_all_libraries(vector_db_instrumentor, caplog):
 
 def test_instrument_no_libraries(vector_db_instrumentor, caplog):
     """Test that instrument() returns 0 if no libraries are available."""
-    with patch.object(
-        vector_db_instrumentor, "_instrument_pinecone", return_value=False
-    ), patch.object(
-        vector_db_instrumentor, "_instrument_weaviate", return_value=False
-    ), patch.object(
-        vector_db_instrumentor, "_instrument_qdrant", return_value=False
-    ), patch.object(
-        vector_db_instrumentor, "_instrument_chroma", return_value=False
-    ), patch.object(
-        vector_db_instrumentor, "_instrument_milvus", return_value=False
-    ), patch.object(
-        vector_db_instrumentor, "_instrument_faiss", return_value=False
+    with (
+        patch.object(vector_db_instrumentor, "_instrument_pinecone", return_value=False),
+        patch.object(vector_db_instrumentor, "_instrument_weaviate", return_value=False),
+        patch.object(vector_db_instrumentor, "_instrument_qdrant", return_value=False),
+        patch.object(vector_db_instrumentor, "_instrument_chroma", return_value=False),
+        patch.object(vector_db_instrumentor, "_instrument_milvus", return_value=False),
+        patch.object(vector_db_instrumentor, "_instrument_faiss", return_value=False),
     ):
 
         instrumented_count = vector_db_instrumentor.instrument()
@@ -108,8 +98,11 @@ def test_instrument_pinecone_missing(vector_db_instrumentor, caplog):
 
 def test_instrument_pinecone_error(vector_db_instrumentor, caplog):
     """Test that Pinecone instrumentation errors are logged."""
-    with patch.dict("sys.modules", {"pinecone": MagicMock()}), patch.object(
-        vector_db_instrumentor, "_wrap_pinecone_method", side_effect=RuntimeError("Mock error")
+    with (
+        patch.dict("sys.modules", {"pinecone": MagicMock()}),
+        patch.object(
+            vector_db_instrumentor, "_wrap_pinecone_method", side_effect=RuntimeError("Mock error")
+        ),
     ):
         assert vector_db_instrumentor._instrument_pinecone() is False
         assert "Failed to instrument Pinecone" in caplog.text
@@ -259,9 +252,12 @@ def test_instrument_pinecone_client_renamed_error(vector_db_instrumentor, caplog
     mock_pinecone = MagicMock(__version__="3.0.0")
     mock_pinecone.Pinecone = MagicMock()
 
-    with patch.dict("sys.modules", {"pinecone": mock_pinecone}), patch(
-        "genai_otel.mcp_instrumentors.vector_db_instrumentor.wrapt.wrap_function_wrapper",
-        side_effect=Exception("pinecone-client has been renamed to pinecone"),
+    with (
+        patch.dict("sys.modules", {"pinecone": mock_pinecone}),
+        patch(
+            "genai_otel.mcp_instrumentors.vector_db_instrumentor.wrapt.wrap_function_wrapper",
+            side_effect=Exception("pinecone-client has been renamed to pinecone"),
+        ),
     ):
         assert vector_db_instrumentor._instrument_pinecone() is False
         assert "pinecone-client" in caplog.text
