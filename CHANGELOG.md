@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **CRITICAL: Fixed CLI wrapper to execute scripts in same process**
+  - Changed from `subprocess.run()` to `runpy.run_path()` to ensure instrumentation hooks are active
+  - Supports both `genai-instrument python script.py` and `genai-instrument script.py` formats
+  - Script now runs in the same process where instrumentation is initialized, fixing ModuleNotFoundError and ensuring proper telemetry collection
+  - Added tests for both CLI usage patterns (7 tests total, all passing)
+
 - **CRITICAL: Fixed MCP dependency conflict error**
   - Removed "mcp" from `DEFAULT_INSTRUMENTORS` list to prevent dependency conflict when mcp library (>= 1.6.0) is not installed
   - Added explanatory comments in `genai_otel/config.py` - users can still enable via `GENAI_ENABLED_INSTRUMENTORS` environment variable
