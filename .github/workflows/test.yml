@@ -34,7 +34,7 @@ jobs:
 
     - name: Check formatting with black
       run: |
-        black --check genai_otel tests
+        black --check genai_otel tests --exclude='__version__\.py'
 
     - name: Check import sorting with isort
       run: |

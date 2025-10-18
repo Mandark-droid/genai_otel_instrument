@@ -360,3 +360,6 @@ node_modules
 scripts/test_basic_openai.py
 CLAUDE.md
 .claude
+
+# setuptools-scm generated version file (auto-generated, do not track)
+genai_otel/__version__.py
