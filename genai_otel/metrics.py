@@ -17,6 +17,7 @@ from opentelemetry.sdk.resources import (
     Resource,
 )
 
+# isort: split
 # Correct the import for OTLP Metric Exporter
 if os.environ.get("OTEL_EXPORTER_OTLP_PROTOCOL") == "grpc":
     from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
