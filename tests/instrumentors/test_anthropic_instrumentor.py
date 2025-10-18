@@ -122,7 +122,10 @@ class TestAnthropicInstrumentor(unittest.TestCase):
 
         # Mock create_span_wrapper
         mock_wrapper = MagicMock()
-        instrumentor.create_span_wrapper = MagicMock(return_value=mock_wrapper)
+        # create_span_wrapper returns a decorator, so we need to return a callable
+        # that when called with original_create returns mock_wrapper
+        mock_decorator = MagicMock(return_value=mock_wrapper)
+        instrumentor.create_span_wrapper = MagicMock(return_value=mock_decorator)
 
         # Call _instrument_client
         instrumentor._instrument_client(mock_client)
@@ -133,7 +136,10 @@ class TestAnthropicInstrumentor(unittest.TestCase):
             extract_attributes=instrumentor._extract_anthropic_attributes,
         )
 
-        # Verify messages.create was replaced
+        # Verify the decorator was called with original_create
+        mock_decorator.assert_called_once_with(original_create)
+
+        # Verify messages.create was replaced with mock_wrapper
         self.assertEqual(mock_client.messages.create, mock_wrapper)
 
     def test_instrument_client_without_messages(self):

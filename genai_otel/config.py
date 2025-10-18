@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 # Default list of instrumentors to enable if not specified by the user.
 # This maintains the "instrument everything available" behavior.
+# Note: "mcp" is excluded by default because it requires the 'mcp' library (>= 1.6.0)
+# which is a specialized dependency for Model Context Protocol servers/clients.
+# Users can enable it by setting GENAI_ENABLED_INSTRUMENTORS="...,mcp" if needed.
 DEFAULT_INSTRUMENTORS = [
     "openai",
     "anthropic",
@@ -35,7 +38,6 @@ DEFAULT_INSTRUMENTORS = [
     "llama_index",
     "transformers",
     "smolagents",
-    "mcp",
     "litellm",
 ]
 

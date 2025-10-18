@@ -134,7 +134,10 @@ class TestOpenAIInstrumentor(unittest.TestCase):
 
             # Create mock wrapper
             mock_wrapper = MagicMock()
-            instrumentor.create_span_wrapper = MagicMock(return_value=mock_wrapper)
+            # create_span_wrapper returns a decorator, so we need to return a callable
+            # that when called with original_create returns mock_wrapper
+            mock_decorator = MagicMock(return_value=mock_wrapper)
+            instrumentor.create_span_wrapper = MagicMock(return_value=mock_decorator)
 
             # Act
             instrumentor._instrument_client(mock_client)
@@ -145,7 +148,10 @@ class TestOpenAIInstrumentor(unittest.TestCase):
                 extract_attributes=instrumentor._extract_openai_attributes,
             )
 
-            # Assert that the create method was replaced
+            # Assert that the decorator was called with original_create
+            mock_decorator.assert_called_once_with(original_create)
+
+            # Assert that the create method was replaced with mock_wrapper
             self.assertEqual(mock_client.chat.completions.create, mock_wrapper)
 
     def test_extract_openai_attributes_with_messages(self):
