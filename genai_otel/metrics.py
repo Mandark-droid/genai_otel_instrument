@@ -10,6 +10,12 @@ from opentelemetry.sdk.metrics.export import (
     ConsoleMetricExporter,
     PeriodicExportingMetricReader,
 )
+from opentelemetry.sdk.resources import (
+    DEPLOYMENT_ENVIRONMENT,
+    SERVICE_NAME,
+    TELEMETRY_SDK_NAME,
+    Resource,
+)
 
 # Correct the import for OTLP Metric Exporter
 if os.environ.get("OTEL_EXPORTER_OTLP_PROTOCOL") == "grpc":
@@ -20,13 +26,6 @@ else:
     from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
         OTLPMetricExporter,
     )
-
-from opentelemetry.sdk.resources import (
-    DEPLOYMENT_ENVIRONMENT,
-    SERVICE_NAME,
-    TELEMETRY_SDK_NAME,
-    Resource,
-)
 
 logger = logging.getLogger(__name__)
 
