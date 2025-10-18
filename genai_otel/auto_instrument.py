@@ -59,19 +59,21 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# isort: split
+# fmt: off
+# isort: off
 # Optional OpenInference instrumentors (requires Python >= 3.10)
 try:
     from openinference.instrumentation.litellm import LiteLLMInstrumentor
     from openinference.instrumentation.mcp import MCPInstrumentor
     from openinference.instrumentation.smolagents import SmolagentsInstrumentor
-
     OPENINFERENCE_AVAILABLE = True
 except ImportError:
     LiteLLMInstrumentor = None
     MCPInstrumentor = None
     SmolagentsInstrumentor = None
     OPENINFERENCE_AVAILABLE = False
+# isort: on
+# fmt: on
 
 # Defines the available instrumentors. This is now at the module level for easier mocking in tests.
 INSTRUMENTORS = {
