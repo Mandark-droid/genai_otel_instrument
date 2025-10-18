@@ -1,3 +1,4 @@
+# isort: skip_file
 import logging
 import os
 from typing import Any, Dict, Optional, Tuple
@@ -17,17 +18,17 @@ from opentelemetry.sdk.resources import (
     Resource,
 )
 
-# fmt: off
-# isort: off
+logger = logging.getLogger(__name__)
+
 # Correct the import for OTLP Metric Exporter
 if os.environ.get("OTEL_EXPORTER_OTLP_PROTOCOL") == "grpc":
-    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (  # noqa: E402
+        OTLPMetricExporter,
+    )
 else:
-    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-# isort: on
-# fmt: on
-
-logger = logging.getLogger(__name__)
+    from opentelemetry.exporter.otlp.proto.http.metric_exporter import (  # noqa: E402
+        OTLPMetricExporter,
+    )
 
 # Global variables to hold the MeterProvider and Meter
 _meter_provider: Optional[MeterProvider] = None

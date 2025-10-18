@@ -1,4 +1,5 @@
 """Module for setting up OpenTelemetry auto-instrumentation for GenAI applications."""
+# isort: skip_file
 
 import logging
 import sys
@@ -59,21 +60,20 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# fmt: off
-# isort: off
 # Optional OpenInference instrumentors (requires Python >= 3.10)
 try:
-    from openinference.instrumentation.litellm import LiteLLMInstrumentor
-    from openinference.instrumentation.mcp import MCPInstrumentor
-    from openinference.instrumentation.smolagents import SmolagentsInstrumentor
+    from openinference.instrumentation.litellm import LiteLLMInstrumentor  # noqa: E402
+    from openinference.instrumentation.mcp import MCPInstrumentor  # noqa: E402
+    from openinference.instrumentation.smolagents import (  # noqa: E402
+        SmolagentsInstrumentor,
+    )
+
     OPENINFERENCE_AVAILABLE = True
 except ImportError:
     LiteLLMInstrumentor = None
     MCPInstrumentor = None
     SmolagentsInstrumentor = None
     OPENINFERENCE_AVAILABLE = False
-# isort: on
-# fmt: on
 
 # Defines the available instrumentors. This is now at the module level for easier mocking in tests.
 INSTRUMENTORS = {
