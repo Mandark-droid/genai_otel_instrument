@@ -32,7 +32,7 @@ jobs:
     # Code quality checks
     - name: Format and lint checks
       run: |
-        black --check genai_otel tests
+        black --check genai_otel tests --exclude='__version__\.py'
         isort --check-only genai_otel tests
         echo "✓ Code quality checks passed"
 

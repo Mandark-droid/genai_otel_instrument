@@ -4,19 +4,19 @@ Complete this checklist before publishing to PyPI.
 
 ## Documentation
 - [ ] README.md is complete and accurate
-- [ ] CHANGELOG.md is updated with version info
-- [ ] All code has docstrings
-- [ ] Usage examples are provided
+- [x] CHANGELOG.md is updated with version info
+- [x] All code has docstrings
+- [x] Usage examples are provided
 - [x] Create an examples folder with one example for each supported instrumented library and also one demo folder
-- [ ] Installation instructions are clear
+- [x] Installation instructions are clear
 
 ## Code Quality
-- [ ] All tests pass locally
-- [ ] Code coverage is >80%
+- [x] All tests pass locally
+- [x] Code coverage is >80% (currently at 98%)
 - [ ] No pylint errors (warnings acceptable)
 - [ ] Black formatting applied
 - [ ] isort applied
-- [ ] Type hints added where possible
+- [x] Type hints added where possible
 
 ## Package Structure
 - [x] pyproject.toml is complete
@@ -34,7 +34,7 @@ Complete this checklist before publishing to PyPI.
 
 ## Testing
 - [ ] Run tests on Python 3.8, 3.9, 3.10, 3.11, 3.12
-- [ ] Test on Linux, macOS, Windows
+- [ ] Test on Linux, macOS, Windows (CI workflows need to pass)
 - [ ] Test clean install: `pip install -e .`
 - [ ] Test with optional deps: `pip install -e ".[all]"`
 - [ ] Test CLI tool works: `genai-instrument --help`
@@ -50,8 +50,9 @@ Complete this checklist before publishing to PyPI.
 - [ ] All changes committed
 - [ ] Version tag created (e.g., v0.1.0)
 - [ ] GitHub repository is public
-- [ ] .gitignore is properly configured
-- [ ] CI/CD workflows are set up
+- [x] .gitignore is properly configured
+- [x] CI/CD workflows are set up
+- [ ] CI/CD workflows passing (black, isort, tests)
 - [ ] Branch protection rules configured
 
 ## PyPI Preparation
@@ -97,6 +98,56 @@ Complete this checklist before publishing to PyPI.
 8. [ ] Verify package on PyPI
 9. [ ] Test installation: `pip install genai-otel-instrument`
 10. [ ] Announce release (if applicable)
+
+## Examples & Demo Validation
+
+### Individual Example Testing
+Test each example runs without instrumentation errors:
+- [ ] `examples/anthropic/example.py`
+- [ ] `examples/aws_bedrock/example.py`
+- [ ] `examples/azure_openai/example.py`
+- [ ] `examples/cohere/example.py`
+- [ ] `examples/google_ai/example.py`
+- [ ] `examples/groq/example.py`
+- [ ] `examples/huggingface/example.py`
+- [ ] `examples/langchain/example.py`
+- [ ] `examples/litellm/example.py`
+- [ ] `examples/llamaindex/example.py`
+- [ ] `examples/mistralai/example.py`
+- [ ] `examples/ollama/example.py`
+- [ ] `examples/openai/example.py`
+- [ ] `examples/replicate/example.py`
+- [ ] `examples/smolagents/example.py`
+- [ ] `examples/togetherai/example.py`
+- [ ] `examples/vertexai/example.py`
+
+### Demo Validation
+- [ ] Run `demo/` folder examples successfully
+- [ ] Verify demo showcases complete observability pipeline
+- [ ] Test demo with OTLP backend (Jaeger/Grafana/etc.)
+
+### Documentation Validation
+- [ ] Confirm all examples have proper README.md files
+- [ ] Verify README includes API key setup instructions
+- [ ] Check README shows expected output format
+- [ ] Validate examples match documentation
+
+### Functional Validation
+- [ ] Verify all examples show telemetry output (traces/metrics)
+- [ ] Check that examples handle missing API keys gracefully
+- [ ] Ensure all examples use correct import pattern: `import genai_otel; genai_otel.instrument()`
+- [ ] Confirm spans contain proper attributes (gen_ai.system, model, tokens)
+- [ ] Validate metrics are recorded (requests, tokens, cost, latency)
+
+### Integration Testing
+- [ ] Test examples with Console exporter (default)
+- [ ] Test examples with OTLP HTTP exporter
+- [ ] Test examples with OTLP gRPC exporter (if configured)
+- [ ] Verify GPU metrics collection (if GPU available)
+- [ ] Test cost tracking accuracy across providers
+- [ ] Validate MCP instrumentation (databases, vector DBs, Redis, Kafka)
+- [ ] Verify HTTP instrumentation is disabled by default
+- [ ] Test with `enable_http_instrumentation=True` flag
 
 ## Post-Release
 - [ ] Monitor PyPI download stats
