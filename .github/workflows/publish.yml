@@ -33,7 +33,7 @@ jobs:
     - name: Format and lint checks
       run: |
         black --check genai_otel tests --exclude='__version__\.py'
-        isort --check-only genai_otel tests
+        isort --check-only genai_otel tests --skip genai_otel/__version__.py
         echo "✓ Code quality checks passed"
 
     - name: Build package
