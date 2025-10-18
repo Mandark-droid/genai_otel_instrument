@@ -52,5 +52,5 @@ def test_smolagents_instrumentor_integration(MockSmolagentsInstrumentor):
 
             setup_auto_instrumentation(config)
 
-    # Assert that the instrument method of the mocked instrumentor was called once with the correct config
-    mock_instrumentor_instance.instrument.assert_called_once_with(config=config)
+    # OpenInference instrumentors don't take config parameter (see auto_instrument.py:208-211)
+    mock_instrumentor_instance.instrument.assert_called_once_with()
