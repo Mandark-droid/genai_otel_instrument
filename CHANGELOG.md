@@ -56,6 +56,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Comprehensive CI/CD improvements**
+  - Added `build-and-install-test` job to test.yml workflow for package build and installation validation
+  - Added pre-release-check.yml workflow that mimics manual test_release.sh script
+  - Enhanced publish.yml with full test suite, code quality checks, and installation testing before publishing
+  - Added workflow documentation in .github/workflows/README.md
+  - CI now tests package installation and CLI functionality in isolated environments
+  - Pre-release validation runs across Ubuntu, Windows, and macOS with Python 3.9 and 3.12
 - **Fine-grained HTTP instrumentation control**
   - Added `enable_http_instrumentation` configuration option (default: `false`)
   - Environment variable: `GENAI_ENABLE_HTTP_INSTRUMENTATION`
