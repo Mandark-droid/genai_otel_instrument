@@ -28,7 +28,9 @@ def main():
         description=("Run a Python script with GenAI OpenTelemetry instrumentation.")
     )
     parser.add_argument(
-        "command", nargs=argparse.REMAINDER, help="The command to run (python script.py or script.py)"
+        "command",
+        nargs=argparse.REMAINDER,
+        help="The command to run (python script.py or script.py)",
     )
 
     args = parser.parse_args()
@@ -52,15 +54,19 @@ def main():
     script_args = []
 
     # Check if command starts with 'python' or 'python3' or 'python.exe'
-    if args.command[0].lower() in ['python', 'python3', 'python.exe', 'python3.exe'] or \
-       os.path.basename(args.command[0]).lower().startswith('python'):
+    if args.command[0].lower() in [
+        "python",
+        "python3",
+        "python.exe",
+        "python3.exe",
+    ] or os.path.basename(args.command[0]).lower().startswith("python"):
         # Format: genai-instrument python script.py [args...]
         if len(args.command) < 2:
             logger.error("No Python script specified after 'python' command")
             sys.exit(1)
         script_path = args.command[1]
         script_args = args.command[2:]
-    elif args.command[0].endswith('.py'):
+    elif args.command[0].endswith(".py"):
         # Format: genai-instrument script.py [args...]
         script_path = args.command[0]
         script_args = args.command[1:]
@@ -82,7 +88,5 @@ def main():
         logger.error(f"Script not found: {script_path}")
         sys.exit(1)
     except Exception as e:
-        logger.error(
-            f"Error running script {script_path}: {e}", exc_info=True
-        )
+        logger.error(f"Error running script {script_path}: {e}", exc_info=True)
         sys.exit(1)

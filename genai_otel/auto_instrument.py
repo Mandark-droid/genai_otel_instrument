@@ -8,6 +8,7 @@ try:
     from openinference.instrumentation.litellm import LiteLLMInstrumentor
     from openinference.instrumentation.mcp import MCPInstrumentor
     from openinference.instrumentation.smolagents import SmolagentsInstrumentor
+
     OPENINFERENCE_AVAILABLE = True
 except ImportError:
     LiteLLMInstrumentor = None
@@ -93,11 +94,13 @@ INSTRUMENTORS = {
 
 # Add OpenInference instrumentors if available (requires Python >= 3.10)
 if OPENINFERENCE_AVAILABLE:
-    INSTRUMENTORS.update({
-        "smolagents": SmolagentsInstrumentor,
-        "mcp": MCPInstrumentor,
-        "litellm": LiteLLMInstrumentor,
-    })
+    INSTRUMENTORS.update(
+        {
+            "smolagents": SmolagentsInstrumentor,
+            "mcp": MCPInstrumentor,
+            "litellm": LiteLLMInstrumentor,
+        }
+    )
 
 
 # Global list to store OTLP exporter sessions that should not be instrumented
@@ -210,7 +213,9 @@ def setup_auto_instrumentation(config: OTelConfig):
 
     # OpenInference instrumentors that use different API (no config parameter)
     # Only include if OpenInference is available (Python >= 3.10)
-    OPENINFERENCE_INSTRUMENTORS = {"smolagents", "mcp", "litellm"} if OPENINFERENCE_AVAILABLE else set()
+    OPENINFERENCE_INSTRUMENTORS = (
+        {"smolagents", "mcp", "litellm"} if OPENINFERENCE_AVAILABLE else set()
+    )
 
     # Auto-instrument LLM libraries based on the configuration
     for name in config.enabled_instrumentors:
