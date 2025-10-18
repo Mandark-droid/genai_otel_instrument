@@ -4,6 +4,9 @@ from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 
+# Skip all GPU tests if nvidia-ml-py is not installed
+pytest.importorskip("pynvml", reason="nvidia-ml-py (pynvml) not installed")
+
 
 # Configure pytest
 def pytest_configure(config):
