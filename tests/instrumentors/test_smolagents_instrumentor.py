@@ -6,11 +6,22 @@ import pytest
 # Assuming OTelConfig is available at genai_otel.config
 from genai_otel.config import OTelConfig
 
+# Check if openinference is available
+try:
+    import openinference.instrumentation.smolagents
+
+    OPENINFERENCE_AVAILABLE = True
+except ImportError:
+    OPENINFERENCE_AVAILABLE = False
+
 # Assuming the actual instrumentor class is from openinference
 # We will mock this class and test genai_otel's integration logic.
 
 
 # Mock the actual openinference instrumentor
+@pytest.mark.skipif(
+    not OPENINFERENCE_AVAILABLE, reason="openinference-instrumentation-smolagents not installed"
+)
 @patch("openinference.instrumentation.smolagents.SmolagentsInstrumentor")
 def test_smolagents_instrumentor_integration(MockSmolagentsInstrumentor):
     """
