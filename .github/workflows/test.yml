@@ -38,7 +38,7 @@ jobs:
 
     - name: Check import sorting with isort
       run: |
-        isort --check-only genai_otel tests --skip genai_otel/__version__.py
+        isort --check-only --skip-glob='*/__version__.py' genai_otel tests
 
     - name: Type check with mypy
       run: |
