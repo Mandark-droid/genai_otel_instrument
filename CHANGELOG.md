@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Conditional imports prevent errors when OpenInference packages are not installed
   - Relaxed `opentelemetry-semantic-conventions` version constraint from `>=0.58b0` to `>=0.45b0` for Python 3.8 compatibility
   - Added missing `opentelemetry-instrumentation-mysql` to core dependencies
+  - Removed `mysql==0.0.3` dependency (requires system MySQL libraries not available in CI)
+  - Added `sqlalchemy>=1.4.0` to core dependencies (required by sqlalchemy instrumentor)
 - **CRITICAL: Fixed CLI wrapper to execute scripts in same process**
   - Changed from `subprocess.run()` to `runpy.run_path()` to ensure instrumentation hooks are active
   - Supports both `genai-instrument python script.py` and `genai-instrument script.py` formats
