@@ -9,6 +9,7 @@ environment variables, with sensible defaults provided.
 
 import logging
 import os
+import sys
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
@@ -20,6 +21,9 @@ logger = logging.getLogger(__name__)
 # Note: "mcp" is excluded by default because it requires the 'mcp' library (>= 1.6.0)
 # which is a specialized dependency for Model Context Protocol servers/clients.
 # Users can enable it by setting GENAI_ENABLED_INSTRUMENTORS="...,mcp" if needed.
+#
+# Note: "smolagents" and "litellm" OpenInference instrumentors require Python >= 3.10
+# They are only added to the default list if Python version is compatible.
 DEFAULT_INSTRUMENTORS = [
     "openai",
     "anthropic",
@@ -37,9 +41,11 @@ DEFAULT_INSTRUMENTORS = [
     "langchain",
     "llama_index",
     "transformers",
-    "smolagents",
-    "litellm",
 ]
+
+# Add OpenInference instrumentors only for Python >= 3.10
+if sys.version_info >= (3, 10):
+    DEFAULT_INSTRUMENTORS.extend(["smolagents", "litellm"])
 
 
 def _get_enabled_instrumentors() -> List[str]:
