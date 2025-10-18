@@ -70,10 +70,15 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 - **Vector Databases**: Pinecone, Weaviate, Qdrant, ChromaDB, Milvus, FAISS
 - **APIs**: HTTP/REST requests (requests, httpx)
 
-### OpenInference
+### OpenInference (Optional - Python 3.10+ only)
 - Smolagents
 - MCP
 - LiteLLM
+
+**Note:** OpenInference instrumentors require Python >= 3.10. Install with:
+```bash
+pip install genai-otel-instrument[openinference]
+```
 
 ## Collected Telemetry
 
