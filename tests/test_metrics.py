@@ -20,9 +20,16 @@ def reset_otel():
         if var in os.environ:
             del os.environ[var]
 
+    # Reset the global providers to None to allow new providers to be set
+    # This is necessary because OTel doesn't allow overriding existing providers
+    metrics._METER_PROVIDER = None  # pylint: disable=protected-access
+    trace._TRACER_PROVIDER = None  # pylint: disable=protected-access
+
+    yield
+
+    # Clean up after test - set back to NoOp
     set_meter_provider(NoOpMeterProvider())
     set_tracer_provider(NoOpTracerProvider())
-    yield
 
 
 def test_basic_instrumentation():
