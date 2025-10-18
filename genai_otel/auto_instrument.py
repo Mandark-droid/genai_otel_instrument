@@ -3,19 +3,6 @@
 import logging
 import sys
 
-# Optional OpenInference instrumentors (requires Python >= 3.10)
-try:
-    from openinference.instrumentation.litellm import LiteLLMInstrumentor
-    from openinference.instrumentation.mcp import MCPInstrumentor
-    from openinference.instrumentation.smolagents import SmolagentsInstrumentor
-
-    OPENINFERENCE_AVAILABLE = True
-except ImportError:
-    LiteLLMInstrumentor = None
-    MCPInstrumentor = None
-    SmolagentsInstrumentor = None
-    OPENINFERENCE_AVAILABLE = False
-
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -71,6 +58,19 @@ except ImportError:
     )
 
 logger = logging.getLogger(__name__)
+
+# Optional OpenInference instrumentors (requires Python >= 3.10)
+try:
+    from openinference.instrumentation.litellm import LiteLLMInstrumentor
+    from openinference.instrumentation.mcp import MCPInstrumentor
+    from openinference.instrumentation.smolagents import SmolagentsInstrumentor
+
+    OPENINFERENCE_AVAILABLE = True
+except ImportError:
+    LiteLLMInstrumentor = None
+    MCPInstrumentor = None
+    SmolagentsInstrumentor = None
+    OPENINFERENCE_AVAILABLE = False
 
 # Defines the available instrumentors. This is now at the module level for easier mocking in tests.
 INSTRUMENTORS = {
