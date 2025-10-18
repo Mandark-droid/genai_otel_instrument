@@ -59,6 +59,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# isort: split
 # Optional OpenInference instrumentors (requires Python >= 3.10)
 try:
     from openinference.instrumentation.litellm import LiteLLMInstrumentor
