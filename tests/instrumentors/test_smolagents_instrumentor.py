@@ -41,24 +41,18 @@ def test_smolagents_instrumentor_integration(MockSmolagentsInstrumentor):
     # and ensure only our mocked smolagents instrumentor is considered.
     with patch.dict(INSTRUMENTORS, {"smolagents": MockSmolagentsInstrumentor}, clear=True):
         # Mock other dependencies of setup_auto_instrumentation to avoid actual initialization
-        with patch("genai_otel.auto_instrument.OTLPSpanExporter"), patch(
-            "os.getenv", return_value="10.0"
-        ), patch("genai_otel.auto_instrument.Resource"), patch(
-            "genai_otel.auto_instrument.TracerProvider"
-        ), patch(
-            "genai_otel.auto_instrument.BatchSpanProcessor"
-        ), patch(
-            "opentelemetry.trace.propagation.tracecontext.TraceContextTextMapPropagator"
-        ), patch(
-            "genai_otel.auto_instrument.OTLPMetricExporter"
-        ), patch(
-            "genai_otel.auto_instrument.PeriodicExportingMetricReader"
-        ), patch(
-            "genai_otel.auto_instrument.MeterProvider"
-        ), patch(
-            "genai_otel.auto_instrument.GPUMetricsCollector"
-        ), patch(
-            "genai_otel.auto_instrument.MCPInstrumentorManager"
+        with (
+            patch("genai_otel.auto_instrument.OTLPSpanExporter"),
+            patch("os.getenv", return_value="10.0"),
+            patch("genai_otel.auto_instrument.Resource"),
+            patch("genai_otel.auto_instrument.TracerProvider"),
+            patch("genai_otel.auto_instrument.BatchSpanProcessor"),
+            patch("opentelemetry.trace.propagation.tracecontext.TraceContextTextMapPropagator"),
+            patch("genai_otel.auto_instrument.OTLPMetricExporter"),
+            patch("genai_otel.auto_instrument.PeriodicExportingMetricReader"),
+            patch("genai_otel.auto_instrument.MeterProvider"),
+            patch("genai_otel.auto_instrument.GPUMetricsCollector"),
+            patch("genai_otel.auto_instrument.MCPInstrumentorManager"),
         ):  # Mock the MCP manager as well
 
             setup_auto_instrumentation(config)

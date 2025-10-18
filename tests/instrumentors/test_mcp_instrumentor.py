@@ -39,24 +39,18 @@ def test_mcp_instrumentor_integration(MockMCPInstrumentor):
     from genai_otel.auto_instrument import INSTRUMENTORS, setup_auto_instrumentation
 
     with patch.dict(INSTRUMENTORS, {"mcp": MockMCPInstrumentor}, clear=True):
-        with patch("genai_otel.auto_instrument.OTLPSpanExporter"), patch(
-            "os.getenv", return_value="10.0"
-        ), patch("genai_otel.auto_instrument.Resource"), patch(
-            "genai_otel.auto_instrument.TracerProvider"
-        ), patch(
-            "genai_otel.auto_instrument.BatchSpanProcessor"
-        ), patch(
-            "opentelemetry.trace.propagation.tracecontext.TraceContextTextMapPropagator"
-        ), patch(
-            "genai_otel.auto_instrument.OTLPMetricExporter"
-        ), patch(
-            "genai_otel.auto_instrument.PeriodicExportingMetricReader"
-        ), patch(
-            "genai_otel.auto_instrument.MeterProvider"
-        ), patch(
-            "genai_otel.auto_instrument.GPUMetricsCollector"
-        ), patch(
-            "genai_otel.auto_instrument.MCPInstrumentorManager"
+        with (
+            patch("genai_otel.auto_instrument.OTLPSpanExporter"),
+            patch("os.getenv", return_value="10.0"),
+            patch("genai_otel.auto_instrument.Resource"),
+            patch("genai_otel.auto_instrument.TracerProvider"),
+            patch("genai_otel.auto_instrument.BatchSpanProcessor"),
+            patch("opentelemetry.trace.propagation.tracecontext.TraceContextTextMapPropagator"),
+            patch("genai_otel.auto_instrument.OTLPMetricExporter"),
+            patch("genai_otel.auto_instrument.PeriodicExportingMetricReader"),
+            patch("genai_otel.auto_instrument.MeterProvider"),
+            patch("genai_otel.auto_instrument.GPUMetricsCollector"),
+            patch("genai_otel.auto_instrument.MCPInstrumentorManager"),
         ):  # Mock the manager
 
             setup_auto_instrumentation(config)
