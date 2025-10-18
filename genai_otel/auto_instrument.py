@@ -1,4 +1,5 @@
 """Module for setting up OpenTelemetry auto-instrumentation for GenAI applications."""
+
 # isort: skip_file
 
 import logging
