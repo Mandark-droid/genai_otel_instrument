@@ -3,6 +3,7 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
+  workflow_dispatch:  # Allow manual triggering for testing
 
 jobs:
   build-and-publish:
@@ -21,20 +22,59 @@ jobs:
         python -m pip install --upgrade pip
         pip install build twine
 
+    # Run full test suite before publishing
+    - name: Install dev dependencies and run tests
+      run: |
+        pip install -e ".[dev]"
+        pytest tests/ -v --cov=genai_otel --cov-report=term
+        echo "✓ All tests passed"
+
+    # Code quality checks
+    - name: Format and lint checks
+      run: |
+        black --check genai_otel tests
+        isort --check-only genai_otel tests
+        echo "✓ Code quality checks passed"
+
     - name: Build package
       run: python -m build
 
-    - name: Check package
+    - name: Check package with twine
       run: twine check dist/*
 
+    # Test installation before publishing
+    - name: Test package installation
+      run: |
+        python -m venv test_env
+        source test_env/bin/activate
+        pip install dist/*.whl
+
+        # Test imports
+        python -c "
+import genai_otel
+print(f'Successfully imported genai_otel version: {genai_otel.__version__}')
+from genai_otel.config import OTelConfig
+from genai_otel.cost_calculator import CostCalculator
+print('✓ All core components imported successfully')
+        "
+
+        # Test CLI
+        genai-instrument --help
+        echo "✓ CLI tool works"
+
+        deactivate
+        rm -rf test_env
+
     - name: Publish to Test PyPI
+      if: github.event_name == 'release'
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
       run: |
-        twine upload --repository testpypi dist/* --skip-existing
+        twine upload --repository testpypi dist/* --skip-existing || echo "Package may already exist on Test PyPI"
 
     - name: Publish to PyPI
+      if: github.event_name == 'release'
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
