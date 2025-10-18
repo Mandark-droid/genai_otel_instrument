@@ -51,7 +51,7 @@ jobs:
 
         # Test imports
         python -c 'import genai_otel; print(f"Successfully imported genai_otel version: {genai_otel.__version__}")'
-        python -c 'from genai_otel.config import OTelConfig; from genai_otel.cost_calculator import CostCalculator; print("✓ All core components imported successfully")'
+        python -c 'from genai_otel.config import OTelConfig; from genai_otel.cost_calculator import CostCalculator; print("All core components imported successfully")'
 
         # Test CLI
         genai-instrument --help
