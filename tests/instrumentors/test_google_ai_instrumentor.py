@@ -8,16 +8,17 @@ from genai_otel.instrumentors.google_ai_instrumentor import GoogleAIInstrumentor
 class TestGoogleAIInstrumentor(unittest.TestCase):
     """Tests for GoogleAIInstrumentor"""
 
-    @patch("google.generativeai", MagicMock())
     def test_init_with_google_available(self):
         """Test that __init__ detects google.generativeai availability."""
-        with patch.dict("sys.modules", {"google": MagicMock(), "google.generativeai": MagicMock()}):
+        # Only patch google.generativeai, not the google namespace package
+        with patch.dict("sys.modules", {"google.generativeai": MagicMock()}):
             instrumentor = GoogleAIInstrumentor()
             self.assertTrue(instrumentor._google_available)
 
     def test_init_with_google_not_available(self):
         """Test that __init__ handles missing google.generativeai gracefully."""
-        with patch.dict("sys.modules", {"google": None, "google.generativeai": None}):
+        # Remove google.generativeai from sys.modules if it exists
+        with patch.dict("sys.modules", {"google.generativeai": None}):
             instrumentor = GoogleAIInstrumentor()
             self.assertFalse(instrumentor._google_available)
 
