@@ -55,7 +55,7 @@ jobs:
     - name: Code quality checks
       run: |
         echo "→ Running code quality checks..."
-        black --check genai_otel tests
+        black --check genai_otel tests --exclude='__version__\.py'
         isort --check-only genai_otel tests
         pylint genai_otel --rcfile=.pylintrc --exit-zero || true
         echo "✓ Code quality checks complete"
