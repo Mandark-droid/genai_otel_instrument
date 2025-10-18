@@ -42,4 +42,5 @@ def test_litellm_instrumentor_integration(MockLiteLLMInstrumentor):
 
             setup_auto_instrumentation(config)
 
-    mock_instrumentor_instance.instrument.assert_called_once_with(config=config)
+    # OpenInference instrumentors don't take config parameter (see auto_instrument.py:208-211)
+    mock_instrumentor_instance.instrument.assert_called_once_with()

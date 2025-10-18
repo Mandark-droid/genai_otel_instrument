@@ -9,7 +9,8 @@ class TestMCPInstrumentorManager(unittest.TestCase):
     """Tests for MCPInstrumentorManager"""
 
     def setUp(self):
-        self.config = OTelConfig()
+        # Enable HTTP instrumentation for tests that expect it
+        self.config = OTelConfig(enable_http_instrumentation=True)
 
     def test_init(self):
         """Test that manager initializes correctly"""
