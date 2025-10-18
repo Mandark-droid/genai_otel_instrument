@@ -17,16 +17,15 @@ from opentelemetry.sdk.resources import (
     Resource,
 )
 
-# isort: split
+# fmt: off
+# isort: off
 # Correct the import for OTLP Metric Exporter
 if os.environ.get("OTEL_EXPORTER_OTLP_PROTOCOL") == "grpc":
-    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
-        OTLPMetricExporter,
-    )
+    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 else:
-    from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
-        OTLPMetricExporter,
-    )
+    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+# isort: on
+# fmt: on
 
 logger = logging.getLogger(__name__)
 
