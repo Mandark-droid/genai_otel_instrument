@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Install with: `pip install genai-otel-instrument[openinference]` (Python 3.10+ only)
   - Package now installs cleanly on Python 3.8, 3.9, 3.10, 3.11, and 3.12
   - Conditional imports prevent errors when OpenInference packages are not installed
+  - Relaxed `opentelemetry-semantic-conventions` version constraint from `>=0.58b0` to `>=0.45b0` for Python 3.8 compatibility
+  - Added missing `opentelemetry-instrumentation-mysql` to core dependencies
 - **CRITICAL: Fixed CLI wrapper to execute scripts in same process**
   - Changed from `subprocess.run()` to `runpy.run_path()` to ensure instrumentation hooks are active
   - Supports both `genai-instrument python script.py` and `genai-instrument script.py` formats
