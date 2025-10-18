@@ -5,8 +5,19 @@ import pytest
 
 from genai_otel.config import OTelConfig
 
+# Check if openinference is available
+try:
+    import openinference.instrumentation.litellm
+
+    OPENINFERENCE_AVAILABLE = True
+except ImportError:
+    OPENINFERENCE_AVAILABLE = False
+
 
 # Mock the actual openinference instrumentor
+@pytest.mark.skipif(
+    not OPENINFERENCE_AVAILABLE, reason="openinference-instrumentation-litellm not installed"
+)
 @patch("openinference.instrumentation.litellm.LiteLLMInstrumentor")
 def test_litellm_instrumentor_integration(MockLiteLLMInstrumentor):
     """
