@@ -3,9 +3,18 @@
 import logging
 import sys
 
-from openinference.instrumentation.litellm import LiteLLMInstrumentor
-from openinference.instrumentation.mcp import MCPInstrumentor
-from openinference.instrumentation.smolagents import SmolagentsInstrumentor
+# Optional OpenInference instrumentors (requires Python >= 3.10)
+try:
+    from openinference.instrumentation.litellm import LiteLLMInstrumentor
+    from openinference.instrumentation.mcp import MCPInstrumentor
+    from openinference.instrumentation.smolagents import SmolagentsInstrumentor
+    OPENINFERENCE_AVAILABLE = True
+except ImportError:
+    LiteLLMInstrumentor = None
+    MCPInstrumentor = None
+    SmolagentsInstrumentor = None
+    OPENINFERENCE_AVAILABLE = False
+
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -80,10 +89,15 @@ INSTRUMENTORS = {
     "langchain": LangChainInstrumentor,
     "llama_index": LlamaIndexInstrumentor,
     "transformers": HuggingFaceInstrumentor,
-    "smolagents": SmolagentsInstrumentor,
-    "mcp": MCPInstrumentor,
-    "litellm": LiteLLMInstrumentor,
 }
+
+# Add OpenInference instrumentors if available (requires Python >= 3.10)
+if OPENINFERENCE_AVAILABLE:
+    INSTRUMENTORS.update({
+        "smolagents": SmolagentsInstrumentor,
+        "mcp": MCPInstrumentor,
+        "litellm": LiteLLMInstrumentor,
+    })
 
 
 # Global list to store OTLP exporter sessions that should not be instrumented
@@ -195,7 +209,8 @@ def setup_auto_instrumentation(config: OTelConfig):
         logger.info("No OTLP endpoint configured, metrics will be exported to console.")
 
     # OpenInference instrumentors that use different API (no config parameter)
-    OPENINFERENCE_INSTRUMENTORS = {"smolagents", "mcp", "litellm"}
+    # Only include if OpenInference is available (Python >= 3.10)
+    OPENINFERENCE_INSTRUMENTORS = {"smolagents", "mcp", "litellm"} if OPENINFERENCE_AVAILABLE else set()
 
     # Auto-instrument LLM libraries based on the configuration
     for name in config.enabled_instrumentors:
