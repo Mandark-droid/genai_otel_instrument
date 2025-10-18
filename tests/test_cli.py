@@ -50,7 +50,7 @@ def mock_logger():
 def test_main_successful_execution(
     mock_instrument, mock_runpy, mock_sys_argv, mock_sys_exit, mock_logger
 ):
-    """Test that the CLI correctly instruments and runs a script."""
+    """Test that the CLI correctly instruments and runs a script (direct .py format)."""
     script_to_run = "my_script.py"
     script_args = ["--arg1", "value1"]
     mock_sys_argv.extend([script_to_run] + script_args)
@@ -65,6 +65,26 @@ def test_main_successful_execution(
 
     # Verify sys.argv was set correctly before running the script
     # (This happens inside main(), so we can't directly assert it)
+
+    # Verify sys.exit was not called
+    mock_sys_exit.assert_not_called()
+
+
+def test_main_successful_execution_with_python_command(
+    mock_instrument, mock_runpy, mock_sys_argv, mock_sys_exit, mock_logger
+):
+    """Test that the CLI correctly instruments and runs a script (python script.py format)."""
+    script_to_run = "my_script.py"
+    script_args = ["--arg1", "value1"]
+    mock_sys_argv.extend(["python", script_to_run] + script_args)
+
+    cli.main()
+
+    # Verify instrumentation was called
+    mock_instrument.assert_called_once()
+
+    # Verify runpy was called with the correct script
+    mock_runpy.assert_called_once_with(script_to_run, run_name="__main__")
 
     # Verify sys.exit was not called
     mock_sys_exit.assert_not_called()
@@ -150,10 +170,30 @@ def test_main_script_execution_error(
 def test_main_script_with_args(
     mock_instrument, mock_runpy, mock_sys_argv, mock_sys_exit, mock_logger
 ):
-    """Test that script arguments are passed correctly."""
+    """Test that script arguments are passed correctly (direct .py format)."""
     script_to_run = "script_with_args.py"
     script_args = ["--input", "data.txt", "--output", "result.txt"]
     mock_sys_argv.extend([script_to_run] + script_args)
+
+    cli.main()
+
+    # Verify instrumentation was called
+    mock_instrument.assert_called_once()
+
+    # Verify runpy was called with the correct script
+    mock_runpy.assert_called_once_with(script_to_run, run_name="__main__")
+
+    # Verify sys.exit was not called
+    mock_sys_exit.assert_not_called()
+
+
+def test_main_script_with_args_python_command(
+    mock_instrument, mock_runpy, mock_sys_argv, mock_sys_exit, mock_logger
+):
+    """Test that script arguments are passed correctly (python script.py format)."""
+    script_to_run = "script_with_args.py"
+    script_args = ["--input", "data.txt", "--output", "result.txt"]
+    mock_sys_argv.extend(["python", script_to_run] + script_args)
 
     cli.main()
 
