@@ -30,11 +30,12 @@ def mock_otel_config():
 def mock_meter():
     """Fixture for a mock OpenTelemetry Meter."""
     meter = Mock()
-    meter.create_counter.side_effect = [Mock(), Mock()]  # Return distinct mocks for each counter
+    meter.create_counter.return_value = Mock()  # Only CO2 counter now
     meter.create_observable_gauge.side_effect = [
         Mock(),
         Mock(),
-    ]  # Return distinct mocks for memory and temperature
+        Mock(),
+    ]  # Return distinct mocks for utilization, memory, and temperature
     return meter
 
 
@@ -100,17 +101,14 @@ class TestGPUMetricsCollector:
         mock_pynvml_gpu_available.nvmlInit.side_effect = Exception("NVML init failed")
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
         assert not collector.gpu_available
-        assert mock_meter.create_counter.call_count == 2
-        mock_meter.create_counter.assert_has_calls(
-            [
-                call(
-                    "genai.co-2.emissions",
-                    description="Cumulative CO2 equivalent emissions in grams",
-                    unit="gCO2e",
-                ),
-                call("genai.gpu.utilization", description="GPU utilization percentage", unit="%"),
-            ]
+        # Only CO2 counter is created (before GPU availability check)
+        mock_meter.create_counter.assert_called_once_with(
+            "gen_ai.co2.emissions",  # Fixed metric name
+            description="Cumulative CO2 equivalent emissions in grams",
+            unit="gCO2e",
         )
+        # GPU gauges are created even if no GPUs available
+        assert mock_meter.create_observable_gauge.call_count == 3
 
     @patch("genai_otel.gpu_metrics.logger")
     def test_init_no_gpus(self, mock_logger, mock_meter, mock_otel_config, mock_pynvml_no_gpu):
@@ -133,18 +131,16 @@ class TestGPUMetricsCollector:
         assert collector.gpu_available
         assert collector.device_count == 1
         mock_pynvml_gpu_available.nvmlInit.assert_called_once()
-        assert mock_meter.create_counter.call_count == 2  # co2 counter and gpu utilization counter
-        mock_meter.create_counter.assert_has_calls(
-            [
-                call(
-                    "genai.co-2.emissions",
-                    description="Cumulative CO2 equivalent emissions in grams",
-                    unit="gCO2e",
-                ),
-                call("genai.gpu.utilization", description="GPU utilization percentage", unit="%"),
-            ]
+        # Only CO2 counter is created
+        mock_meter.create_counter.assert_called_once_with(
+            "gen_ai.co2.emissions",  # Fixed metric name
+            description="Cumulative CO2 equivalent emissions in grams",
+            unit="gCO2e",
         )
-        assert mock_meter.create_observable_gauge.call_count == 2  # memory and temperature gauges
+        # All three metrics are now ObservableGauges
+        assert (
+            mock_meter.create_observable_gauge.call_count == 3
+        )  # utilization, memory, temperature
 
     @patch("genai_otel.gpu_metrics.logger")
     def test_init_metric_instrument_creation_fails(
@@ -152,126 +148,97 @@ class TestGPUMetricsCollector:
     ):
         import genai_otel.gpu_metrics
 
-        failed_exception = Exception("Failed to create counter")
-        mock_meter.create_counter.side_effect = [
-            Mock(),
-            failed_exception,
-        ]  # First call for co2 counter succeeds
+        # Make create_observable_gauge fail
+        mock_meter.create_observable_gauge.side_effect = StopIteration()
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
         assert collector.gpu_available
         mock_logger.error.assert_called_with(
-            "Failed to create GPU metrics instruments: %s", failed_exception, exc_info=True
+            "Failed to create GPU metrics instruments: %s",
+            mock_meter.create_observable_gauge.side_effect,
+            exc_info=True,
         )
-        assert collector.gpu_utilization_counter is None
-        assert collector.gpu_memory_used_gauge is None
-        assert collector.gpu_temperature_gauge is None
 
     @patch("genai_otel.gpu_metrics.logger")
     @patch.dict(sys.modules, {"pynvml": None})
     @patch("genai_otel.gpu_metrics.NVML_AVAILABLE", False)
-    def test_collect_metrics_nvml_not_available(self, mock_logger, mock_meter, mock_otel_config):
+    def test_observe_gpu_utilization_nvml_not_available(
+        self, mock_logger, mock_meter, mock_otel_config
+    ):
         import genai_otel.gpu_metrics
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
-        collector._collect_metrics()
-        mock_logger.warning.assert_called_once()  # From init
-        mock_meter.create_counter.assert_called_once()  # From init
-        mock_meter.create_observable_gauge.assert_not_called()  # From init
-        # No further calls to pynvml or metric adds
-        assert mock_meter.create_counter.call_count == 1
+        # ObservableGauge callbacks return generators, should return empty if NVML not available
+        observations = list(collector._observe_gpu_utilization(None))
+        assert observations == []
 
     @patch("genai_otel.gpu_metrics.logger")
-    def test_collect_metrics_nvml_init_fails(
+    def test_observe_gpu_utilization_nvml_init_fails(
         self, mock_logger, mock_meter, mock_otel_config, mock_pynvml_gpu_available
     ):
         import genai_otel.gpu_metrics
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
-        # Reset mock_pynvml_gpu_available for the collect phase, as it was already called in init
+        # Reset and make nvmlInit fail in callback
         mock_pynvml_gpu_available.nvmlInit.reset_mock()
         mock_pynvml_gpu_available.nvmlInit.side_effect = Exception(
-            "NVML init failed during collect"
+            "NVML init failed during observe"
         )
-        collector._collect_metrics()
+
+        observations = list(collector._observe_gpu_utilization(None))
+        assert observations == []
         mock_logger.error.assert_called_with(
-            "Error during GPU metrics collection: %s",
-            mock_pynvml_gpu_available.nvmlInit.side_effect,
-            exc_info=True,
+            "Error observing GPU utilization: %s", mock_pynvml_gpu_available.nvmlInit.side_effect
         )
-        mock_pynvml_gpu_available.nvmlShutdown.assert_not_called()  # Shutdown not called if init fails
 
     @patch("genai_otel.gpu_metrics.logger")
-    def test_collect_metrics_successful_collection(
+    def test_observe_gpu_utilization_successful(
         self, mock_logger, mock_meter, mock_otel_config, mock_pynvml_gpu_available
     ):
+        from opentelemetry.metrics import Observation
+
         import genai_otel.gpu_metrics
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
-        # Reset mock_pynvml_gpu_available for the collect phase, as it was already called in init
+        # Reset mocks from init
         mock_pynvml_gpu_available.nvmlInit.reset_mock()
         mock_pynvml_gpu_available.nvmlDeviceGetCount.reset_mock()
-        collector._collect_metrics()
 
-        mock_pynvml_gpu_available.nvmlInit.assert_called_once()  # Called once in collect
-        mock_pynvml_gpu_available.nvmlDeviceGetCount.assert_called_once()  # Called once in collect
-        mock_pynvml_gpu_available.nvmlDeviceGetHandleByIndex.assert_called_once_with(0)
-        mock_pynvml_gpu_available.nvmlDeviceGetName.assert_called_once_with(
-            mock_pynvml_gpu_available.nvmlDeviceGetHandleByIndex.return_value
-        )
-        mock_pynvml_gpu_available.nvmlDeviceGetUtilizationRates.assert_called_once_with(
-            mock_pynvml_gpu_available.nvmlDeviceGetHandleByIndex.return_value
-        )
-        mock_pynvml_gpu_available.nvmlDeviceGetMemoryInfo.assert_called_once_with(
-            mock_pynvml_gpu_available.nvmlDeviceGetHandleByIndex.return_value
-        )
-        mock_pynvml_gpu_available.nvmlDeviceGetTemperature.assert_called_once_with(
-            mock_pynvml_gpu_available.nvmlDeviceGetHandleByIndex.return_value,
-            mock_pynvml_gpu_available.NVML_TEMPERATURE_GPU,
-        )
+        observations = list(collector._observe_gpu_utilization(None))
+
+        assert len(observations) == 1
+        assert isinstance(observations[0], Observation)
+        assert observations[0].value == 50
+        assert observations[0].attributes == {"gpu_id": "0", "gpu_name": "NVIDIA GeForce RTX 3080"}
+
+        mock_pynvml_gpu_available.nvmlInit.assert_called_once()
         mock_pynvml_gpu_available.nvmlShutdown.assert_called_once()
 
-        collector.gpu_utilization_counter.add.assert_called_once_with(
-            50, {"gpu_id": "0", "gpu_name": "NVIDIA GeForce RTX 3080"}
-        )
-        collector.gpu_memory_used_gauge.add.assert_called_once_with(
-            pytest.approx(4768.37158203125), {"gpu_id": "0", "gpu_name": "NVIDIA GeForce RTX 3080"}
-        )
-        collector.gpu_temperature_gauge.add.assert_called_once_with(
-            65, {"gpu_id": "0", "gpu_name": "NVIDIA GeForce RTX 3080"}
-        )
-
     @patch("genai_otel.gpu_metrics.logger")
-    def test_collect_metrics_partial_failures(
+    def test_observe_gpu_metrics_partial_failures(
         self, mock_logger, mock_meter, mock_otel_config, mock_pynvml_gpu_available
     ):
+        from opentelemetry.metrics import Observation
+
         import genai_otel.gpu_metrics
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
 
-        # Reset mock_pynvml_gpu_available for the collect phase, as it was already called in init
+        # Reset mocks from init
         mock_pynvml_gpu_available.nvmlInit.reset_mock()
         mock_pynvml_gpu_available.nvmlDeviceGetCount.reset_mock()
 
-        # Mock some calls to fail
-        mock_pynvml_gpu_available.nvmlDeviceGetName.side_effect = Exception("Name error")
+        # Mock memory info to fail
         mock_pynvml_gpu_available.nvmlDeviceGetMemoryInfo.side_effect = Exception("Memory error")
 
-        collector._collect_metrics()
+        observations = list(collector._observe_gpu_memory(None))
 
-        # Ensure other metrics are still collected
-        collector.gpu_utilization_counter.add.assert_called_once()
-        collector.gpu_memory_used_gauge.add.assert_not_called()  # This one failed
-        collector.gpu_temperature_gauge.add.assert_called_once()
-
-        # Check debug logs for failures
-        mock_logger.debug.assert_any_call(
-            "Failed to get GPU name: %s", mock_pynvml_gpu_available.nvmlDeviceGetName.side_effect
-        )
-        mock_logger.debug.assert_any_call(
-            "Failed to get GPU memory info: %s",
+        # Should get no observations but no crash
+        assert observations == []
+        mock_logger.debug.assert_called_with(
+            "Failed to get GPU memory for GPU %d: %s",
+            0,
             mock_pynvml_gpu_available.nvmlDeviceGetMemoryInfo.side_effect,
         )
-        mock_pynvml_gpu_available.nvmlShutdown.assert_called_once()
 
     @patch("genai_otel.gpu_metrics.threading.Thread")
     @patch("genai_otel.gpu_metrics.logger")
@@ -308,11 +275,9 @@ class TestGPUMetricsCollector:
         import genai_otel.gpu_metrics
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
-        collector.gpu_utilization_counter = None  # Simulate failure in init
+        # With new implementation, start() always works - ObservableGauges handle collection
         collector.start()
-        mock_logger.warning.assert_any_call(
-            "GPU metrics instruments not initialized. Cannot start collection."
-        )
+        # Only CO2 collection thread is started
         mock_thread.assert_called_once_with(target=collector._collect_loop, daemon=True)
         mock_thread.return_value.start.assert_called_once()
 
@@ -325,13 +290,10 @@ class TestGPUMetricsCollector:
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
         collector.start()
-        assert collector.running
-        assert mock_thread.call_count == 2  # One for _collect_loop, one for _run
-        mock_thread.assert_any_call(target=collector._collect_loop, daemon=True)
-        mock_thread.assert_any_call(target=collector._run, daemon=True)
-        mock_thread.return_value.start.call_count == 2
-        mock_logger.info.assert_any_call("Starting GPU metrics collection including CO2")
-        mock_logger.info.assert_any_call("GPU metrics collection thread started.")
+        # Only CO2 collection thread started (no more _run thread)
+        mock_thread.assert_called_once_with(target=collector._collect_loop, daemon=True)
+        mock_thread.return_value.start.assert_called_once()
+        mock_logger.info.assert_called_with("Starting GPU metrics collection (CO2 tracking)")
 
     @patch("genai_otel.gpu_metrics.time.time", return_value=1000.0)
     @patch("genai_otel.gpu_metrics.logger")
@@ -418,12 +380,9 @@ class TestGPUMetricsCollector:
         import genai_otel.gpu_metrics
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
-        collector.running = False
-        collector.thread = None
         collector._thread = None
         collector._stop_event = mock_event_class.return_value  # Assign the mock instance
         collector.stop()
-        assert not collector.running
         mock_logger.info.assert_not_called()
         collector._stop_event.set.assert_called_once()
         mock_pynvml_gpu_available.nvmlShutdown.assert_called_once()
@@ -436,20 +395,16 @@ class TestGPUMetricsCollector:
         import genai_otel.gpu_metrics
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
-        collector.running = True
-        collector.thread = Mock()
-        collector.thread.is_alive.return_value = True
+        # With new implementation, there's no self.running or self.thread attributes
         collector._thread = Mock()
         collector._thread.is_alive.return_value = True
         collector._stop_event = mock_event_class.return_value  # Assign the mock instance
 
         collector.stop()
 
-        assert not collector.running
-        collector.thread.join.assert_called_once_with(timeout=5)
+        # Only CO2 collection thread
         collector._thread.join.assert_called_once_with(timeout=5)
-        mock_logger.info.assert_any_call("GPU metrics collection thread stopped.")
-        mock_logger.info.assert_any_call("CO2 metrics collection thread stopped.")
+        mock_logger.info.assert_called_once_with("GPU CO2 metrics collection thread stopped.")
         collector._stop_event.set.assert_called_once()
         mock_pynvml_gpu_available.nvmlShutdown.assert_called_once()
 

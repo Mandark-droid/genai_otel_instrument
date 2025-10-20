@@ -101,9 +101,23 @@ class OpenAIInstrumentor(BaseInstrumentor):
         model = kwargs.get("model", "unknown")
         messages = kwargs.get("messages", [])
 
+        # Core attributes
         attrs["gen_ai.system"] = "openai"
         attrs["gen_ai.request.model"] = model
+        attrs["gen_ai.operation.name"] = "chat"  # NEW: operation name
         attrs["gen_ai.request.message_count"] = len(messages)
+
+        # Request parameters (NEW)
+        if "temperature" in kwargs:
+            attrs["gen_ai.request.temperature"] = kwargs["temperature"]
+        if "top_p" in kwargs:
+            attrs["gen_ai.request.top_p"] = kwargs["top_p"]
+        if "max_tokens" in kwargs:
+            attrs["gen_ai.request.max_tokens"] = kwargs["max_tokens"]
+        if "frequency_penalty" in kwargs:
+            attrs["gen_ai.request.frequency_penalty"] = kwargs["frequency_penalty"]
+        if "presence_penalty" in kwargs:
+            attrs["gen_ai.request.presence_penalty"] = kwargs["presence_penalty"]
 
         if messages:
             # Only capture first 200 chars to avoid sensitive data and span size issues
@@ -129,3 +143,64 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 "total_tokens": getattr(usage, "total_tokens", 0),
             }
         return None
+
+    def _extract_response_attributes(self, result) -> Dict[str, Any]:
+        """Extract response attributes from OpenAI response.
+
+        Args:
+            result: The API response object.
+
+        Returns:
+            Dict[str, Any]: Dictionary of response attributes.
+        """
+        attrs = {}
+
+        # Response ID
+        if hasattr(result, "id"):
+            attrs["gen_ai.response.id"] = result.id
+
+        # Response model (actual model used, may differ from request)
+        if hasattr(result, "model"):
+            attrs["gen_ai.response.model"] = result.model
+
+        # Finish reasons
+        if hasattr(result, "choices") and result.choices:
+            finish_reasons = [
+                choice.finish_reason for choice in result.choices if hasattr(choice, "finish_reason")
+            ]
+            if finish_reasons:
+                attrs["gen_ai.response.finish_reasons"] = finish_reasons
+
+        return attrs
+
+    def _add_content_events(self, span, result, request_kwargs: dict):
+        """Add prompt and completion content as span events.
+
+        Args:
+            span: The OpenTelemetry span.
+            result: The API response object.
+            request_kwargs: The original request kwargs.
+        """
+        # Add prompt content events
+        messages = request_kwargs.get("messages", [])
+        for idx, message in enumerate(messages):
+            if isinstance(message, dict):
+                role = message.get("role", "unknown")
+                content = message.get("content", "")
+                span.add_event(
+                    f"gen_ai.prompt.{idx}",
+                    attributes={"gen_ai.prompt.role": role, "gen_ai.prompt.content": str(content)},
+                )
+
+        # Add completion content events
+        if hasattr(result, "choices") and result.choices:
+            for idx, choice in enumerate(result.choices):
+                if hasattr(choice, "message") and hasattr(choice.message, "content"):
+                    content = choice.message.content
+                    span.add_event(
+                        f"gen_ai.completion.{idx}",
+                        attributes={
+                            "gen_ai.completion.role": "assistant",
+                            "gen_ai.completion.content": str(content),
+                        },
+                    )

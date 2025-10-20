@@ -10,6 +10,8 @@ from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExp
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
+from opentelemetry.sdk.metrics.view import View
+from opentelemetry.sdk.metrics._internal.aggregation import ExplicitBucketHistogramAggregation
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
@@ -17,6 +19,16 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 from .config import OTelConfig
 from .gpu_metrics import GPUMetricsCollector
 from .mcp_instrumentors import MCPInstrumentorManager
+from .metrics import _GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS
+
+# Import semantic conventions
+try:
+    from openlit.semcov import SemanticConvention as SC
+except ImportError:
+    # Fallback if openlit not available
+    class SC:
+        GEN_AI_CLIENT_OPERATION_DURATION = "gen_ai.client.operation.duration"
+
 
 # Import instrumentors - fix the import path based on your actual structure
 try:
@@ -193,12 +205,23 @@ def setup_auto_instrumentation(config: OTelConfig):
             f"OpenTelemetry tracing configured with OTLP endpoint: {span_exporter._endpoint}"
         )
 
-        # Configure Metrics
+        # Configure Metrics with Views for histogram buckets
         metric_exporter = OTLPMetricExporter(
             headers=config.headers,
         )
         metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
-        meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+
+        # Create View to configure histogram buckets for GenAI operation duration
+        duration_view = View(
+            instrument_name=SC.GEN_AI_CLIENT_OPERATION_DURATION,
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS
+            ),
+        )
+
+        meter_provider = MeterProvider(
+            resource=resource, metric_readers=[metric_reader], views=[duration_view]
+        )
         metrics.set_meter_provider(meter_provider)
         logger.info(
             f"OpenTelemetry metrics configured with OTLP endpoint: {metric_exporter._endpoint}"
@@ -211,7 +234,18 @@ def setup_auto_instrumentation(config: OTelConfig):
 
         metric_exporter = ConsoleMetricExporter()
         metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
-        meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+
+        # Create View to configure histogram buckets (same as OTLP path)
+        duration_view = View(
+            instrument_name=SC.GEN_AI_CLIENT_OPERATION_DURATION,
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS
+            ),
+        )
+
+        meter_provider = MeterProvider(
+            resource=resource, metric_readers=[metric_reader], views=[duration_view]
+        )
         metrics.set_meter_provider(meter_provider)
         logger.info("No OTLP endpoint configured, metrics will be exported to console.")
 
