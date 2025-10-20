@@ -419,6 +419,78 @@ class TestOpenAIInstrumentor(unittest.TestCase):
             # Verify _instrument_client was called with the instance
             mock_instrument_client.assert_called_once_with(instance)
 
+    def test_extract_openai_attributes_with_tools(self):
+        """Test that _extract_openai_attributes extracts tool definitions."""
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+
+            tools = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "description": "Get the current weather",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "location": {"type": "string"},
+                            },
+                        },
+                    },
+                }
+            ]
+
+            kwargs = {
+                "model": "gpt-4",
+                "messages": [{"role": "user", "content": "What's the weather?"}],
+                "tools": tools,
+            }
+
+            attrs = instrumentor._extract_openai_attributes(None, [], kwargs)
+
+            self.assertIn("llm.tools", attrs)
+            # Verify it's JSON-serialized
+            import json
+            parsed_tools = json.loads(attrs["llm.tools"])
+            self.assertEqual(len(parsed_tools), 1)
+            self.assertEqual(parsed_tools[0]["function"]["name"], "get_weather")
+
+    def test_extract_response_attributes_with_tool_calls(self):
+        """Test that _extract_response_attributes extracts tool calls from response."""
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+
+            # Create mock result with tool calls
+            result = MagicMock()
+            result.id = "chatcmpl-123"
+            result.model = "gpt-4-0613"
+
+            # Create mock tool call
+            tool_call = MagicMock()
+            tool_call.id = "call_abc123"
+            tool_call.function.name = "get_weather"
+            tool_call.function.arguments = '{"location": "San Francisco"}'
+
+            # Create mock choice with tool calls
+            choice = MagicMock()
+            choice.finish_reason = "tool_calls"
+            choice.message.tool_calls = [tool_call]
+            result.choices = [choice]
+
+            attrs = instrumentor._extract_response_attributes(result)
+
+            self.assertEqual(attrs["gen_ai.response.id"], "chatcmpl-123")
+            self.assertEqual(attrs["gen_ai.response.model"], "gpt-4-0613")
+            self.assertEqual(attrs["gen_ai.response.finish_reasons"], ["tool_calls"])
+
+            # Check tool call attributes
+            prefix = "llm.output_messages.0.message.tool_calls.0"
+            self.assertEqual(attrs[f"{prefix}.tool_call.id"], "call_abc123")
+            self.assertEqual(attrs[f"{prefix}.tool_call.function.name"], "get_weather")
+            self.assertEqual(
+                attrs[f"{prefix}.tool_call.function.arguments"], '{"location": "San Francisco"}'
+            )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

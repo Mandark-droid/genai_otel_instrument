@@ -128,6 +128,22 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 cls._shared_cost_counter = meter.create_counter(
                     SC.GEN_AI_USAGE_COST, description="Cost of GenAI operations", unit="USD"
                 )
+                # Granular cost counters (Phase 3.2)
+                cls._shared_prompt_cost_counter = meter.create_counter(
+                    "gen_ai.usage.cost.prompt", description="Prompt tokens cost", unit="USD"
+                )
+                cls._shared_completion_cost_counter = meter.create_counter(
+                    "gen_ai.usage.cost.completion", description="Completion tokens cost", unit="USD"
+                )
+                cls._shared_reasoning_cost_counter = meter.create_counter(
+                    "gen_ai.usage.cost.reasoning", description="Reasoning tokens cost (o1 models)", unit="USD"
+                )
+                cls._shared_cache_read_cost_counter = meter.create_counter(
+                    "gen_ai.usage.cost.cache_read", description="Cache read cost (Anthropic)", unit="USD"
+                )
+                cls._shared_cache_write_cost_counter = meter.create_counter(
+                    "gen_ai.usage.cost.cache_write", description="Cache write cost (Anthropic)", unit="USD"
+                )
                 cls._shared_error_counter = meter.create_counter(
                     "gen_ai.client.errors", description="Number of GenAI client errors"
                 )
@@ -142,6 +158,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 cls._shared_token_counter = None
                 cls._shared_latency_histogram = None
                 cls._shared_cost_counter = None
+                cls._shared_prompt_cost_counter = None
+                cls._shared_completion_cost_counter = None
+                cls._shared_reasoning_cost_counter = None
+                cls._shared_cache_read_cost_counter = None
+                cls._shared_cache_write_cost_counter = None
                 cls._shared_error_counter = None
 
     @abstractmethod
@@ -326,9 +347,43 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         # Assuming 'chat' as a default call_type for generic base instrumentor tests.
                         # Specific instrumentors will provide the actual call_type.
                         call_type = span.attributes.get("gen_ai.request.type", "chat")
-                        cost = self.cost_calculator.calculate_cost(model, usage, call_type)
-                        if cost and cost > 0:
-                            self._shared_cost_counter.add(cost, {"model": str(model)})
+
+                        # Use granular cost calculation for chat requests
+                        if call_type == "chat":
+                            costs = self.cost_calculator.calculate_granular_cost(model, usage, call_type)
+                            total_cost = costs["total"]
+
+                            # Record total cost
+                            if total_cost > 0:
+                                self._shared_cost_counter.add(total_cost, {"model": str(model)})
+                                # Set span attributes for granular costs
+                                span.set_attribute("gen_ai.usage.cost.total", total_cost)
+
+                            # Record and set attributes for granular costs
+                            if costs["prompt"] > 0 and self._shared_prompt_cost_counter:
+                                self._shared_prompt_cost_counter.add(costs["prompt"], {"model": str(model)})
+                                span.set_attribute("gen_ai.usage.cost.prompt", costs["prompt"])
+
+                            if costs["completion"] > 0 and self._shared_completion_cost_counter:
+                                self._shared_completion_cost_counter.add(costs["completion"], {"model": str(model)})
+                                span.set_attribute("gen_ai.usage.cost.completion", costs["completion"])
+
+                            if costs["reasoning"] > 0 and self._shared_reasoning_cost_counter:
+                                self._shared_reasoning_cost_counter.add(costs["reasoning"], {"model": str(model)})
+                                span.set_attribute("gen_ai.usage.cost.reasoning", costs["reasoning"])
+
+                            if costs["cache_read"] > 0 and self._shared_cache_read_cost_counter:
+                                self._shared_cache_read_cost_counter.add(costs["cache_read"], {"model": str(model)})
+                                span.set_attribute("gen_ai.usage.cost.cache_read", costs["cache_read"])
+
+                            if costs["cache_write"] > 0 and self._shared_cache_write_cost_counter:
+                                self._shared_cache_write_cost_counter.add(costs["cache_write"], {"model": str(model)})
+                                span.set_attribute("gen_ai.usage.cost.cache_write", costs["cache_write"])
+                        else:
+                            # For non-chat requests, use simple cost calculation
+                            cost = self.cost_calculator.calculate_cost(model, usage, call_type)
+                            if cost and cost > 0:
+                                self._shared_cost_counter.add(cost, {"model": str(model)})
                     except Exception as e:
                         logger.warning("Failed to calculate cost for span '%s': %s", span.name, e)
 

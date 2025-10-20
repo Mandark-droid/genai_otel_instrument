@@ -29,6 +29,11 @@ def reset_shared_metrics():
     BaseInstrumentor._shared_token_counter = None
     BaseInstrumentor._shared_latency_histogram = None
     BaseInstrumentor._shared_cost_counter = None
+    BaseInstrumentor._shared_prompt_cost_counter = None
+    BaseInstrumentor._shared_completion_cost_counter = None
+    BaseInstrumentor._shared_reasoning_cost_counter = None
+    BaseInstrumentor._shared_cache_read_cost_counter = None
+    BaseInstrumentor._shared_cache_write_cost_counter = None
     BaseInstrumentor._shared_error_counter = None
     base._SHARED_METRICS_CREATED = False
     yield
@@ -56,6 +61,11 @@ def instrumentor(monkeypatch):
         mock_token_counter = MagicMock()
         mock_latency_histogram = MagicMock()
         mock_cost_counter = MagicMock()
+        mock_prompt_cost_counter = MagicMock()
+        mock_completion_cost_counter = MagicMock()
+        mock_reasoning_cost_counter = MagicMock()
+        mock_cache_read_cost_counter = MagicMock()
+        mock_cache_write_cost_counter = MagicMock()
         mock_error_counter = MagicMock()
 
         # Configure mock_get_meter to return a meter instance that provides distinct mocks for each counter
@@ -66,6 +76,11 @@ def instrumentor(monkeypatch):
             mock_token_counter,
             mock_latency_histogram,
             mock_cost_counter,
+            mock_prompt_cost_counter,
+            mock_completion_cost_counter,
+            mock_reasoning_cost_counter,
+            mock_cache_read_cost_counter,
+            mock_cache_write_cost_counter,
             mock_error_counter,
         ]
 
@@ -74,6 +89,11 @@ def instrumentor(monkeypatch):
         monkeypatch.setattr(BaseInstrumentor, "_shared_token_counter", mock_token_counter)
         monkeypatch.setattr(BaseInstrumentor, "_shared_latency_histogram", mock_latency_histogram)
         monkeypatch.setattr(BaseInstrumentor, "_shared_cost_counter", mock_cost_counter)
+        monkeypatch.setattr(BaseInstrumentor, "_shared_prompt_cost_counter", mock_prompt_cost_counter)
+        monkeypatch.setattr(BaseInstrumentor, "_shared_completion_cost_counter", mock_completion_cost_counter)
+        monkeypatch.setattr(BaseInstrumentor, "_shared_reasoning_cost_counter", mock_reasoning_cost_counter)
+        monkeypatch.setattr(BaseInstrumentor, "_shared_cache_read_cost_counter", mock_cache_read_cost_counter)
+        monkeypatch.setattr(BaseInstrumentor, "_shared_cache_write_cost_counter", mock_cache_write_cost_counter)
         monkeypatch.setattr(BaseInstrumentor, "_shared_error_counter", mock_error_counter)
 
         # Create instrumentor with cost tracking ENABLED

@@ -153,6 +153,96 @@ class TestCostCalculator(unittest.TestCase):
         cost = self.calculator._calculate_chat_cost("unknown-chat-model", usage)
         self.assertEqual(cost, 0.0)
 
+    def test_calculate_granular_cost_basic(self):
+        """Test granular cost calculation for basic chat request"""
+        usage = {"prompt_tokens": 1000, "completion_tokens": 2000}
+        costs = self.calculator.calculate_granular_cost("gpt-4o", usage, "chat")
+
+        expected_prompt = (1000 / 1000) * 0.0005
+        expected_completion = (2000 / 1000) * 0.0015
+        expected_total = expected_prompt + expected_completion
+
+        self.assertAlmostEqual(costs["prompt"], expected_prompt)
+        self.assertAlmostEqual(costs["completion"], expected_completion)
+        self.assertAlmostEqual(costs["total"], expected_total)
+        self.assertEqual(costs["reasoning"], 0.0)
+        self.assertEqual(costs["cache_read"], 0.0)
+        self.assertEqual(costs["cache_write"], 0.0)
+
+    def test_calculate_granular_cost_with_reasoning(self):
+        """Test granular cost calculation with reasoning tokens (o1 models)"""
+        # Add o1 model pricing with reasoning
+        self.calculator.pricing_data["chat"]["o1-preview"] = {
+            "promptPrice": 0.015,
+            "completionPrice": 0.060,
+            "reasoningPrice": 0.030,
+        }
+
+        usage = {
+            "prompt_tokens": 1000,
+            "completion_tokens": 2000,
+            "completion_tokens_details": {"reasoning_tokens": 500},
+        }
+
+        costs = self.calculator.calculate_granular_cost("o1-preview", usage, "chat")
+
+        expected_prompt = (1000 / 1000) * 0.015
+        expected_completion = (2000 / 1000) * 0.060
+        expected_reasoning = (500 / 1000) * 0.030
+        expected_total = expected_prompt + expected_completion + expected_reasoning
+
+        self.assertAlmostEqual(costs["prompt"], expected_prompt)
+        self.assertAlmostEqual(costs["completion"], expected_completion)
+        self.assertAlmostEqual(costs["reasoning"], expected_reasoning)
+        self.assertAlmostEqual(costs["total"], expected_total)
+        self.assertEqual(costs["cache_read"], 0.0)
+        self.assertEqual(costs["cache_write"], 0.0)
+
+    def test_calculate_granular_cost_with_cache(self):
+        """Test granular cost calculation with cache tokens (Anthropic models)"""
+        # Add Anthropic pricing with cache costs
+        self.calculator.pricing_data["chat"]["claude-3-5-sonnet-20241022"] = {
+            "promptPrice": 0.003,
+            "completionPrice": 0.015,
+            "cacheReadPrice": 0.0003,
+            "cacheWritePrice": 0.00375,
+        }
+
+        usage = {
+            "prompt_tokens": 1000,
+            "completion_tokens": 2000,
+            "cache_read_input_tokens": 500,
+            "cache_creation_input_tokens": 200,
+        }
+
+        costs = self.calculator.calculate_granular_cost("claude-3-5-sonnet-20241022", usage, "chat")
+
+        expected_prompt = (1000 / 1000) * 0.003
+        expected_completion = (2000 / 1000) * 0.015
+        expected_cache_read = (500 / 1000) * 0.0003
+        expected_cache_write = (200 / 1000) * 0.00375
+        expected_total = expected_prompt + expected_completion + expected_cache_read + expected_cache_write
+
+        self.assertAlmostEqual(costs["prompt"], expected_prompt)
+        self.assertAlmostEqual(costs["completion"], expected_completion)
+        self.assertAlmostEqual(costs["cache_read"], expected_cache_read)
+        self.assertAlmostEqual(costs["cache_write"], expected_cache_write)
+        self.assertAlmostEqual(costs["total"], expected_total)
+        self.assertEqual(costs["reasoning"], 0.0)
+
+    def test_calculate_granular_cost_non_chat(self):
+        """Test granular cost calculation for non-chat requests returns zeros for granular costs"""
+        usage = {"prompt_tokens": 5000}
+        costs = self.calculator.calculate_granular_cost("text-embedding-ada-002", usage, "embedding")
+
+        # For non-chat, only total should be set
+        self.assertGreater(costs["total"], 0)
+        self.assertEqual(costs["prompt"], 0.0)
+        self.assertEqual(costs["completion"], 0.0)
+        self.assertEqual(costs["reasoning"], 0.0)
+        self.assertEqual(costs["cache_read"], 0.0)
+        self.assertEqual(costs["cache_write"], 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

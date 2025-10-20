@@ -5,6 +5,7 @@ OpenAI SDK, capturing relevant attributes such as the model name, message count,
 and token usage.
 """
 
+import json
 import logging
 from typing import Any, Dict, Optional
 
@@ -119,6 +120,13 @@ class OpenAIInstrumentor(BaseInstrumentor):
         if "presence_penalty" in kwargs:
             attrs["gen_ai.request.presence_penalty"] = kwargs["presence_penalty"]
 
+        # Tool/function definitions (Phase 3.1)
+        if "tools" in kwargs:
+            try:
+                attrs["llm.tools"] = json.dumps(kwargs["tools"])
+            except (TypeError, ValueError) as e:
+                logger.debug("Failed to serialize tools: %s", e)
+
         if messages:
             # Only capture first 200 chars to avoid sensitive data and span size issues
             first_message = str(messages[0])[:200]
@@ -137,11 +145,20 @@ class OpenAIInstrumentor(BaseInstrumentor):
         """
         if hasattr(result, "usage") and result.usage:
             usage = result.usage
-            return {
+            usage_dict = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
                 "total_tokens": getattr(usage, "total_tokens", 0),
             }
+
+            # Extract reasoning tokens for o1 models (Phase 3.2)
+            if hasattr(usage, "completion_tokens_details") and usage.completion_tokens_details:
+                details = usage.completion_tokens_details
+                usage_dict["completion_tokens_details"] = {
+                    "reasoning_tokens": getattr(details, "reasoning_tokens", 0)
+                }
+
+            return usage_dict
         return None
 
     def _extract_response_attributes(self, result) -> Dict[str, Any]:
@@ -170,6 +187,22 @@ class OpenAIInstrumentor(BaseInstrumentor):
             ]
             if finish_reasons:
                 attrs["gen_ai.response.finish_reasons"] = finish_reasons
+
+            # Tool calls extraction (Phase 3.1)
+            for choice_idx, choice in enumerate(result.choices):
+                message = getattr(choice, "message", None)
+                if message and hasattr(message, "tool_calls") and message.tool_calls:
+                    for tc_idx, tool_call in enumerate(message.tool_calls):
+                        prefix = f"llm.output_messages.{choice_idx}.message.tool_calls.{tc_idx}"
+                        if hasattr(tool_call, "id"):
+                            attrs[f"{prefix}.tool_call.id"] = tool_call.id
+                        if hasattr(tool_call, "function"):
+                            if hasattr(tool_call.function, "name"):
+                                attrs[f"{prefix}.tool_call.function.name"] = tool_call.function.name
+                            if hasattr(tool_call.function, "arguments"):
+                                attrs[f"{prefix}.tool_call.function.arguments"] = (
+                                    tool_call.function.arguments
+                                )
 
         return attrs
 
