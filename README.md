@@ -86,19 +86,41 @@ pip install genai-otel-instrument[openinference]
 Every LLM call, database query, API request, and vector search is traced with full context propagation.
 
 ### Metrics
-- `genai.requests` - Request counts by provider/model
-- `genai.tokens` - Token usage (prompt/completion)
-- `genai.latency` - Request latency histogram
-- `genai.cost` - Estimated costs in USD
-- `genai.gpu.*` - GPU utilization, memory, temperature, power
+- `gen_ai.requests` - Request counts by provider/model
+- `gen_ai.client.token.usage` - Token usage (prompt/completion)
+- `gen_ai.client.operation.duration` - Request latency histogram (optimized buckets for LLM workloads)
+- `gen_ai.usage.cost` - Estimated costs in USD
+- `gen_ai.client.errors` - Error counts by operation and type
+- `gen_ai.gpu.*` - GPU utilization, memory, temperature (ObservableGauges)
+- `gen_ai.co2.emissions` - CO2 emissions tracking (opt-in)
 
 ### Span Attributes
-- `gen_ai.system` - Provider name
+**Core Attributes:**
+- `gen_ai.system` - Provider name (e.g., "openai")
+- `gen_ai.operation.name` - Operation type (e.g., "chat")
 - `gen_ai.request.model` - Model identifier
-- `gen_ai.usage.prompt_tokens` - Input tokens
-- `gen_ai.usage.completion_tokens` - Output tokens
-- `gen_ai.cost.amount` - Estimated cost
-- Database, vector DB, and API attributes
+- `gen_ai.usage.prompt_tokens` / `gen_ai.usage.input_tokens` - Input tokens (dual emission supported)
+- `gen_ai.usage.completion_tokens` / `gen_ai.usage.output_tokens` - Output tokens (dual emission supported)
+- `gen_ai.usage.total_tokens` - Total tokens
+
+**Request Parameters:**
+- `gen_ai.request.temperature` - Temperature setting
+- `gen_ai.request.top_p` - Top-p sampling
+- `gen_ai.request.max_tokens` - Max tokens requested
+- `gen_ai.request.frequency_penalty` - Frequency penalty
+- `gen_ai.request.presence_penalty` - Presence penalty
+
+**Response Attributes:**
+- `gen_ai.response.id` - Response ID from provider
+- `gen_ai.response.model` - Actual model used (may differ from request)
+- `gen_ai.response.finish_reasons` - Array of finish reasons
+
+**Content Events (opt-in):**
+- `gen_ai.prompt.{index}` events with role and content
+- `gen_ai.completion.{index}` events with role and content
+
+**Additional:**
+- Database, vector DB, and API attributes from MCP instrumentation
 
 ## Configuration
 
@@ -117,6 +139,11 @@ GENAI_ENABLE_MCP_INSTRUMENTATION=true
 OTEL_SERVICE_INSTANCE_ID=instance-1 # Optional service instance id
 OTEL_ENVIRONMENT=production # Optional environment
 OTEL_EXPORTER_OTLP_TIMEOUT=10.0 # Optional timeout for OTLP exporter
+
+# Semantic conventions (NEW)
+OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai  # "gen_ai" for new conventions only, "gen_ai/dup" for dual emission
+GENAI_ENABLE_CONTENT_CAPTURE=false  # WARNING: May capture sensitive data. Enable with caution.
+
 # Logging configuration
 GENAI_OTEL_LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL. Logs are written to 'logs/genai_otel.log' with rotation (10 files, 10MB each).
 
