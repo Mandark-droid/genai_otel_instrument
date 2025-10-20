@@ -533,3 +533,157 @@ def test_streaming_detection_in_wrapper(instrumentor):
 
     # Verify span was created
     inst.tracer.start_span.assert_called_once()
+
+
+# --- Tests for Granular Cost Tracking (Phase 3.2) ---
+def test_granular_cost_tracking_with_all_cost_types(instrumentor):
+    """Test granular cost tracking with prompt, completion, reasoning, and cache costs."""
+    inst, mock_span = instrumentor
+
+    # Set up mock span to return appropriate attributes
+    def mock_get_attribute(key, default=None):
+        if key == "gen_ai.request.model":
+            return "claude-3-5-sonnet-20241022"
+        elif key == "gen_ai.request.type":
+            return "chat"
+        return default
+
+    mock_span.attributes.get.side_effect = mock_get_attribute
+
+    # Mock the cost calculator to return granular costs
+    inst.cost_calculator.calculate_granular_cost.return_value = {
+        "total": 0.05,
+        "prompt": 0.01,
+        "completion": 0.02,
+        "reasoning": 0.005,
+        "cache_read": 0.001,
+        "cache_write": 0.014,
+    }
+
+    usage = {
+        "prompt_tokens": 100,
+        "completion_tokens": 50,
+        "reasoning_tokens": 25,
+        "cache_read_input_tokens": 10,
+        "cache_creation_input_tokens": 140,
+    }
+    result = {"usage": usage}
+
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify all granular cost counters were called
+    inst._shared_cost_counter.add.assert_called_once_with(
+        0.05, {"model": "claude-3-5-sonnet-20241022"}
+    )
+    inst._shared_prompt_cost_counter.add.assert_called_once_with(
+        0.01, {"model": "claude-3-5-sonnet-20241022"}
+    )
+    inst._shared_completion_cost_counter.add.assert_called_once_with(
+        0.02, {"model": "claude-3-5-sonnet-20241022"}
+    )
+    inst._shared_reasoning_cost_counter.add.assert_called_once_with(
+        0.005, {"model": "claude-3-5-sonnet-20241022"}
+    )
+    inst._shared_cache_read_cost_counter.add.assert_called_once_with(
+        0.001, {"model": "claude-3-5-sonnet-20241022"}
+    )
+    inst._shared_cache_write_cost_counter.add.assert_called_once_with(
+        0.014, {"model": "claude-3-5-sonnet-20241022"}
+    )
+
+    # Verify span attributes were set
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.total", 0.05)
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.prompt", 0.01)
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.completion", 0.02)
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.reasoning", 0.005)
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.cache_read", 0.001)
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.cache_write", 0.014)
+
+
+def test_granular_cost_tracking_with_zero_costs(instrumentor):
+    """Test that zero costs are not recorded to granular counters."""
+    inst, mock_span = instrumentor
+
+    # Set up mock span to return appropriate attributes
+    def mock_get_attribute(key, default=None):
+        if key == "gen_ai.request.model":
+            return "gpt-4"
+        elif key == "gen_ai.request.type":
+            return "chat"
+        return default
+
+    mock_span.attributes.get.side_effect = mock_get_attribute
+
+    # Mock the cost calculator to return costs with zeros
+    inst.cost_calculator.calculate_granular_cost.return_value = {
+        "total": 0.03,
+        "prompt": 0.01,
+        "completion": 0.02,
+        "reasoning": 0.0,  # Zero - should not be recorded
+        "cache_read": 0.0,  # Zero - should not be recorded
+        "cache_write": 0.0,  # Zero - should not be recorded
+    }
+
+    usage = {"prompt_tokens": 100, "completion_tokens": 50}
+    result = {"usage": usage}
+
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify only non-zero costs were recorded
+    inst._shared_cost_counter.add.assert_called_once_with(0.03, {"model": "gpt-4"})
+    inst._shared_prompt_cost_counter.add.assert_called_once_with(0.01, {"model": "gpt-4"})
+    inst._shared_completion_cost_counter.add.assert_called_once_with(0.02, {"model": "gpt-4"})
+
+    # Verify zero costs were NOT recorded
+    inst._shared_reasoning_cost_counter.add.assert_not_called()
+    inst._shared_cache_read_cost_counter.add.assert_not_called()
+    inst._shared_cache_write_cost_counter.add.assert_not_called()
+
+    # Verify span attributes - zero costs should not set attributes
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.total", 0.03)
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.prompt", 0.01)
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.completion", 0.02)
+
+
+def test_granular_cost_tracking_only_prompt_cost(instrumentor):
+    """Test granular cost tracking with only prompt cost (embedding call)."""
+    inst, mock_span = instrumentor
+
+    # Set up mock span to return appropriate attributes
+    def mock_get_attribute(key, default=None):
+        if key == "gen_ai.request.model":
+            return "text-embedding-3-small"
+        elif key == "gen_ai.request.type":
+            return "chat"
+        return default
+
+    mock_span.attributes.get.side_effect = mock_get_attribute
+
+    # Mock the cost calculator to return only prompt cost
+    inst.cost_calculator.calculate_granular_cost.return_value = {
+        "total": 0.001,
+        "prompt": 0.001,
+        "completion": 0.0,
+        "reasoning": 0.0,
+        "cache_read": 0.0,
+        "cache_write": 0.0,
+    }
+
+    usage = {"prompt_tokens": 500}
+    result = {"usage": usage}
+
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify only total and prompt costs were recorded
+    inst._shared_cost_counter.add.assert_called_once_with(
+        0.001, {"model": "text-embedding-3-small"}
+    )
+    inst._shared_prompt_cost_counter.add.assert_called_once_with(
+        0.001, {"model": "text-embedding-3-small"}
+    )
+
+    # Verify other costs were NOT recorded
+    inst._shared_completion_cost_counter.add.assert_not_called()
+    inst._shared_reasoning_cost_counter.add.assert_not_called()
+    inst._shared_cache_read_cost_counter.add.assert_not_called()
+    inst._shared_cache_write_cost_counter.add.assert_not_called()
