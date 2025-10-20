@@ -20,9 +20,9 @@ except ImportError:
     # Fallback if openlit not available
     class SC:
         MCP_REQUESTS = "mcp.requests"
-        MCP_CLIENT_OPERATION_DURATION = "mcp.client.operation.duration"
+        MCP_CLIENT_OPERATION_DURATION_METRIC = "mcp.client.operation.duration"
         MCP_REQUEST_SIZE = "mcp.request.size"
-        MCP_RESPONSE_SIZE = "mcp.response.size"
+        MCP_RESPONSE_SIZE_METRIC = "mcp.response.size"
 
 
 class BaseMCPInstrumentor:
