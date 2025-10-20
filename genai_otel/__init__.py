@@ -7,8 +7,14 @@ It supports various LLM providers, frameworks, and common data stores (MCP tools
 
 import logging
 import os
+import warnings
 
 import httpx
+
+# Suppress known third-party library warnings that we cannot control
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="pydantic")
+warnings.filterwarnings("ignore", message=".*validate_default.*", module="pydantic")
+warnings.filterwarnings("ignore", message=".*NumPy module was reloaded.*", module="replicate")
 
 from .__version__ import __version__
 
