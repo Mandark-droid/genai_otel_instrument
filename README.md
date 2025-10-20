@@ -86,6 +86,8 @@ pip install genai-otel-instrument[openinference]
 Every LLM call, database query, API request, and vector search is traced with full context propagation.
 
 ### Metrics
+
+**GenAI Metrics:**
 - `gen_ai.requests` - Request counts by provider/model
 - `gen_ai.client.token.usage` - Token usage (prompt/completion)
 - `gen_ai.client.operation.duration` - Request latency histogram (optimized buckets for LLM workloads)
@@ -98,6 +100,12 @@ Every LLM call, database query, API request, and vector search is traced with fu
 - `gen_ai.client.errors` - Error counts by operation and type
 - `gen_ai.gpu.*` - GPU utilization, memory, temperature (ObservableGauges)
 - `gen_ai.co2.emissions` - CO2 emissions tracking (opt-in)
+
+**MCP Metrics (Database Operations):**
+- `mcp.requests` - Number of MCP/database requests
+- `mcp.client.operation.duration` - Operation duration histogram (1ms to 10s buckets)
+- `mcp.request.size` - Request payload size histogram (100B to 5MB buckets)
+- `mcp.response.size` - Response payload size histogram (100B to 5MB buckets)
 
 ### Span Attributes
 **Core Attributes:**
@@ -155,6 +163,7 @@ OTEL_EXPORTER_OTLP_HEADERS=x-api-key=secret
 GENAI_ENABLE_GPU_METRICS=true
 GENAI_ENABLE_COST_TRACKING=true
 GENAI_ENABLE_MCP_INSTRUMENTATION=true
+GENAI_GPU_COLLECTION_INTERVAL=5  # GPU metrics collection interval in seconds (default: 5)
 OTEL_SERVICE_INSTANCE_ID=instance-1 # Optional service instance id
 OTEL_ENVIRONMENT=production # Optional environment
 OTEL_EXPORTER_OTLP_TIMEOUT=10.0 # Optional timeout for OTLP exporter

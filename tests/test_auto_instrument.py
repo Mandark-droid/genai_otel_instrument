@@ -156,14 +156,14 @@ class TestAutoInstrumentation:
                         assert call_kwargs["resource"] == mock_resource_instance
                         assert call_kwargs["metric_readers"] == [mock_metric_reader_instance]
                         assert "views" in call_kwargs
-                        assert len(call_kwargs["views"]) == 1  # Should have duration_view
+                        assert len(call_kwargs["views"]) == 4  # GenAI duration view + 3 MCP views
                         mock_metrics.set_meter_provider.assert_called_once_with(
                             mock_meter_provider_instance
                         )
                         mock_openai_instance.instrument.assert_called_once_with(config=config)
                         mock_anthropic_instance.instrument.assert_called_once_with(config=config)
                         mock_google_instance.assert_not_called()
-                        mock_gpu_collector.assert_called_once_with(mock_meter, config)
+                        mock_gpu_collector.assert_called_once_with(mock_meter, config, interval=5)
                         mock_gpu_collector.return_value.start.assert_called_once()
                         mock_mcp_manager.assert_called_once_with(config)
                         mock_mcp_manager.return_value.instrument_all.assert_called_once_with(
@@ -188,7 +188,7 @@ class TestAutoInstrumentation:
                         mock_logger.info.assert_any_call(
                             "MCP tools instrumentation enabled and set up."
                         )
-                        mock_logger.info.assert_any_call("GPU metrics collection started.")
+                        mock_logger.info.assert_any_call("GPU metrics collection started (interval: 5s).")
                         mock_logger.info.assert_any_call("Auto-instrumentation setup complete")
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
@@ -396,9 +396,9 @@ class TestAutoInstrumentation:
                         mock_gpu_collector.return_value = mock_gpu_instance
                         setup_auto_instrumentation(config)
                         mock_meter_provider_instance.get_meter.assert_called_once_with("genai.gpu")
-                        mock_gpu_collector.assert_called_once_with(mock_meter, config)
+                        mock_gpu_collector.assert_called_once_with(mock_meter, config, interval=5)
                         mock_gpu_instance.start.assert_called_once()
-                        mock_logger.info.assert_any_call("GPU metrics collection started.")
+                        mock_logger.info.assert_any_call("GPU metrics collection started (interval: 5s).")
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
     def test_setup_auto_instrumentation_llm_instrumentor_failure_no_fail_on_error(self):

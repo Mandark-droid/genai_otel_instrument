@@ -45,6 +45,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Anthropic prompt caching with read/write cost separation
     - Per-request cost attribution by token type
 
+- **MCP Metrics for Database Operations (Phase 3.3)**
+  - Added `BaseMCPInstrumentor` base class with shared MCP-specific metrics
+  - New MCP metrics with optimized histogram buckets:
+    - `mcp.requests` - Counter for number of MCP requests
+    - `mcp.client.operation.duration` - Histogram for operation duration (1ms to 10s buckets)
+    - `mcp.request.size` - Histogram for request payload size (100B to 5MB buckets)
+    - `mcp.response.size` - Histogram for response payload size (100B to 5MB buckets)
+  - Enhanced `DatabaseInstrumentor` to use hybrid approach:
+    - Keeps built-in OpenTelemetry instrumentors for full trace/span creation
+    - Adds custom wrapt wrappers for MCP metrics collection
+    - Instruments PostgreSQL (psycopg2), MongoDB (pymongo), and MySQL (mysql-connector)
+  - Configured Views in `auto_instrument.py` to apply MCP histogram bucket boundaries
+  - Added 4 new tests for BaseMCPInstrumentor (391 total tests, all passing)
+  - Metrics include attributes for `db.system` and `mcp.operation` for filtering
+
+- **Configurable GPU Collection Interval**
+  - Added `gpu_collection_interval` configuration option (default: 5 seconds, down from 10)
+  - New environment variable: `GENAI_GPU_COLLECTION_INTERVAL`
+  - Fixes CO2 metrics not appearing for short-running scripts
+  - GPU metrics and CO2 emissions now collected more frequently
+
 ### Changed
 
 - **BREAKING: Metric names now use OpenTelemetry semantic conventions**
