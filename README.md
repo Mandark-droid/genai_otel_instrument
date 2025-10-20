@@ -100,6 +100,8 @@ Every LLM call, database query, API request, and vector search is traced with fu
 - `gen_ai.client.errors` - Error counts by operation and type
 - `gen_ai.gpu.*` - GPU utilization, memory, temperature (ObservableGauges)
 - `gen_ai.co2.emissions` - CO2 emissions tracking (opt-in)
+- `gen_ai.server.ttft` - Time to First Token for streaming responses (histogram, 1ms-10s buckets)
+- `gen_ai.server.tbt` - Time Between Tokens for streaming responses (histogram, 10ms-2.5s buckets)
 
 **MCP Metrics (Database Operations):**
 - `mcp.requests` - Number of MCP/database requests
@@ -141,6 +143,10 @@ Every LLM call, database query, API request, and vector search is traced with fu
 - `gen_ai.usage.cost.reasoning` - Reasoning tokens cost (o1 models)
 - `gen_ai.usage.cost.cache_read` - Cache read cost (Anthropic)
 - `gen_ai.usage.cost.cache_write` - Cache write cost (Anthropic)
+
+**Streaming Attributes:**
+- `gen_ai.server.ttft` - Time to First Token (seconds) for streaming responses
+- `gen_ai.streaming.token_count` - Total number of chunks/tokens in streaming response
 
 **Content Events (opt-in):**
 - `gen_ai.prompt.{index}` events with role and content

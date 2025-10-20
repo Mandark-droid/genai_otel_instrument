@@ -86,12 +86,8 @@ class TestBaseMCPInstrumentor(unittest.TestCase):
         instrumentor2 = BaseMCPInstrumentor()
 
         # Verify they share the same metric instances
-        self.assertIs(
-            instrumentor1.mcp_request_counter, instrumentor2.mcp_request_counter
-        )
-        self.assertIs(
-            instrumentor1.mcp_duration_histogram, instrumentor2.mcp_duration_histogram
-        )
+        self.assertIs(instrumentor1.mcp_request_counter, instrumentor2.mcp_request_counter)
+        self.assertIs(instrumentor1.mcp_duration_histogram, instrumentor2.mcp_duration_histogram)
         self.assertIs(
             instrumentor1.mcp_request_size_histogram,
             instrumentor2.mcp_request_size_histogram,

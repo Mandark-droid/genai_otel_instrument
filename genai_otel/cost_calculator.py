@@ -102,14 +102,28 @@ class CostCalculator:
         - cache_write: Cache write cost (Anthropic)
         """
         if not self.pricing_data:
-            return {"total": 0.0, "prompt": 0.0, "completion": 0.0, "reasoning": 0.0, "cache_read": 0.0, "cache_write": 0.0}
+            return {
+                "total": 0.0,
+                "prompt": 0.0,
+                "completion": 0.0,
+                "reasoning": 0.0,
+                "cache_read": 0.0,
+                "cache_write": 0.0,
+            }
 
         if call_type == "chat":
             return self._calculate_chat_cost_granular(model, usage)
 
         # For non-chat requests, only return total cost
         total_cost = self.calculate_cost(model, usage, call_type)
-        return {"total": total_cost, "prompt": 0.0, "completion": 0.0, "reasoning": 0.0, "cache_read": 0.0, "cache_write": 0.0}
+        return {
+            "total": total_cost,
+            "prompt": 0.0,
+            "completion": 0.0,
+            "reasoning": 0.0,
+            "cache_read": 0.0,
+            "cache_write": 0.0,
+        }
 
     def _calculate_chat_cost(self, model: str, usage: Dict[str, int]) -> float:
         """Calculate cost for chat models."""
@@ -125,7 +139,14 @@ class CostCalculator:
         model_key = self._normalize_model_name(model, "chat")
         if not model_key:
             logger.debug("Pricing not found for chat model: %s", model)
-            return {"total": 0.0, "prompt": 0.0, "completion": 0.0, "reasoning": 0.0, "cache_read": 0.0, "cache_write": 0.0}
+            return {
+                "total": 0.0,
+                "prompt": 0.0,
+                "completion": 0.0,
+                "reasoning": 0.0,
+                "cache_read": 0.0,
+                "cache_write": 0.0,
+            }
 
         pricing = self.pricing_data["chat"][model_key]
 
@@ -153,7 +174,9 @@ class CostCalculator:
         if cache_write_tokens > 0 and "cacheWritePrice" in pricing:
             cache_write_cost = (cache_write_tokens / 1000) * pricing.get("cacheWritePrice", 0.0)
 
-        total_cost = prompt_cost + completion_cost + reasoning_cost + cache_read_cost + cache_write_cost
+        total_cost = (
+            prompt_cost + completion_cost + reasoning_cost + cache_read_cost + cache_write_cost
+        )
 
         return {
             "total": total_cost,

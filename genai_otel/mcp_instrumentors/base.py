@@ -74,7 +74,7 @@ class BaseMCPInstrumentor:
 
             # MCP operation duration histogram
             cls._shared_duration_histogram = meter.create_histogram(
-                SC.MCP_CLIENT_OPERATION_DURATION,
+                SC.MCP_CLIENT_OPERATION_DURATION_METRIC,
                 description="MCP operation duration",
                 unit="s",
             )
@@ -88,7 +88,7 @@ class BaseMCPInstrumentor:
 
             # MCP response size histogram
             cls._shared_response_size_histogram = meter.create_histogram(
-                SC.MCP_RESPONSE_SIZE,
+                SC.MCP_RESPONSE_SIZE_METRIC,
                 description="MCP response payload size",
                 unit="By",
             )

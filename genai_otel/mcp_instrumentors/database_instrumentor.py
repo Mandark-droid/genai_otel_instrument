@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 try:
     import psycopg2
     from psycopg2.extensions import cursor as Psycopg2Cursor
+
     PSYCOPG2_AVAILABLE = True
 except ImportError:
     psycopg2 = None
@@ -37,6 +38,7 @@ except ImportError:
 try:
     import pymongo
     from pymongo.collection import Collection as PymongoCollection
+
     PYMONGO_AVAILABLE = True
 except ImportError:
     pymongo = None
@@ -46,6 +48,7 @@ except ImportError:
 try:
     import mysql.connector
     from mysql.connector.cursor import MySQLCursor
+
     MYSQL_AVAILABLE = True
 except ImportError:
     mysql = None
@@ -133,15 +136,13 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
             # Wrap psycopg2 cursor execute methods
             if hasattr(Psycopg2Cursor, "execute"):
                 wrapt.wrap_function_wrapper(
-                    "psycopg2.extensions",
-                    "cursor.execute",
-                    self._db_execute_wrapper("psycopg2")
+                    "psycopg2.extensions", "cursor.execute", self._db_execute_wrapper("psycopg2")
                 )
             if hasattr(Psycopg2Cursor, "executemany"):
                 wrapt.wrap_function_wrapper(
                     "psycopg2.extensions",
                     "cursor.executemany",
-                    self._db_execute_wrapper("psycopg2")
+                    self._db_execute_wrapper("psycopg2"),
                 )
             logger.debug("PostgreSQL MCP metrics enabled")
         except Exception as e:
@@ -152,16 +153,23 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
         try:
             # Wrap common pymongo collection methods
             methods_to_wrap = [
-                "find", "find_one", "insert_one", "insert_many",
-                "update_one", "update_many", "delete_one", "delete_many",
-                "count_documents", "aggregate"
+                "find",
+                "find_one",
+                "insert_one",
+                "insert_many",
+                "update_one",
+                "update_many",
+                "delete_one",
+                "delete_many",
+                "count_documents",
+                "aggregate",
             ]
             for method_name in methods_to_wrap:
                 if hasattr(PymongoCollection, method_name):
                     wrapt.wrap_function_wrapper(
                         "pymongo.collection",
                         f"Collection.{method_name}",
-                        self._db_operation_wrapper("pymongo", method_name)
+                        self._db_operation_wrapper("pymongo", method_name),
                     )
             logger.debug("MongoDB MCP metrics enabled")
         except Exception as e:
@@ -175,13 +183,13 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
                 wrapt.wrap_function_wrapper(
                     "mysql.connector.cursor",
                     "MySQLCursor.execute",
-                    self._db_execute_wrapper("mysql")
+                    self._db_execute_wrapper("mysql"),
                 )
             if hasattr(MySQLCursor, "executemany"):
                 wrapt.wrap_function_wrapper(
                     "mysql.connector.cursor",
                     "MySQLCursor.executemany",
-                    self._db_execute_wrapper("mysql")
+                    self._db_execute_wrapper("mysql"),
                 )
             logger.debug("MySQL MCP metrics enabled")
         except Exception as e:
@@ -196,6 +204,7 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
         Returns:
             Wrapper function compatible with wrapt
         """
+
         def wrapper(wrapped, instance, args, kwargs):
             start_time = time.time()
             try:
@@ -206,21 +215,21 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
                 duration = time.time() - start_time
                 if self.mcp_duration_histogram:
                     self.mcp_duration_histogram.record(
-                        duration,
-                        {"db.system": db_system, "mcp.operation": "execute"}
+                        duration, {"db.system": db_system, "mcp.operation": "execute"}
                     )
 
                 # Record request count
                 if self.mcp_request_counter:
                     self.mcp_request_counter.add(
-                        1,
-                        {"db.system": db_system, "mcp.operation": "execute"}
+                        1, {"db.system": db_system, "mcp.operation": "execute"}
                     )
 
                 # Estimate request size (query + params)
                 try:
                     query = args[0] if args else ""
-                    params = args[1] if len(args) > 1 else kwargs.get("vars") or kwargs.get("params")
+                    params = (
+                        args[1] if len(args) > 1 else kwargs.get("vars") or kwargs.get("params")
+                    )
                     request_size = len(str(query))
                     if params:
                         try:
@@ -230,8 +239,7 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
 
                     if self.mcp_request_size_histogram:
                         self.mcp_request_size_histogram.record(
-                            request_size,
-                            {"db.system": db_system}
+                            request_size, {"db.system": db_system}
                         )
 
                     # Estimate response size from rowcount
@@ -240,8 +248,7 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
                         response_size = instance.rowcount * 100
                         if self.mcp_response_size_histogram:
                             self.mcp_response_size_histogram.record(
-                                response_size,
-                                {"db.system": db_system}
+                                response_size, {"db.system": db_system}
                             )
                 except Exception as e:
                     logger.debug(f"Failed to record payload size for {db_system}: {e}")
@@ -258,6 +265,7 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
         Returns:
             Wrapper function compatible with wrapt
         """
+
         def wrapper(wrapped, instance, args, kwargs):
             start_time = time.time()
             try:
@@ -268,15 +276,13 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
                 duration = time.time() - start_time
                 if self.mcp_duration_histogram:
                     self.mcp_duration_histogram.record(
-                        duration,
-                        {"db.system": db_system, "mcp.operation": operation}
+                        duration, {"db.system": db_system, "mcp.operation": operation}
                     )
 
                 # Record request count
                 if self.mcp_request_counter:
                     self.mcp_request_counter.add(
-                        1,
-                        {"db.system": db_system, "mcp.operation": operation}
+                        1, {"db.system": db_system, "mcp.operation": operation}
                     )
 
                 # Estimate payload sizes
@@ -300,8 +306,7 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
 
                     if self.mcp_request_size_histogram and request_size > 0:
                         self.mcp_request_size_histogram.record(
-                            request_size,
-                            {"db.system": db_system, "mcp.operation": operation}
+                            request_size, {"db.system": db_system, "mcp.operation": operation}
                         )
 
                     # Response size: estimate based on result type
@@ -323,8 +328,7 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
 
                     if self.mcp_response_size_histogram and response_size > 0:
                         self.mcp_response_size_histogram.record(
-                            response_size,
-                            {"db.system": db_system, "mcp.operation": operation}
+                            response_size, {"db.system": db_system, "mcp.operation": operation}
                         )
                 except Exception as e:
                     logger.debug(f"Failed to record payload size for {db_system}.{operation}: {e}")
