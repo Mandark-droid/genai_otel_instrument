@@ -101,6 +101,19 @@ class OTelConfig:
         default_factory=lambda: float(os.getenv("GENAI_CARBON_INTENSITY", "475.0"))
     )  # gCO2e/kWh
 
+    # OpenTelemetry semantic convention stability opt-in
+    # Supports "gen_ai" for new conventions, "gen_ai/dup" for dual emission
+    semconv_stability_opt_in: str = field(
+        default_factory=lambda: os.getenv("OTEL_SEMCONV_STABILITY_OPT_IN", "gen_ai")
+    )
+
+    # Enable content capture as span events
+    # WARNING: May capture sensitive data. Use with caution.
+    enable_content_capture: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_CONTENT_CAPTURE", "false").lower()
+        == "true"
+    )
+
 
 import os
 
