@@ -6,8 +6,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **OpenTelemetry Semantic Convention Compliance (Phase 1 & 2)**
+  - Added support for `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable for dual token attribute emission
+  - Added `GENAI_ENABLE_CONTENT_CAPTURE` environment variable for opt-in prompt/completion content capture as span events
+  - Added comprehensive span attributes to OpenAI instrumentor:
+    - Request parameters: `gen_ai.operation.name`, `gen_ai.request.temperature`, `gen_ai.request.top_p`, `gen_ai.request.max_tokens`, `gen_ai.request.frequency_penalty`, `gen_ai.request.presence_penalty`
+    - Response attributes: `gen_ai.response.id`, `gen_ai.response.model`, `gen_ai.response.finish_reasons`
+  - Added event-based content capture for prompts and completions (disabled by default for security)
+  - Added 8 new tests for Phase 2 enhancements (381 total tests, all passing)
+
+### Changed
+
+- **BREAKING: Metric names now use OpenTelemetry semantic conventions**
+  - `genai.requests` → `gen_ai.requests`
+  - `genai.tokens` → `gen_ai.client.token.usage`
+  - `genai.latency` → `gen_ai.client.operation.duration`
+  - `genai.cost` → `gen_ai.usage.cost`
+  - `genai.errors` → `gen_ai.client.errors`
+  - All GPU metrics now use `gen_ai.gpu.*` prefix (was `genai.gpu.*`)
+  - Update your dashboards and alerting rules accordingly
+- **Token attribute naming now supports dual emission**
+  - When `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai/dup`, both old and new token attributes are emitted:
+    - New (always): `gen_ai.usage.prompt_tokens`, `gen_ai.usage.completion_tokens`
+    - Old (with /dup): `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`
+  - Default (`gen_ai`): Only new attributes are emitted
+
 ### Fixed
 
+- **CRITICAL: GPU metrics now use correct metric types and callbacks**
+  - Changed `gpu_utilization_counter` from Counter to ObservableGauge (utilization is 0-100%, not monotonic)
+  - Fixed `gpu_memory_used_gauge` and `gpu_temperature_gauge` to use callbacks instead of manual `.add()` calls
+  - Added callback methods: `_observe_gpu_utilization()`, `_observe_gpu_memory()`, `_observe_gpu_temperature()`
+  - Fixed CO2 metric name from `genai.co-2.emissions` to `gen_ai.co2.emissions`
+  - Removed dual-thread architecture (now uses single CO2 collection thread, ObservableGauges auto-collected)
+  - All GPU metrics now correctly reported with proper data types
+  - Updated 19 GPU metrics tests to match new implementation
+- **Histogram buckets now properly applied via OpenTelemetry Views**
+  - Created View with ExplicitBucketHistogramAggregation for `gen_ai.client.operation.duration`
+  - Applies `_GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS` from metrics.py
+  - Buckets optimized for LLM latencies (0.01s to 81.92s)
+  - No longer uses default OTel buckets (which were poorly suited for GenAI workloads)
 - **CRITICAL: Made OpenInference instrumentations optional to support Python 3.8 and 3.9**
   - Moved `openinference-instrumentation-smolagents`, `openinference-instrumentation-litellm`, `openinference-instrumentation-mcp`, and `litellm` to optional dependencies
   - These packages require Python >= 3.10 and were causing installation failures on Python 3.8 and 3.9

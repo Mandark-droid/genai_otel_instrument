@@ -1,0 +1,66 @@
+........................................................................ [ 19%]
+........................................................................ [ 38%]
+........................................................................ [ 57%]
+..............................................F......................... [ 77%]
+........................................................................ [ 96%]
+.............                                                            [100%]
+============================== warnings summary ===============================
+tests/test_metrics.py::test_basic_instrumentation
+  H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\together\types\evaluation.py:76: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class EvaluationJob(BaseModel):
+
+tests/test_metrics.py::test_basic_instrumentation
+  H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\replicate\helpers.py:17: UserWarning: The NumPy module was reloaded (imported a second time). This can in some cases result in small but subtle issues and is discouraged.
+    import numpy as np  # type: ignore
+
+tests/test_metrics.py::test_basic_instrumentation
+  H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pydantic\_internal\_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'validate_default' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'validate_default' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.12.6-final-0 _______________
+
+Name                                                     Stmts   Miss  Cover
+----------------------------------------------------------------------------
+genai_otel\__init__.py                                      25      0   100%
+genai_otel\__version__.py                                   13      0   100%
+genai_otel\auto_instrument.py                              131      7    95%
+genai_otel\cli.py                                           41      6    85%
+genai_otel\config.py                                        51      0   100%
+genai_otel\cost_calculator.py                              116      8    93%
+genai_otel\exceptions.py                                     4      0   100%
+genai_otel\gpu_metrics.py                                  136      8    94%
+genai_otel\instrumentors\__init__.py                        17      0   100%
+genai_otel\instrumentors\anthropic_instrumentor.py          57      3    95%
+genai_otel\instrumentors\anyscale_instrumentor.py           12      2    83%
+genai_otel\instrumentors\aws_bedrock_instrumentor.py        60      0   100%
+genai_otel\instrumentors\azure_openai_instrumentor.py       40      0   100%
+genai_otel\instrumentors\base.py                           149      2    99%
+genai_otel\instrumentors\cohere_instrumentor.py             46      2    96%
+genai_otel\instrumentors\google_ai_instrumentor.py          44      0   100%
+genai_otel\instrumentors\groq_instrumentor.py               54      3    94%
+genai_otel\instrumentors\huggingface_instrumentor.py        50      0   100%
+genai_otel\instrumentors\langchain_instrumentor.py          46      0   100%
+genai_otel\instrumentors\llamaindex_instrumentor.py         20      0   100%
+genai_otel\instrumentors\mistralai_instrumentor.py         101      0   100%
+genai_otel\instrumentors\ollama_instrumentor.py             51      0   100%
+genai_otel\instrumentors\openai_instrumentor.py             60      0   100%
+genai_otel\instrumentors\replicate_instrumentor.py          23      0   100%
+genai_otel\instrumentors\togetherai_instrumentor.py         23      0   100%
+genai_otel\instrumentors\vertexai_instrumentor.py           23      0   100%
+genai_otel\logging_config.py                                23      0   100%
+genai_otel\mcp_instrumentors\__init__.py                     2      0   100%
+genai_otel\mcp_instrumentors\api_instrumentor.py            60      2    97%
+genai_otel\mcp_instrumentors\database_instrumentor.py       45      0   100%
+genai_otel\mcp_instrumentors\kafka_instrumentor.py          15      0   100%
+genai_otel\mcp_instrumentors\manager.py                     94      4    96%
+genai_otel\mcp_instrumentors\redis_instrumentor.py          15      0   100%
+genai_otel\mcp_instrumentors\vector_db_instrumentor.py     169      3    98%
+genai_otel\metrics.py                                       26      0   100%
+----------------------------------------------------------------------------
+TOTAL                                                     1842     50    97%
+Coverage HTML written to dir htmlcov
+=========================== short test summary info ===========================
+FAILED tests/test_auto_instrument.py::TestAutoInstrumentation::test_setup_enables_all_components
+1 failed, 372 passed, 3 warnings in 30.41s

@@ -249,6 +249,143 @@ class TestOpenAIInstrumentor(unittest.TestCase):
 
             self.assertIsNone(usage)
 
+    def test_extract_openai_attributes_with_request_parameters(self):
+        """Test that _extract_openai_attributes extracts request parameters."""
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+
+            kwargs = {
+                "model": "gpt-4",
+                "messages": [{"role": "user", "content": "Hello"}],
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "max_tokens": 100,
+                "frequency_penalty": 0.5,
+                "presence_penalty": 0.3,
+            }
+
+            attrs = instrumentor._extract_openai_attributes(None, [], kwargs)
+
+            self.assertEqual(attrs["gen_ai.system"], "openai")
+            self.assertEqual(attrs["gen_ai.request.model"], "gpt-4")
+            self.assertEqual(attrs["gen_ai.operation.name"], "chat")
+            self.assertEqual(attrs["gen_ai.request.temperature"], 0.7)
+            self.assertEqual(attrs["gen_ai.request.top_p"], 0.9)
+            self.assertEqual(attrs["gen_ai.request.max_tokens"], 100)
+            self.assertEqual(attrs["gen_ai.request.frequency_penalty"], 0.5)
+            self.assertEqual(attrs["gen_ai.request.presence_penalty"], 0.3)
+
+    def test_extract_response_attributes_complete(self):
+        """Test that _extract_response_attributes extracts all response attributes."""
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+
+            # Create mock result with all response attributes
+            result = MagicMock()
+            result.id = "chatcmpl-123"
+            result.model = "gpt-4-0613"
+            result.choices = [
+                MagicMock(finish_reason="stop"),
+                MagicMock(finish_reason="length"),
+            ]
+
+            attrs = instrumentor._extract_response_attributes(result)
+
+            self.assertEqual(attrs["gen_ai.response.id"], "chatcmpl-123")
+            self.assertEqual(attrs["gen_ai.response.model"], "gpt-4-0613")
+            self.assertEqual(attrs["gen_ai.response.finish_reasons"], ["stop", "length"])
+
+    def test_extract_response_attributes_partial(self):
+        """Test that _extract_response_attributes handles partial response data."""
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+
+            # Create mock result with only some attributes
+            result = MagicMock()
+            result.id = "chatcmpl-456"
+            result.model = None  # Model might be None in some cases
+            result.choices = []
+
+            attrs = instrumentor._extract_response_attributes(result)
+
+            self.assertEqual(attrs["gen_ai.response.id"], "chatcmpl-456")
+            # Should not include finish_reasons if choices is empty
+            self.assertNotIn("gen_ai.response.finish_reasons", attrs)
+
+    def test_extract_response_attributes_missing(self):
+        """Test that _extract_response_attributes handles missing attributes."""
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+
+            # Create mock result without response attributes
+            result = MagicMock(spec=[])
+
+            attrs = instrumentor._extract_response_attributes(result)
+
+            # Should return empty dict when no attributes available
+            self.assertEqual(attrs, {})
+
+    def test_add_content_events(self):
+        """Test that _add_content_events adds prompt and completion events."""
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+
+            # Create mock span
+            mock_span = MagicMock()
+
+            # Create mock result with completion content
+            result = MagicMock()
+            choice = MagicMock()
+            choice.message.content = "This is the completion"
+            result.choices = [choice]
+
+            # Create request kwargs with messages
+            request_kwargs = {
+                "messages": [
+                    {"role": "user", "content": "Hello"},
+                    {"role": "assistant", "content": "Hi there"},
+                ]
+            }
+
+            # Call method
+            instrumentor._add_content_events(mock_span, result, request_kwargs)
+
+            # Verify prompt events were added
+            assert mock_span.add_event.call_count == 3  # 2 prompts + 1 completion
+            calls = mock_span.add_event.call_args_list
+
+            # Check prompt events
+            self.assertEqual(calls[0][0][0], "gen_ai.prompt.0")
+            self.assertEqual(calls[0][1]["attributes"]["gen_ai.prompt.role"], "user")
+            self.assertEqual(calls[0][1]["attributes"]["gen_ai.prompt.content"], "Hello")
+
+            self.assertEqual(calls[1][0][0], "gen_ai.prompt.1")
+            self.assertEqual(calls[1][1]["attributes"]["gen_ai.prompt.role"], "assistant")
+            self.assertEqual(calls[1][1]["attributes"]["gen_ai.prompt.content"], "Hi there")
+
+            # Check completion event
+            self.assertEqual(calls[2][0][0], "gen_ai.completion.0")
+            self.assertEqual(calls[2][1]["attributes"]["gen_ai.completion.role"], "assistant")
+            self.assertEqual(
+                calls[2][1]["attributes"]["gen_ai.completion.content"], "This is the completion"
+            )
+
+    def test_add_content_events_empty_messages(self):
+        """Test that _add_content_events handles empty messages."""
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+
+            mock_span = MagicMock()
+            result = MagicMock()
+            result.choices = []
+            request_kwargs = {"messages": []}
+
+            # Should not raise any errors
+            instrumentor._add_content_events(mock_span, result, request_kwargs)
+
+            # No events should be added
+            mock_span.add_event.assert_not_called()
+
     @patch("genai_otel.instrumentors.openai_instrumentor.logger")
     def test_wrapped_init_calls_instrument_client(self, mock_logger):
         """Test that the wrapped __init__ calls _instrument_client on the instance."""

@@ -150,10 +150,13 @@ class TestAutoInstrumentation:
                         mock_periodic_exporting_metric_reader.assert_called_once_with(
                             exporter=mock_metric_exporter_instance
                         )
-                        mock_meter_provider_class.assert_called_once_with(
-                            resource=mock_resource_instance,
-                            metric_readers=[mock_metric_reader_instance],
-                        )
+                        # MeterProvider should be called with views parameter for histogram buckets
+                        assert mock_meter_provider_class.call_count == 1
+                        call_kwargs = mock_meter_provider_class.call_args.kwargs
+                        assert call_kwargs["resource"] == mock_resource_instance
+                        assert call_kwargs["metric_readers"] == [mock_metric_reader_instance]
+                        assert "views" in call_kwargs
+                        assert len(call_kwargs["views"]) == 1  # Should have duration_view
                         mock_metrics.set_meter_provider.assert_called_once_with(
                             mock_meter_provider_instance
                         )

@@ -378,3 +378,49 @@ def test_cost_calculation_exception_handling(instrumentor, caplog):
     # Should still return the result
     assert result == {"usage": {"prompt_tokens": 10, "completion_tokens": 20}}
     assert "Failed to calculate cost for span 'test.span'" in caplog.text
+
+
+def test_dual_token_attribute_emission(instrumentor):
+    """Test that both old and new token attributes are emitted when semconv_stability_opt_in=gen_ai/dup."""
+    inst, mock_span, mock_span_ctx = instrumentor
+    # Enable dual emission
+    inst.config.semconv_stability_opt_in = "gen_ai/dup"
+
+    result = {"usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}}
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify both new and old token attributes are set
+    set_attribute_calls = mock_span.set_attribute.call_args_list
+    attributes_set = {call[0][0]: call[0][1] for call in set_attribute_calls}
+
+    # New semantic conventions
+    assert attributes_set.get("gen_ai.usage.prompt_tokens") == 10
+    assert attributes_set.get("gen_ai.usage.completion_tokens") == 20
+    assert attributes_set.get("gen_ai.usage.total_tokens") == 30
+
+    # Old semantic conventions
+    assert attributes_set.get("gen_ai.usage.input_tokens") == 10
+    assert attributes_set.get("gen_ai.usage.output_tokens") == 20
+
+
+def test_single_token_attribute_emission(instrumentor):
+    """Test that only new token attributes are emitted when semconv_stability_opt_in=gen_ai."""
+    inst, mock_span, mock_span_ctx = instrumentor
+    # Default is gen_ai (new conventions only)
+    inst.config.semconv_stability_opt_in = "gen_ai"
+
+    result = {"usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}}
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify only new token attributes are set
+    set_attribute_calls = mock_span.set_attribute.call_args_list
+    attributes_set = {call[0][0]: call[0][1] for call in set_attribute_calls}
+
+    # New semantic conventions
+    assert attributes_set.get("gen_ai.usage.prompt_tokens") == 10
+    assert attributes_set.get("gen_ai.usage.completion_tokens") == 20
+    assert attributes_set.get("gen_ai.usage.total_tokens") == 30
+
+    # Old semantic conventions should NOT be set
+    assert "gen_ai.usage.input_tokens" not in attributes_set
+    assert "gen_ai.usage.output_tokens" not in attributes_set

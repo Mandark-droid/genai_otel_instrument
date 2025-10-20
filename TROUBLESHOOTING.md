@@ -207,6 +207,135 @@ pip install genai-otel-instrument[all]
    ```
 
 ```bash
+pip uninstall pynvml
+pip install genai-otel-instrument[gpu]
+```
+
+---
+
+### Issue: Metrics have changed names after upgrade
+
+**Cause**: Version 2.0+ uses OpenTelemetry semantic conventions for metric names.
+
+**Solution**:
+
+This is a **BREAKING CHANGE** in the metric naming to comply with OpenTelemetry standards.
+
+**Metric Name Changes:**
+| Old Name (v1.x) | New Name (v2.0+) |
+|-----------------|------------------|
+| `genai.requests` | `gen_ai.requests` |
+| `genai.tokens` | `gen_ai.client.token.usage` |
+| `genai.latency` | `gen_ai.client.operation.duration` |
+| `genai.cost` | `gen_ai.usage.cost` |
+| `genai.errors` | `gen_ai.client.errors` |
+| `genai.gpu.*` | `gen_ai.gpu.*` |
+| `genai.co-2.emissions` | `gen_ai.co2.emissions` |
+
+**Action Required:**
+1. **Update Dashboard Queries** - Replace metric names in all dashboard queries
+2. **Update Alerting Rules** - Update alert metric names
+3. **Update Aggregations** - Update any metric aggregation rules
+
+**Example Dashboard Update (Prometheus/Grafana):**
+```promql
+# OLD (v1.x)
+sum(rate(genai_requests_total[5m])) by (operation)
+
+# NEW (v2.0+)
+sum(rate(gen_ai_requests_total[5m])) by (operation)
+```
+
+---
+
+### Issue: Token attributes have changed
+
+**Cause**: OpenTelemetry semantic conventions for token attributes have evolved.
+
+**Solution**:
+
+We now support **both old and new conventions** with the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable:
+
+**Option 1: New conventions only (default)**
+```bash
+export OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai
+```
+Emits: `gen_ai.usage.prompt_tokens`, `gen_ai.usage.completion_tokens`
+
+**Option 2: Dual emission (migration mode)**
+```bash
+export OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai/dup
+```
+Emits both:
+- New: `gen_ai.usage.prompt_tokens`, `gen_ai.usage.completion_tokens`
+- Old: `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`
+
+Use dual emission during migration to ensure compatibility with systems expecting different attribute names.
+
+---
+
+### Issue: GPU metrics showing as monotonic counters instead of gauges
+
+**Cause**: Fixed in v2.0+. Earlier versions incorrectly used Counter for GPU utilization.
+
+**Solution**:
+
+Upgrade to v2.0+. GPU metrics now correctly use ObservableGauge:
+- `gen_ai.gpu.utilization` - Gauge (0-100%)
+- `gen_ai.gpu.memory.used` - Gauge (MiB)
+- `gen_ai.gpu.temperature` - Gauge (Celsius)
+- `gen_ai.co2.emissions` - Counter (cumulative gCO2e)
+
+If you're on v2.0+ and still seeing issues, check that NVML is properly initialized:
+```python
+import pynvml
+pynvml.nvmlInit()
+print(f"GPU count: {pynvml.nvmlDeviceGetCount()}")
+pynvml.nvmlShutdown()
+```
+
+---
+
+### Issue: Content capture not working
+
+**Cause**: Content capture is disabled by default for security reasons.
+
+**Solution**:
+
+Enable content capture with environment variable:
+```bash
+export GENAI_ENABLE_CONTENT_CAPTURE=true
+```
+
+Or programmatically:
+```python
+from genai_otel import instrument
+instrument(enable_content_capture=True)
+```
+
+**WARNING**: Content capture records full prompts and completions as span events. This may expose sensitive data. Only enable in trusted environments with proper data handling policies.
+
+**What gets captured:**
+- Prompt events: `gen_ai.prompt.{index}` with attributes:
+  - `gen_ai.prompt.role`
+  - `gen_ai.prompt.content`
+- Completion events: `gen_ai.completion.{index}` with attributes:
+  - `gen_ai.completion.role`
+  - `gen_ai.completion.content`
+
+---
+
+### Issue: Histogram buckets not optimized for LLM latencies
+
+**Cause**: Fixed in v2.0+. Earlier versions used default OTel buckets.
+
+**Solution**:
+
+Upgrade to v2.0+. Histogram buckets are now properly configured via OpenTelemetry Views:
+- Operation duration uses buckets: `[0.01, 0.02, 0.04, 0.08, 0.16, 0.32, 0.64, 1.28, 2.56, 5.12, 10.24, 20.48, 40.96, 81.92]` seconds
+- Optimized for LLM response times (10ms to 81s)
+
+You can verify buckets in your metrics backend or via console exporter.
 
 ---
 
