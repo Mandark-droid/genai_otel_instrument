@@ -225,6 +225,7 @@ genai_otel = ["llm_pricing.json", "py.typed"]
 
 [tool.setuptools_scm]
 write_to = "genai_otel/__version__.py"
+local_scheme = "no-local-version"
 
 [tool.black]
 line-length = 100
