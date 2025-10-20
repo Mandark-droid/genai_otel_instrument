@@ -26,8 +26,24 @@ Based on analysis of current trace/metric collection, OpenTelemetry GenAI semant
 - ✅ Response attribute extraction added (`_extract_response_attributes` method)
 - ✅ All tests passing, zero regressions
 
+**Phase 3.1: COMPLETE** ✅
+- ✅ Tool/function call instrumentation implemented for OpenAI
+- ✅ Tool definitions captured in `llm.tools` attribute
+- ✅ Tool call responses extracted with full function details
+- ✅ 2 new tests added (383 total tests passing)
+
+**Phase 3.2: COMPLETE** ✅
+- ✅ Granular cost tracking implemented with 5 new cost counters
+- ✅ Support for OpenAI o1 reasoning tokens (`completion_tokens_details.reasoning_tokens`)
+- ✅ Support for Anthropic cache costs (`cache_read_input_tokens`, `cache_creation_input_tokens`)
+- ✅ `calculate_granular_cost()` method added to CostCalculator
+- ✅ 6 new span attributes for cost breakdown
+- ✅ 4 new tests added (387 total tests passing)
+- ✅ Code coverage maintained at **95%**
+
 **Next Steps:**
-- Phase 3: Advanced features (tool calls, granular costs, MCP metrics, streaming)
+- Phase 3.3: MCP metrics (requests, duration, payload sizes)
+- Phase 3.4: Streaming metrics (TTFT/TBT)
 - Phase 4: Optional enhancements (session tracking, RAG attributes, agent tracking)
 
 ### 🆕 Update (Version 1.1)
