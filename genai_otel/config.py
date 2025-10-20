@@ -101,6 +101,10 @@ class OTelConfig:
         default_factory=lambda: float(os.getenv("GENAI_CARBON_INTENSITY", "475.0"))
     )  # gCO2e/kWh
 
+    gpu_collection_interval: int = field(
+        default_factory=lambda: int(os.getenv("GENAI_GPU_COLLECTION_INTERVAL", "5"))
+    )  # seconds - how often to collect GPU metrics and CO2 emissions
+
     # OpenTelemetry semantic convention stability opt-in
     # Supports "gen_ai" for new conventions, "gen_ai/dup" for dual emission
     semconv_stability_opt_in: str = field(
