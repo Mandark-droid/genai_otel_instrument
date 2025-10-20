@@ -37,6 +37,8 @@ except ImportError:
         GEN_AI_CLIENT_TOKEN_USAGE = "gen_ai.client.token.usage"
         GEN_AI_CLIENT_OPERATION_DURATION = "gen_ai.client.operation.duration"
         GEN_AI_USAGE_COST = "gen_ai.usage.cost"
+        GEN_AI_SERVER_TTFT = "gen_ai.server.ttft"
+        GEN_AI_SERVER_TBT = "gen_ai.server.tbt"
 
 
 # Import histogram bucket definitions

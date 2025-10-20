@@ -6,7 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Phase 3.4 Fallback Semantic Conventions**
+  - Fixed `AttributeError` when `openlit` package is not installed
+  - Added missing `GEN_AI_SERVER_TTFT` and `GEN_AI_SERVER_TBT` constants to fallback `SC` class in `base.py`
+  - Fixed MCP constant names in `mcp_instrumentors/base.py` to include `_METRIC` suffix
+  - Library now works correctly with or without the `openlit` package
+
+- **Third-Party Library Warnings**
+  - Suppressed pydantic deprecation warnings from external dependencies
+  - Added warning filters in `__init__.py` for runtime suppression
+  - Added warning filters in `pyproject.toml` for pytest suppression
+  - Clean output with zero warnings in both tests and production use
+
 ### Added
+
+- **Granular Cost Tracking Tests (Phase 3.2 Coverage)**
+  - Added 3 comprehensive tests for granular cost tracking functionality
+  - `test_granular_cost_tracking_with_all_cost_types` - Tests all 6 cost types (prompt, completion, reasoning, cache_read, cache_write)
+  - `test_granular_cost_tracking_with_zero_costs` - Validates zero-cost handling
+  - `test_granular_cost_tracking_only_prompt_cost` - Tests embedding/prompt-only scenarios
+  - Improved `base.py` coverage from 83% to 91%
+  - Total tests: 405 → 408, all passing
+  - Overall coverage maintained at 93%
 
 - **OpenTelemetry Semantic Convention Compliance (Phase 1 & 2)**
   - Added support for `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable for dual token attribute emission
