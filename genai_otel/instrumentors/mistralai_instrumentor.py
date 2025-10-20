@@ -1,11 +1,16 @@
-"""OpenTelemetry instrumentor for the Mistral AI SDK.
+"""OpenTelemetry instrumentor for the Mistral AI SDK (v1.0+).
 
 This instrumentor automatically traces chat calls to Mistral AI models,
 capturing relevant attributes such as the model name and token usage.
+
+Supports Mistral SDK v1.0+ with the new API structure:
+- Mistral.chat.complete()
+- Mistral.chat.stream()
+- Mistral.embeddings.create()
 """
 
 import logging
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
 from .base import BaseInstrumentor
@@ -14,154 +19,89 @@ logger = logging.getLogger(__name__)
 
 
 class MistralAIInstrumentor(BaseInstrumentor):
-    """Instrumentor for Mistral AI"""
+    """Instrumentor for Mistral AI SDK v1.0+"""
 
     def instrument(self, config: OTelConfig):
         self.config = config
         try:
-            import mistralai
-            from mistralai.client import MistralClient
+            import wrapt
+            from mistralai import Mistral
 
-            # Instrument the chat method using proper patching
-            self._instrument_chat()
-            self._instrument_embeddings()
+            # Wrap the Mistral client __init__ to instrument each instance
+            original_init = Mistral.__init__
 
-            logger.info("MistralAI instrumentation enabled")
+            def wrapped_init(wrapped, instance, args, kwargs):
+                result = wrapped(*args, **kwargs)
+                self._instrument_client(instance)
+                return result
+
+            Mistral.__init__ = wrapt.FunctionWrapper(original_init, wrapped_init)
+            logger.info("MistralAI instrumentation enabled (v1.0+ SDK)")
 
         except ImportError:
             logger.warning("mistralai package not available, skipping instrumentation")
         except Exception as e:
-            logger.error(f"Failed to instrument mistralai: {e}")
+            logger.error(f"Failed to instrument mistralai: {e}", exc_info=True)
 
-    def _instrument_chat(self):
-        """Instrument the chat completion method"""
-        try:
-            import wrapt
-            from mistralai.client import MistralClient
+    def _instrument_client(self, client):
+        """Instrument Mistral client instance methods."""
+        # Instrument chat.complete()
+        if hasattr(client, "chat") and hasattr(client.chat, "complete"):
+            original_complete = client.chat.complete
+            instrumented_complete = self.create_span_wrapper(
+                span_name="mistralai.chat.complete",
+                extract_attributes=self._extract_chat_attributes,
+            )(original_complete)
+            client.chat.complete = instrumented_complete
 
-            @wrapt.patch_function_wrapper("mistralai.client", "MistralClient.chat")
-            def wrapped_chat(wrapped, instance, args, kwargs):
-                with self.tracer.start_as_current_span("mistralai.chat") as span:
-                    model = kwargs.get("model", "unknown")
+        # Instrument chat.stream()
+        if hasattr(client, "chat") and hasattr(client.chat, "stream"):
+            original_stream = client.chat.stream
+            instrumented_stream = self.create_span_wrapper(
+                span_name="mistralai.chat.stream",
+                extract_attributes=self._extract_chat_attributes,
+            )(original_stream)
+            client.chat.stream = instrumented_stream
 
-                    span.set_attribute("gen_ai.system", "mistralai")
-                    span.set_attribute("gen_ai.request.model", model)
-                    span.set_attribute("llm.request.type", "chat")
+        # Instrument embeddings.create()
+        if hasattr(client, "embeddings") and hasattr(client.embeddings, "create"):
+            original_embeddings = client.embeddings.create
+            instrumented_embeddings = self.create_span_wrapper(
+                span_name="mistralai.embeddings.create",
+                extract_attributes=self._extract_embeddings_attributes,
+            )(original_embeddings)
+            client.embeddings.create = instrumented_embeddings
 
-                    if self.request_counter:
-                        self.request_counter.add(
-                            1, {"model": model, "provider": "mistralai", "operation": "chat"}
-                        )
+    def _extract_chat_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
+        """Extract attributes from chat.complete() or chat.stream() call."""
+        model = kwargs.get("model", "unknown")
+        attributes = {
+            "gen_ai.system": "mistralai",
+            "gen_ai.request.model": model,
+            "gen_ai.request.type": "chat",
+        }
 
-                    try:
-                        result = wrapped(*args, **kwargs)
-                        self._record_result_metrics(span, result, 0)
-                        return result
-                    except Exception as e:
-                        span.set_attribute("error", True)
-                        span.set_attribute("error.message", str(e))
-                        if self.request_counter:
-                            self.request_counter.add(
-                                1,
-                                {
-                                    "model": model,
-                                    "provider": "mistralai",
-                                    "operation": "chat",
-                                    "error": "true",
-                                },
-                            )
-                        raise
+        # Add optional parameters
+        if "temperature" in kwargs and kwargs["temperature"] is not None:
+            attributes["gen_ai.request.temperature"] = kwargs["temperature"]
+        if "top_p" in kwargs and kwargs["top_p"] is not None:
+            attributes["gen_ai.request.top_p"] = kwargs["top_p"]
+        if "max_tokens" in kwargs and kwargs["max_tokens"] is not None:
+            attributes["gen_ai.request.max_tokens"] = kwargs["max_tokens"]
 
-            return wrapped_chat
+        return attributes
 
-        except Exception as e:
-            logger.debug(f"Could not instrument MistralAI chat: {e}")
-
-    def _instrument_embeddings(self):
-        """Instrument the embeddings method"""
-        try:
-            import wrapt
-            from mistralai.client import MistralClient
-
-            @wrapt.patch_function_wrapper("mistralai.client", "MistralClient.embeddings")
-            def wrapped_embeddings(wrapped, instance, args, kwargs):
-                with self.tracer.start_as_current_span("mistralai.embeddings") as span:
-                    model = kwargs.get("model", "mistral-embed")
-
-                    span.set_attribute("gen_ai.system", "mistralai")
-                    span.set_attribute("gen_ai.request.model", model)
-                    span.set_attribute("llm.request.type", "embeddings")
-
-                    if self.request_counter:
-                        self.request_counter.add(
-                            1, {"model": model, "provider": "mistralai", "operation": "embeddings"}
-                        )
-
-                    try:
-                        result = wrapped(*args, **kwargs)
-                        self._record_embedding_metrics(span, result)
-                        return result
-                    except Exception as e:
-                        span.set_attribute("error", True)
-                        span.set_attribute("error.message", str(e))
-                        if self.request_counter:
-                            self.request_counter.add(
-                                1,
-                                {
-                                    "model": model,
-                                    "provider": "mistralai",
-                                    "operation": "embeddings",
-                                    "error": "true",
-                                },
-                            )
-                        raise
-
-            return wrapped_embeddings
-
-        except Exception as e:
-            logger.debug(f"Could not instrument MistralAI embeddings: {e}")
-
-    def _record_result_metrics(self, span, result, cost: float):
-        """Record metrics from chat completion result"""
-        if hasattr(result, "usage"):
-            usage = self._extract_usage(result)
-            if usage:
-                span.set_attribute("gen_ai.response.finish_reasons", ["stop"])
-                span.set_attribute("gen_ai.usage.prompt_tokens", usage.get("prompt_tokens", 0))
-                span.set_attribute(
-                    "gen_ai.usage.completion_tokens", usage.get("completion_tokens", 0)
-                )
-                span.set_attribute("gen_ai.usage.total_tokens", usage.get("total_tokens", 0))
-
-                # Record token metrics
-                if self.token_counter:
-                    self.token_counter.add(
-                        usage.get("prompt_tokens", 0), {"type": "input", "provider": "mistralai"}
-                    )
-                    self.token_counter.add(
-                        usage.get("completion_tokens", 0),
-                        {"type": "output", "provider": "mistralai"},
-                    )
-
-                # Calculate and record cost
-                if cost > 0:
-                    span.set_attribute("gen_ai.usage.cost", cost)
-                    if self.cost_counter:
-                        self.cost_counter.add(cost, {"provider": "mistralai"})
-
-    def _record_embedding_metrics(self, span, result):
-        """Record metrics from embeddings result"""
-        if hasattr(result, "usage"):
-            usage = self._extract_usage(result)
-            if usage:
-                span.set_attribute("gen_ai.usage.prompt_tokens", usage.get("prompt_tokens", 0))
-                span.set_attribute("gen_ai.usage.total_tokens", usage.get("total_tokens", 0))
-
-                if self.token_counter:
-                    self.token_counter.add(
-                        usage.get("prompt_tokens", 0),
-                        {"type": "input", "provider": "mistralai", "operation": "embeddings"},
-                    )
+    def _extract_embeddings_attributes(
+        self, instance: Any, args: Any, kwargs: Any
+    ) -> Dict[str, Any]:
+        """Extract attributes from embeddings.create() call."""
+        model = kwargs.get("model", "mistral-embed")
+        attributes = {
+            "gen_ai.system": "mistralai",
+            "gen_ai.request.model": model,
+            "gen_ai.request.type": "embedding",
+        }
+        return attributes
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract usage information from Mistral AI response"""
