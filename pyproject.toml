@@ -251,3 +251,8 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "--cov=genai_otel --cov-report=html --cov-report=term"
+filterwarnings = [
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20",
+    "ignore::UserWarning:replicate.helpers",
+    "ignore::pydantic._internal._generate_schema.UnsupportedFieldAttributeWarning",
+]
