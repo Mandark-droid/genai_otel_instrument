@@ -1,5 +1,25 @@
 # GenAI OpenTelemetry Auto-Instrumentation
 
+[![PyPI version](https://badge.fury.io/py/genai-otel-instrument.svg)](https://badge.fury.io/py/genai-otel-instrument)
+[![Python Versions](https://img.shields.io/pypi/pyversions/genai-otel-instrument.svg)](https://pypi.org/project/genai-otel-instrument/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Downloads](https://static.pepy.tech/badge/genai-otel-instrument)](https://pepy.tech/project/genai-otel-instrument)
+[![Downloads/Month](https://static.pepy.tech/badge/genai-otel-instrument/month)](https://pepy.tech/project/genai-otel-instrument)
+
+[![GitHub Stars](https://img.shields.io/github/stars/Mandark-droid/genai_otel_instrument?style=social)](https://github.com/Mandark-droid/genai_otel_instrument)
+[![GitHub Forks](https://img.shields.io/github/forks/Mandark-droid/genai_otel_instrument?style=social)](https://github.com/Mandark-droid/genai_otel_instrument)
+[![GitHub Issues](https://img.shields.io/github/issues/Mandark-droid/genai_otel_instrument)](https://github.com/Mandark-droid/genai_otel_instrument/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Mandark-droid/genai_otel_instrument)](https://github.com/Mandark-droid/genai_otel_instrument/pulls)
+
+[![Code Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](https://github.com/Mandark-droid/genai_otel_instrument)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+[![Type Checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](http://mypy-lang.org/)
+
+[![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-1.20%2B-blueviolet)](https://opentelemetry.io/)
+[![Semantic Conventions](https://img.shields.io/badge/OTel%20Semconv-GenAI%20v1.28-orange)](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/Mandark-droid/genai_otel_instrument/actions)
+
 Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with zero-code setup.
 
 ## Features
@@ -278,6 +298,169 @@ genai-otel-instrument/
         ├── manager.py
         └── (other mcp files)
 ```
+
+## Roadmap
+
+### Next Release (v0.2.0) - Q1 2026
+
+We're planning significant enhancements for the next major release, focusing on evaluation metrics and safety guardrails alongside completing OpenTelemetry semantic convention compliance.
+
+#### 🎯 Evaluation & Monitoring
+
+**LLM Output Quality Metrics**
+- **Bias Detection** - Automatically detect and measure bias in LLM responses
+  - Gender, racial, political, and cultural bias detection
+  - Bias score metrics with configurable thresholds
+  - Integration with fairness libraries (e.g., Fairlearn, AIF360)
+
+- **Toxicity Detection** - Monitor and alert on toxic or harmful content
+  - Perspective API integration for toxicity scoring
+  - Custom toxicity models support
+  - Real-time toxicity metrics and alerts
+  - Configurable severity levels
+
+- **Hallucination Detection** - Track factual accuracy and groundedness
+  - Fact-checking against provided context
+  - Citation validation for RAG applications
+  - Confidence scoring for generated claims
+  - Hallucination rate metrics by model and use case
+
+**Implementation:**
+```python
+import genai_otel
+
+# Enable evaluation metrics
+genai_otel.instrument(
+    enable_bias_detection=True,
+    enable_toxicity_detection=True,
+    enable_hallucination_detection=True,
+
+    # Configure thresholds
+    bias_threshold=0.7,
+    toxicity_threshold=0.5,
+    hallucination_threshold=0.8
+)
+```
+
+**Metrics Added:**
+- `gen_ai.eval.bias_score` - Bias detection scores (histogram)
+- `gen_ai.eval.toxicity_score` - Toxicity scores (histogram)
+- `gen_ai.eval.hallucination_score` - Hallucination probability (histogram)
+- `gen_ai.eval.violations` - Count of threshold violations by type
+
+#### 🛡️ Safety Guardrails
+
+**Input/Output Filtering**
+- **Prompt Injection Detection** - Protect against prompt injection attacks
+  - Pattern-based detection (jailbreaking attempts)
+  - ML-based classifier for sophisticated attacks
+  - Real-time blocking with configurable policies
+  - Attack attempt metrics and logging
+
+- **Restricted Topics** - Block sensitive or inappropriate topics
+  - Configurable topic blacklists (legal, medical, financial advice)
+  - Industry-specific content filters
+  - Topic detection with confidence scoring
+  - Custom topic definition support
+
+- **Sensitive Information Protection** - Prevent PII leakage
+  - PII detection (emails, phone numbers, SSN, credit cards)
+  - Automatic redaction or blocking
+  - Compliance mode (GDPR, HIPAA, PCI-DSS)
+  - Data leak prevention metrics
+
+**Implementation:**
+```python
+import genai_otel
+
+# Configure guardrails
+genai_otel.instrument(
+    enable_prompt_injection_detection=True,
+    enable_restricted_topics=True,
+    enable_sensitive_info_detection=True,
+
+    # Custom configuration
+    restricted_topics=["medical_advice", "legal_advice", "financial_advice"],
+    pii_detection_mode="block",  # or "redact", "warn"
+
+    # Callbacks for custom handling
+    on_guardrail_violation=my_violation_handler
+)
+```
+
+**Metrics Added:**
+- `gen_ai.guardrail.prompt_injection_detected` - Injection attempts blocked
+- `gen_ai.guardrail.restricted_topic_blocked` - Restricted topic violations
+- `gen_ai.guardrail.pii_detected` - PII detection events
+- `gen_ai.guardrail.violations` - Total guardrail violations by type
+
+**Span Attributes:**
+- `gen_ai.guardrail.violation_type` - Type of violation detected
+- `gen_ai.guardrail.violation_severity` - Severity level (low, medium, high, critical)
+- `gen_ai.guardrail.blocked` - Whether request was blocked (boolean)
+- `gen_ai.eval.bias_categories` - Detected bias types (array)
+- `gen_ai.eval.toxicity_categories` - Toxicity categories (array)
+
+#### 📊 Enhanced OpenTelemetry Compliance
+
+Completing remaining items from [OTEL_SEMANTIC_GAP_ANALYSIS_AND_IMPLEMENTATION_PLAN.md](OTEL_SEMANTIC_GAP_ANALYSIS_AND_IMPLEMENTATION_PLAN.md):
+
+**Phase 4: Optional Enhancements**
+- ✅ Session & User Tracking - Track sessions and users across requests
+  ```python
+  genai_otel.instrument(
+      session_id_extractor=lambda ctx: ctx.get("session_id"),
+      user_id_extractor=lambda ctx: ctx.get("user_id")
+  )
+  ```
+
+- ✅ RAG/Embedding Attributes - Enhanced observability for retrieval-augmented generation
+  - `embedding.model_name` - Embedding model used
+  - `embedding.vector_dimensions` - Vector dimensions
+  - `retrieval.documents.{i}.document.id` - Retrieved document IDs
+  - `retrieval.documents.{i}.document.score` - Relevance scores
+  - `retrieval.documents.{i}.document.content` - Document content (truncated)
+
+- ✅ Agent Workflow Tracking - Better support for agentic workflows
+  - `agent.name` - Agent identifier
+  - `agent.iteration` - Current iteration number
+  - `agent.action` - Action taken
+  - `agent.observation` - Observation received
+
+#### 🔄 Migration Support
+
+**Backward Compatibility:**
+- All new features are opt-in via configuration
+- Existing instrumentation continues to work unchanged
+- Gradual migration path for new semantic conventions
+
+**Version Support:**
+- Python 3.9+ (evaluation features require 3.10+)
+- OpenTelemetry SDK 1.20.0+
+- Backward compatible with existing dashboards
+
+### Future Releases
+
+**v0.3.0 - Advanced Analytics**
+- Custom metric aggregations
+- Cost optimization recommendations
+- Automated performance regression detection
+- A/B testing support for prompts
+
+**v0.4.0 - Enterprise Features**
+- Multi-tenancy support
+- Role-based access control for telemetry
+- Advanced compliance reporting
+- SLA monitoring and alerting
+
+**Community Feedback**
+
+We welcome feedback on our roadmap! Please:
+- Open issues for feature requests
+- Join discussions on prioritization
+- Share your use cases and requirements
+
+See [Contributing.md](Contributing.md) for how to get involved.
 
 ## License
 Apache-2.0 license
