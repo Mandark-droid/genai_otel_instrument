@@ -89,7 +89,12 @@ Every LLM call, database query, API request, and vector search is traced with fu
 - `gen_ai.requests` - Request counts by provider/model
 - `gen_ai.client.token.usage` - Token usage (prompt/completion)
 - `gen_ai.client.operation.duration` - Request latency histogram (optimized buckets for LLM workloads)
-- `gen_ai.usage.cost` - Estimated costs in USD
+- `gen_ai.usage.cost` - Total estimated costs in USD
+- `gen_ai.usage.cost.prompt` - Prompt tokens cost (granular)
+- `gen_ai.usage.cost.completion` - Completion tokens cost (granular)
+- `gen_ai.usage.cost.reasoning` - Reasoning tokens cost (OpenAI o1 models)
+- `gen_ai.usage.cost.cache_read` - Cache read cost (Anthropic)
+- `gen_ai.usage.cost.cache_write` - Cache write cost (Anthropic)
 - `gen_ai.client.errors` - Error counts by operation and type
 - `gen_ai.gpu.*` - GPU utilization, memory, temperature (ObservableGauges)
 - `gen_ai.co2.emissions` - CO2 emissions tracking (opt-in)
@@ -114,6 +119,20 @@ Every LLM call, database query, API request, and vector search is traced with fu
 - `gen_ai.response.id` - Response ID from provider
 - `gen_ai.response.model` - Actual model used (may differ from request)
 - `gen_ai.response.finish_reasons` - Array of finish reasons
+
+**Tool/Function Calls:**
+- `llm.tools` - JSON-serialized tool definitions
+- `llm.output_messages.{choice}.message.tool_calls.{index}.tool_call.id` - Tool call ID
+- `llm.output_messages.{choice}.message.tool_calls.{index}.tool_call.function.name` - Function name
+- `llm.output_messages.{choice}.message.tool_calls.{index}.tool_call.function.arguments` - Function arguments
+
+**Cost Attributes (granular):**
+- `gen_ai.usage.cost.total` - Total cost
+- `gen_ai.usage.cost.prompt` - Prompt tokens cost
+- `gen_ai.usage.cost.completion` - Completion tokens cost
+- `gen_ai.usage.cost.reasoning` - Reasoning tokens cost (o1 models)
+- `gen_ai.usage.cost.cache_read` - Cache read cost (Anthropic)
+- `gen_ai.usage.cost.cache_write` - Cache write cost (Anthropic)
 
 **Content Events (opt-in):**
 - `gen_ai.prompt.{index}` events with role and content

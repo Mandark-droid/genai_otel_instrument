@@ -113,10 +113,20 @@ class AnthropicInstrumentor(BaseInstrumentor):
         """
         if hasattr(result, "usage") and result.usage:
             usage = result.usage
-            return {
+            usage_dict = {
                 "prompt_tokens": getattr(usage, "input_tokens", 0),
                 "completion_tokens": getattr(usage, "output_tokens", 0),
                 "total_tokens": getattr(usage, "input_tokens", 0)
                 + getattr(usage, "output_tokens", 0),
             }
+
+            # Extract cache tokens for Anthropic models (Phase 3.2)
+            # cache_read_input_tokens: Tokens that were read from cache
+            # cache_creation_input_tokens: Tokens that were written to cache
+            if hasattr(usage, "cache_read_input_tokens"):
+                usage_dict["cache_read_input_tokens"] = getattr(usage, "cache_read_input_tokens", 0)
+            if hasattr(usage, "cache_creation_input_tokens"):
+                usage_dict["cache_creation_input_tokens"] = getattr(usage, "cache_creation_input_tokens", 0)
+
+            return usage_dict
         return None

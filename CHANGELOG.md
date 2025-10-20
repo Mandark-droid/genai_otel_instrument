@@ -17,6 +17,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added event-based content capture for prompts and completions (disabled by default for security)
   - Added 8 new tests for Phase 2 enhancements (381 total tests, all passing)
 
+- **Tool/Function Call Instrumentation (Phase 3.1)**
+  - Added support for tracking tool/function calls in LLM responses (OpenAI function calling)
+  - New span attributes:
+    - `llm.tools` - JSON-serialized tool definitions from request
+    - `llm.output_messages.{choice_idx}.message.tool_calls.{tc_idx}.tool_call.id` - Tool call ID
+    - `llm.output_messages.{choice_idx}.message.tool_calls.{tc_idx}.tool_call.function.name` - Function name
+    - `llm.output_messages.{choice_idx}.message.tool_calls.{tc_idx}.tool_call.function.arguments` - Function arguments
+  - Enhanced OpenAI instrumentor to extract and record tool call information
+  - Added 2 new tests for tool call instrumentation (383 total tests)
+
+- **Granular Cost Tracking (Phase 3.2)**
+  - Added granular cost breakdown with separate tracking for:
+    - Prompt tokens cost (`gen_ai.usage.cost.prompt`)
+    - Completion tokens cost (`gen_ai.usage.cost.completion`)
+    - Reasoning tokens cost (`gen_ai.usage.cost.reasoning`) - for OpenAI o1 models
+    - Cache read cost (`gen_ai.usage.cost.cache_read`) - for Anthropic prompt caching
+    - Cache write cost (`gen_ai.usage.cost.cache_write`) - for Anthropic prompt caching
+  - Added 5 new cost-specific metrics counters
+  - Added 6 new span attributes for cost breakdown (`gen_ai.usage.cost.*`)
+  - Added `calculate_granular_cost()` method to CostCalculator
+  - Enhanced OpenAI instrumentor to extract reasoning tokens from `completion_tokens_details.reasoning_tokens`
+  - Enhanced Anthropic instrumentor to extract cache tokens (`cache_read_input_tokens`, `cache_creation_input_tokens`)
+  - Added 4 new tests for granular cost tracking (387 total tests, all passing)
+  - Cost breakdown enables detailed analysis of:
+    - OpenAI o1 models with separate reasoning token costs
+    - Anthropic prompt caching with read/write cost separation
+    - Per-request cost attribution by token type
+
 ### Changed
 
 - **BREAKING: Metric names now use OpenTelemetry semantic conventions**
