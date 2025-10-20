@@ -65,7 +65,11 @@ class CostCalculator:
         usage: Dict[str, Any],
         call_type: str,
     ) -> float:
-        """Calculate cost in USD for a request based on model, usage, and call type."""
+        """Calculate cost in USD for a request based on model, usage, and call type.
+
+        Note: For chat requests, use calculate_granular_cost() to get prompt/completion/reasoning/cache breakdown.
+        This method returns total cost for backwards compatibility.
+        """
         if not self.pricing_data:
             return 0.0
 
@@ -81,21 +85,84 @@ class CostCalculator:
         logger.warning("Unknown call type '%s' for cost calculation.", call_type)
         return 0.0
 
+    def calculate_granular_cost(
+        self,
+        model: str,
+        usage: Dict[str, Any],
+        call_type: str,
+    ) -> Dict[str, float]:
+        """Calculate granular cost breakdown for a request.
+
+        Returns a dictionary with:
+        - total: Total cost
+        - prompt: Prompt tokens cost
+        - completion: Completion tokens cost
+        - reasoning: Reasoning tokens cost (OpenAI o1 models)
+        - cache_read: Cache read cost (Anthropic)
+        - cache_write: Cache write cost (Anthropic)
+        """
+        if not self.pricing_data:
+            return {"total": 0.0, "prompt": 0.0, "completion": 0.0, "reasoning": 0.0, "cache_read": 0.0, "cache_write": 0.0}
+
+        if call_type == "chat":
+            return self._calculate_chat_cost_granular(model, usage)
+
+        # For non-chat requests, only return total cost
+        total_cost = self.calculate_cost(model, usage, call_type)
+        return {"total": total_cost, "prompt": 0.0, "completion": 0.0, "reasoning": 0.0, "cache_read": 0.0, "cache_write": 0.0}
+
     def _calculate_chat_cost(self, model: str, usage: Dict[str, int]) -> float:
         """Calculate cost for chat models."""
+        granular = self._calculate_chat_cost_granular(model, usage)
+        return granular["total"]
+
+    def _calculate_chat_cost_granular(self, model: str, usage: Dict[str, int]) -> Dict[str, float]:
+        """Calculate granular cost breakdown for chat models.
+
+        Returns:
+            Dict with keys: total, prompt, completion, reasoning, cache_read, cache_write
+        """
         model_key = self._normalize_model_name(model, "chat")
         if not model_key:
             logger.debug("Pricing not found for chat model: %s", model)
-            return 0.0
+            return {"total": 0.0, "prompt": 0.0, "completion": 0.0, "reasoning": 0.0, "cache_read": 0.0, "cache_write": 0.0}
 
         pricing = self.pricing_data["chat"][model_key]
+
+        # Standard prompt and completion tokens
         prompt_tokens = usage.get("prompt_tokens", 0)
         completion_tokens = usage.get("completion_tokens", 0)
 
         prompt_cost = (prompt_tokens / 1000) * pricing.get("promptPrice", 0.0)
         completion_cost = (completion_tokens / 1000) * pricing.get("completionPrice", 0.0)
 
-        return prompt_cost + completion_cost
+        # Reasoning tokens (OpenAI o1 models)
+        reasoning_tokens = usage.get("completion_tokens_details", {}).get("reasoning_tokens", 0)
+        reasoning_cost = 0.0
+        if reasoning_tokens > 0 and "reasoningPrice" in pricing:
+            reasoning_cost = (reasoning_tokens / 1000) * pricing.get("reasoningPrice", 0.0)
+
+        # Cache costs (Anthropic models)
+        cache_read_tokens = usage.get("cache_read_input_tokens", 0)
+        cache_write_tokens = usage.get("cache_creation_input_tokens", 0)
+        cache_read_cost = 0.0
+        cache_write_cost = 0.0
+
+        if cache_read_tokens > 0 and "cacheReadPrice" in pricing:
+            cache_read_cost = (cache_read_tokens / 1000) * pricing.get("cacheReadPrice", 0.0)
+        if cache_write_tokens > 0 and "cacheWritePrice" in pricing:
+            cache_write_cost = (cache_write_tokens / 1000) * pricing.get("cacheWritePrice", 0.0)
+
+        total_cost = prompt_cost + completion_cost + reasoning_cost + cache_read_cost + cache_write_cost
+
+        return {
+            "total": total_cost,
+            "prompt": prompt_cost,
+            "completion": completion_cost,
+            "reasoning": reasoning_cost,
+            "cache_read": cache_read_cost,
+            "cache_write": cache_write_cost,
+        }
 
     def _calculate_embedding_cost(self, model: str, usage: Dict[str, int]) -> float:
         """Calculate cost for embedding models."""
