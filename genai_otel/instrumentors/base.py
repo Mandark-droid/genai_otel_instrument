@@ -27,6 +27,40 @@ from opentelemetry.trace import Status, StatusCode
 from ..config import OTelConfig
 from ..cost_calculator import CostCalculator
 
+# Import semantic conventions
+try:
+    from openlit.semcov import SemanticConvention as SC
+except ImportError:
+    # Fallback if openlit not available
+    class SC:
+        GEN_AI_REQUESTS = "gen_ai.requests"
+        GEN_AI_CLIENT_TOKEN_USAGE = "gen_ai.client.token.usage"
+        GEN_AI_CLIENT_OPERATION_DURATION = "gen_ai.client.operation.duration"
+        GEN_AI_USAGE_COST = "gen_ai.usage.cost"
+
+
+# Import histogram bucket definitions
+try:
+    from genai_otel.metrics import _GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS
+except ImportError:
+    # Fallback buckets if import fails
+    _GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS = [
+        0.01,
+        0.02,
+        0.04,
+        0.08,
+        0.16,
+        0.32,
+        0.64,
+        1.28,
+        2.56,
+        5.12,
+        10.24,
+        20.48,
+        40.96,
+        81.92,
+    ]
+
 logger = logging.getLogger(__name__)
 # Global flag to track if shared metrics have been created
 _SHARED_METRICS_CREATED = False
@@ -77,21 +111,25 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             try:
                 meter = metrics.get_meter(__name__)
 
-                # Create shared metrics once
+                # Create shared metrics once using semantic conventions
                 cls._shared_request_counter = meter.create_counter(
-                    "genai.requests", description="Number of LLM requests"
+                    SC.GEN_AI_REQUESTS, description="Number of GenAI requests"
                 )
                 cls._shared_token_counter = meter.create_counter(
-                    "genai.tokens", description="Number of tokens processed"
+                    SC.GEN_AI_CLIENT_TOKEN_USAGE, description="Token usage for GenAI operations"
                 )
+                # Note: Histogram buckets should be configured via Views in MeterProvider
+                # The advisory parameter is provided as a hint but Views take precedence
                 cls._shared_latency_histogram = meter.create_histogram(
-                    "genai.latency", description="Request latency in seconds", unit="s"
+                    SC.GEN_AI_CLIENT_OPERATION_DURATION,
+                    description="GenAI client operation duration",
+                    unit="s",
                 )
                 cls._shared_cost_counter = meter.create_counter(
-                    "genai.cost", description="Estimated cost in USD", unit="USD"
+                    SC.GEN_AI_USAGE_COST, description="Cost of GenAI operations", unit="USD"
                 )
                 cls._shared_error_counter = meter.create_counter(
-                    "genai.errors", description="Number of errors"
+                    "gen_ai.client.errors", description="Number of GenAI client errors"
                 )
 
                 _SHARED_METRICS_CREATED = True
@@ -157,7 +195,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
                         # Record metrics based on the result
                         try:
-                            self._record_result_metrics(span, result, start_time)
+                            self._record_result_metrics(span, result, start_time, kwargs)
                         except Exception as e:
                             logger.warning(
                                 "Failed to record metrics for span '%s': %s", span_name, e
@@ -188,8 +226,15 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
         return wrapper
 
-    def _record_result_metrics(self, span, result, start_time: float):
-        """Record metrics derived from the function result and execution time."""
+    def _record_result_metrics(self, span, result, start_time: float, request_kwargs: dict = None):
+        """Record metrics derived from the function result and execution time.
+
+        Args:
+            span: The OpenTelemetry span to record metrics on.
+            result: The result from the wrapped function.
+            start_time: The time when the function started executing.
+            request_kwargs: The original request kwargs (for content capture).
+        """
         # Record latency
         try:
             duration = time.time() - start_time
@@ -197,6 +242,35 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 self.latency_histogram.record(duration, {"operation": span.name})
         except Exception as e:
             logger.warning("Failed to record latency for span '%s': %s", span.name, e)
+
+        # Extract and set response attributes if available
+        try:
+            if hasattr(self, "_extract_response_attributes"):
+                response_attrs = self._extract_response_attributes(result)
+                if response_attrs and isinstance(response_attrs, dict):
+                    for key, value in response_attrs.items():
+                        if isinstance(value, (str, int, float, bool)):
+                            span.set_attribute(key, value)
+                        elif isinstance(value, list):
+                            # For arrays like finish_reasons
+                            span.set_attribute(key, value)
+                        else:
+                            span.set_attribute(key, str(value))
+        except Exception as e:
+            logger.warning(
+                "Failed to extract response attributes for span '%s': %s", span.name, e
+            )
+
+        # Add content events if content capture is enabled
+        try:
+            if (
+                hasattr(self, "_add_content_events")
+                and self.config
+                and self.config.enable_content_capture
+            ):
+                self._add_content_events(span, result, request_kwargs or {})
+        except Exception as e:
+            logger.warning("Failed to add content events for span '%s': %s", span.name, e)
 
         # Extract and record token usage and cost
         try:
@@ -207,6 +281,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 total_tokens = usage.get("total_tokens", 0)
 
                 # Record token counts if available and positive
+                # Support dual emission based on OTEL_SEMCONV_STABILITY_OPT_IN
+                emit_old_attrs = (
+                    self.config
+                    and self.config.semconv_stability_opt_in
+                    and "dup" in self.config.semconv_stability_opt_in
+                )
+
                 if (
                     self.token_counter
                     and isinstance(prompt_tokens, (int, float))
@@ -215,7 +296,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     self.token_counter.add(
                         prompt_tokens, {"token_type": "prompt", "operation": span.name}
                     )
+                    # New semantic convention
                     span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
+                    # Old semantic convention (if dual emission enabled)
+                    if emit_old_attrs:
+                        span.set_attribute("gen_ai.usage.input_tokens", int(prompt_tokens))
 
                 if (
                     self.token_counter
@@ -225,7 +310,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     self.token_counter.add(
                         completion_tokens, {"token_type": "completion", "operation": span.name}
                     )
+                    # New semantic convention
                     span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
+                    # Old semantic convention (if dual emission enabled)
+                    if emit_old_attrs:
+                        span.set_attribute("gen_ai.usage.output_tokens", int(completion_tokens))
 
                 if isinstance(total_tokens, (int, float)) and total_tokens > 0:
                     span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))
