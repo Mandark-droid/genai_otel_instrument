@@ -20,6 +20,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added warning filters in `pyproject.toml` for pytest suppression
   - Clean output with zero warnings in both tests and production use
 
+- **MistralAI Instrumentor Trace Collection**
+  - **BREAKING**: Complete rewrite to support Mistral SDK v1.0+ properly
+  - Fixed traces not being collected (was only collecting metrics)
+  - Changed from class-level patching to instance-level instrumentation (Anthropic pattern)
+  - Now wraps `Mistral.__init__` to instrument each client instance
+  - Properly instruments: `client.chat.complete()`, `client.chat.stream()`, `client.embeddings.create()`
+  - Tests: Simplified to 5 essential tests
+  - Verified working with live API calls - traces now collected correctly
+
+- **HuggingFace Instrumentor Trace Collection**
+  - Fixed traces not being collected (was only collecting metrics)
+  - Fixed incorrect tracer reference (`config.tracer` → `self.tracer`)
+  - Properly initialize `self.config` in `instrument()` method
+  - Updated to use `tracer.start_span()` instead of deprecated `start_as_current_span()`
+  - Added proper span ending with `span.end()`
+  - Verified working - traces now collected correctly
+
 ### Added
 
 - **Granular Cost Tracking Tests (Phase 3.2 Coverage)**
