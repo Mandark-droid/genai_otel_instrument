@@ -126,7 +126,9 @@ class AnthropicInstrumentor(BaseInstrumentor):
             if hasattr(usage, "cache_read_input_tokens"):
                 usage_dict["cache_read_input_tokens"] = getattr(usage, "cache_read_input_tokens", 0)
             if hasattr(usage, "cache_creation_input_tokens"):
-                usage_dict["cache_creation_input_tokens"] = getattr(usage, "cache_creation_input_tokens", 0)
+                usage_dict["cache_creation_input_tokens"] = getattr(
+                    usage, "cache_creation_input_tokens", 0
+                )
 
             return usage_dict
         return None

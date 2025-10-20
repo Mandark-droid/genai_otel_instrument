@@ -114,8 +114,7 @@ class OTelConfig:
     # Enable content capture as span events
     # WARNING: May capture sensitive data. Use with caution.
     enable_content_capture: bool = field(
-        default_factory=lambda: os.getenv("GENAI_ENABLE_CONTENT_CAPTURE", "false").lower()
-        == "true"
+        default_factory=lambda: os.getenv("GENAI_ENABLE_CONTENT_CAPTURE", "false").lower() == "true"
     )
 
 

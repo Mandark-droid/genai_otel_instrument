@@ -183,7 +183,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
         # Finish reasons
         if hasattr(result, "choices") and result.choices:
             finish_reasons = [
-                choice.finish_reason for choice in result.choices if hasattr(choice, "finish_reason")
+                choice.finish_reason
+                for choice in result.choices
+                if hasattr(choice, "finish_reason")
             ]
             if finish_reasons:
                 attrs["gen_ai.response.finish_reasons"] = finish_reasons
