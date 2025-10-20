@@ -66,6 +66,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixes CO2 metrics not appearing for short-running scripts
   - GPU metrics and CO2 emissions now collected more frequently
 
+- **Streaming Metrics for TTFT and TBT (Phase 3.4)**
+  - Added streaming response detection and automatic metrics collection
+  - New streaming metrics with optimized histogram buckets:
+    - `gen_ai.server.ttft` - Time to First Token histogram (1ms to 10s buckets)
+    - `gen_ai.server.tbt` - Time Between Tokens histogram (10ms to 2.5s buckets)
+  - New span attribute for streaming:
+    - `gen_ai.streaming.token_count` - Total number of chunks/tokens yielded
+  - Enhanced `BaseInstrumentor` to detect `stream=True` parameter automatically
+  - Added `_wrap_streaming_response()` helper method for streaming iterator wrapping
+  - Changed span management from context manager to manual start/end for streaming support
+  - Configured Views in `auto_instrument.py` to apply streaming histogram bucket boundaries
+  - Added 2 new tests for streaming metrics (405 total tests, all passing)
+  - Streaming metrics enable analysis of:
+    - Real-time response latency (TTFT)
+    - Token generation speed consistency (TBT)
+    - Overall streaming performance for user experience optimization
+
 ### Changed
 
 - **BREAKING: Metric names now use OpenTelemetry semantic conventions**
