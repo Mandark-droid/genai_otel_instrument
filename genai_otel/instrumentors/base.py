@@ -80,6 +80,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     _shared_latency_histogram = None
     _shared_cost_counter = None
     _shared_error_counter = None
+    # Streaming metrics (Phase 3.4)
+    _shared_ttft_histogram = None
+    _shared_tbt_histogram = None
 
     def __init__(self):
         """Initializes the instrumentor with OpenTelemetry tracers, meters, and common metrics."""
@@ -98,6 +101,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         self.latency_histogram = self._shared_latency_histogram
         self.cost_counter = self._shared_cost_counter
         self.error_counter = self._shared_error_counter
+        # Streaming metrics
+        self.ttft_histogram = self._shared_ttft_histogram
+        self.tbt_histogram = self._shared_tbt_histogram
 
     @classmethod
     def _ensure_shared_metrics_created(cls):
@@ -136,16 +142,34 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     "gen_ai.usage.cost.completion", description="Completion tokens cost", unit="USD"
                 )
                 cls._shared_reasoning_cost_counter = meter.create_counter(
-                    "gen_ai.usage.cost.reasoning", description="Reasoning tokens cost (o1 models)", unit="USD"
+                    "gen_ai.usage.cost.reasoning",
+                    description="Reasoning tokens cost (o1 models)",
+                    unit="USD",
                 )
                 cls._shared_cache_read_cost_counter = meter.create_counter(
-                    "gen_ai.usage.cost.cache_read", description="Cache read cost (Anthropic)", unit="USD"
+                    "gen_ai.usage.cost.cache_read",
+                    description="Cache read cost (Anthropic)",
+                    unit="USD",
                 )
                 cls._shared_cache_write_cost_counter = meter.create_counter(
-                    "gen_ai.usage.cost.cache_write", description="Cache write cost (Anthropic)", unit="USD"
+                    "gen_ai.usage.cost.cache_write",
+                    description="Cache write cost (Anthropic)",
+                    unit="USD",
                 )
                 cls._shared_error_counter = meter.create_counter(
                     "gen_ai.client.errors", description="Number of GenAI client errors"
+                )
+                # Streaming metrics (Phase 3.4)
+                # Note: Buckets should be configured via Views in MeterProvider
+                cls._shared_ttft_histogram = meter.create_histogram(
+                    SC.GEN_AI_SERVER_TTFT,
+                    description="Time to first token in seconds",
+                    unit="s",
+                )
+                cls._shared_tbt_histogram = meter.create_histogram(
+                    SC.GEN_AI_SERVER_TBT,
+                    description="Time between tokens in seconds",
+                    unit="s",
                 )
 
                 _SHARED_METRICS_CREATED = True
@@ -164,6 +188,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 cls._shared_cache_read_cost_counter = None
                 cls._shared_cache_write_cost_counter = None
                 cls._shared_error_counter = None
+                cls._shared_ttft_histogram = None
+                cls._shared_tbt_histogram = None
 
     @abstractmethod
     def instrument(self, config: OTelConfig):
@@ -201,45 +227,56 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             "Failed to extract attributes for span '%s': %s", span_name, e
                         )
 
-                with self.tracer.start_as_current_span(
-                    span_name, attributes=initial_attributes
-                ) as span:
-                    start_time = time.time()
+                # Check if this is a streaming request before creating the span
+                is_streaming = kwargs.get("stream", False)
 
+                # Start the span (but don't use context manager for streaming to keep it open)
+                span = self.tracer.start_span(span_name, attributes=initial_attributes)
+                start_time = time.time()
+
+                try:
+                    # Call the original function
+                    result = wrapped(*args, **kwargs)
+
+                    if self.request_counter:
+                        self.request_counter.add(1, {"operation": span.name})
+
+                    # Handle streaming vs non-streaming responses (Phase 3.4)
+                    if is_streaming:
+                        # For streaming responses, wrap the iterator to capture TTFT/TBT
+                        model = kwargs.get(
+                            "model", initial_attributes.get("gen_ai.request.model", "unknown")
+                        )
+                        logger.debug(f"Detected streaming response for model: {model}")
+                        # Wrap the streaming response - span will be finalized when iteration completes
+                        return self._wrap_streaming_response(result, span, start_time, model)
+
+                    # Non-streaming: record metrics and close span normally
                     try:
-
-                        # Call the original function
-                        result = wrapped(*args, **kwargs)
-
-                        if self.request_counter:
-                            self.request_counter.add(1, {"operation": span.name})
-
-                        # Record metrics based on the result
-                        try:
-                            self._record_result_metrics(span, result, start_time, kwargs)
-                        except Exception as e:
-                            logger.warning(
-                                "Failed to record metrics for span '%s': %s", span_name, e
-                            )
-
-                        # Set span status to OK on successful execution
-                        span.set_status(Status(StatusCode.OK))
-                        return result
-
+                        self._record_result_metrics(span, result, start_time, kwargs)
                     except Exception as e:
-                        # Handle exceptions during the wrapped function execution
-                        try:
-                            if self.error_counter:
-                                self.error_counter.add(
-                                    1, {"operation": span_name, "error_type": type(e).__name__}
-                                )
-                        except Exception:
-                            pass
+                        logger.warning("Failed to record metrics for span '%s': %s", span_name, e)
 
-                        # Set span status to ERROR and record the exception
-                        span.set_status(Status(StatusCode.ERROR, str(e)))
-                        span.record_exception(e)
-                        raise
+                    # Set span status to OK on successful execution
+                    span.set_status(Status(StatusCode.OK))
+                    span.end()
+                    return result
+
+                except Exception as e:
+                    # Handle exceptions during the wrapped function execution
+                    try:
+                        if self.error_counter:
+                            self.error_counter.add(
+                                1, {"operation": span_name, "error_type": type(e).__name__}
+                            )
+                    except Exception:
+                        pass
+
+                    # Set span status to ERROR and record the exception
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
+                    span.record_exception(e)
+                    span.end()
+                    raise
 
             except Exception as e:
                 logger.error("Span creation failed for '%s': %s", span_name, e, exc_info=True)
@@ -278,9 +315,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         else:
                             span.set_attribute(key, str(value))
         except Exception as e:
-            logger.warning(
-                "Failed to extract response attributes for span '%s': %s", span.name, e
-            )
+            logger.warning("Failed to extract response attributes for span '%s': %s", span.name, e)
 
         # Add content events if content capture is enabled
         try:
@@ -350,7 +385,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
                         # Use granular cost calculation for chat requests
                         if call_type == "chat":
-                            costs = self.cost_calculator.calculate_granular_cost(model, usage, call_type)
+                            costs = self.cost_calculator.calculate_granular_cost(
+                                model, usage, call_type
+                            )
                             total_cost = costs["total"]
 
                             # Record total cost
@@ -361,24 +398,42 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
                             # Record and set attributes for granular costs
                             if costs["prompt"] > 0 and self._shared_prompt_cost_counter:
-                                self._shared_prompt_cost_counter.add(costs["prompt"], {"model": str(model)})
+                                self._shared_prompt_cost_counter.add(
+                                    costs["prompt"], {"model": str(model)}
+                                )
                                 span.set_attribute("gen_ai.usage.cost.prompt", costs["prompt"])
 
                             if costs["completion"] > 0 and self._shared_completion_cost_counter:
-                                self._shared_completion_cost_counter.add(costs["completion"], {"model": str(model)})
-                                span.set_attribute("gen_ai.usage.cost.completion", costs["completion"])
+                                self._shared_completion_cost_counter.add(
+                                    costs["completion"], {"model": str(model)}
+                                )
+                                span.set_attribute(
+                                    "gen_ai.usage.cost.completion", costs["completion"]
+                                )
 
                             if costs["reasoning"] > 0 and self._shared_reasoning_cost_counter:
-                                self._shared_reasoning_cost_counter.add(costs["reasoning"], {"model": str(model)})
-                                span.set_attribute("gen_ai.usage.cost.reasoning", costs["reasoning"])
+                                self._shared_reasoning_cost_counter.add(
+                                    costs["reasoning"], {"model": str(model)}
+                                )
+                                span.set_attribute(
+                                    "gen_ai.usage.cost.reasoning", costs["reasoning"]
+                                )
 
                             if costs["cache_read"] > 0 and self._shared_cache_read_cost_counter:
-                                self._shared_cache_read_cost_counter.add(costs["cache_read"], {"model": str(model)})
-                                span.set_attribute("gen_ai.usage.cost.cache_read", costs["cache_read"])
+                                self._shared_cache_read_cost_counter.add(
+                                    costs["cache_read"], {"model": str(model)}
+                                )
+                                span.set_attribute(
+                                    "gen_ai.usage.cost.cache_read", costs["cache_read"]
+                                )
 
                             if costs["cache_write"] > 0 and self._shared_cache_write_cost_counter:
-                                self._shared_cache_write_cost_counter.add(costs["cache_write"], {"model": str(model)})
-                                span.set_attribute("gen_ai.usage.cost.cache_write", costs["cache_write"])
+                                self._shared_cache_write_cost_counter.add(
+                                    costs["cache_write"], {"model": str(model)}
+                                )
+                                span.set_attribute(
+                                    "gen_ai.usage.cost.cache_write", costs["cache_write"]
+                                )
                         else:
                             # For non-chat requests, use simple cost calculation
                             cost = self.cost_calculator.calculate_cost(model, usage, call_type)
@@ -391,6 +446,69 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             logger.warning(
                 "Failed to extract or record usage metrics for span '%s': %s", span.name, e
             )
+
+    def _wrap_streaming_response(self, stream, span, start_time: float, model: str):
+        """Wrap a streaming response to capture TTFT and TBT metrics.
+
+        This generator wrapper yields chunks from the streaming response while
+        measuring time to first token (TTFT) and time between tokens (TBT).
+        The span is finalized when the stream completes or errors.
+
+        Args:
+            stream: The streaming response iterator
+            span: The OpenTelemetry span for this request
+            start_time: Request start time (for TTFT calculation)
+            model: Model name/identifier for metric attributes
+
+        Yields:
+            Chunks from the original stream
+        """
+        from opentelemetry.trace import Status, StatusCode
+
+        first_token = True
+        last_token_time = start_time
+        token_count = 0
+
+        try:
+            for chunk in stream:
+                current_time = time.time()
+                token_count += 1
+
+                if first_token:
+                    # Record Time to First Token
+                    ttft = current_time - start_time
+                    span.set_attribute("gen_ai.server.ttft", ttft)
+                    if self.ttft_histogram:
+                        self.ttft_histogram.record(ttft, {"model": model, "operation": span.name})
+                    logger.debug(f"TTFT for {model}: {ttft:.3f}s")
+                    first_token = False
+                else:
+                    # Record Time Between Tokens
+                    tbt = current_time - last_token_time
+                    if self.tbt_histogram:
+                        self.tbt_histogram.record(tbt, {"model": model, "operation": span.name})
+
+                last_token_time = current_time
+                yield chunk
+
+            # Stream completed successfully
+            duration = time.time() - start_time
+            if self.latency_histogram:
+                self.latency_histogram.record(duration, {"operation": span.name})
+            span.set_attribute("gen_ai.streaming.token_count", token_count)
+            span.set_status(Status(StatusCode.OK))
+            span.end()  # Close the span when streaming completes
+            logger.debug(f"Streaming completed: {token_count} chunks in {duration:.3f}s")
+
+        except Exception as e:
+            # Stream failed
+            span.set_status(Status(StatusCode.ERROR, str(e)))
+            span.record_exception(e)
+            span.end()  # Close the span even on error
+            if self.error_counter:
+                self.error_counter.add(1, {"operation": span.name, "error_type": type(e).__name__})
+            logger.warning(f"Error in streaming wrapper: {e}")
+            raise
 
     @abstractmethod
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:

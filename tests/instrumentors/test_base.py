@@ -1,5 +1,6 @@
 import threading
 import time
+import unittest.mock
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -35,6 +36,9 @@ def reset_shared_metrics():
     BaseInstrumentor._shared_cache_read_cost_counter = None
     BaseInstrumentor._shared_cache_write_cost_counter = None
     BaseInstrumentor._shared_error_counter = None
+    # Phase 3.4: Streaming metrics
+    BaseInstrumentor._shared_ttft_histogram = None
+    BaseInstrumentor._shared_tbt_histogram = None
     base._SHARED_METRICS_CREATED = False
     yield
 
@@ -51,10 +55,8 @@ def instrumentor(monkeypatch):
         mock_span = MagicMock()
         mock_span.name = "test.span"
         mock_span.attributes.get.return_value = "test_model"
-        mock_span_ctx = MagicMock()
-        mock_span_ctx.__enter__.return_value = mock_span
-        mock_span_ctx.__exit__.return_value = None
-        mock_tracer.start_as_current_span.return_value = mock_span_ctx
+        # Changed from start_as_current_span to start_span (Phase 3.4)
+        mock_tracer.start_span.return_value = mock_span
 
         # Create mocks for ALL metrics *before* instantiating ConcreteInstrumentor
         mock_request_counter = MagicMock()
@@ -67,6 +69,9 @@ def instrumentor(monkeypatch):
         mock_cache_read_cost_counter = MagicMock()
         mock_cache_write_cost_counter = MagicMock()
         mock_error_counter = MagicMock()
+        # Phase 3.4: Streaming metrics
+        mock_ttft_histogram = MagicMock()
+        mock_tbt_histogram = MagicMock()
 
         # Configure mock_get_meter to return a meter instance that provides distinct mocks for each counter
         mock_meter_instance = MagicMock()
@@ -74,7 +79,6 @@ def instrumentor(monkeypatch):
         mock_meter_instance.create_counter.side_effect = [
             mock_request_counter,
             mock_token_counter,
-            mock_latency_histogram,
             mock_cost_counter,
             mock_prompt_cost_counter,
             mock_completion_cost_counter,
@@ -83,18 +87,36 @@ def instrumentor(monkeypatch):
             mock_cache_write_cost_counter,
             mock_error_counter,
         ]
+        mock_meter_instance.create_histogram.side_effect = [
+            mock_latency_histogram,
+            mock_ttft_histogram,
+            mock_tbt_histogram,
+        ]
 
         # Patch the class-level shared metrics with mocks
         monkeypatch.setattr(BaseInstrumentor, "_shared_request_counter", mock_request_counter)
         monkeypatch.setattr(BaseInstrumentor, "_shared_token_counter", mock_token_counter)
         monkeypatch.setattr(BaseInstrumentor, "_shared_latency_histogram", mock_latency_histogram)
         monkeypatch.setattr(BaseInstrumentor, "_shared_cost_counter", mock_cost_counter)
-        monkeypatch.setattr(BaseInstrumentor, "_shared_prompt_cost_counter", mock_prompt_cost_counter)
-        monkeypatch.setattr(BaseInstrumentor, "_shared_completion_cost_counter", mock_completion_cost_counter)
-        monkeypatch.setattr(BaseInstrumentor, "_shared_reasoning_cost_counter", mock_reasoning_cost_counter)
-        monkeypatch.setattr(BaseInstrumentor, "_shared_cache_read_cost_counter", mock_cache_read_cost_counter)
-        monkeypatch.setattr(BaseInstrumentor, "_shared_cache_write_cost_counter", mock_cache_write_cost_counter)
+        monkeypatch.setattr(
+            BaseInstrumentor, "_shared_prompt_cost_counter", mock_prompt_cost_counter
+        )
+        monkeypatch.setattr(
+            BaseInstrumentor, "_shared_completion_cost_counter", mock_completion_cost_counter
+        )
+        monkeypatch.setattr(
+            BaseInstrumentor, "_shared_reasoning_cost_counter", mock_reasoning_cost_counter
+        )
+        monkeypatch.setattr(
+            BaseInstrumentor, "_shared_cache_read_cost_counter", mock_cache_read_cost_counter
+        )
+        monkeypatch.setattr(
+            BaseInstrumentor, "_shared_cache_write_cost_counter", mock_cache_write_cost_counter
+        )
         monkeypatch.setattr(BaseInstrumentor, "_shared_error_counter", mock_error_counter)
+        # Phase 3.4: Streaming metrics
+        monkeypatch.setattr(BaseInstrumentor, "_shared_ttft_histogram", mock_ttft_histogram)
+        monkeypatch.setattr(BaseInstrumentor, "_shared_tbt_histogram", mock_tbt_histogram)
 
         # Create instrumentor with cost tracking ENABLED
         config = OTelConfig()
@@ -107,7 +129,8 @@ def instrumentor(monkeypatch):
         inst.cost_calculator = MagicMock()
         inst.cost_calculator.calculate_cost.return_value = 0.01  # Positive cost
 
-        yield inst, mock_span, mock_span_ctx
+        # Phase 3.4: No longer need mock_span_ctx since we use start_span instead of start_as_current_span
+        yield inst, mock_span
 
 
 # --- Tests for _ensure_shared_metrics_created ---
@@ -153,7 +176,7 @@ def test_ensure_shared_metrics_created_failure(caplog):
 # --- Tests for create_span_wrapper ---
 def test_create_span_wrapper_creates_span(instrumentor):
     """Test that the wrapper creates a span with correct attributes."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     original_function = MagicMock(return_value={"usage": None})
     wrapped = inst.create_span_wrapper(
         span_name="test.span",
@@ -162,7 +185,8 @@ def test_create_span_wrapper_creates_span(instrumentor):
 
     result = wrapped("arg1", kwarg1="kwarg_value")
 
-    inst.tracer.start_as_current_span.assert_called_once_with(
+    # Changed from start_as_current_span to start_span (Phase 3.4)
+    inst.tracer.start_span.assert_called_once_with(
         "test.span", attributes={"test.attribute": "test_value"}
     )
     original_function.assert_called_once_with("arg1", kwarg1="kwarg_value")
@@ -171,7 +195,7 @@ def test_create_span_wrapper_creates_span(instrumentor):
 
 def test_create_span_wrapper_handles_extract_attributes_error(instrumentor, caplog):
     """Test that the wrapper handles errors in extract_attributes."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     original_function = MagicMock(return_value={"usage": None})
     wrapped = inst.create_span_wrapper(
         span_name="test.span", extract_attributes=lambda *args, **kwargs: 1 / 0  # Force error
@@ -179,14 +203,15 @@ def test_create_span_wrapper_handles_extract_attributes_error(instrumentor, capl
 
     result = wrapped("arg1", kwarg1="kwarg_value")
 
-    inst.tracer.start_as_current_span.assert_called_once_with("test.span", attributes={})
+    # Changed from start_as_current_span to start_span (Phase 3.4)
+    inst.tracer.start_span.assert_called_once_with("test.span", attributes={})
     assert "Failed to extract attributes" in caplog.text
     assert result == {"usage": None}
 
 
 def test_create_span_wrapper_handles_function_error(instrumentor):
     """Test that the wrapper handles errors in the wrapped function."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     original_function = MagicMock(side_effect=ValueError("Test error"))
     wrapped = inst.create_span_wrapper("test.span")(original_function)
 
@@ -199,7 +224,7 @@ def test_create_span_wrapper_handles_function_error(instrumentor):
 
 def test_create_span_wrapper_records_metrics(instrumentor):
     """Test that the wrapper records metrics for successful execution."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     mock_span.attributes.get.return_value = "test_model"
     original_function = MagicMock(
         return_value={"usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}}
@@ -222,7 +247,7 @@ def test_create_span_wrapper_records_metrics(instrumentor):
 
 def test_create_span_wrapper_records_metrics_without_usage(instrumentor):
     """Test that the wrapper handles missing usage data."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     original_function = MagicMock(return_value={"usage": None})
     wrapped = inst.create_span_wrapper("test.span")(original_function)
 
@@ -237,7 +262,7 @@ def test_create_span_wrapper_records_metrics_without_usage(instrumentor):
 
 def test_create_span_wrapper_with_cost_tracking_disabled(instrumentor):
     """Test that cost tracking is skipped when disabled."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     inst.config.enable_cost_tracking = False
     original_function = MagicMock(
         return_value={"usage": {"prompt_tokens": 10, "completion_tokens": 20}}
@@ -260,7 +285,7 @@ def test_create_span_wrapper_with_cost_tracking_disabled(instrumentor):
 # --- Tests for _record_result_metrics ---
 def test_record_result_metrics_success(instrumentor):
     """Test that metrics are recorded correctly for a successful result."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     mock_span.attributes.get.return_value = "test_model"
     result = {"usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}}
 
@@ -279,7 +304,7 @@ def test_record_result_metrics_success(instrumentor):
 
 def test_record_result_metrics_with_errors(instrumentor, caplog):
     """Test that errors in metric recording are logged but not raised."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     result = {"usage": {"prompt_tokens": 10, "completion_tokens": 20}}
 
     inst.token_counter.add.side_effect = ValueError("Mock error")
@@ -291,7 +316,7 @@ def test_record_result_metrics_with_errors(instrumentor, caplog):
 # --- Tests for instrumentation disabled ---
 def test_create_span_wrapper_with_instrumentation_disabled(instrumentor):
     """Test that the wrapper bypasses instrumentation when disabled."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     inst._instrumented = False
     original_function = MagicMock(return_value={"usage": None})
     wrapped = inst.create_span_wrapper("test.span")(original_function)
@@ -305,7 +330,7 @@ def test_create_span_wrapper_with_instrumentation_disabled(instrumentor):
 
 def test_extract_attributes_with_non_primitive_value(instrumentor):
     """Test that non-primitive attribute values are converted to strings."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     original_function = MagicMock(return_value={"usage": None})
 
     # Create an extract_attributes function that returns a non-primitive value
@@ -323,8 +348,8 @@ def test_extract_attributes_with_non_primitive_value(instrumentor):
 
     result = wrapped()
 
-    # Verify that start_as_current_span was called with attributes including stringified non-primitives
-    call_args = inst.tracer.start_as_current_span.call_args
+    # Verify that start_span was called with attributes including stringified non-primitives (Phase 3.4)
+    call_args = inst.tracer.start_span.call_args
     attributes = call_args[1]["attributes"]
     assert attributes["string_attr"] == "test"
     assert attributes["int_attr"] == 42
@@ -334,7 +359,7 @@ def test_extract_attributes_with_non_primitive_value(instrumentor):
 
 def test_record_result_metrics_exception_in_wrapper(instrumentor, caplog):
     """Test that exceptions in _record_result_metrics call are caught and logged."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     original_function = MagicMock(return_value={"usage": {"prompt_tokens": 10}})
 
     # Make _record_result_metrics raise an exception
@@ -349,7 +374,7 @@ def test_record_result_metrics_exception_in_wrapper(instrumentor, caplog):
 
 def test_error_counter_exception_handling(instrumentor):
     """Test that exceptions in error_counter.add are silently caught."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     original_function = MagicMock(side_effect=ValueError("Test error"))
 
     # Make error_counter.add raise an exception
@@ -367,7 +392,7 @@ def test_error_counter_exception_handling(instrumentor):
 
 def test_latency_histogram_exception_handling(instrumentor, caplog):
     """Test that exceptions in latency_histogram.record are caught and logged."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     original_function = MagicMock(return_value={"usage": None})
 
     # Make latency_histogram.record raise an exception
@@ -383,7 +408,7 @@ def test_latency_histogram_exception_handling(instrumentor, caplog):
 
 def test_cost_calculation_exception_handling(instrumentor, caplog):
     """Test that exceptions in cost calculation are caught and logged."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     mock_span.attributes.get.return_value = "test_model"
     original_function = MagicMock(
         return_value={"usage": {"prompt_tokens": 10, "completion_tokens": 20}}
@@ -402,7 +427,7 @@ def test_cost_calculation_exception_handling(instrumentor, caplog):
 
 def test_dual_token_attribute_emission(instrumentor):
     """Test that both old and new token attributes are emitted when semconv_stability_opt_in=gen_ai/dup."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     # Enable dual emission
     inst.config.semconv_stability_opt_in = "gen_ai/dup"
 
@@ -425,7 +450,7 @@ def test_dual_token_attribute_emission(instrumentor):
 
 def test_single_token_attribute_emission(instrumentor):
     """Test that only new token attributes are emitted when semconv_stability_opt_in=gen_ai."""
-    inst, mock_span, mock_span_ctx = instrumentor
+    inst, mock_span = instrumentor
     # Default is gen_ai (new conventions only)
     inst.config.semconv_stability_opt_in = "gen_ai"
 
@@ -444,3 +469,67 @@ def test_single_token_attribute_emission(instrumentor):
     # Old semantic conventions should NOT be set
     assert "gen_ai.usage.input_tokens" not in attributes_set
     assert "gen_ai.usage.output_tokens" not in attributes_set
+
+
+# --- Tests for Streaming Metrics (Phase 3.4) ---
+def test_streaming_response_wrapper(instrumentor):
+    """Test that streaming responses are properly wrapped with TTFT/TBT metrics."""
+    inst, mock_span = instrumentor
+
+    # Create a mock streaming response
+    def mock_stream_generator():
+        yield "chunk1"
+        yield "chunk2"
+        yield "chunk3"
+
+    # Wrap the stream
+    wrapped_stream = inst._wrap_streaming_response(
+        stream=mock_stream_generator(), span=mock_span, start_time=1000.0, model="gpt-4"
+    )
+
+    # Consume the stream
+    chunks = list(wrapped_stream)
+
+    # Verify chunks were yielded
+    assert chunks == ["chunk1", "chunk2", "chunk3"]
+
+    # Verify TTFT was recorded
+    mock_span.set_attribute.assert_any_call("gen_ai.server.ttft", unittest.mock.ANY)
+
+    # Verify streaming token count was set
+    mock_span.set_attribute.assert_any_call("gen_ai.streaming.token_count", 3)
+
+    # Verify span was ended
+    mock_span.end.assert_called_once()
+
+    # Verify span status was set to OK
+    assert mock_span.set_status.called
+
+
+def test_streaming_detection_in_wrapper(instrumentor):
+    """Test that create_span_wrapper detects streaming and wraps response."""
+    inst, mock_span = instrumentor
+
+    # Create a mock function that returns an iterator
+    def mock_streaming_function(*args, **kwargs):
+        for i in range(3):
+            yield f"chunk{i}"
+
+    # Wrap the function with stream=True in kwargs
+    wrapped = inst.create_span_wrapper(
+        span_name="test.streaming",
+        extract_attributes=lambda *args, **kwargs: {"gen_ai.request.model": "gpt-4"},
+    )(mock_streaming_function)
+
+    # Call with stream=True
+    result = wrapped(stream=True, model="gpt-4")
+
+    # Result should be a generator (the wrapped stream)
+    assert hasattr(result, "__iter__")
+
+    # Consume the generator
+    chunks = list(result)
+    assert len(chunks) == 3
+
+    # Verify span was created
+    inst.tracer.start_span.assert_called_once()

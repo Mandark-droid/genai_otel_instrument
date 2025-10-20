@@ -221,7 +221,9 @@ class TestCostCalculator(unittest.TestCase):
         expected_completion = (2000 / 1000) * 0.015
         expected_cache_read = (500 / 1000) * 0.0003
         expected_cache_write = (200 / 1000) * 0.00375
-        expected_total = expected_prompt + expected_completion + expected_cache_read + expected_cache_write
+        expected_total = (
+            expected_prompt + expected_completion + expected_cache_read + expected_cache_write
+        )
 
         self.assertAlmostEqual(costs["prompt"], expected_prompt)
         self.assertAlmostEqual(costs["completion"], expected_completion)
@@ -233,7 +235,9 @@ class TestCostCalculator(unittest.TestCase):
     def test_calculate_granular_cost_non_chat(self):
         """Test granular cost calculation for non-chat requests returns zeros for granular costs"""
         usage = {"prompt_tokens": 5000}
-        costs = self.calculator.calculate_granular_cost("text-embedding-ada-002", usage, "embedding")
+        costs = self.calculator.calculate_granular_cost(
+            "text-embedding-ada-002", usage, "embedding"
+        )
 
         # For non-chat, only total should be set
         self.assertGreater(costs["total"], 0)

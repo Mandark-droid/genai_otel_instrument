@@ -156,7 +156,9 @@ class TestAutoInstrumentation:
                         assert call_kwargs["resource"] == mock_resource_instance
                         assert call_kwargs["metric_readers"] == [mock_metric_reader_instance]
                         assert "views" in call_kwargs
-                        assert len(call_kwargs["views"]) == 4  # GenAI duration view + 3 MCP views
+                        assert (
+                            len(call_kwargs["views"]) == 6
+                        )  # GenAI duration + 3 MCP + 2 streaming (Phase 3.4)
                         mock_metrics.set_meter_provider.assert_called_once_with(
                             mock_meter_provider_instance
                         )
@@ -188,7 +190,9 @@ class TestAutoInstrumentation:
                         mock_logger.info.assert_any_call(
                             "MCP tools instrumentation enabled and set up."
                         )
-                        mock_logger.info.assert_any_call("GPU metrics collection started (interval: 5s).")
+                        mock_logger.info.assert_any_call(
+                            "GPU metrics collection started (interval: 5s)."
+                        )
                         mock_logger.info.assert_any_call("Auto-instrumentation setup complete")
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
@@ -398,7 +402,9 @@ class TestAutoInstrumentation:
                         mock_meter_provider_instance.get_meter.assert_called_once_with("genai.gpu")
                         mock_gpu_collector.assert_called_once_with(mock_meter, config, interval=5)
                         mock_gpu_instance.start.assert_called_once()
-                        mock_logger.info.assert_any_call("GPU metrics collection started (interval: 5s).")
+                        mock_logger.info.assert_any_call(
+                            "GPU metrics collection started (interval: 5s)."
+                        )
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
     def test_setup_auto_instrumentation_llm_instrumentor_failure_no_fail_on_error(self):
