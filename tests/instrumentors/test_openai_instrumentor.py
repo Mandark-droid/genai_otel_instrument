@@ -451,6 +451,7 @@ class TestOpenAIInstrumentor(unittest.TestCase):
             self.assertIn("llm.tools", attrs)
             # Verify it's JSON-serialized
             import json
+
             parsed_tools = json.loads(attrs["llm.tools"])
             self.assertEqual(len(parsed_tools), 1)
             self.assertEqual(parsed_tools[0]["function"]["name"], "get_weather")

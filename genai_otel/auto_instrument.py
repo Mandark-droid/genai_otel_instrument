@@ -21,6 +21,8 @@ from .gpu_metrics import GPUMetricsCollector
 from .mcp_instrumentors import MCPInstrumentorManager
 from .metrics import (
     _GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS,
+    _GEN_AI_SERVER_TBT,
+    _GEN_AI_SERVER_TFTT,
     _MCP_CLIENT_OPERATION_DURATION_BUCKETS,
     _MCP_PAYLOAD_SIZE_BUCKETS,
 )
@@ -32,6 +34,8 @@ except ImportError:
     # Fallback if openlit not available
     class SC:
         GEN_AI_CLIENT_OPERATION_DURATION = "gen_ai.client.operation.duration"
+        GEN_AI_SERVER_TTFT = "gen_ai.server.ttft"
+        GEN_AI_SERVER_TBT = "gen_ai.server.tbt"
 
 
 # Import instrumentors - fix the import path based on your actual structure
@@ -233,22 +237,36 @@ def setup_auto_instrumentation(config: OTelConfig):
 
         mcp_request_size_view = View(
             instrument_name="mcp.request.size",
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_MCP_PAYLOAD_SIZE_BUCKETS
-            ),
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_MCP_PAYLOAD_SIZE_BUCKETS),
         )
 
         mcp_response_size_view = View(
             instrument_name="mcp.response.size",
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_MCP_PAYLOAD_SIZE_BUCKETS
-            ),
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_MCP_PAYLOAD_SIZE_BUCKETS),
+        )
+
+        # Create Views for streaming metrics (Phase 3.4)
+        ttft_view = View(
+            instrument_name=SC.GEN_AI_SERVER_TTFT,
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TFTT),
+        )
+
+        tbt_view = View(
+            instrument_name=SC.GEN_AI_SERVER_TBT,
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TBT),
         )
 
         meter_provider = MeterProvider(
             resource=resource,
             metric_readers=[metric_reader],
-            views=[duration_view, mcp_duration_view, mcp_request_size_view, mcp_response_size_view]
+            views=[
+                duration_view,
+                mcp_duration_view,
+                mcp_request_size_view,
+                mcp_response_size_view,
+                ttft_view,
+                tbt_view,
+            ],
         )
         metrics.set_meter_provider(meter_provider)
         logger.info(
@@ -281,22 +299,36 @@ def setup_auto_instrumentation(config: OTelConfig):
 
         mcp_request_size_view = View(
             instrument_name="mcp.request.size",
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_MCP_PAYLOAD_SIZE_BUCKETS
-            ),
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_MCP_PAYLOAD_SIZE_BUCKETS),
         )
 
         mcp_response_size_view = View(
             instrument_name="mcp.response.size",
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_MCP_PAYLOAD_SIZE_BUCKETS
-            ),
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_MCP_PAYLOAD_SIZE_BUCKETS),
+        )
+
+        # Create Views for streaming metrics (Phase 3.4)
+        ttft_view = View(
+            instrument_name=SC.GEN_AI_SERVER_TTFT,
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TFTT),
+        )
+
+        tbt_view = View(
+            instrument_name=SC.GEN_AI_SERVER_TBT,
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TBT),
         )
 
         meter_provider = MeterProvider(
             resource=resource,
             metric_readers=[metric_reader],
-            views=[duration_view, mcp_duration_view, mcp_request_size_view, mcp_response_size_view]
+            views=[
+                duration_view,
+                mcp_duration_view,
+                mcp_request_size_view,
+                mcp_response_size_view,
+                ttft_view,
+                tbt_view,
+            ],
         )
         metrics.set_meter_provider(meter_provider)
         logger.info("No OTLP endpoint configured, metrics will be exported to console.")
@@ -347,10 +379,12 @@ def setup_auto_instrumentation(config: OTelConfig):
             gpu_collector = GPUMetricsCollector(
                 meter_provider.get_meter("genai.gpu"),
                 config,
-                interval=config.gpu_collection_interval
+                interval=config.gpu_collection_interval,
             )
             gpu_collector.start()
-            logger.info(f"GPU metrics collection started (interval: {config.gpu_collection_interval}s).")
+            logger.info(
+                f"GPU metrics collection started (interval: {config.gpu_collection_interval}s)."
+            )
         except Exception as e:
             logger.error(f"Failed to start GPU metrics collection: {e}", exc_info=True)
             if config.fail_on_error:
