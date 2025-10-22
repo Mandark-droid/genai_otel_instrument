@@ -43,6 +43,7 @@ class GPUMetricsCollector:
         self.gpu_utilization_counter: Optional[ObservableCounter] = None
         self.gpu_memory_used_gauge: Optional[ObservableGauge] = None
         self.gpu_temperature_gauge: Optional[ObservableGauge] = None
+        self.gpu_power_gauge: Optional[ObservableGauge] = None
         self.config = config
         self.interval = interval  # seconds
         self.gpu_available = False
@@ -92,6 +93,12 @@ class GPUMetricsCollector:
                 callbacks=[self._observe_gpu_temperature],
                 description="GPU temperature in Celsius",
                 unit="Cel",
+            )
+            self.gpu_power_gauge = self.meter.create_observable_gauge(
+                "gen_ai.gpu.power",  # Fixed metric name
+                callbacks=[self._observe_gpu_power],
+                description="GPU power consumption in Watts",
+                unit="W",
             )
         except Exception as e:
             logger.error("Failed to create GPU metrics instruments: %s", e, exc_info=True)
@@ -184,6 +191,33 @@ class GPUMetricsCollector:
             pynvml.nvmlShutdown()
         except Exception as e:
             logger.error("Error observing GPU temperature: %s", e)
+
+    def _observe_gpu_power(self, options):
+        """Observable callback for GPU power consumption."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    # Power usage is returned in milliwatts, convert to watts
+                    power_mw = pynvml.nvmlDeviceGetPowerUsage(handle)
+                    power_w = power_mw / 1000.0
+                    yield Observation(
+                        value=power_w, attributes={"gpu_id": str(i), "gpu_name": device_name}
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get GPU power for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing GPU power: %s", e)
 
     def start(self):
         """Starts the GPU metrics collection.
