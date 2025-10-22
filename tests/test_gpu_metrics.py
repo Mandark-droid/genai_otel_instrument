@@ -31,11 +31,8 @@ def mock_meter():
     """Fixture for a mock OpenTelemetry Meter."""
     meter = Mock()
     meter.create_counter.return_value = Mock()  # Only CO2 counter now
-    meter.create_observable_gauge.side_effect = [
-        Mock(),
-        Mock(),
-        Mock(),
-    ]  # Return distinct mocks for utilization, memory, and temperature
+    # Return a new Mock() each time create_observable_gauge is called
+    meter.create_observable_gauge.return_value = Mock()
     return meter
 
 
@@ -108,7 +105,7 @@ class TestGPUMetricsCollector:
             unit="gCO2e",
         )
         # GPU gauges are created even if no GPUs available
-        assert mock_meter.create_observable_gauge.call_count == 3
+        assert mock_meter.create_observable_gauge.call_count == 4
 
     @patch("genai_otel.gpu_metrics.logger")
     def test_init_no_gpus(self, mock_logger, mock_meter, mock_otel_config, mock_pynvml_no_gpu):
@@ -137,10 +134,10 @@ class TestGPUMetricsCollector:
             description="Cumulative CO2 equivalent emissions in grams",
             unit="gCO2e",
         )
-        # All three metrics are now ObservableGauges
+        # All four metrics are now ObservableGauges
         assert (
-            mock_meter.create_observable_gauge.call_count == 3
-        )  # utilization, memory, temperature
+            mock_meter.create_observable_gauge.call_count == 4
+        )  # utilization, memory, temperature, power
 
     @patch("genai_otel.gpu_metrics.logger")
     def test_init_metric_instrument_creation_fails(
@@ -239,6 +236,30 @@ class TestGPUMetricsCollector:
             0,
             mock_pynvml_gpu_available.nvmlDeviceGetMemoryInfo.side_effect,
         )
+
+    @patch("genai_otel.gpu_metrics.logger")
+    def test_observe_gpu_power_successful(
+        self, mock_logger, mock_meter, mock_otel_config, mock_pynvml_gpu_available
+    ):
+        from opentelemetry.metrics import Observation
+
+        import genai_otel.gpu_metrics
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
+        # Reset mocks from init
+        mock_pynvml_gpu_available.nvmlInit.reset_mock()
+        mock_pynvml_gpu_available.nvmlDeviceGetCount.reset_mock()
+
+        observations = list(collector._observe_gpu_power(None))
+
+        assert len(observations) == 1
+        assert isinstance(observations[0], Observation)
+        # Power usage is 150000 mW = 150 W
+        assert observations[0].value == 150.0
+        assert observations[0].attributes == {"gpu_id": "0", "gpu_name": "NVIDIA GeForce RTX 3080"}
+
+        mock_pynvml_gpu_available.nvmlInit.assert_called_once()
+        mock_pynvml_gpu_available.nvmlShutdown.assert_called_once()
 
     @patch("genai_otel.gpu_metrics.threading.Thread")
     @patch("genai_otel.gpu_metrics.logger")
