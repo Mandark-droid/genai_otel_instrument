@@ -57,15 +57,17 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
         with patch.dict("sys.modules", {"transformers": mock_transformers}):
             instrumentor = HuggingFaceInstrumentor()
             config = MagicMock()
-            config.tracer = MagicMock()
-            config.request_counter = MagicMock()
 
             # Create a mock span context manager
             mock_span = MagicMock()
             mock_span_context = MagicMock()
             mock_span_context.__enter__ = MagicMock(return_value=mock_span)
             mock_span_context.__exit__ = MagicMock(return_value=None)
-            config.tracer.start_as_current_span.return_value = mock_span_context
+
+            # Mock the instrumentor's tracer and request_counter (set in BaseInstrumentor.__init__)
+            instrumentor.tracer = MagicMock()
+            instrumentor.tracer.start_span.return_value = mock_span_context
+            instrumentor.request_counter = MagicMock()
 
             # Act - run instrumentation
             instrumentor.instrument(config)
@@ -89,7 +91,7 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
             self.assertEqual(result, "generated text")
 
             # Verify tracing was called
-            config.tracer.start_as_current_span.assert_called_once_with("huggingface.pipeline")
+            instrumentor.tracer.start_span.assert_called_once_with("huggingface.pipeline")
 
             # Verify span attributes were set
             mock_span.set_attribute.assert_has_calls(
@@ -101,7 +103,7 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
             )
 
             # Verify metrics were recorded
-            config.request_counter.add.assert_called_once_with(
+            instrumentor.request_counter.add.assert_called_once_with(
                 1, {"model": "gpt2", "provider": "huggingface"}
             )
 
@@ -125,15 +127,17 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
         with patch.dict("sys.modules", {"transformers": mock_transformers}):
             instrumentor = HuggingFaceInstrumentor()
             config = MagicMock()
-            config.tracer = MagicMock()
-            config.request_counter = MagicMock()
 
             # Create a mock span context manager
             mock_span = MagicMock()
             mock_span_context = MagicMock()
             mock_span_context.__enter__ = MagicMock(return_value=mock_span)
             mock_span_context.__exit__ = MagicMock(return_value=None)
-            config.tracer.start_as_current_span.return_value = mock_span_context
+
+            # Mock the instrumentor's tracer and request_counter (set in BaseInstrumentor.__init__)
+            instrumentor.tracer = MagicMock()
+            instrumentor.tracer.start_span.return_value = mock_span_context
+            instrumentor.request_counter = MagicMock()
 
             # Act
             instrumentor.instrument(config)
@@ -155,7 +159,7 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
             )
 
             # Verify request counter
-            config.request_counter.add.assert_called_once_with(
+            instrumentor.request_counter.add.assert_called_once_with(
                 1, {"model": "unknown", "provider": "huggingface"}
             )
 
