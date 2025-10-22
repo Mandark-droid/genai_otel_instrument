@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.1] - 2025-01-22
+## [0.1.2.dev0] - 2025-01-22
 
 ### Added
 
@@ -272,6 +272,6 @@ This is the first public release of genai-otel-instrument, a comprehensive OpenT
 - Fixed tests for base/redis and auto instrument (a701603)
 - Updated `test_auto_instrument.py` assertions to match new OTLP exporter configuration (exporters now read endpoint from environment variables instead of direct parameters)
 
-[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v0.1.0...v0.1.1
+[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v0.1.2.dev0...HEAD
+[0.1.2.dev0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v0.1.0...v0.1.2.dev0
 [0.1.0]: https://github.com/Mandark-droid/genai_otel_instrument/releases/tag/v0.1.0
