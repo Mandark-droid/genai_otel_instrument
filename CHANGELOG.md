@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **GPU Power Consumption Metric**
+  - Added `gen_ai.gpu.power` observable gauge metric to track real-time GPU power consumption
+  - Metric reports power usage in Watts with `gpu_id` and `gpu_name` attributes
+  - Automatically collected alongside existing GPU metrics (utilization, memory, temperature)
+  - Implementation in `genai_otel/gpu_metrics.py:97-102, 195-220`
+  - Added test coverage in `tests/test_gpu_metrics.py:244-266`
+  - Completes the GPU metrics suite with 5 total metrics: utilization, memory, temperature, power, and CO2 emissions
+
+### Fixed
+
+- **Test Fixes for HuggingFace and MistralAI Instrumentors**
+  - Fixed HuggingFace instrumentor tests (2 failures) - corrected tracer mocking to use `instrumentor.tracer.start_span()` instead of `config.tracer.start_as_current_span()`
+  - Fixed HuggingFace instrumentor tests - added `instrumentor.request_counter` mock for proper metrics assertion
+  - Fixed MistralAI instrumentor test - corrected wrapt module mocking by adding to `sys.modules` instead of invalid module-level patch
+  - All 395 tests now passing with zero failures
+  - Tests modified: `tests/instrumentors/test_huggingface_instrumentor.py`, `tests/instrumentors/test_mistralai_instrumentor.py`
+
 ## [0.1.0] - 2025-01-20
 
 **First Beta Release** 🎉

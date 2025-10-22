@@ -28,7 +28,7 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 🤖 **15+ LLM Providers** - OpenAI, Anthropic, Google, AWS, Azure, and more
 🔧 **MCP Tool Support** - Auto-instrument databases, APIs, caches, vector DBs
 💰 **Cost Tracking** - Automatic cost calculation per request
-🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature
+🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature, power
 📊 **Complete Observability** - Traces, metrics, and rich span attributes
 ➕ **Service Instance ID & Environment** - Identify your services and environments
 ⏱️ **Configurable Exporter Timeout** - Set timeout for OTLP exporter
@@ -108,7 +108,7 @@ Every LLM call, database query, API request, and vector search is traced with fu
 ### Metrics
 
 **GenAI Metrics:**
-- `gen_ai.requests` - Request counts by provider/model
+- `gen_ai.requests` - Request counts by provider and model
 - `gen_ai.client.token.usage` - Token usage (prompt/completion)
 - `gen_ai.client.operation.duration` - Request latency histogram (optimized buckets for LLM workloads)
 - `gen_ai.usage.cost` - Total estimated costs in USD
@@ -118,7 +118,7 @@ Every LLM call, database query, API request, and vector search is traced with fu
 - `gen_ai.usage.cost.cache_read` - Cache read cost (Anthropic)
 - `gen_ai.usage.cost.cache_write` - Cache write cost (Anthropic)
 - `gen_ai.client.errors` - Error counts by operation and type
-- `gen_ai.gpu.*` - GPU utilization, memory, temperature (ObservableGauges)
+- `gen_ai.gpu.*` - GPU utilization, memory, temperature, power (ObservableGauges)
 - `gen_ai.co2.emissions` - CO2 emissions tracking (opt-in)
 - `gen_ai.server.ttft` - Time to First Token for streaming responses (histogram, 1ms-10s buckets)
 - `gen_ai.server.tbt` - Time Between Tokens for streaming responses (histogram, 10ms-2.5s buckets)
