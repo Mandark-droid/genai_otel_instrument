@@ -10,16 +10,25 @@ from genai_otel.instrumentors.mistralai_instrumentor import MistralAIInstrumento
 class TestMistralAIInstrumentor(unittest.TestCase):
     """Tests for MistralAIInstrumentor (v1.0+ SDK)"""
 
-    @patch("genai_otel.instrumentors.mistralai_instrumentor.wrapt")
     @patch("genai_otel.instrumentors.mistralai_instrumentor.logger")
-    def test_instrument_with_mistralai_available(self, mock_logger, mock_wrapt):
+    def test_instrument_with_mistralai_available(self, mock_logger):
         """Test that instrument works when MistralAI v1.0+ is available."""
         # Create mock mistralai module for v1.0+
         mock_mistralai = MagicMock()
-        mock_mistral_class = MagicMock()
-        mock_mistralai.Mistral = mock_mistral_class
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai}):
+        # Create a real class so we can access __init__ properly
+        class MockMistral:
+            def __init__(self):
+                pass
+
+        mock_mistralai.Mistral = MockMistral
+
+        # Mock wrapt module since it's imported inside instrument()
+        mock_wrapt = MagicMock()
+        # Make FunctionWrapper return a callable that can replace __init__
+        mock_wrapt.FunctionWrapper.return_value = MagicMock()
+
+        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "wrapt": mock_wrapt}):
             instrumentor = MistralAIInstrumentor()
             config = OTelConfig()
 
