@@ -1,7 +1,7 @@
 """Tests for MistralAI instrumentor (v1.0+ SDK)"""
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
 
 from genai_otel.config import OTelConfig
 from genai_otel.instrumentors.mistralai_instrumentor import MistralAIInstrumentor
@@ -16,19 +16,35 @@ class TestMistralAIInstrumentor(unittest.TestCase):
         # Create mock mistralai module for v1.0+
         mock_mistralai = MagicMock()
 
-        # Create a real class so we can access __init__ properly
+        # Create a real class so we can check for instrumentation flag
         class MockMistral:
-            def __init__(self):
-                pass
+            pass
 
         mock_mistralai.Mistral = MockMistral
 
+        # Mock Chat and Embeddings classes
+        mock_chat = MagicMock()
+        mock_chat.complete = MagicMock()
+        mock_chat.stream = MagicMock()
+
+        mock_embeddings = MagicMock()
+        mock_embeddings.create = MagicMock()
+
+        mock_mistralai.chat.Chat = mock_chat
+        mock_mistralai.embeddings.Embeddings = mock_embeddings
+
         # Mock wrapt module since it's imported inside instrument()
         mock_wrapt = MagicMock()
-        # Make FunctionWrapper return a callable that can replace __init__
-        mock_wrapt.FunctionWrapper.return_value = MagicMock()
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "wrapt": mock_wrapt}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "mistralai": mock_mistralai,
+                "mistralai.chat": mock_mistralai.chat,
+                "mistralai.embeddings": mock_mistralai.embeddings,
+                "wrapt": mock_wrapt,
+            },
+        ):
             instrumentor = MistralAIInstrumentor()
             config = OTelConfig()
 
@@ -55,17 +71,25 @@ class TestMistralAIInstrumentor(unittest.TestCase):
     def test_instrument_with_exception(self, mock_logger):
         """Test that instrument handles exceptions during setup."""
         mock_mistralai = MagicMock()
-        # Make _instrument_chat_complete raise an exception
-        mock_mistralai.Mistral = MagicMock()
 
-        with patch.dict("sys.modules", {"mistralai": mock_mistralai}):
+        class MockMistral:
+            pass
+
+        # Make Mistral access raise an exception
+        mock_mistralai.Mistral = MockMistral
+
+        mock_wrapt = MagicMock()
+
+        with patch.dict("sys.modules", {"mistralai": mock_mistralai, "wrapt": mock_wrapt}):
             instrumentor = MistralAIInstrumentor()
             config = OTelConfig()
+            config.fail_on_error = False  # Should not raise
 
-            # Make one of the instrument methods raise an exception
-            instrumentor._instrument_chat_complete = MagicMock(side_effect=Exception("Setup error"))
-
-            instrumentor.instrument(config)
+            # Make _wrap_mistral_methods raise an exception
+            with patch.object(
+                instrumentor, '_wrap_mistral_methods', side_effect=RuntimeError("Setup error")
+            ):
+                instrumentor.instrument(config)
 
             # Verify error was logged
             mock_logger.error.assert_called_once()
