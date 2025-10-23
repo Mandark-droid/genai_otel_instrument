@@ -1,0 +1,43 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    send_batch_size: 1000
+    timeout: 10s
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 200
+    spike_limit_mib: 300
+  attributes:
+    actions:
+      - key: service.instance.id
+        action: insert
+        value: ${env:OTEL_SERVICE_INSTANCE_ID}
+      - key: service.environment
+        action: insert
+        value: ${env:OTEL_ENVIRONMENT}
+
+exporters:
+  jaeger:
+    endpoint: jaeger:14250 # Jaeger's OTLP gRPC endpoint
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: "0.0.0.0:8889" # Prometheus exporter endpoint
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, attributes]
+      exporters: [jaeger]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, attributes]
+      exporters: [prometheus]

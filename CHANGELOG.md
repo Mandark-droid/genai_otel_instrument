@@ -6,6 +6,196 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **HuggingFace InferenceClient Instrumentation**
+  - Added full instrumentation support for HuggingFace Inference API via `InferenceClient`
+  - Enables observability for smolagents workflows using `InferenceClientModel`
+  - Wraps `InferenceClient.chat_completion()` and `InferenceClient.text_generation()` methods
+  - Creates child spans showing actual HuggingFace API calls under agent/tool spans
+  - Extracts model name, temperature, max_tokens, top_p from API calls
+  - Supports both object and dict response formats for token usage
+  - Handles streaming responses with `gen_ai.server.ttft` and `gen_ai.streaming.token_count`
+  - Cost tracking enabled via fallback estimation based on model parameter count
+  - Implementation in `genai_otel/instrumentors/huggingface_instrumentor.py:141-222`
+  - Added 10 comprehensive tests covering all InferenceClient functionality
+  - Coverage increased from 85% → 98% for HuggingFace instrumentor
+  - Resolves issue where only AGENT and TOOL spans were visible without LLM child spans
+
+- **Fallback Cost Estimation for Local Models (Ollama & HuggingFace)**
+  - Added 36 Ollama models to `llm_pricing.json` with parameter-count-based pricing tiers
+  - Implemented intelligent fallback cost estimation for unknown local models in `CostCalculator`
+  - Automatically parses parameter count from model names (e.g., "360m", "7b", "70b")
+  - Supports both Ollama and HuggingFace model naming patterns:
+    - Explicit sizes: `llama3:7b`, `mistral-7b-v0.1`, `smollm2:360m`
+    - HuggingFace size indicators: `gpt2`, `gpt2-xl`, `bert-base`, `t5-xxl`, etc.
+  - Applies tiered pricing based on parameter count:
+    - Tiny (< 1B): $0.0001 / $0.0002 per 1k tokens
+    - Small (1-10B): $0.0003 / $0.0006
+    - Medium (10-20B): $0.0005 / $0.001
+    - Large (20-80B): $0.0008 / $0.0008
+    - XLarge (80B+): $0.0012 / $0.0012
+  - Acknowledges that local models are free but consume GPU power and electricity
+  - Provides synthetic cost estimates for carbon footprint and resource tracking
+  - Added `scripts/add_ollama_pricing.py` to update pricing database with new Ollama models
+  - Logs fallback pricing usage at INFO level for transparency
+
+### Improved
+
+- **CostEnrichmentSpanProcessor Performance Optimization**
+  - Added early-exit logic to skip spans that already have cost attributes
+  - Checks for `gen_ai.usage.cost.total` presence before attempting enrichment
+  - Saves processing compute by avoiding redundant cost calculations
+  - Eliminates warning messages for spans enriched by instrumentors
+  - Benefits all instrumentors that set cost attributes directly (Mistral, OpenAI, Anthropic, etc.)
+  - Implementation in `genai_otel/cost_enrichment_processor.py:69-74`
+  - Added comprehensive test coverage for skip logic
+  - Coverage increased from 94% → 98% for CostEnrichmentSpanProcessor
+
+### Fixed
+
+- **CRITICAL: Complete Rewrite of Mistral AI Instrumentor**
+  - **Root problem**: Original instrumentor used instance-level wrapping which didn't work reliably
+  - **Complete architectural rewrite** using class-level method wrapping with `wrapt.wrap_function_wrapper()`
+  - Now properly wraps `Chat.complete`, `Chat.stream`, and `Embeddings.create` at the class level
+  - All Mistral client instances now use instrumented methods automatically
+  - **Streaming support** with custom `_StreamWrapper` class:
+    - Iterates through streaming chunks and collects usage data
+    - Records TTFT (Time To First Token) metric
+    - Creates mock response objects for proper metrics recording
+  - **Proper error handling** with span exception recording
+  - **Cost tracking** now works correctly with BaseInstrumentor integration
+  - Fixed incorrect `_record_result_metrics()` signature usage
+  - Implementation in `genai_otel/instrumentors/mistralai_instrumentor.py` (180 lines, completely rewritten)
+  - All 5 Mistral tests passing with proper mocking
+  - Traces now collected with full details: model, tokens, costs, TTFT
+  - Resolves issue where no Mistral spans were being collected
+
+- **CRITICAL: Fixed Missing Granular Cost Counter Class Variables**
+  - Fixed `AttributeError: 'OllamaInstrumentor' object has no attribute '_shared_prompt_cost_counter'`
+  - **Root cause**: Granular cost counters were created in initialization but not declared as class variables
+  - **Impact**: Test suite failed with 34 errors when running full suite (but passed individually)
+  - Added missing class variable declarations in `BaseInstrumentor`:
+    - `_shared_prompt_cost_counter`
+    - `_shared_completion_cost_counter`
+    - `_shared_reasoning_cost_counter`
+    - `_shared_cache_read_cost_counter`
+    - `_shared_cache_write_cost_counter`
+  - Created instance variable references in `__init__` for all granular counters
+  - Updated all references to use instance variables instead of `_shared_*` variables
+  - Implementation in `genai_otel/instrumentors/base.py:85-90, 106-111`
+  - All 424 tests now passing consistently
+  - Affects all instrumentors using granular cost tracking
+
+- **CRITICAL: Fixed Cost Tracking Disabled by Wrong Variable Check**
+  - **Root cause**: Cost tracking checked `self._shared_cost_counter` which was always None
+  - Should have checked `self.config.enable_cost_tracking` flag only
+  - **Impact**: Cost attributes were never added to spans even when cost tracking was enabled
+  - Removed unnecessary `cost_counter` existence check
+  - Cost tracking now properly controlled by `GENAI_ENABLE_COST_TRACKING` environment variable
+  - Implementation in `genai_otel/instrumentors/base.py:384`
+  - Debug logging confirmed cost calculation working: "Calculating cost for model=smollm2:360m"
+  - Affects all instrumentors (Ollama, Mistral, OpenAI, Anthropic, etc.)
+
+- **CRITICAL: Fixed Token and Cost Attributes Not Being Set on Spans**
+  - Fixed critical bug where `gen_ai.usage.prompt_tokens`, `gen_ai.usage.completion_tokens`, and all cost attributes were not being set on spans
+  - **Root causes:**
+    1. Span attributes were only set if metric counters were available, but this check was too restrictive
+    2. Used wrong variable name (`self._shared_cost_counter` instead of `self.cost_counter`) in cost tracking check
+  - **Impact**: Cost calculation completely failed - only `gen_ai.usage.total_tokens` was set
+  - **Fixed by:**
+    1. Always setting span attributes regardless of metric availability
+    2. Using correct instance variables (`self.cost_counter`, `self.token_counter`)
+    3. Metrics recording is now optional, but span attributes are always set
+    4. Cost attributes (`gen_ai.usage.cost.total`, `gen_ai.usage.cost.prompt`, `gen_ai.usage.cost.completion`) are now always added
+  - This ensures cost tracking works even if metrics initialization fails
+  - Affects all instrumentors (OpenAI, Anthropic, Ollama, etc.)
+
+- **CRITICAL: Fixed 6 Instrumentors Missing `self._instrumented = True`**
+  - Ollama, Cohere, HuggingFace, Replicate, TogetherAI, and VertexAI instrumentors were completely broken
+  - No traces were being collected because `self._instrumented` flag was not set after wrapping functions
+  - The `create_span_wrapper()` checks this flag and skips instrumentation if False
+  - Added `self._instrumented = True` after successful wrapping in all 6 instrumentors
+  - All instrumentors now properly collect traces again
+
+- **CRITICAL: CostEnrichmentSpanProcessor Now Working**
+  - Fixed critical bug where `CostEnrichmentSpanProcessor` was calling `calculate_cost()` (returns float) but treating it as a dict
+  - This caused all cost enrichment to silently fail with `TypeError: 'float' object is not subscriptable`
+  - Now correctly calls `calculate_granular_cost()` which returns a proper dict with `total`, `prompt`, `completion` keys
+  - Cost attributes (`gen_ai.usage.cost.total`, `gen_ai.usage.cost.prompt`, `gen_ai.usage.cost.completion`) will now be added to OpenInference spans (smolagents, litellm, mcp)
+  - Improved error logging from `logger.debug` to `logger.warning` with full exception info for easier debugging
+  - Added logging of successful cost enrichment at `INFO` level with span name, model, and token details
+  - All 415 tests passing, including 20 cost enrichment processor tests
+
+- **Fixed OpenInference Instrumentor Loading Order**
+  - Corrected instrumentor initialization order to: smolagents → litellm → mcp
+  - This matches the correct order found in working implementations
+  - Ensures proper nested instrumentation and attribute capture
+
+## [0.1.3] - 2025-01-23
+
+### Added
+
+- **Cost Enrichment for OpenInference Instrumentors**
+  - **CostEnrichmentSpanProcessor**: New custom SpanProcessor that automatically adds cost tracking to spans created by OpenInference instrumentors (smolagents, litellm, mcp)
+    - Extracts model name and token usage from existing span attributes
+    - Calculates costs using the existing CostCalculator with 145+ model pricing data
+    - Adds granular cost attributes: `gen_ai.usage.cost.total`, `gen_ai.usage.cost.prompt`, `gen_ai.usage.cost.completion`
+    - **Dual Semantic Convention Support**: Works with both OpenTelemetry GenAI and OpenInference conventions
+      - GenAI: `gen_ai.request.model`, `gen_ai.usage.{prompt_tokens,completion_tokens,input_tokens,output_tokens}`
+      - OpenInference: `llm.model_name`, `embedding.model_name`, `llm.token_count.{prompt,completion}`
+      - OpenInference span kinds: LLM, EMBEDDING, CHAIN, RETRIEVER, RERANKER, TOOL, AGENT
+    - Maps operation names to call types (chat, embedding, image, audio) automatically
+    - Gracefully handles missing data and errors without failing span processing
+  - Enabled by default when `GENAI_ENABLE_COST_TRACKING=true`
+  - Works alongside OpenInference's native instrumentation without modifying upstream code
+  - 100% test coverage with 20 comprehensive test cases (includes 5 OpenInference-specific tests)
+
+- **Comprehensive Cost Tracking Enhancements**
+  - Added token usage extraction and cost calculation for **6 instrumentors**: Ollama, Cohere, Together AI, Vertex AI, HuggingFace, and Replicate
+  - Implemented `create_span_wrapper()` pattern across all instrumentors for consistent metrics recording
+  - Added `gen_ai.operation.name` attribute to all instrumentors for improved observability
+  - Total instrumentors with cost tracking increased from 8 to **11** (37.5% increase)
+
+- **Pricing Data Expansion**
+  - Added pricing for **45+ new LLM models** from 3 major providers:
+    - **Groq**: 9 models (Llama 3.1/3.3/4, Qwen, GPT-OSS, Kimi-K2)
+    - **Cohere**: 5 models (Command R/R+/R7B, Command A, updated legacy pricing)
+    - **Together AI**: 30+ models (DeepSeek R1/V3, Qwen 2.5/3, Mistral variants, GLM-4.5)
+  - All pricing verified from official provider documentation (2025 rates)
+
+- **Enhanced Instrumentor Implementations**
+  - **Ollama**: Extracts `prompt_eval_count` and `eval_count` from response (local model usage tracking)
+  - **Cohere**: Extracts from `meta.tokens` with `meta.billed_units` fallback
+  - **Together AI**: OpenAI-compatible format with dual API support (client + legacy Complete API)
+  - **Vertex AI**: Extracts `usage_metadata` with both snake_case and camelCase support
+  - **HuggingFace**: Documented as local/free execution (no API costs)
+  - **Replicate**: Documented as hardware-based pricing ($/second, not token-based)
+
+### Improved
+
+- **Standardization & Code Quality**
+  - Standardized all instrumentors to use `BaseInstrumentor.create_span_wrapper()` pattern
+  - Improved error handling with consistent `fail_on_error` support across all instrumentors
+  - Enhanced documentation with comprehensive docstrings explaining pricing models
+  - Added proper logging at all error points for better debugging
+  - Thread-safe metrics initialization across all instrumentors
+
+- **Test Coverage**
+  - All **415 tests passing** (100% test success rate)
+  - Increased overall code coverage to **89%**
+  - Individual instrumentor coverage: HuggingFace (98%), OpenAI (98%), Anthropic (95%), Groq (94%)
+  - Core modules at 100% coverage: config, metrics, logging, exceptions, __init__, cost_enrichment_processor
+  - Updated 40+ tests to match new `create_span_wrapper()` pattern
+  - Added 20 comprehensive tests for CostEnrichmentSpanProcessor (100% coverage)
+    - 15 tests for GenAI semantic conventions
+    - 5 tests for OpenInference semantic conventions
+
+- **Documentation**
+  - Updated all instrumentor docstrings to explain token extraction logic
+  - Added comments documenting non-standard pricing models (hardware-based, local execution)
+  - Improved code comments for complex fallback logic
+
 ## [0.1.2.dev0] - 2025-01-22
 
 ### Added

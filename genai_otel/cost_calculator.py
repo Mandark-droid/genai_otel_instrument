@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
@@ -137,18 +138,32 @@ class CostCalculator:
             Dict with keys: total, prompt, completion, reasoning, cache_read, cache_write
         """
         model_key = self._normalize_model_name(model, "chat")
-        if not model_key:
-            logger.debug("Pricing not found for chat model: %s", model)
-            return {
-                "total": 0.0,
-                "prompt": 0.0,
-                "completion": 0.0,
-                "reasoning": 0.0,
-                "cache_read": 0.0,
-                "cache_write": 0.0,
-            }
 
-        pricing = self.pricing_data["chat"][model_key]
+        # Fallback for unknown local models (Ollama, HuggingFace): estimate pricing based on parameter count
+        if not model_key:
+            param_count = self._extract_param_count_from_model_name(model)
+            if param_count is not None:
+                pricing = self._get_local_model_price_tier(param_count)
+                logger.info(
+                    "Using fallback pricing for unknown local model '%s' with %.2fB parameters: "
+                    "$%.4f prompt / $%.4f completion per 1k tokens",
+                    model,
+                    param_count,
+                    pricing["promptPrice"],
+                    pricing["completionPrice"]
+                )
+            else:
+                logger.debug("Pricing not found for chat model: %s", model)
+                return {
+                    "total": 0.0,
+                    "prompt": 0.0,
+                    "completion": 0.0,
+                    "reasoning": 0.0,
+                    "cache_read": 0.0,
+                    "cache_write": 0.0,
+                }
+        else:
+            pricing = self.pricing_data["chat"][model_key]
 
         # Standard prompt and completion tokens
         prompt_tokens = usage.get("prompt_tokens", 0)
@@ -274,3 +289,113 @@ class CostCalculator:
             if key.lower() in normalized_model:
                 return key
         return None
+
+    def _extract_param_count_from_model_name(self, model: str) -> Optional[float]:
+        """Extract parameter count from Ollama or HuggingFace model name.
+
+        Supports both explicit size indicators and common model size names.
+
+        Examples:
+            Ollama models:
+            "smollm2:360m" -> 0.36
+            "llama3:7b" -> 7.0
+            "llama3.1:70b" -> 70.0
+            "deepseek-r1:32b" -> 32.0
+
+            HuggingFace models:
+            "gpt2" -> 0.124 (base)
+            "gpt2-xl" -> 1.5
+            "bert-base-uncased" -> 0.11
+            "bert-large-uncased" -> 0.34
+            "t5-small" -> 0.06
+            "t5-xxl" -> 11.0
+            "llama-2-7b" -> 7.0
+            "mistral-7b-v0.1" -> 7.0
+
+        Returns:
+            Parameter count in billions, or None if not parseable.
+        """
+        model_lower = model.lower()
+
+        # First try explicit parameter count patterns (e.g., 135m, 7b, 70b)
+        # Matches: digits followed by optional decimal, then 'm' or 'b'
+        pattern = r'(\d+(?:\.\d+)?)(m|b)(?:\s|:|$|-)'
+        match = re.search(pattern, model_lower)
+        if match:
+            value = float(match.group(1))
+            unit = match.group(2)
+            if unit == 'm':
+                return value / 1000  # Convert millions to billions
+            elif unit == 'b':
+                return value
+
+        # Fallback to common model size indicators for HuggingFace models
+        # These are approximate values based on typical model sizes
+        size_map = {
+            # T5 family
+            "t5-small": 0.06,
+            "t5-base": 0.22,
+            "t5-large": 0.77,
+            "t5-xl": 3.0,
+            "t5-xxl": 11.0,
+            # GPT-2 family
+            "gpt2-small": 0.124,
+            "gpt2-medium": 0.355,
+            "gpt2-large": 0.774,
+            "gpt2-xl": 1.5,
+            "gpt2": 0.124,  # default GPT-2 is small
+            # BERT family
+            "bert-tiny": 0.004,
+            "bert-mini": 0.011,
+            "bert-small": 0.029,
+            "bert-medium": 0.041,
+            "bert-base": 0.11,
+            "bert-large": 0.34,
+            # Generic size indicators (fallback)
+            "tiny": 0.01,
+            "mini": 0.02,
+            "small": 0.06,
+            "base": 0.11,
+            "medium": 0.35,
+            "large": 0.77,
+            "xl": 1.5,
+            "xxl": 11.0,
+        }
+
+        # Check for size indicators in the model name
+        for size_key, param_count in size_map.items():
+            if size_key in model_lower:
+                return param_count
+
+        return None
+
+    def _get_local_model_price_tier(self, param_count_billions: float) -> Dict[str, float]:
+        """Get pricing tier based on parameter count for local models (Ollama, HuggingFace).
+
+        Local models (Ollama, HuggingFace Transformers) are free but consume GPU power
+        and electricity. We estimate costs based on parameter count and comparable
+        cloud API pricing.
+
+        Price Tiers (based on parameter count):
+        - Tiny (< 1B params): $0.0001 / $0.0002 (prompt/completion)
+        - Small (1-10B): $0.0003 / $0.0006
+        - Medium (10-20B): $0.0005 / $0.001
+        - Large (20-80B): $0.0008 / $0.0008
+        - XLarge (80B+): $0.0012 / $0.0012
+
+        Args:
+            param_count_billions: Model parameter count in billions
+
+        Returns:
+            Dict with promptPrice and completionPrice
+        """
+        if param_count_billions < 1.0:
+            return {"promptPrice": 0.0001, "completionPrice": 0.0002}
+        elif param_count_billions < 10.0:
+            return {"promptPrice": 0.0003, "completionPrice": 0.0006}
+        elif param_count_billions < 20.0:
+            return {"promptPrice": 0.0005, "completionPrice": 0.001}
+        elif param_count_billions < 80.0:
+            return {"promptPrice": 0.0008, "completionPrice": 0.0008}
+        else:
+            return {"promptPrice": 0.0012, "completionPrice": 0.0012}

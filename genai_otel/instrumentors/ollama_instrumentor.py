@@ -2,11 +2,11 @@
 
 This instrumentor automatically traces calls to Ollama models for both
 generation and chat functionalities, capturing relevant attributes such as
-the model name.
+the model name and token usage.
 """
 
 import logging
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
 from .base import BaseInstrumentor
@@ -22,8 +22,8 @@ class OllamaInstrumentor(BaseInstrumentor):
         super().__init__()
         self._ollama_available = False
         self._ollama_module = None
-        self._original_generate = None  # Add this
-        self._original_chat = None  # Add this
+        self._original_generate = None
+        self._original_chat = None
         self._check_availability()
 
     def _check_availability(self):
@@ -46,38 +46,107 @@ class OllamaInstrumentor(BaseInstrumentor):
         if not self._ollama_available or self._ollama_module is None:
             return
 
-        # Store original methods
-        self._original_generate = self._ollama_module.generate
-        self._original_chat = self._ollama_module.chat
+        try:
+            # Store original methods and wrap them
+            self._original_generate = self._ollama_module.generate
+            self._original_chat = self._ollama_module.chat
 
-        def wrapped_generate(*args, **kwargs):
-            with self.tracer.start_as_current_span("ollama.generate") as span:
-                model = kwargs.get("model", "unknown")
+            # Wrap generate method
+            wrapped_generate = self.create_span_wrapper(
+                span_name="ollama.generate",
+                extract_attributes=self._extract_generate_attributes,
+            )(self._original_generate)
+            self._ollama_module.generate = wrapped_generate
 
-                span.set_attribute("gen_ai.system", "ollama")
-                span.set_attribute("gen_ai.request.model", model)
+            # Wrap chat method
+            wrapped_chat = self.create_span_wrapper(
+                span_name="ollama.chat",
+                extract_attributes=self._extract_chat_attributes,
+            )(self._original_chat)
+            self._ollama_module.chat = wrapped_chat
 
-                if self.request_counter:
-                    self.request_counter.add(1, {"model": model, "provider": "ollama"})
+            self._instrumented = True
+            logger.info("Ollama instrumentation enabled")
 
-                result = self._original_generate(*args, **kwargs)
-                return result
+        except Exception as e:
+            logger.error("Failed to instrument Ollama: %s", e, exc_info=True)
+            if config.fail_on_error:
+                raise
 
-        def wrapped_chat(*args, **kwargs):
-            with self.tracer.start_as_current_span("ollama.chat") as span:
-                model = kwargs.get("model", "unknown")
+    def _extract_generate_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
+        """Extract attributes from Ollama generate call.
 
-                span.set_attribute("gen_ai.system", "ollama")
-                span.set_attribute("gen_ai.request.model", model)
+        Args:
+            instance: The client instance (None for module-level functions).
+            args: Positional arguments.
+            kwargs: Keyword arguments.
 
-                if self.request_counter:
-                    self.request_counter.add(1, {"model": model, "provider": "ollama"})
+        Returns:
+            Dict[str, Any]: Dictionary of attributes to set on the span.
+        """
+        attrs = {}
+        model = kwargs.get("model", "unknown")
 
-                result = self._original_chat(*args, **kwargs)
-                return result
+        attrs["gen_ai.system"] = "ollama"
+        attrs["gen_ai.request.model"] = model
+        attrs["gen_ai.operation.name"] = "generate"
 
-        self._ollama_module.generate = wrapped_generate
-        self._ollama_module.chat = wrapped_chat
+        return attrs
+
+    def _extract_chat_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
+        """Extract attributes from Ollama chat call.
+
+        Args:
+            instance: The client instance (None for module-level functions).
+            args: Positional arguments.
+            kwargs: Keyword arguments.
+
+        Returns:
+            Dict[str, Any]: Dictionary of attributes to set on the span.
+        """
+        attrs = {}
+        model = kwargs.get("model", "unknown")
+        messages = kwargs.get("messages", [])
+
+        attrs["gen_ai.system"] = "ollama"
+        attrs["gen_ai.request.model"] = model
+        attrs["gen_ai.operation.name"] = "chat"
+        attrs["gen_ai.request.message_count"] = len(messages)
+
+        return attrs
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
-        return None
+        """Extract token usage from Ollama response.
+
+        Ollama responses include:
+        - prompt_eval_count: Input tokens
+        - eval_count: Output tokens
+
+        Args:
+            result: The API response object or dictionary.
+
+        Returns:
+            Optional[Dict[str, int]]: Dictionary with token counts or None.
+        """
+        try:
+            # Handle both dict and object responses
+            if isinstance(result, dict):
+                prompt_tokens = result.get("prompt_eval_count", 0)
+                completion_tokens = result.get("eval_count", 0)
+            elif hasattr(result, "prompt_eval_count") and hasattr(result, "eval_count"):
+                prompt_tokens = getattr(result, "prompt_eval_count", 0)
+                completion_tokens = getattr(result, "eval_count", 0)
+            else:
+                return None
+
+            if prompt_tokens == 0 and completion_tokens == 0:
+                return None
+
+            return {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+            }
+        except Exception as e:
+            logger.debug("Failed to extract usage from Ollama response: %s", e)
+            return None
