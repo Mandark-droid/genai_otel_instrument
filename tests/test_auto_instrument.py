@@ -141,9 +141,11 @@ class TestAutoInstrumentation:
                         mock_batch_span_processor.assert_called_once_with(
                             mock_span_exporter_instance
                         )
-                        mock_tracer_provider_instance.add_span_processor.assert_called_once_with(
-                            mock_span_processor_instance
-                        )
+                        # Should add 2 processors: CostEnrichmentSpanProcessor + BatchSpanProcessor
+                        assert mock_tracer_provider_instance.add_span_processor.call_count == 2
+                        # Verify the BatchSpanProcessor was added (second call)
+                        calls = mock_tracer_provider_instance.add_span_processor.call_args_list
+                        assert calls[1][0][0] == mock_span_processor_instance
                         mock_otlp_metric_exporter.assert_called_once_with(
                             headers=config.headers,
                         )

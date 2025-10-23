@@ -82,6 +82,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     _shared_latency_histogram = None
     _shared_cost_counter = None
     _shared_error_counter = None
+    # Granular cost counters (Phase 3.2)
+    _shared_prompt_cost_counter = None
+    _shared_completion_cost_counter = None
+    _shared_reasoning_cost_counter = None
+    _shared_cache_read_cost_counter = None
+    _shared_cache_write_cost_counter = None
     # Streaming metrics (Phase 3.4)
     _shared_ttft_histogram = None
     _shared_tbt_histogram = None
@@ -103,6 +109,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         self.latency_histogram = self._shared_latency_histogram
         self.cost_counter = self._shared_cost_counter
         self.error_counter = self._shared_error_counter
+        # Granular cost counters (Phase 3.2)
+        self.prompt_cost_counter = self._shared_prompt_cost_counter
+        self.completion_cost_counter = self._shared_completion_cost_counter
+        self.reasoning_cost_counter = self._shared_reasoning_cost_counter
+        self.cache_read_cost_counter = self._shared_cache_read_cost_counter
+        self.cache_write_cost_counter = self._shared_cache_write_cost_counter
         # Streaming metrics
         self.ttft_histogram = self._shared_ttft_histogram
         self.tbt_histogram = self._shared_tbt_histogram
@@ -346,44 +358,53 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     and "dup" in self.config.semconv_stability_opt_in
                 )
 
-                if (
-                    self.token_counter
-                    and isinstance(prompt_tokens, (int, float))
-                    and prompt_tokens > 0
-                ):
-                    self.token_counter.add(
-                        prompt_tokens, {"token_type": "prompt", "operation": span.name}
-                    )
-                    # New semantic convention
+                # Record prompt tokens
+                if isinstance(prompt_tokens, (int, float)) and prompt_tokens > 0:
+                    # Record metric if available
+                    if self.token_counter:
+                        self.token_counter.add(
+                            prompt_tokens, {"token_type": "prompt", "operation": span.name}
+                        )
+                    # Always set span attributes (needed for cost calculation)
                     span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
                     # Old semantic convention (if dual emission enabled)
                     if emit_old_attrs:
                         span.set_attribute("gen_ai.usage.input_tokens", int(prompt_tokens))
 
-                if (
-                    self.token_counter
-                    and isinstance(completion_tokens, (int, float))
-                    and completion_tokens > 0
-                ):
-                    self.token_counter.add(
-                        completion_tokens, {"token_type": "completion", "operation": span.name}
-                    )
-                    # New semantic convention
+                # Record completion tokens
+                if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
+                    # Record metric if available
+                    if self.token_counter:
+                        self.token_counter.add(
+                            completion_tokens, {"token_type": "completion", "operation": span.name}
+                        )
+                    # Always set span attributes (needed for cost calculation)
                     span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
                     # Old semantic convention (if dual emission enabled)
                     if emit_old_attrs:
                         span.set_attribute("gen_ai.usage.output_tokens", int(completion_tokens))
 
+                # Record total tokens
                 if isinstance(total_tokens, (int, float)) and total_tokens > 0:
                     span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))
 
                 # Calculate and record cost if enabled and applicable
-                if self.config and self.config.enable_cost_tracking and self._shared_cost_counter:
+                logger.debug(
+                    f"Cost tracking check: config={self.config is not None}, "
+                    f"enable_cost_tracking={self.config.enable_cost_tracking if self.config else 'N/A'}"
+                )
+                if self.config and self.config.enable_cost_tracking:
                     try:
                         model = span.attributes.get("gen_ai.request.model", "unknown")
                         # Assuming 'chat' as a default call_type for generic base instrumentor tests.
                         # Specific instrumentors will provide the actual call_type.
                         call_type = span.attributes.get("gen_ai.request.type", "chat")
+
+                        logger.debug(
+                            f"Calculating cost for model={model}, call_type={call_type}, "
+                            f"prompt_tokens={usage.get('prompt_tokens')}, "
+                            f"completion_tokens={usage.get('completion_tokens')}"
+                        )
 
                         # Use granular cost calculation for chat requests
                         if call_type == "chat":
@@ -394,45 +415,55 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
                             # Record total cost
                             if total_cost > 0:
-                                self._shared_cost_counter.add(total_cost, {"model": str(model)})
-                                # Set span attributes for granular costs
+                                if self.cost_counter:
+                                    self.cost_counter.add(total_cost, {"model": str(model)})
+                                # Always set span attributes (needed for cost tracking)
                                 span.set_attribute("gen_ai.usage.cost.total", total_cost)
+                                logger.debug(f"Set cost attribute: gen_ai.usage.cost.total={total_cost}")
+                            else:
+                                logger.debug(f"Cost is zero, not setting attributes. Costs: {costs}")
 
                             # Record and set attributes for granular costs
-                            if costs["prompt"] > 0 and self._shared_prompt_cost_counter:
-                                self._shared_prompt_cost_counter.add(
-                                    costs["prompt"], {"model": str(model)}
-                                )
+                            # Note: Metrics recording is optional, span attributes are always set
+                            if costs["prompt"] > 0:
+                                if self.prompt_cost_counter:
+                                    self.prompt_cost_counter.add(
+                                        costs["prompt"], {"model": str(model)}
+                                    )
                                 span.set_attribute("gen_ai.usage.cost.prompt", costs["prompt"])
 
-                            if costs["completion"] > 0 and self._shared_completion_cost_counter:
-                                self._shared_completion_cost_counter.add(
-                                    costs["completion"], {"model": str(model)}
-                                )
+                            if costs["completion"] > 0:
+                                if self.completion_cost_counter:
+                                    self.completion_cost_counter.add(
+                                        costs["completion"], {"model": str(model)}
+                                    )
                                 span.set_attribute(
                                     "gen_ai.usage.cost.completion", costs["completion"]
                                 )
 
-                            if costs["reasoning"] > 0 and self._shared_reasoning_cost_counter:
-                                self._shared_reasoning_cost_counter.add(
-                                    costs["reasoning"], {"model": str(model)}
-                                )
+                            if costs["reasoning"] > 0:
+                                if self.reasoning_cost_counter:
+                                    self.reasoning_cost_counter.add(
+                                        costs["reasoning"], {"model": str(model)}
+                                    )
                                 span.set_attribute(
                                     "gen_ai.usage.cost.reasoning", costs["reasoning"]
                                 )
 
-                            if costs["cache_read"] > 0 and self._shared_cache_read_cost_counter:
-                                self._shared_cache_read_cost_counter.add(
-                                    costs["cache_read"], {"model": str(model)}
-                                )
+                            if costs["cache_read"] > 0:
+                                if self.cache_read_cost_counter:
+                                    self.cache_read_cost_counter.add(
+                                        costs["cache_read"], {"model": str(model)}
+                                    )
                                 span.set_attribute(
                                     "gen_ai.usage.cost.cache_read", costs["cache_read"]
                                 )
 
-                            if costs["cache_write"] > 0 and self._shared_cache_write_cost_counter:
-                                self._shared_cache_write_cost_counter.add(
-                                    costs["cache_write"], {"model": str(model)}
-                                )
+                            if costs["cache_write"] > 0:
+                                if self.cache_write_cost_counter:
+                                    self.cache_write_cost_counter.add(
+                                        costs["cache_write"], {"model": str(model)}
+                                    )
                                 span.set_attribute(
                                     "gen_ai.usage.cost.cache_write", costs["cache_write"]
                                 )
@@ -440,7 +471,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             # For non-chat requests, use simple cost calculation
                             cost = self.cost_calculator.calculate_cost(model, usage, call_type)
                             if cost and cost > 0:
-                                self._shared_cost_counter.add(cost, {"model": str(model)})
+                                if self.cost_counter:
+                                    self.cost_counter.add(cost, {"model": str(model)})
                     except Exception as e:
                         logger.warning("Failed to calculate cost for span '%s': %s", span.name, e)
 

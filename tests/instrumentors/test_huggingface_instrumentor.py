@@ -12,6 +12,7 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
         """Reset sys.modules before each test."""
         self.original_sys_modules = dict(sys.modules)
         sys.modules.pop("transformers", None)
+        sys.modules.pop("huggingface_hub", None)
 
     def tearDown(self):
         """Restore sys.modules after each test."""
@@ -98,6 +99,7 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
                 [
                     call("gen_ai.system", "huggingface"),
                     call("gen_ai.request.model", "gpt2"),
+                    call("gen_ai.operation.name", "text-generation"),
                     call("huggingface.task", "text-generation"),
                 ]
             )
@@ -154,6 +156,7 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
                 [
                     call("gen_ai.system", "huggingface"),
                     call("gen_ai.request.model", "unknown"),
+                    call("gen_ai.operation.name", "unknown"),
                     call("huggingface.task", "unknown"),
                 ]
             )
@@ -164,32 +167,109 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
             )
 
     # ------------------------------------------------------------------
-    # 4. _extract_usage – returns None
+    # 4. _extract_usage – Transformers returns None, InferenceClient extracts tokens
     # ------------------------------------------------------------------
-    def test_extract_usage(self):
-        instrumentor = HuggingFaceInstrumentor()
-        self.assertIsNone(instrumentor._extract_usage("anything"))
+    def test_extract_usage_transformers_returns_none(self):
+        """Transformers pipeline results have no usage info."""
+        with patch.dict("sys.modules", {"transformers": None, "huggingface_hub": None}):
+            instrumentor = HuggingFaceInstrumentor()
+            self.assertIsNone(instrumentor._extract_usage("pipeline output"))
+            self.assertIsNone(instrumentor._extract_usage(["list", "of", "results"]))
+
+    def test_extract_usage_inference_client_object_response(self):
+        """InferenceClient returns usage as object attributes."""
+        with patch.dict("sys.modules", {"transformers": None, "huggingface_hub": None}):
+            instrumentor = HuggingFaceInstrumentor()
+
+            # Mock InferenceClient response with usage object
+            mock_usage = MagicMock()
+            mock_usage.prompt_tokens = 10
+            mock_usage.completion_tokens = 20
+            mock_usage.total_tokens = 30
+
+            mock_response = MagicMock()
+            mock_response.usage = mock_usage
+
+            usage = instrumentor._extract_usage(mock_response)
+
+            self.assertIsNotNone(usage)
+            self.assertEqual(usage["prompt_tokens"], 10)
+            self.assertEqual(usage["completion_tokens"], 20)
+            self.assertEqual(usage["total_tokens"], 30)
+
+    def test_extract_usage_inference_client_dict_response(self):
+        """InferenceClient can also return usage as a dict."""
+        with patch.dict("sys.modules", {"transformers": None, "huggingface_hub": None}):
+            instrumentor = HuggingFaceInstrumentor()
+
+            mock_response = MagicMock()
+            mock_response.usage = {
+                "prompt_tokens": 15,
+                "completion_tokens": 25,
+                "total_tokens": 40,
+            }
+
+            usage = instrumentor._extract_usage(mock_response)
+
+            self.assertIsNotNone(usage)
+            self.assertEqual(usage["prompt_tokens"], 15)
+            self.assertEqual(usage["completion_tokens"], 25)
+            self.assertEqual(usage["total_tokens"], 40)
+
+    def test_extract_usage_inference_client_partial_tokens(self):
+        """InferenceClient response with only prompt or completion tokens."""
+        with patch.dict("sys.modules", {"transformers": None, "huggingface_hub": None}):
+            instrumentor = HuggingFaceInstrumentor()
+
+            mock_usage = MagicMock()
+            mock_usage.prompt_tokens = 10
+            mock_usage.completion_tokens = None
+            mock_usage.total_tokens = None
+
+            mock_response = MagicMock()
+            mock_response.usage = mock_usage
+
+            usage = instrumentor._extract_usage(mock_response)
+
+            self.assertIsNotNone(usage)
+            self.assertEqual(usage["prompt_tokens"], 10)
+            self.assertEqual(usage["completion_tokens"], 0)
+            self.assertEqual(usage["total_tokens"], 10)  # Calculated from prompt + completion
 
     # ------------------------------------------------------------------
-    # 5. _check_availability – both branches
+    # 5. _check_availability – both transformers and inference_client branches
     # ------------------------------------------------------------------
     @patch("genai_otel.instrumentors.huggingface_instrumentor.logger")
-    def test_check_availability_missing(self, mock_logger):
-        with patch.dict("sys.modules", {"transformers": None}):
+    def test_check_availability_transformers_missing(self, mock_logger):
+        with patch.dict("sys.modules", {"transformers": None, "huggingface_hub": None}):
             instrumentor = HuggingFaceInstrumentor()
             self.assertFalse(instrumentor._transformers_available)
-            mock_logger.debug.assert_called_with(
-                "Transformers library not installed, instrumentation will be skipped"
-            )
+            self.assertFalse(instrumentor._inference_client_available)
 
     @patch("genai_otel.instrumentors.huggingface_instrumentor.logger")
-    def test_check_availability_present(self, mock_logger):
-        with patch.dict("sys.modules", {"transformers": MagicMock()}):
+    def test_check_availability_transformers_present(self, mock_logger):
+        with patch.dict("sys.modules", {"transformers": MagicMock(), "huggingface_hub": None}):
             instrumentor = HuggingFaceInstrumentor()
             self.assertTrue(instrumentor._transformers_available)
-            mock_logger.debug.assert_called_with(
-                "Transformers library detected and available for instrumentation"
-            )
+            self.assertFalse(instrumentor._inference_client_available)
+
+    @patch("genai_otel.instrumentors.huggingface_instrumentor.logger")
+    def test_check_availability_inference_client_present(self, mock_logger):
+        mock_hub = MagicMock()
+        mock_hub.InferenceClient = MagicMock()
+        with patch.dict("sys.modules", {"transformers": None, "huggingface_hub": mock_hub}):
+            instrumentor = HuggingFaceInstrumentor()
+            self.assertFalse(instrumentor._transformers_available)
+            self.assertTrue(instrumentor._inference_client_available)
+
+    @patch("genai_otel.instrumentors.huggingface_instrumentor.logger")
+    def test_check_availability_both_present(self, mock_logger):
+        mock_hub = MagicMock()
+        mock_hub.InferenceClient = MagicMock()
+        with patch.dict("sys.modules", {"transformers": MagicMock(), "huggingface_hub": mock_hub}):
+            instrumentor = HuggingFaceInstrumentor()
+            self.assertTrue(instrumentor._transformers_available)
+            self.assertTrue(instrumentor._inference_client_available)
 
     # ------------------------------------------------------------------
     # 6. __init__ calls _check_availability
@@ -200,7 +280,103 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
         mock_check.assert_called_once()
 
     # ------------------------------------------------------------------
-    # 7. Test ImportError during instrument() method
+    # 7. InferenceClient instrumentation tests
+    # ------------------------------------------------------------------
+    def test_instrument_inference_client_when_available(self):
+        """Test that InferenceClient methods are wrapped correctly."""
+        # Create mock InferenceClient class
+        mock_inference_client = MagicMock()
+        original_chat = MagicMock(return_value="chat response")
+        original_text_gen = MagicMock(return_value="text response")
+        mock_inference_client.chat_completion = original_chat
+        mock_inference_client.text_generation = original_text_gen
+
+        # Create mock huggingface_hub module
+        mock_hub = MagicMock()
+        mock_hub.InferenceClient = mock_inference_client
+
+        with patch.dict("sys.modules", {"transformers": None, "huggingface_hub": mock_hub}):
+            instrumentor = HuggingFaceInstrumentor()
+            config = MagicMock()
+
+            # Mock create_span_wrapper to return a simple wrapper
+            def mock_wrapper_factory(span_name, extract_attributes):
+                def decorator(func):
+                    def wrapped(*args, **kwargs):
+                        return func(*args, **kwargs)
+                    return wrapped
+                return decorator
+
+            instrumentor.create_span_wrapper = mock_wrapper_factory
+
+            # Act
+            instrumentor.instrument(config)
+
+            # Assert
+            self.assertTrue(instrumentor._inference_client_available)
+            self.assertTrue(instrumentor._instrumented)
+
+            # Verify the methods were replaced (wrapped)
+            from huggingface_hub import InferenceClient
+            self.assertIsNotNone(InferenceClient.chat_completion)
+            self.assertIsNotNone(InferenceClient.text_generation)
+
+    def test_extract_inference_client_attributes_with_model_in_kwargs(self):
+        """Test attribute extraction when model is in kwargs."""
+        with patch.dict("sys.modules", {"transformers": None, "huggingface_hub": None}):
+            instrumentor = HuggingFaceInstrumentor()
+
+            instance = MagicMock()
+            args = []
+            kwargs = {
+                "model": "meta-llama/Llama-2-7b-hf",
+                "max_tokens": 100,
+                "temperature": 0.7,
+                "top_p": 0.9,
+            }
+
+            attrs = instrumentor._extract_inference_client_attributes(instance, args, kwargs)
+
+            self.assertEqual(attrs["gen_ai.system"], "huggingface")
+            self.assertEqual(attrs["gen_ai.request.model"], "meta-llama/Llama-2-7b-hf")
+            self.assertEqual(attrs["gen_ai.operation.name"], "chat")
+            self.assertEqual(attrs["gen_ai.request.max_tokens"], 100)
+            self.assertEqual(attrs["gen_ai.request.temperature"], 0.7)
+            self.assertEqual(attrs["gen_ai.request.top_p"], 0.9)
+
+    def test_extract_inference_client_attributes_with_model_in_args(self):
+        """Test attribute extraction when model is first positional argument."""
+        with patch.dict("sys.modules", {"transformers": None, "huggingface_hub": None}):
+            instrumentor = HuggingFaceInstrumentor()
+
+            instance = MagicMock()
+            args = ["gpt2"]
+            kwargs = {"temperature": 0.5}
+
+            attrs = instrumentor._extract_inference_client_attributes(instance, args, kwargs)
+
+            self.assertEqual(attrs["gen_ai.system"], "huggingface")
+            self.assertEqual(attrs["gen_ai.request.model"], "gpt2")
+            self.assertEqual(attrs["gen_ai.operation.name"], "chat")
+            self.assertEqual(attrs["gen_ai.request.temperature"], 0.5)
+
+    def test_extract_inference_client_attributes_no_model(self):
+        """Test attribute extraction when no model provided."""
+        with patch.dict("sys.modules", {"transformers": None, "huggingface_hub": None}):
+            instrumentor = HuggingFaceInstrumentor()
+
+            instance = MagicMock()
+            args = []
+            kwargs = {}
+
+            attrs = instrumentor._extract_inference_client_attributes(instance, args, kwargs)
+
+            self.assertEqual(attrs["gen_ai.system"], "huggingface")
+            self.assertEqual(attrs["gen_ai.request.model"], "unknown")
+            self.assertEqual(attrs["gen_ai.operation.name"], "chat")
+
+    # ------------------------------------------------------------------
+    # 8. Test ImportError during instrument() method
     # ------------------------------------------------------------------
     def test_instrument_importlib_fails(self):
         """Test that ImportError during instrumentation is handled gracefully."""
@@ -211,6 +387,7 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
 
             config = MagicMock()
             config.tracer = MagicMock()
+            config.fail_on_error = False  # Should handle errors gracefully
 
             # Mock importlib.import_module to raise ImportError
             with patch("importlib.import_module", side_effect=ImportError("Module not found")):
