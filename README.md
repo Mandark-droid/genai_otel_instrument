@@ -11,7 +11,7 @@
 [![GitHub Issues](https://img.shields.io/github/issues/Mandark-droid/genai_otel_instrument)](https://github.com/Mandark-droid/genai_otel_instrument/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Mandark-droid/genai_otel_instrument)](https://github.com/Mandark-droid/genai_otel_instrument/pulls)
 
-[![Code Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](https://github.com/Mandark-droid/genai_otel_instrument)
+[![Code Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/Mandark-droid/genai_otel_instrument)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 [![Type Checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](http://mypy-lang.org/)
@@ -75,9 +75,9 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 ## What Gets Instrumented?
 
 ### LLM Providers (Auto-detected)
-- OpenAI, Anthropic, Google AI, AWS Bedrock, Azure OpenAI
-- Cohere, Mistral AI, Together AI, Groq, Ollama
-- Vertex AI, Replicate, Anyscale, HuggingFace
+- **With Full Cost Tracking**: OpenAI, Anthropic, Google AI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, Vertex AI
+- **Hardware/Local Pricing**: Replicate (hardware-based $/second), HuggingFace (local execution, free)
+- **Other Providers**: Anyscale
 
 ### Frameworks
 - LangChain (chains, agents, tools)
@@ -91,14 +91,51 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 - **APIs**: HTTP/REST requests (requests, httpx)
 
 ### OpenInference (Optional - Python 3.10+ only)
-- Smolagents
-- MCP
-- LiteLLM
+- Smolagents - HuggingFace smolagents framework tracing
+- MCP - Model Context Protocol instrumentation
+- LiteLLM - Multi-provider LLM proxy
+
+**Cost Enrichment:** OpenInference instrumentors are automatically enriched with cost tracking! When cost tracking is enabled (`GENAI_ENABLE_COST_TRACKING=true`), a custom `CostEnrichmentSpanProcessor` extracts model and token usage from OpenInference spans and adds cost attributes (`gen_ai.usage.cost.total`, `gen_ai.usage.cost.prompt`, `gen_ai.usage.cost.completion`) using our comprehensive pricing database of 145+ models.
+
+The processor supports OpenInference semantic conventions:
+- Model: `llm.model_name`, `embedding.model_name`
+- Tokens: `llm.token_count.prompt`, `llm.token_count.completion`
+- Operations: `openinference.span.kind` (LLM, EMBEDDING, CHAIN, RETRIEVER, etc.)
 
 **Note:** OpenInference instrumentors require Python >= 3.10. Install with:
 ```bash
 pip install genai-otel-instrument[openinference]
 ```
+
+## Cost Tracking Coverage
+
+The library includes comprehensive cost tracking with pricing data for **145+ models** across **11 providers**:
+
+### Providers with Full Token-Based Cost Tracking
+- **OpenAI**: GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo, o1/o3 series, embeddings, audio, vision (35+ models)
+- **Anthropic**: Claude 3.5 Sonnet/Opus/Haiku, Claude 3 series (10+ models)
+- **Google AI**: Gemini 1.5/2.0 Pro/Flash, PaLM 2 (12+ models)
+- **AWS Bedrock**: Amazon Titan, Claude, Llama, Mistral models (20+ models)
+- **Azure OpenAI**: Same as OpenAI with Azure-specific pricing
+- **Cohere**: Command R/R+, Command Light, Embed v3/v2 (8+ models)
+- **Mistral AI**: Mistral Large/Medium/Small, Mixtral, embeddings (8+ models)
+- **Together AI**: DeepSeek-R1, Llama 3.x, Qwen, Mixtral (25+ models)
+- **Groq**: Llama 3.x series, Mixtral, Gemma models (15+ models)
+- **Ollama**: Local models with token tracking (pricing via cost estimation)
+- **Vertex AI**: Gemini models via Google Cloud with usage metadata extraction
+
+### Special Pricing Models
+- **Replicate**: Hardware-based pricing ($/second of GPU/CPU time) - not token-based
+- **HuggingFace Transformers**: Local execution - no API costs
+
+### Pricing Features
+- **Differential Pricing**: Separate rates for prompt tokens vs. completion tokens
+- **Reasoning Tokens**: Special pricing for OpenAI o1/o3 reasoning tokens
+- **Cache Pricing**: Anthropic prompt caching costs (read/write)
+- **Granular Cost Metrics**: Per-request cost breakdown by token type
+- **Auto-Updated Pricing**: Pricing data maintained in `llm_pricing.json`
+
+**Coverage Statistics**: As of v0.1.3, 89% test coverage with 415 passing tests, including comprehensive cost calculation validation and cost enrichment processor tests (supporting both GenAI and OpenInference semantic conventions).
 
 ## Collected Telemetry
 
