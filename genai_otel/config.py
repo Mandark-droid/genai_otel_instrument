@@ -44,6 +44,9 @@ DEFAULT_INSTRUMENTORS = [
 ]
 
 # Add OpenInference instrumentors only for Python >= 3.10
+# IMPORTANT: Order matters! Load in this specific sequence:
+# 1. smolagents - instruments the agent framework
+# 2. litellm - instruments the LLM calls made by agents
 if sys.version_info >= (3, 10):
     DEFAULT_INSTRUMENTORS.extend(["smolagents", "litellm"])
 
