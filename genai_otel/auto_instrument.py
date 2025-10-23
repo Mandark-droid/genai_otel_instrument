@@ -17,6 +17,8 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
 from .config import OTelConfig
+from .cost_calculator import CostCalculator
+from .cost_enrichment_processor import CostEnrichmentSpanProcessor
 from .gpu_metrics import GPUMetricsCollector
 from .mcp_instrumentors import MCPInstrumentorManager
 from .metrics import (
@@ -117,12 +119,16 @@ INSTRUMENTORS = {
 }
 
 # Add OpenInference instrumentors if available (requires Python >= 3.10)
+# IMPORTANT: Order matters! Load in this specific sequence:
+# 1. smolagents - instruments the agent framework
+# 2. litellm - instruments LLM calls made by agents
+# 3. mcp - instruments Model Context Protocol tools
 if OPENINFERENCE_AVAILABLE:
     INSTRUMENTORS.update(
         {
             "smolagents": SmolagentsInstrumentor,
-            "mcp": MCPInstrumentor,
             "litellm": LiteLLMInstrumentor,
+            "mcp": MCPInstrumentor,
         }
     )
 
@@ -162,6 +168,17 @@ def setup_auto_instrumentation(config: OTelConfig):
     )
 
     set_global_textmap(TraceContextTextMapPropagator())
+
+    # Add cost enrichment processor for OpenInference instrumentors
+    # This enriches spans from smolagents, litellm, mcp with cost attributes
+    if config.enable_cost_tracking:
+        try:
+            cost_calculator = CostCalculator()
+            cost_processor = CostEnrichmentSpanProcessor(cost_calculator)
+            tracer_provider.add_span_processor(cost_processor)
+            logger.info("Cost enrichment processor added for OpenInference instrumentors")
+        except Exception as e:
+            logger.warning(f"Failed to add cost enrichment processor: {e}", exc_info=True)
 
     logger.debug(f"OTelConfig endpoint: {config.endpoint}")
     if config.endpoint:

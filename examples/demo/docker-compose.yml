@@ -1,39 +1,120 @@
 version: '3.8'
 
 services:
-  # Jaeger - for trace visualization
+  # OpenTelemetry Collector - Central telemetry pipeline
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: genai-otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    ports:
+      - "4317:4317"    # OTLP gRPC receiver
+      - "4318:4318"    # OTLP HTTP receiver
+      - "8888:8888"    # Prometheus metrics (collector internal)
+      - "8889:8889"    # Prometheus exporter
+    networks:
+      - genai-otel-network
+    depends_on:
+      - jaeger
+      - prometheus
+
+  # Jaeger - Distributed tracing backend
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: genai-otel-jaeger
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+      - METRICS_STORAGE_TYPE=prometheus
+      - PROMETHEUS_SERVER_URL=http://prometheus:9090
     ports:
       - "16686:16686"  # Jaeger UI
-      - "4318:4318"    # OTLP HTTP receiver
-      - "4317:4317"    # OTLP gRPC receiver
+      - "14250:14250"  # Model.proto gRPC
     networks:
       - genai-otel-network
 
-  # Demo application
+  # Prometheus - Metrics storage and querying
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: genai-otel-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=7d'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"    # Prometheus UI
+    networks:
+      - genai-otel-network
+
+  # Grafana - Visualization and dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: genai-otel-grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"    # Grafana UI
+    networks:
+      - genai-otel-network
+    depends_on:
+      - prometheus
+      - jaeger
+
+  # Demo Application
   demo-app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: examples/demo/Dockerfile
     container_name: genai-otel-demo-app
     environment:
+      # OpenTelemetry Configuration
       - OTEL_SERVICE_NAME=genai-demo-app
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_INSTANCE_ID=demo-instance-1
+      - OTEL_ENVIRONMENT=demo
+      - OTEL_EXPORTER_OTLP_TIMEOUT=10.0
+
+      # Semantic Conventions
+      - OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai
+      - GENAI_ENABLE_CONTENT_CAPTURE=false
+
+      # Feature Flags
       - GENAI_ENABLE_GPU_METRICS=false
       - GENAI_ENABLE_COST_TRACKING=true
       - GENAI_ENABLE_MCP_INSTRUMENTATION=true
+      - GENAI_ENABLE_CO2_TRACKING=true
+
+      # API Keys (pass from host environment)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+
+      # Logging
       - GENAI_OTEL_LOG_LEVEL=INFO
+      - GENAI_FAIL_ON_ERROR=false
     depends_on:
-      - jaeger
+      - otel-collector
     networks:
       - genai-otel-network
+    restart: unless-stopped
 
 networks:
   genai-otel-network:
     driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:
