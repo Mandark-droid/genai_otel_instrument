@@ -1,4 +1,7 @@
-genai-otel-instrument[all]
+# Dependencies are installed via Dockerfile
+# The package is built from source with specific extras: [openai,anthropic,langchain]
+# This file is kept for reference only
+
 openai>=1.0.0
 anthropic>=0.18.0
 langchain>=0.1.0

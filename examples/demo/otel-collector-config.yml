@@ -1,3 +1,7 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
 receivers:
   otlp:
     protocols:
@@ -13,31 +17,24 @@ processors:
   memory_limiter:
     check_interval: 1s
     limit_mib: 200
-    spike_limit_mib: 300
-  attributes:
-    actions:
-      - key: service.instance.id
-        action: insert
-        value: ${env:OTEL_SERVICE_INSTANCE_ID}
-      - key: service.environment
-        action: insert
-        value: ${env:OTEL_ENVIRONMENT}
+    spike_limit_mib: 100
 
 exporters:
-  jaeger:
-    endpoint: jaeger:14250 # Jaeger's OTLP gRPC endpoint
+  otlp/jaeger:
+    endpoint: jaeger:4317  # Jaeger's OTLP gRPC endpoint
     tls:
       insecure: true
   prometheus:
     endpoint: "0.0.0.0:8889" # Prometheus exporter endpoint
 
 service:
+  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, batch, attributes]
-      exporters: [jaeger]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/jaeger]
     metrics:
       receivers: [otlp]
-      processors: [memory_limiter, batch, attributes]
+      processors: [memory_limiter, batch]
       exporters: [prometheus]

@@ -9,7 +9,7 @@ services:
     volumes:
       - ./otel-collector-config.yml:/etc/otel-collector-config.yml
     ports:
-      - "4317:4317"    # OTLP gRPC receiver
+      #- "4317:4317"    # OTLP gRPC receiver
       - "4318:4318"    # OTLP HTTP receiver
       - "8888:8888"    # Prometheus metrics (collector internal)
       - "8889:8889"    # Prometheus exporter
@@ -18,18 +18,52 @@ services:
     depends_on:
       - jaeger
       - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
-  # Jaeger - Distributed tracing backend
+  # OpenSearch Setup - Creates ingest pipeline and index template
+  # Uses external OpenSearch instance
+  opensearch-setup:
+    image: alpine:latest
+    container_name: genai-otel-opensearch-setup
+    volumes:
+      - ./opensearch-setup.sh:/tmp/setup-orig.sh:ro
+    environment:
+      - OPENSEARCH_URL=http://192.168.13.107:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=admin
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        apk add --no-cache curl dos2unix
+        cp /tmp/setup-orig.sh /tmp/setup.sh
+        dos2unix /tmp/setup.sh
+        sh /tmp/setup.sh
+    restart: "no"
+
+  # Jaeger - Distributed tracing backend with OpenSearch storage
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: genai-otel-jaeger
     environment:
       - COLLECTOR_OTLP_ENABLED=true
-      - METRICS_STORAGE_TYPE=prometheus
-      - PROMETHEUS_SERVER_URL=http://prometheus:9090
+      - SPAN_STORAGE_TYPE=opensearch
+      - ES_SERVER_URLS=http://192.168.13.107:9200
+      - ES_USERNAME=admin
+      - ES_PASSWORD=admin
+      - ES_VERSION=7
+      - ES_USE_ALIASES=true
+      - ES_INDEX_PREFIX=jaeger
+      - ES_TLS_ENABLED=false
     ports:
       - "16686:16686"  # Jaeger UI
       - "14250:14250"  # Model.proto gRPC
+      - "4317:4317"    # OTLP gRPC receiver
     networks:
       - genai-otel-network
 
@@ -48,7 +82,7 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
     ports:
-      - "9090:9090"    # Prometheus UI
+      - "9091:9090"    # Prometheus UI (changed from 9090 to avoid conflict)
     networks:
       - genai-otel-network
 
@@ -61,6 +95,7 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_AUTH_DISABLE_LOGIN_FORM=true
       - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+      - GF_INSTALL_PLUGINS=grafana-opensearch-datasource
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
@@ -106,10 +141,12 @@ services:
       - GENAI_OTEL_LOG_LEVEL=INFO
       - GENAI_FAIL_ON_ERROR=false
     depends_on:
-      - otel-collector
+      otel-collector:
+        condition: service_healthy
     networks:
       - genai-otel-network
-    restart: unless-stopped
+    restart: on-failure
+    command: sh -c "sleep 5 && python /app/app.py"
 
 networks:
   genai-otel-network:
