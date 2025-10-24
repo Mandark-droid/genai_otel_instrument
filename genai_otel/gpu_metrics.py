@@ -42,6 +42,7 @@ class GPUMetricsCollector:
         self._stop_event = threading.Event()
         self.gpu_utilization_counter: Optional[ObservableCounter] = None
         self.gpu_memory_used_gauge: Optional[ObservableGauge] = None
+        self.gpu_memory_total_gauge: Optional[ObservableGauge] = None
         self.gpu_temperature_gauge: Optional[ObservableGauge] = None
         self.gpu_power_gauge: Optional[ObservableGauge] = None
         self.config = config
@@ -86,6 +87,12 @@ class GPUMetricsCollector:
                 "gen_ai.gpu.memory.used",  # Fixed metric name
                 callbacks=[self._observe_gpu_memory],
                 description="GPU memory used in MiB",
+                unit="MiB",
+            )
+            self.gpu_memory_total_gauge = self.meter.create_observable_gauge(
+                "gen_ai.gpu.memory.total",  # Fixed metric name
+                callbacks=[self._observe_gpu_memory_total],
+                description="Total GPU memory capacity in MiB",
                 unit="MiB",
             )
             self.gpu_temperature_gauge = self.meter.create_observable_gauge(
@@ -166,6 +173,33 @@ class GPUMetricsCollector:
             pynvml.nvmlShutdown()
         except Exception as e:
             logger.error("Error observing GPU memory: %s", e)
+
+    def _observe_gpu_memory_total(self, options):
+        """Observable callback for total GPU memory capacity."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                    gpu_memory_total = memory_info.total / (1024**2)  # Convert to MiB
+                    yield Observation(
+                        value=gpu_memory_total,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get total GPU memory for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing total GPU memory: %s", e)
 
     def _observe_gpu_temperature(self, options):
         """Observable callback for GPU temperature."""
