@@ -7,5 +7,3 @@ datasources:
     url: http://jaeger:16686
     isDefault: false
     editable: false
-    jsonData:
-      traceqlEditorEnabled: true
