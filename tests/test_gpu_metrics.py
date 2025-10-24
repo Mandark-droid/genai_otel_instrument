@@ -105,7 +105,7 @@ class TestGPUMetricsCollector:
             unit="gCO2e",
         )
         # GPU gauges are created even if no GPUs available
-        assert mock_meter.create_observable_gauge.call_count == 4
+        assert mock_meter.create_observable_gauge.call_count == 5
 
     @patch("genai_otel.gpu_metrics.logger")
     def test_init_no_gpus(self, mock_logger, mock_meter, mock_otel_config, mock_pynvml_no_gpu):
@@ -134,10 +134,10 @@ class TestGPUMetricsCollector:
             description="Cumulative CO2 equivalent emissions in grams",
             unit="gCO2e",
         )
-        # All four metrics are now ObservableGauges
+        # All five metrics are now ObservableGauges
         assert (
-            mock_meter.create_observable_gauge.call_count == 4
-        )  # utilization, memory, temperature, power
+            mock_meter.create_observable_gauge.call_count == 5
+        )  # utilization, memory used, memory total, temperature, power
 
     @patch("genai_otel.gpu_metrics.logger")
     def test_init_metric_instrument_creation_fails(
