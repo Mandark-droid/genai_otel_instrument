@@ -1,16 +1,23 @@
 # GenAI OTel Instrumentation - Complete Demo
 
-This is a fully self-contained Docker demo that showcases the genai-otel-instrument library with multiple LLM providers.
+This is a fully self-contained Docker demo that showcases the genai-otel-instrument library with multiple LLM providers and advanced trace analytics.
 
 ## What's Included
 
-- **Jaeger**: For trace visualization and metrics
+- **OpenSearch**: Long-term trace storage with full-text search and aggregations
+- **Jaeger with OpenSearch Backend**: Distributed tracing with persistent storage
+- **OpenTelemetry Collector**: Central telemetry pipeline
+- **Prometheus**: Metrics storage and querying
+- **Grafana**: Pre-built dashboards for metrics and trace analytics
+- **GenAI Ingest Pipeline**: Automatically extracts and flattens all GenAI semantic convention fields
 - **Demo Application**: Python app demonstrating:
   - OpenAI instrumentation
   - Anthropic Claude instrumentation
   - LangChain instrumentation
   - Automatic cost tracking
   - Token usage metrics
+  - GPU metrics (if available)
+  - CO2 emissions tracking
   - Distributed tracing
 
 ## Quick Start
@@ -20,6 +27,14 @@ This is a fully self-contained Docker demo that showcases the genai-otel-instrum
 - Docker and Docker Compose installed
 - OpenAI API key (required)
 - Anthropic API key (optional, for Claude demo)
+- **System Configuration for OpenSearch**:
+  ```bash
+  # Required for OpenSearch to start properly
+  sudo sysctl -w vm.max_map_count=262144
+
+  # To make it permanent, add to /etc/sysctl.conf:
+  echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
+  ```
 
 ### Setup
 
@@ -39,11 +54,19 @@ This is a fully self-contained Docker demo that showcases the genai-otel-instrum
    docker-compose up --build
    ```
 
-4. **View the traces**:
-   - Open http://localhost:16686 in your browser
-   - Select "genai-demo-app" from the Service dropdown
-   - Click "Find Traces"
-   - Explore the captured telemetry data!
+4. **View the traces and metrics**:
+   - **Grafana**: http://localhost:3000 (dashboards - START HERE!)
+     - "GenAI OTel Demo Metrics" - Token usage, costs, latency, GPU metrics
+     - "GenAI Traces - OpenSearch" - Advanced trace analytics
+   - **Jaeger UI**: http://localhost:16686 (trace visualization)
+   - **OpenSearch**: http://localhost:9200 (direct API access)
+   - **Prometheus**: http://localhost:9091 (raw metrics)
+
+5. **Explore the data**:
+   - In Grafana, navigate to "GenAI Traces - OpenSearch" dashboard
+   - Click on any Trace ID to jump to detailed view in Jaeger
+   - Analyze costs, token usage, and performance by model
+   - Track errors and slow requests
 
 ## What You'll See
 
@@ -118,6 +141,44 @@ Replace Jaeger with:
 - Any OTLP-compatible backend
 
 Just update the `OTEL_EXPORTER_OTLP_ENDPOINT` in docker-compose.yml
+
+## OpenSearch Integration
+
+This demo includes OpenSearch for advanced trace analytics. See [OPENSEARCH_SETUP.md](./OPENSEARCH_SETUP.md) for detailed documentation.
+
+### What You Get
+
+- **Persistent Storage**: Traces are stored in OpenSearch, not just in-memory
+- **Advanced Analytics**: Query and aggregate trace data using OpenSearch's powerful query DSL
+- **GenAI Field Extraction**: Automatic extraction of all GenAI semantic convention fields:
+  - Model names, token counts, costs
+  - GPU metrics, CO2 emissions
+  - Error details, performance metrics
+- **Pre-built Dashboard**: Grafana dashboard with cost analysis, performance metrics, and error tracking
+- **Direct Queries**: Use OpenSearch REST API for custom analytics
+
+### Quick Examples
+
+```bash
+# View all extracted GenAI fields
+curl "http://localhost:9200/jaeger-span-*/_search?pretty&size=1"
+
+# Get total cost by model
+curl "http://localhost:9200/jaeger-span-*/_search?pretty" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "size": 0,
+  "query": {"exists": {"field": "gen_ai_system"}},
+  "aggs": {
+    "by_model": {
+      "terms": {"field": "gen_ai_request_model.keyword"},
+      "aggs": {
+        "total_cost": {"sum": {"field": "gen_ai_cost_amount"}}
+      }
+    }
+  }
+}'
+```
 
 ## Troubleshooting
 
