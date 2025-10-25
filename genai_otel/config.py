@@ -11,7 +11,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +130,13 @@ class OTelConfig:
     custom_pricing_json: Optional[str] = field(
         default_factory=lambda: os.getenv("GENAI_CUSTOM_PRICING_JSON")
     )
+
+    # Session and user tracking (Phase 4.1)
+    # Optional callable functions to extract session_id and user_id from requests
+    # Signature: (instance, args, kwargs) -> Optional[str]
+    # Example: lambda instance, args, kwargs: kwargs.get("metadata", {}).get("session_id")
+    session_id_extractor: Optional[Callable[[Any, Tuple, Dict], Optional[str]]] = None
+    user_id_extractor: Optional[Callable[[Any, Tuple, Dict], Optional[str]]] = None
 
 
 import os
