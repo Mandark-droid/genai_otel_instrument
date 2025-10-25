@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.4] - 2025-01-25
+## [0.1.5] - 2025-01-25
 
 ### Added
 
@@ -19,6 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Streaming metrics still captured: `gen_ai.server.ttft` (histogram), `gen_ai.server.tbt` (histogram), `gen_ai.streaming.token_count` (chunk count)
   - Implementation in `genai_otel/instrumentors/base.py:551-638`
   - Resolves issue where streaming requests had TTFT/TBT but no cost/usage tracking
+
+### Fixed
+
+- **GPU Metrics Test Infrastructure**
+  - Fixed GPU metrics test mocks to return separate Mock objects for CO2 and power cost counters
+  - Updated `mock_meter` fixture in `tests/test_gpu_metrics.py` to use `side_effect` for multiple counters
+  - Fixed `test_auto_instrument.py` assertions to use dynamic `config.gpu_collection_interval` instead of hardcoded values
+  - All 434 tests now pass with proper GPU power cost tracking validation
+
+## [0.1.4] - 2025-01-24
+
+### Added
 
 - **Custom Model Pricing via Environment Variable**
   - Added `GENAI_CUSTOM_PRICING_JSON` environment variable for custom/proprietary model pricing
