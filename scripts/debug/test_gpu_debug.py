@@ -1,10 +1,11 @@
 """Test GPU metrics collection with debug output"""
+
 import logging
 import os
 import time
 
 # Set up logging to DEBUG level
-logging.basicConfig(level=logging.DEBUG, format='%(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format="%(name)s - %(levelname)s - %(message)s")
 
 import genai_otel
 from genai_otel.config import OTelConfig
