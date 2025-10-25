@@ -32,9 +32,8 @@ class MistralAIInstrumentor(BaseInstrumentor):
             # In Mistral SDK v1.0+, structure is:
             # - Mistral client has .chat and .embeddings properties
             # - These are bound methods that call internal APIs
-
             # Store original methods at module level before any instances are created
-            if not hasattr(Mistral, '_genai_otel_instrumented'):
+            if not hasattr(Mistral, "_genai_otel_instrumented"):
                 self._wrap_mistral_methods(Mistral, wrapt)
                 Mistral._genai_otel_instrumented = True
                 logger.info("MistralAI instrumentation enabled (v1.0+ SDK)")
@@ -54,29 +53,21 @@ class MistralAIInstrumentor(BaseInstrumentor):
             from mistralai.embeddings import Embeddings
 
             # Wrap Chat.complete method
-            if hasattr(Chat, 'complete'):
+            if hasattr(Chat, "complete"):
                 wrapt.wrap_function_wrapper(
-                    'mistralai.chat',
-                    'Chat.complete',
-                    self._wrap_chat_complete
+                    "mistralai.chat", "Chat.complete", self._wrap_chat_complete
                 )
                 logger.debug("Wrapped Mistral Chat.complete")
 
             # Wrap Chat.stream method
-            if hasattr(Chat, 'stream'):
-                wrapt.wrap_function_wrapper(
-                    'mistralai.chat',
-                    'Chat.stream',
-                    self._wrap_chat_stream
-                )
+            if hasattr(Chat, "stream"):
+                wrapt.wrap_function_wrapper("mistralai.chat", "Chat.stream", self._wrap_chat_stream)
                 logger.debug("Wrapped Mistral Chat.stream")
 
             # Wrap Embeddings.create method
-            if hasattr(Embeddings, 'create'):
+            if hasattr(Embeddings, "create"):
                 wrapt.wrap_function_wrapper(
-                    'mistralai.embeddings',
-                    'Embeddings.create',
-                    self._wrap_embeddings_create
+                    "mistralai.embeddings", "Embeddings.create", self._wrap_embeddings_create
                 )
                 logger.debug("Wrapped Mistral Embeddings.create")
 
@@ -140,15 +131,11 @@ class MistralAIInstrumentor(BaseInstrumentor):
             stream = wrapped(*args, **kwargs)
 
             # Wrap the stream with our tracking wrapper
-            return self._StreamWrapper(
-                stream, span, self, model, start_time, span_name
-            )
+            return self._StreamWrapper(stream, span, self, model, start_time, span_name)
 
         except Exception as e:
             if self.error_counter:
-                self.error_counter.add(
-                    1, {"operation": span_name, "error.type": type(e).__name__}
-                )
+                self.error_counter.add(1, {"operation": span_name, "error.type": type(e).__name__})
             span.record_exception(e)
             span.end()
             raise
@@ -240,10 +227,7 @@ class MistralAIInstrumentor(BaseInstrumentor):
 
                         mock_response = MockResponse(self._usage)
                         self._instrumentor._record_result_metrics(
-                            self._span,
-                            mock_response,
-                            self._start_time,
-                            {"model": self._model}
+                            self._span, mock_response, self._start_time, {"model": self._model}
                         )
 
                 finally:
@@ -255,21 +239,21 @@ class MistralAIInstrumentor(BaseInstrumentor):
             """Process a streaming chunk to extract usage."""
             try:
                 # Mistral streaming chunks have: data.choices[0].delta.content
-                if hasattr(chunk, 'data'):
+                if hasattr(chunk, "data"):
                     data = chunk.data
-                    if hasattr(data, 'choices') and len(data.choices) > 0:
+                    if hasattr(data, "choices") and len(data.choices) > 0:
                         delta = data.choices[0].delta
-                        if hasattr(delta, 'content') and delta.content:
+                        if hasattr(delta, "content") and delta.content:
                             self._response_text += delta.content
 
                     # Extract usage if available on final chunk
-                    if hasattr(data, 'usage') and data.usage:
+                    if hasattr(data, "usage") and data.usage:
                         usage = data.usage
-                        if hasattr(usage, 'prompt_tokens'):
+                        if hasattr(usage, "prompt_tokens"):
                             self._usage["prompt_tokens"] = usage.prompt_tokens
-                        if hasattr(usage, 'completion_tokens'):
+                        if hasattr(usage, "completion_tokens"):
                             self._usage["completion_tokens"] = usage.completion_tokens
-                        if hasattr(usage, 'total_tokens'):
+                        if hasattr(usage, "total_tokens"):
                             self._usage["total_tokens"] = usage.total_tokens
 
             except Exception as e:

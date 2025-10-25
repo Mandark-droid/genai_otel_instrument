@@ -253,14 +253,9 @@ class TestCustomPricing(unittest.TestCase):
 
     def test_custom_pricing_chat_model(self):
         """Test adding custom pricing for a chat model."""
-        custom_pricing_json = json.dumps({
-            "chat": {
-                "my-custom-model": {
-                    "promptPrice": 0.001,
-                    "completionPrice": 0.002
-                }
-            }
-        })
+        custom_pricing_json = json.dumps(
+            {"chat": {"my-custom-model": {"promptPrice": 0.001, "completionPrice": 0.002}}}
+        )
 
         with patch.object(CostCalculator, "_load_pricing", MagicMock()):
             calculator = CostCalculator(custom_pricing_json=custom_pricing_json)
@@ -286,24 +281,14 @@ class TestCustomPricing(unittest.TestCase):
 
     def test_custom_pricing_override_existing(self):
         """Test that custom pricing overrides default pricing."""
-        custom_pricing_json = json.dumps({
-            "chat": {
-                "gpt-4o": {
-                    "promptPrice": 0.999,
-                    "completionPrice": 0.999
-                }
-            }
-        })
+        custom_pricing_json = json.dumps(
+            {"chat": {"gpt-4o": {"promptPrice": 0.999, "completionPrice": 0.999}}}
+        )
 
         with patch.object(CostCalculator, "_load_pricing", MagicMock()):
             calculator = CostCalculator(custom_pricing_json=custom_pricing_json)
             calculator.pricing_data = {
-                "chat": {
-                    "gpt-4o": {
-                        "promptPrice": 0.0005,
-                        "completionPrice": 0.0015
-                    }
-                }
+                "chat": {"gpt-4o": {"promptPrice": 0.0005, "completionPrice": 0.0015}}
             }
 
             # Merge custom pricing (should override)
@@ -315,17 +300,13 @@ class TestCustomPricing(unittest.TestCase):
 
     def test_custom_pricing_multiple_categories(self):
         """Test custom pricing across multiple categories."""
-        custom_pricing_json = json.dumps({
-            "chat": {
-                "custom-chat-model": {"promptPrice": 0.001, "completionPrice": 0.002}
-            },
-            "embeddings": {
-                "custom-embedding-model": 0.0001
-            },
-            "audio": {
-                "custom-tts-model": 0.02
+        custom_pricing_json = json.dumps(
+            {
+                "chat": {"custom-chat-model": {"promptPrice": 0.001, "completionPrice": 0.002}},
+                "embeddings": {"custom-embedding-model": 0.0001},
+                "audio": {"custom-tts-model": 0.02},
             }
-        })
+        )
 
         with patch.object(CostCalculator, "_load_pricing", MagicMock()):
             calculator = CostCalculator(custom_pricing_json=custom_pricing_json)
@@ -366,11 +347,7 @@ class TestCustomPricing(unittest.TestCase):
 
     def test_custom_pricing_invalid_category(self):
         """Test that invalid categories are ignored with warning."""
-        custom_pricing_json = json.dumps({
-            "invalid_category": {
-                "some-model": {"price": 0.001}
-            }
-        })
+        custom_pricing_json = json.dumps({"invalid_category": {"some-model": {"price": 0.001}}})
 
         with patch.object(CostCalculator, "_load_pricing", MagicMock()):
             calculator = CostCalculator()
@@ -383,11 +360,7 @@ class TestCustomPricing(unittest.TestCase):
 
     def test_custom_pricing_with_embedding_model(self):
         """Test custom pricing for embedding models."""
-        custom_pricing_json = json.dumps({
-            "embeddings": {
-                "my-custom-embeddings": 0.00005
-            }
-        })
+        custom_pricing_json = json.dumps({"embeddings": {"my-custom-embeddings": 0.00005}})
 
         with patch.object(CostCalculator, "_load_pricing", MagicMock()):
             calculator = CostCalculator(custom_pricing_json=custom_pricing_json)

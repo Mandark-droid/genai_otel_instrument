@@ -301,8 +301,7 @@ class GPUMetricsCollector:
                     delta_cost_usd = (delta_energy_wh / 1000.0) * self.config.power_cost_per_kwh
                     device_name = self._get_device_name(handle, i)
                     self.power_cost_counter.add(
-                        delta_cost_usd,
-                        {"gpu_id": str(i), "gpu_name": device_name}
+                        delta_cost_usd, {"gpu_id": str(i), "gpu_name": device_name}
                     )
 
                     self.last_timestamp[i] = current_time
