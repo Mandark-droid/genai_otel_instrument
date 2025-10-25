@@ -6,6 +6,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Phase 4: Session and User Tracking (4.1)**
+  - Added `session_id_extractor` and `user_id_extractor` optional callable fields to `OTelConfig`
+  - Extractor function signature: `(instance, args, kwargs) -> Optional[str]`
+  - Automatically sets `session.id` and `user.id` span attributes when extractors are configured
+  - Enables tracking conversations across multiple requests for the same session
+  - Supports per-user analytics, cost attribution, and debugging
+  - Implementation in `genai_otel/config.py:134-139` and `genai_otel/instrumentors/base.py:266-284`
+  - Documented in README.md with comprehensive examples
+  - Example implementation in `examples/phase4_session_rag_tracking.py`
+
+- **Phase 4: RAG and Embedding Attributes (4.2)**
+  - Added `add_embedding_attributes()` helper method to `BaseInstrumentor`
+    - Sets `embedding.model_name`, `embedding.text`, `embedding.vector`, `embedding.vector.dimension`
+    - Truncates text to 500 characters to avoid span size explosion
+  - Added `add_retrieval_attributes()` helper method to `BaseInstrumentor`
+    - Sets `retrieval.query`, `retrieval.document_count`
+    - Sets per-document attributes: `retrieval.documents.{i}.document.id`, `.score`, `.content`, `.metadata.*`
+    - Limits to 5 documents by default (configurable via `max_docs` parameter)
+    - Truncates content and metadata to prevent excessive attribute counts
+  - Enables enhanced observability for RAG (Retrieval-Augmented Generation) workflows
+  - Implementation in `genai_otel/instrumentors/base.py:705-770`
+  - Documented in README.md with usage examples and best practices
+  - Complete RAG workflow example in `examples/phase4_session_rag_tracking.py`
+
+- **Phase 4 Documentation and Examples**
+  - Added "Advanced Features" section to README.md
+  - Documented session/user tracking with extractor function patterns
+  - Documented RAG/embedding attributes with helper method usage
+  - Created comprehensive example file `examples/phase4_session_rag_tracking.py` demonstrating:
+    - Session and user extractor functions
+    - Embedding attribute capture
+    - Retrieval attribute capture with document metadata
+    - Complete RAG workflow with session tracking
+  - Updated roadmap section to mark Phase 4 as completed
+  - **Note**: Agent workflow tracking (`agent.name`, `agent.iteration`, etc.) is provided by the existing OpenInference Smolagents instrumentor, not new in Phase 4
+
 ## [0.1.5] - 2025-01-25
 
 ### Added

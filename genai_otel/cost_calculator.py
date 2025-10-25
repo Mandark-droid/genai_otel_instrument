@@ -80,7 +80,8 @@ class CostCalculator:
 
             if not isinstance(custom_pricing, dict):
                 logger.error(
-                    "Custom pricing must be a JSON object/dict. Got: %s", type(custom_pricing).__name__
+                    "Custom pricing must be a JSON object/dict. Got: %s",
+                    type(custom_pricing).__name__,
                 )
                 return
 
@@ -215,7 +216,7 @@ class CostCalculator:
                     model,
                     param_count,
                     pricing["promptPrice"],
-                    pricing["completionPrice"]
+                    pricing["completionPrice"],
                 )
             else:
                 logger.debug("Pricing not found for chat model: %s", model)
@@ -384,14 +385,14 @@ class CostCalculator:
 
         # First try explicit parameter count patterns (e.g., 135m, 7b, 70b)
         # Matches: digits followed by optional decimal, then 'm' or 'b'
-        pattern = r'(\d+(?:\.\d+)?)(m|b)(?:\s|:|$|-)'
+        pattern = r"(\d+(?:\.\d+)?)(m|b)(?:\s|:|$|-)"
         match = re.search(pattern, model_lower)
         if match:
             value = float(match.group(1))
             unit = match.group(2)
-            if unit == 'm':
+            if unit == "m":
                 return value / 1000  # Convert millions to billions
-            elif unit == 'b':
+            elif unit == "b":
                 return value
 
         # Fallback to common model size indicators for HuggingFace models
