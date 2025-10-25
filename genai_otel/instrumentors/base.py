@@ -7,6 +7,7 @@ It includes methods for creating OpenTelemetry spans, recording metrics,
 and handling configuration and cost calculation.
 """
 
+import json
 import logging
 import threading
 import time
@@ -270,18 +271,18 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             session_id = self.config.session_id_extractor(instance, args, kwargs)
                             if session_id:
                                 span.set_attribute("session.id", session_id)
-                                logger.debug(f"Set session.id: {session_id}")
+                                logger.debug("Set session.id: %s", session_id)
                         except Exception as e:
-                            logger.debug(f"Failed to extract session ID: {e}")
+                            logger.debug("Failed to extract session ID: %s", e)
 
                     if self.config.user_id_extractor:
                         try:
                             user_id = self.config.user_id_extractor(instance, args, kwargs)
                             if user_id:
                                 span.set_attribute("user.id", user_id)
-                                logger.debug(f"Set user.id: {user_id}")
+                                logger.debug("Set user.id: %s", user_id)
                         except Exception as e:
-                            logger.debug(f"Failed to extract user ID: {e}")
+                            logger.debug("Failed to extract user ID: %s", e)
 
                 try:
                     # Call the original function
@@ -719,8 +720,6 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
         if vector and self.config and hasattr(self.config, "capture_embedding_vectors"):
             # Only capture vectors if explicitly enabled (they can be very large)
-            import json
-
             span.set_attribute("embedding.vector", json.dumps(vector))
             span.set_attribute("embedding.vector.dimension", len(vector))
 
