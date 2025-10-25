@@ -167,7 +167,7 @@ class TestAutoInstrumentation:
                         mock_openai_instance.instrument.assert_called_once_with(config=config)
                         mock_anthropic_instance.instrument.assert_called_once_with(config=config)
                         mock_google_instance.assert_not_called()
-                        mock_gpu_collector.assert_called_once_with(mock_meter, config, interval=5)
+                        mock_gpu_collector.assert_called_once_with(mock_meter, config, interval=config.gpu_collection_interval)
                         mock_gpu_collector.return_value.start.assert_called_once()
                         mock_mcp_manager.assert_called_once_with(config)
                         mock_mcp_manager.return_value.instrument_all.assert_called_once_with(
@@ -193,7 +193,7 @@ class TestAutoInstrumentation:
                             "MCP tools instrumentation enabled and set up."
                         )
                         mock_logger.info.assert_any_call(
-                            "GPU metrics collection started (interval: 5s)."
+                            f"GPU metrics collection started (interval: {config.gpu_collection_interval}s)."
                         )
                         mock_logger.info.assert_any_call("Auto-instrumentation setup complete")
 
@@ -402,10 +402,10 @@ class TestAutoInstrumentation:
                         mock_gpu_collector.return_value = mock_gpu_instance
                         setup_auto_instrumentation(config)
                         mock_meter_provider_instance.get_meter.assert_called_once_with("genai.gpu")
-                        mock_gpu_collector.assert_called_once_with(mock_meter, config, interval=5)
+                        mock_gpu_collector.assert_called_once_with(mock_meter, config, interval=config.gpu_collection_interval)
                         mock_gpu_instance.start.assert_called_once()
                         mock_logger.info.assert_any_call(
-                            "GPU metrics collection started (interval: 5s)."
+                            f"GPU metrics collection started (interval: {config.gpu_collection_interval}s)."
                         )
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)

@@ -23,6 +23,7 @@ def mock_otel_config():
     config = Mock()
     config.enable_co2_tracking = True
     config.carbon_intensity = 0.4  # gCO2e/kWh
+    config.power_cost_per_kwh = 0.12  # USD per kWh
     return config
 
 
@@ -30,7 +31,9 @@ def mock_otel_config():
 def mock_meter():
     """Fixture for a mock OpenTelemetry Meter."""
     meter = Mock()
-    meter.create_counter.return_value = Mock()  # Only CO2 counter now
+    # create_counter is called for both CO2 and power cost counters
+    # Return different Mock objects for each counter to avoid confusion
+    meter.create_counter.side_effect = [Mock(), Mock()]
     # Return a new Mock() each time create_observable_gauge is called
     meter.create_observable_gauge.return_value = Mock()
     return meter
@@ -86,7 +89,8 @@ class TestGPUMetricsCollector:
             "GPU metrics collection not available - nvidia-ml-py not installed. "
             "Install with: pip install genai-otel-instrument[gpu]"
         )
-        mock_meter.create_counter.assert_called_once()  # co2 counter is always created
+        # Both CO2 and power cost counters are created even when NVML not available
+        assert mock_meter.create_counter.call_count == 2
         mock_meter.create_observable_gauge.assert_not_called()  # other gauges not created
 
     @patch("genai_otel.gpu_metrics.logger")
@@ -98,12 +102,8 @@ class TestGPUMetricsCollector:
         mock_pynvml_gpu_available.nvmlInit.side_effect = Exception("NVML init failed")
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
         assert not collector.gpu_available
-        # Only CO2 counter is created (before GPU availability check)
-        mock_meter.create_counter.assert_called_once_with(
-            "gen_ai.co2.emissions",  # Fixed metric name
-            description="Cumulative CO2 equivalent emissions in grams",
-            unit="gCO2e",
-        )
+        # Both CO2 and power cost counters are created (before GPU availability check)
+        assert mock_meter.create_counter.call_count == 2
         # GPU gauges are created even if no GPUs available
         assert mock_meter.create_observable_gauge.call_count == 5
 
@@ -128,12 +128,8 @@ class TestGPUMetricsCollector:
         assert collector.gpu_available
         assert collector.device_count == 1
         mock_pynvml_gpu_available.nvmlInit.assert_called_once()
-        # Only CO2 counter is created
-        mock_meter.create_counter.assert_called_once_with(
-            "gen_ai.co2.emissions",  # Fixed metric name
-            description="Cumulative CO2 equivalent emissions in grams",
-            unit="gCO2e",
-        )
+        # Both CO2 and power cost counters are created
+        assert mock_meter.create_counter.call_count == 2
         # All five metrics are now ObservableGauges
         assert (
             mock_meter.create_observable_gauge.call_count == 5
@@ -366,6 +362,59 @@ class TestGPUMetricsCollector:
         collector.co2_counter.add.assert_not_called()
         assert collector.cumulative_energy_wh[0] == 1.5
         assert collector.last_timestamp[0] == 1000.0
+
+    @patch("genai_otel.gpu_metrics.time.time", return_value=1000.0)
+    @patch("genai_otel.gpu_metrics.logger")
+    def test_collect_loop_power_cost_tracking(
+        self, mock_logger, mock_time, mock_meter, mock_otel_config, mock_pynvml_gpu_available
+    ):
+        """Test that power cost is calculated and recorded correctly."""
+        import genai_otel.gpu_metrics
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
+        collector.device_count = 1
+        collector.last_timestamp = [990.0]  # 10 seconds ago
+        collector.interval = 1
+
+        # Mock _stop_event.wait to return True after one iteration
+        collector._stop_event.wait = Mock(side_effect=[False, True])
+
+        collector._collect_loop()
+
+        # Power usage is 150W (150000 mW)
+        # delta_time_hours = (1000 - 990) / 3600 = 10 / 3600 hours
+        # delta_energy_wh = (150 / 1000) * (10 / 3600 * 3600) = 0.15 * 10 = 1.5 Wh
+        # delta_cost_usd = (1.5 / 1000) * 0.12 = 0.00018 USD
+        expected_cost = (1.5 / 1000.0) * 0.12
+        collector.power_cost_counter.add.assert_called_once()
+        call_args = collector.power_cost_counter.add.call_args
+        assert call_args[0][0] == pytest.approx(expected_cost)
+        assert call_args[0][1] == {"gpu_id": "0", "gpu_name": "NVIDIA GeForce RTX 3080"}
+
+    @patch("genai_otel.gpu_metrics.time.time", return_value=1000.0)
+    @patch("genai_otel.gpu_metrics.logger")
+    def test_collect_loop_power_cost_with_different_rate(
+        self, mock_logger, mock_time, mock_meter, mock_otel_config, mock_pynvml_gpu_available
+    ):
+        """Test power cost calculation with different electricity rate."""
+        import genai_otel.gpu_metrics
+
+        mock_otel_config.power_cost_per_kwh = 0.25  # Higher electricity cost
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
+        collector.device_count = 1
+        collector.last_timestamp = [990.0]
+        collector.interval = 1
+
+        collector._stop_event.wait = Mock(side_effect=[False, True])
+
+        collector._collect_loop()
+
+        # Same power and time, but different rate
+        # delta_energy_wh = 1.5 Wh
+        # delta_cost_usd = (1.5 / 1000) * 0.25 = 0.000375 USD
+        expected_cost = (1.5 / 1000.0) * 0.25
+        call_args = collector.power_cost_counter.add.call_args
+        assert call_args[0][0] == pytest.approx(expected_cost)
 
     @patch("genai_otel.gpu_metrics.time.time", return_value=1000.0)
     @patch("genai_otel.gpu_metrics.logger")

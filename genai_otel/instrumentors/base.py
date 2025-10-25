@@ -97,7 +97,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         self.tracer = trace.get_tracer(__name__)
         self.meter = metrics.get_meter(__name__)
         self.config: Optional[OTelConfig] = None
-        self.cost_calculator = CostCalculator()
+        self.cost_calculator = CostCalculator()  # Will be updated when instrument() is called
         self._instrumented = False
 
         # Use shared metrics to avoid duplicate warnings
@@ -205,9 +205,24 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 cls._shared_ttft_histogram = None
                 cls._shared_tbt_histogram = None
 
+    def _setup_config(self, config: OTelConfig):
+        """Set up configuration and reinitialize cost calculator with custom pricing if provided.
+
+        Args:
+            config (OTelConfig): The OpenTelemetry configuration object.
+        """
+        self.config = config
+        # Reinitialize cost calculator with custom pricing if provided
+        if config.custom_pricing_json:
+            self.cost_calculator = CostCalculator(custom_pricing_json=config.custom_pricing_json)
+            logger.info("Cost calculator reinitialized with custom pricing")
+
     @abstractmethod
     def instrument(self, config: OTelConfig):
         """Abstract method to implement library-specific instrumentation.
+
+        Implementers should call self._setup_config(config) at the beginning of this method
+        to ensure custom pricing is loaded.
 
         Args:
             config (OTelConfig): The OpenTelemetry configuration object.
@@ -502,6 +517,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         first_token = True
         last_token_time = start_time
         token_count = 0
+        last_chunk = None  # Store last chunk to extract usage
 
         try:
             for chunk in stream:
@@ -523,6 +539,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         self.tbt_histogram.record(tbt, {"model": model, "operation": span.name})
 
                 last_token_time = current_time
+                last_chunk = chunk  # Keep track of last chunk for usage extraction
                 yield chunk
 
             # Stream completed successfully
@@ -530,6 +547,96 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             if self.latency_histogram:
                 self.latency_histogram.record(duration, {"operation": span.name})
             span.set_attribute("gen_ai.streaming.token_count", token_count)
+
+            # Extract usage from last chunk and calculate cost
+            # Many providers (OpenAI, Anthropic, etc.) include usage in the final chunk
+            try:
+                if last_chunk is not None:
+                    usage = self._extract_usage(last_chunk)
+                    if usage and isinstance(usage, dict):
+                        # Record token usage metrics and calculate cost
+                        # This will set span attributes and record cost metrics
+                        prompt_tokens = usage.get("prompt_tokens", 0)
+                        completion_tokens = usage.get("completion_tokens", 0)
+                        total_tokens = usage.get("total_tokens", 0)
+
+                        # Record token counts
+                        if isinstance(prompt_tokens, (int, float)) and prompt_tokens > 0:
+                            if self.token_counter:
+                                self.token_counter.add(
+                                    prompt_tokens, {"token_type": "prompt", "operation": span.name}
+                                )
+                            span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
+
+                        if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
+                            if self.token_counter:
+                                self.token_counter.add(
+                                    completion_tokens, {"token_type": "completion", "operation": span.name}
+                                )
+                            span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
+
+                        if isinstance(total_tokens, (int, float)) and total_tokens > 0:
+                            span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))
+
+                        # Calculate and record cost if enabled
+                        if self.config and self.config.enable_cost_tracking:
+                            try:
+                                # Get call_type from span attributes or default to "chat"
+                                call_type = span.attributes.get("gen_ai.request.type", "chat")
+
+                                # Use granular cost calculation for chat requests
+                                if call_type == "chat":
+                                    costs = self.cost_calculator.calculate_granular_cost(
+                                        model, usage, call_type
+                                    )
+                                    total_cost = costs["total"]
+
+                                    # Record total cost
+                                    if total_cost > 0:
+                                        if self.cost_counter:
+                                            self.cost_counter.add(total_cost, {"model": str(model)})
+                                        span.set_attribute("gen_ai.usage.cost.total", total_cost)
+                                        logger.debug(f"Streaming cost: {total_cost} USD")
+
+                                    # Record granular costs
+                                    if costs["prompt"] > 0:
+                                        if self.prompt_cost_counter:
+                                            self.prompt_cost_counter.add(costs["prompt"], {"model": str(model)})
+                                        span.set_attribute("gen_ai.usage.cost.prompt", costs["prompt"])
+
+                                    if costs["completion"] > 0:
+                                        if self.completion_cost_counter:
+                                            self.completion_cost_counter.add(costs["completion"], {"model": str(model)})
+                                        span.set_attribute("gen_ai.usage.cost.completion", costs["completion"])
+
+                                    if costs["reasoning"] > 0:
+                                        if self.reasoning_cost_counter:
+                                            self.reasoning_cost_counter.add(costs["reasoning"], {"model": str(model)})
+                                        span.set_attribute("gen_ai.usage.cost.reasoning", costs["reasoning"])
+
+                                    if costs["cache_read"] > 0:
+                                        if self.cache_read_cost_counter:
+                                            self.cache_read_cost_counter.add(costs["cache_read"], {"model": str(model)})
+                                        span.set_attribute("gen_ai.usage.cost.cache_read", costs["cache_read"])
+
+                                    if costs["cache_write"] > 0:
+                                        if self.cache_write_cost_counter:
+                                            self.cache_write_cost_counter.add(costs["cache_write"], {"model": str(model)})
+                                        span.set_attribute("gen_ai.usage.cost.cache_write", costs["cache_write"])
+                                else:
+                                    # For non-chat requests, use simple cost calculation
+                                    cost = self.cost_calculator.calculate_cost(model, usage, call_type)
+                                    if cost and cost > 0:
+                                        if self.cost_counter:
+                                            self.cost_counter.add(cost, {"model": str(model)})
+                                        span.set_attribute("gen_ai.usage.cost.total", cost)
+                            except Exception as e:
+                                logger.warning("Failed to calculate cost for streaming response: %s", e)
+                    else:
+                        logger.debug("No usage information found in streaming response")
+            except Exception as e:
+                logger.warning("Failed to extract usage from streaming response: %s", e)
+
             span.set_status(Status(StatusCode.OK))
             span.end()  # Close the span when streaming completes
             logger.debug(f"Streaming completed: {token_count} chunks in {duration:.3f}s")
