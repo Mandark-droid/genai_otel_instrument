@@ -303,6 +303,181 @@ genai_otel.instrument(
 
 A `sample.env` file has been generated in the project root directory. This file contains commented-out examples of all supported environment variables, along with their default values or expected formats. You can copy this file to `.env` and uncomment/modify the variables to configure the instrumentation for your specific needs.
 
+## Advanced Features
+
+### Session and User Tracking
+
+Track user sessions and identify users across multiple LLM requests for better analytics, debugging, and cost attribution.
+
+**Configuration:**
+
+```python
+import genai_otel
+from genai_otel import OTelConfig
+
+# Define extractor functions
+def extract_session_id(instance, args, kwargs):
+    """Extract session ID from request metadata."""
+    # Option 1: From kwargs metadata
+    metadata = kwargs.get("metadata", {})
+    return metadata.get("session_id")
+
+    # Option 2: From custom headers
+    # headers = kwargs.get("headers", {})
+    # return headers.get("X-Session-ID")
+
+    # Option 3: From thread-local storage
+    # import threading
+    # return getattr(threading.current_thread(), "session_id", None)
+
+def extract_user_id(instance, args, kwargs):
+    """Extract user ID from request metadata."""
+    metadata = kwargs.get("metadata", {})
+    return metadata.get("user_id")
+
+# Configure with extractors
+config = OTelConfig(
+    service_name="my-rag-app",
+    endpoint="http://localhost:4318",
+    session_id_extractor=extract_session_id,
+    user_id_extractor=extract_user_id,
+)
+
+genai_otel.instrument(config)
+```
+
+**Usage:**
+
+```python
+from openai import OpenAI
+
+client = OpenAI()
+
+# Pass session and user info via metadata
+response = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "What is OpenTelemetry?"}],
+    extra_body={"metadata": {"session_id": "sess_12345", "user_id": "user_alice"}}
+)
+```
+
+**Span Attributes Added:**
+- `session.id` - Unique session identifier for tracking conversations
+- `user.id` - User identifier for per-user analytics and cost tracking
+
+**Use Cases:**
+- Track multi-turn conversations across requests
+- Analyze usage patterns per user
+- Debug session-specific issues
+- Calculate per-user costs and quotas
+- Build user-specific dashboards
+
+### RAG and Embedding Attributes
+
+Enhanced observability for Retrieval-Augmented Generation (RAG) workflows, including embedding generation and document retrieval.
+
+**Helper Methods:**
+
+The `BaseInstrumentor` provides helper methods to add RAG-specific attributes to your spans:
+
+```python
+from opentelemetry import trace
+from genai_otel.instrumentors.base import BaseInstrumentor
+
+# Get your instrumentor instance (or create spans manually)
+tracer = trace.get_tracer(__name__)
+
+# 1. Embedding Attributes
+with tracer.start_as_current_span("embedding.create") as span:
+    # Your embedding logic
+    embedding_response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input="OpenTelemetry provides observability"
+    )
+
+    # Add embedding attributes (if using BaseInstrumentor)
+    # instrumentor.add_embedding_attributes(
+    #     span,
+    #     model="text-embedding-3-small",
+    #     input_text="OpenTelemetry provides observability",
+    #     vector=embedding_response.data[0].embedding
+    # )
+
+    # Or manually set attributes
+    span.set_attribute("embedding.model_name", "text-embedding-3-small")
+    span.set_attribute("embedding.text", "OpenTelemetry provides observability"[:500])
+    span.set_attribute("embedding.vector.dimension", len(embedding_response.data[0].embedding))
+
+# 2. Retrieval Attributes
+with tracer.start_as_current_span("retrieval.search") as span:
+    # Your retrieval logic
+    retrieved_docs = [
+        {
+            "id": "doc_001",
+            "score": 0.95,
+            "content": "OpenTelemetry is an observability framework...",
+            "metadata": {"source": "docs.opentelemetry.io", "category": "intro"}
+        },
+        # ... more documents
+    ]
+
+    # Add retrieval attributes (if using BaseInstrumentor)
+    # instrumentor.add_retrieval_attributes(
+    #     span,
+    #     documents=retrieved_docs,
+    #     query="What is OpenTelemetry?",
+    #     max_docs=5
+    # )
+
+    # Or manually set attributes
+    span.set_attribute("retrieval.query", "What is OpenTelemetry?"[:500])
+    span.set_attribute("retrieval.document_count", len(retrieved_docs))
+
+    for i, doc in enumerate(retrieved_docs[:5]):  # Limit to 5 docs
+        prefix = f"retrieval.documents.{i}.document"
+        span.set_attribute(f"{prefix}.id", doc["id"])
+        span.set_attribute(f"{prefix}.score", doc["score"])
+        span.set_attribute(f"{prefix}.content", doc["content"][:500])
+
+        # Add metadata
+        for key, value in doc.get("metadata", {}).items():
+            span.set_attribute(f"{prefix}.metadata.{key}", str(value))
+```
+
+**Embedding Attributes:**
+- `embedding.model_name` - Embedding model used
+- `embedding.text` - Input text (truncated to 500 chars)
+- `embedding.vector` - Embedding vector (optional, if configured)
+- `embedding.vector.dimension` - Vector dimensions
+
+**Retrieval Attributes:**
+- `retrieval.query` - Search query (truncated to 500 chars)
+- `retrieval.document_count` - Number of documents retrieved
+- `retrieval.documents.{i}.document.id` - Document ID
+- `retrieval.documents.{i}.document.score` - Relevance score
+- `retrieval.documents.{i}.document.content` - Document content (truncated to 500 chars)
+- `retrieval.documents.{i}.document.metadata.*` - Custom metadata fields
+
+**Safeguards:**
+- Text content truncated to 500 characters to avoid span size explosion
+- Document count limited to 5 by default (configurable via `max_docs`)
+- Metadata values truncated to prevent excessive attribute counts
+
+**Complete RAG Workflow Example:**
+
+See `examples/phase4_session_rag_tracking.py` for a comprehensive demonstration of:
+- Session and user tracking across RAG pipeline
+- Embedding attribute capture
+- Retrieval attribute capture
+- End-to-end RAG workflow with full observability
+
+**Use Cases:**
+- Monitor retrieval quality and relevance scores
+- Debug RAG pipeline performance
+- Track embedding model usage
+- Analyze document retrieval patterns
+- Optimize vector search configurations
+
 ## Example: Full-Stack GenAI App
 
 ```python
@@ -485,27 +660,33 @@ genai_otel.instrument(
 
 Completing remaining items from [OTEL_SEMANTIC_GAP_ANALYSIS_AND_IMPLEMENTATION_PLAN.md](OTEL_SEMANTIC_GAP_ANALYSIS_AND_IMPLEMENTATION_PLAN.md):
 
-**Phase 4: Optional Enhancements**
-- ✅ Session & User Tracking - Track sessions and users across requests
-  ```python
-  genai_otel.instrument(
-      session_id_extractor=lambda ctx: ctx.get("session_id"),
-      user_id_extractor=lambda ctx: ctx.get("user_id")
-  )
-  ```
+**Phase 4: Optional Enhancements (✅ COMPLETED)**
 
-- ✅ RAG/Embedding Attributes - Enhanced observability for retrieval-augmented generation
-  - `embedding.model_name` - Embedding model used
-  - `embedding.vector_dimensions` - Vector dimensions
-  - `retrieval.documents.{i}.document.id` - Retrieved document IDs
-  - `retrieval.documents.{i}.document.score` - Relevance scores
-  - `retrieval.documents.{i}.document.content` - Document content (truncated)
+All Phase 4 features are now available! See the [Advanced Features](#advanced-features) section for detailed documentation.
 
-- ✅ Agent Workflow Tracking - Better support for agentic workflows
-  - `agent.name` - Agent identifier
-  - `agent.iteration` - Current iteration number
-  - `agent.action` - Action taken
-  - `agent.observation` - Observation received
+- ✅ **Session & User Tracking** - Track sessions and users across requests with custom extractor functions
+  - Configurable via `session_id_extractor` and `user_id_extractor` in `OTelConfig`
+  - Automatically adds `session.id` and `user.id` span attributes
+  - See [Session and User Tracking](#session-and-user-tracking) for usage examples
+
+- ✅ **RAG/Embedding Attributes** - Enhanced observability for retrieval-augmented generation
+  - Helper methods: `add_embedding_attributes()` and `add_retrieval_attributes()`
+  - Embedding attributes: `embedding.model_name`, `embedding.text`, `embedding.vector.dimension`
+  - Retrieval attributes: `retrieval.query`, `retrieval.document_count`, `retrieval.documents.{i}.document.*`
+  - See [RAG and Embedding Attributes](#rag-and-embedding-attributes) for usage examples
+  - Complete example: `examples/phase4_session_rag_tracking.py`
+
+**Note on Agent Workflow Tracking:**
+
+Agent workflow observability is already provided by the OpenInference Smolagents instrumentor (included when `smolagents` is in `enabled_instrumentors`). This is not a new Phase 4 feature, but an existing capability:
+
+- `openinference.span.kind: "AGENT"` - Identifies agent spans
+- `agent.name` - Agent identifier (via OpenInference)
+- `agent.iteration` - Current iteration number (via OpenInference)
+- `agent.action` - Action taken (via OpenInference)
+- `agent.observation` - Observation received (via OpenInference)
+
+Agent tracking requires Python >= 3.10 and the `smolagents` library. See [OpenInference Integration](#openinference-optional---python-310-only) for details.
 
 #### 🔄 Migration Support
 
