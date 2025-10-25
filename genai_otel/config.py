@@ -104,6 +104,10 @@ class OTelConfig:
         default_factory=lambda: float(os.getenv("GENAI_CARBON_INTENSITY", "475.0"))
     )  # gCO2e/kWh
 
+    power_cost_per_kwh: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_POWER_COST_PER_KWH", "0.12"))
+    )  # USD per kWh - electricity cost for power consumption tracking
+
     gpu_collection_interval: int = field(
         default_factory=lambda: int(os.getenv("GENAI_GPU_COLLECTION_INTERVAL", "5"))
     )  # seconds - how often to collect GPU metrics and CO2 emissions
@@ -118,6 +122,13 @@ class OTelConfig:
     # WARNING: May capture sensitive data. Use with caution.
     enable_content_capture: bool = field(
         default_factory=lambda: os.getenv("GENAI_ENABLE_CONTENT_CAPTURE", "false").lower() == "true"
+    )
+
+    # Custom pricing configuration for models not in llm_pricing.json
+    # Format: JSON string with same structure as llm_pricing.json
+    # Example: {"chat": {"custom-model": {"promptPrice": 0.001, "completionPrice": 0.002}}}
+    custom_pricing_json: Optional[str] = field(
+        default_factory=lambda: os.getenv("GENAI_CUSTOM_PRICING_JSON")
     )
 
 
