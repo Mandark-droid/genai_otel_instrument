@@ -1,7 +1,7 @@
 """Tests for MistralAI instrumentor (v1.0+ SDK)"""
 
 import unittest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call, patch
 
 from genai_otel.config import OTelConfig
 from genai_otel.instrumentors.mistralai_instrumentor import MistralAIInstrumentor
@@ -87,7 +87,7 @@ class TestMistralAIInstrumentor(unittest.TestCase):
 
             # Make _wrap_mistral_methods raise an exception
             with patch.object(
-                instrumentor, '_wrap_mistral_methods', side_effect=RuntimeError("Setup error")
+                instrumentor, "_wrap_mistral_methods", side_effect=RuntimeError("Setup error")
             ):
                 instrumentor.instrument(config)
 
