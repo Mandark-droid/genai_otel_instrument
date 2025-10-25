@@ -2,6 +2,7 @@
 
 This script helps identify why cost attributes are not appearing on Ollama spans.
 """
+
 import json
 import logging
 import os
@@ -16,13 +17,17 @@ print("=" * 80)
 # Step 1: Initialize instrumentation
 print("\n1. Initializing genai-otel instrumentation...")
 import genai_otel
+
 genai_otel.instrument()
 
 # Step 2: Check if Ollama is installed
 print("\n2. Checking if Ollama is installed...")
 try:
     import ollama
-    print(f"   [OK] Ollama library version: {ollama.__version__ if hasattr(ollama, '__version__') else 'unknown'}")
+
+    print(
+        f"   [OK] Ollama library version: {ollama.__version__ if hasattr(ollama, '__version__') else 'unknown'}"
+    )
 except ImportError:
     print("   [ERROR] Ollama library not installed. Install with: pip install ollama")
     exit(1)
@@ -34,23 +39,22 @@ print("   Start Ollama with: ollama run smollm2:360m")
 
 try:
     # Make a test call to Ollama
-    response = ollama.generate(
-        model='smollm2:360m',
-        prompt='Say hello in 3 words'
-    )
+    response = ollama.generate(model="smollm2:360m", prompt="Say hello in 3 words")
 
     print(f"\n   [OK] Ollama call successful!")
-    print(f"\n   Raw response keys: {list(response.keys() if isinstance(response, dict) else dir(response))}")
+    print(
+        f"\n   Raw response keys: {list(response.keys() if isinstance(response, dict) else dir(response))}"
+    )
 
     # Check token counts in response
     if isinstance(response, dict):
-        prompt_eval = response.get('prompt_eval_count', 'MISSING')
-        eval_count = response.get('eval_count', 'MISSING')
+        prompt_eval = response.get("prompt_eval_count", "MISSING")
+        eval_count = response.get("eval_count", "MISSING")
         print(f"   prompt_eval_count: {prompt_eval}")
         print(f"   eval_count: {eval_count}")
     else:
-        prompt_eval = getattr(response, 'prompt_eval_count', 'MISSING')
-        eval_count = getattr(response, 'eval_count', 'MISSING')
+        prompt_eval = getattr(response, "prompt_eval_count", "MISSING")
+        eval_count = getattr(response, "eval_count", "MISSING")
         print(f"   prompt_eval_count: {prompt_eval}")
         print(f"   eval_count: {eval_count}")
 
@@ -60,7 +64,7 @@ try:
         print(f"   {json.dumps(response, indent=2)}")
     else:
         for key in dir(response):
-            if not key.startswith('_'):
+            if not key.startswith("_"):
                 print(f"   {key}: {getattr(response, key, None)}")
 
 except Exception as e:

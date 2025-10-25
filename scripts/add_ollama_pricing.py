@@ -16,6 +16,7 @@ Note: CostCalculator also has fallback logic to estimate costs for:
 - Unknown Ollama models based on parameter count parsing from model name
 - HuggingFace Transformers models (also typically run locally)
 """
+
 import json
 from pathlib import Path
 
@@ -25,7 +26,6 @@ OLLAMA_MODELS = {
     "smollm2:135m": 0.135,
     "smollm2:360m": 0.360,
     "tinyllama": 1.1,
-
     # Small models (1-10B)
     "llama3.2:1b": 1.0,
     "llama3.2:3b": 3.0,
@@ -46,11 +46,9 @@ OLLAMA_MODELS = {
     "gemma:7b": 7.0,
     "gemma2:9b": 9.0,
     "codellama:7b": 7.0,
-
     # Medium models (10-20B)
     "llama2:13b": 13.0,
     "codellama:13b": 13.0,
-
     # Large models (20-80B)
     "llama2:70b": 70.0,
     "llama3:70b": 70.0,
@@ -63,10 +61,10 @@ OLLAMA_MODELS = {
     "deepseek-r1:32b": 32.0,
     "deepseek-r1:70b": 70.0,
     "deepseek-v3.1": 671.0,
-
     # XLarge models (80B+)
     "llama3.1:405b": 405.0,
 }
+
 
 def get_price_tier(param_count_billions):
     """Get pricing tier based on parameter count."""
@@ -80,6 +78,7 @@ def get_price_tier(param_count_billions):
         return {"promptPrice": 0.0008, "completionPrice": 0.0008}
     else:
         return {"promptPrice": 0.0012, "completionPrice": 0.0012}
+
 
 def main():
     # Load existing pricing file
@@ -103,6 +102,7 @@ def main():
     print("\nSample pricing:")
     for model, price in list(ollama_pricing.items())[:5]:
         print(f"  {model}: ${price['promptPrice']:.4f} / ${price['completionPrice']:.4f}")
+
 
 if __name__ == "__main__":
     main()

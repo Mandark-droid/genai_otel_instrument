@@ -119,7 +119,7 @@ pip install genai-otel-instrument[all]
    ```python
    instrument(enable_gpu_metrics=False)
    ```
-   
+
    Or via environment:
    ```bash
    export GENAI_ENABLE_GPU_METRICS=false
