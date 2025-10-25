@@ -27,8 +27,9 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 🚀 **Zero-Code Instrumentation** - Just install and set env vars
 🤖 **15+ LLM Providers** - OpenAI, Anthropic, Google, AWS, Azure, and more
 🔧 **MCP Tool Support** - Auto-instrument databases, APIs, caches, vector DBs
-💰 **Cost Tracking** - Automatic cost calculation per request
-🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature, power
+💰 **Cost Tracking** - Automatic cost calculation for both streaming and non-streaming requests
+⚡ **Streaming Support** - Full observability for streaming responses with TTFT/TBT metrics and cost tracking
+🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature, power, and electricity cost tracking
 📊 **Complete Observability** - Traces, metrics, and rich span attributes
 ➕ **Service Instance ID & Environment** - Identify your services and environments
 ⏱️ **Configurable Exporter Timeout** - Set timeout for OTLP exporter
@@ -238,7 +239,14 @@ Every LLM call, database query, API request, and vector search is traced with fu
 
 **Streaming Attributes:**
 - `gen_ai.server.ttft` - Time to First Token (seconds) for streaming responses
-- `gen_ai.streaming.token_count` - Total number of chunks/tokens in streaming response
+- `gen_ai.streaming.token_count` - Total number of chunks in streaming response
+- `gen_ai.usage.prompt_tokens` - Actual prompt tokens (extracted from final chunk)
+- `gen_ai.usage.completion_tokens` - Actual completion tokens (extracted from final chunk)
+- `gen_ai.usage.total_tokens` - Total tokens (extracted from final chunk)
+- `gen_ai.usage.cost.total` - Total cost for streaming request
+- `gen_ai.usage.cost.prompt` - Prompt tokens cost for streaming request
+- `gen_ai.usage.cost.completion` - Completion tokens cost for streaming request
+- All granular cost attributes (reasoning, cache_read, cache_write) also available for streaming
 
 **Content Events (opt-in):**
 - `gen_ai.prompt.{index}` events with role and content
