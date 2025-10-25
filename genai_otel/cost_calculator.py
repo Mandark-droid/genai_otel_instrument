@@ -13,10 +13,18 @@ class CostCalculator:
 
     DEFAULT_PRICING_FILE = "llm_pricing.json"
 
-    def __init__(self):
-        """Initializes the CostCalculator by loading pricing data from a JSON file."""
+    def __init__(self, custom_pricing_json: Optional[str] = None):
+        """Initializes the CostCalculator by loading pricing data from a JSON file.
+
+        Args:
+            custom_pricing_json: Optional JSON string with custom model pricing.
+                Format: {"chat": {"model-name": {"promptPrice": 0.001, "completionPrice": 0.002}}}
+                Custom prices will be merged with default pricing, with custom taking precedence.
+        """
         self.pricing_data: Dict[str, Any] = {}
         self._load_pricing()
+        if custom_pricing_json:
+            self._merge_custom_pricing(custom_pricing_json)
 
     def _load_pricing(self):
         """Load pricing data from the JSON configuration file."""
@@ -59,6 +67,63 @@ class CostCalculator:
             )
         except Exception as e:
             logger.error("An unexpected error occurred while loading pricing: %s", e, exc_info=True)
+
+    def _merge_custom_pricing(self, custom_pricing_json: str):
+        """Merge custom pricing from JSON string into existing pricing data.
+
+        Args:
+            custom_pricing_json: JSON string with custom model pricing.
+                Format: {"chat": {"model-name": {"promptPrice": 0.001, "completionPrice": 0.002}}}
+        """
+        try:
+            custom_pricing = json.loads(custom_pricing_json)
+
+            if not isinstance(custom_pricing, dict):
+                logger.error(
+                    "Custom pricing must be a JSON object/dict. Got: %s", type(custom_pricing).__name__
+                )
+                return
+
+            # Merge custom pricing into each category (chat, embeddings, images, audio)
+            for category, models in custom_pricing.items():
+                if category not in ["chat", "embeddings", "images", "audio"]:
+                    logger.warning(
+                        "Unknown pricing category '%s' in custom pricing. Valid categories: "
+                        "chat, embeddings, images, audio",
+                        category,
+                    )
+                    continue
+
+                if not isinstance(models, dict):
+                    logger.error(
+                        "Custom pricing for category '%s' must be a dict. Got: %s",
+                        category,
+                        type(models).__name__,
+                    )
+                    continue
+
+                # Initialize category if it doesn't exist
+                if category not in self.pricing_data:
+                    self.pricing_data[category] = {}
+
+                # Merge models into the category
+                for model_name, pricing in models.items():
+                    self.pricing_data[category][model_name] = pricing
+                    logger.info(
+                        "Added custom pricing for %s model '%s': %s",
+                        category,
+                        model_name,
+                        pricing,
+                    )
+
+        except json.JSONDecodeError as e:
+            logger.error(
+                "Failed to decode custom pricing JSON: %s. Custom pricing will be ignored.", e
+            )
+        except Exception as e:
+            logger.error(
+                "An unexpected error occurred while merging custom pricing: %s", e, exc_info=True
+            )
 
     def calculate_cost(
         self,
