@@ -1,5 +1,7 @@
 """Vertex AI Example"""
+
 import genai_otel
+
 genai_otel.instrument()
 
 from vertexai.preview.language_models import TextGenerationModel

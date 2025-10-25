@@ -16,10 +16,7 @@ from langchain_openai import ChatOpenAI
 # Create a simple chain
 llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7)
 
-prompt = PromptTemplate(
-    input_variables=["topic"],
-    template="Explain {topic} in simple terms."
-)
+prompt = PromptTemplate(input_variables=["topic"], template="Explain {topic} in simple terms.")
 
 chain = LLMChain(llm=llm, prompt=prompt)
 

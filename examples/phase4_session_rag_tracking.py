@@ -75,9 +75,7 @@ response = client.chat.completions.create(
 )
 
 print(f"Response: {response.choices[0].message.content[:100]}...")
-print(
-    "\nThe span for this request now includes:"
-)
+print("\nThe span for this request now includes:")
 print("  - session.id: sess_12345")
 print("  - user.id: user_alice")
 print("\nThese attributes allow you to:")
@@ -112,9 +110,7 @@ with tracer.start_as_current_span("embedding.create") as span:
     # For demonstration, we'll set attributes directly
     span.set_attribute("embedding.model_name", "text-embedding-3-small")
     span.set_attribute("embedding.text", "OpenTelemetry provides observability"[:500])
-    span.set_attribute(
-        "embedding.vector.dimension", len(embedding_response.data[0].embedding)
-    )
+    span.set_attribute("embedding.vector.dimension", len(embedding_response.data[0].embedding))
 
     print(f"Created embedding with {len(embedding_response.data[0].embedding)} dimensions")
     print("\nThe span includes:")
@@ -187,9 +183,7 @@ def rag_query(query: str, session_id: str, user_id: str):
         span.set_attribute("session.id", session_id)
         span.set_attribute("user.id", user_id)
 
-        embedding_response = client.embeddings.create(
-            model="text-embedding-3-small", input=query
-        )
+        embedding_response = client.embeddings.create(model="text-embedding-3-small", input=query)
 
         span.set_attribute("embedding.model_name", "text-embedding-3-small")
         span.set_attribute("embedding.text", query[:500])

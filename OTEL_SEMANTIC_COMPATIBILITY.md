@@ -39,7 +39,7 @@ span.add_event(
 )
 
 span.add_event(
-    name="gen_ai.content.completion", 
+    name="gen_ai.content.completion",
     attributes={
         "gen_ai.completion": "[{\"role\": \"assistant\", \"content\": \"...\"}]"
     }
@@ -204,7 +204,7 @@ gen_ai.server.request.duration
     ```python
     if hasattr(message, "tool_calls"):
         for i, tool_call in enumerate(message.tool_calls):
-            span.set_attribute(f"message.tool_calls.{i}.tool_call.function.name", 
+            span.set_attribute(f"message.tool_calls.{i}.tool_call.function.name",
                               tool_call.function.name)
             span.set_attribute(f"message.tool_calls.{i}.tool_call.function.arguments",
                               tool_call.function.arguments)
