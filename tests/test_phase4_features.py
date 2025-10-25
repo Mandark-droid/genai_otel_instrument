@@ -1,6 +1,7 @@
 """Tests for Phase 4 features: RAG and Embedding Attributes."""
 
 from unittest.mock import Mock
+
 from genai_otel import OTelConfig
 from genai_otel.instrumentors.base import BaseInstrumentor
 
@@ -181,9 +182,7 @@ class TestRAGEmbeddingAttributes:
         # Find the content attribute call
         calls = mock_span.set_attribute.call_args_list
         content_call = [
-            call
-            for call in calls
-            if call[0][0] == "retrieval.documents.0.document.content"
+            call for call in calls if call[0][0] == "retrieval.documents.0.document.content"
         ][0]
 
         # Verify content was truncated to 500 chars
