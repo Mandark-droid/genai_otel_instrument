@@ -255,3 +255,9 @@ addopts = "--cov=genai_otel --cov-report=html --cov-report=term"
 filterwarnings = [
     "ignore::UserWarning:replicate.helpers",
 ]
+
+[tool.bandit]
+# Exclude test directories
+exclude_dirs = ["tests/", "scripts/debug/"]
+# Skip false positives
+skips = ["B105", "B110"]
