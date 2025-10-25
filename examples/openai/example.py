@@ -19,9 +19,9 @@ response = client.chat.completions.create(
     model="gpt-3.5-turbo",
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "What is OpenTelemetry?"}
+        {"role": "user", "content": "What is OpenTelemetry?"},
     ],
-    max_tokens=150
+    max_tokens=150,
 )
 
 print(f"Response: {response.choices[0].message.content}")

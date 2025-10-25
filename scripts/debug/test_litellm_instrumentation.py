@@ -2,6 +2,7 @@
 
 This script helps debug why litellm child spans may be missing in smolagents traces.
 """
+
 import logging
 import os
 
@@ -16,14 +17,20 @@ print("=" * 80)
 print("\n1. Checking OpenInference package versions...")
 try:
     import openinference.instrumentation.litellm
-    print(f"   [OK] openinference-instrumentation-litellm: {openinference.instrumentation.litellm.__version__}")
+
+    print(
+        f"   [OK] openinference-instrumentation-litellm: {openinference.instrumentation.litellm.__version__}"
+    )
 except ImportError as e:
     print(f"   [ERROR] openinference-instrumentation-litellm not installed: {e}")
     exit(1)
 
 try:
     import openinference.instrumentation.smolagents
-    print(f"   [OK] openinference-instrumentation-smolagents: {openinference.instrumentation.smolagents.__version__}")
+
+    print(
+        f"   [OK] openinference-instrumentation-smolagents: {openinference.instrumentation.smolagents.__version__}"
+    )
 except ImportError as e:
     print(f"   [ERROR] openinference-instrumentation-smolagents not installed: {e}")
 
@@ -31,6 +38,7 @@ except ImportError as e:
 print("\n2. Checking if litellm is installed...")
 try:
     import litellm
+
     print(f"   [OK] litellm version: {litellm.__version__}")
 except ImportError:
     print("   [ERROR] litellm not installed. Install with: pip install litellm")
@@ -73,7 +81,7 @@ if os.getenv("OPENAI_API_KEY"):
         response = litellm.completion(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": "Say 'test successful' in 2 words"}],
-            max_tokens=10
+            max_tokens=10,
         )
         print(f"   [OK] LiteLLM call successful: {response.choices[0].message.content}")
         print("\n   Check your trace backend for a span with:")

@@ -1,0 +1,79 @@
+# Pre-commit hooks for genai-otel-instrument
+# See https://pre-commit.com for more information
+
+repos:
+  # Code formatting with black
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        args: [--line-length=100]
+        language_version: python3
+
+  # Import sorting with isort
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=100]
+
+  # Linting with pylint (optional - can be slow)
+  # Uncomment if you want pylint to run on every commit
+  # - repo: local
+  #   hooks:
+  #     - id: pylint
+  #       name: pylint
+  #       entry: pylint
+  #       language: system
+  #       types: [python]
+  #       args:
+  #         - --disable=C0301,C0103,R0913,R0914,R0915,R0912,W0718,W0719,R0903,W0603,R1702,E1101,W0621,W0404,C0415,W0611,W1203
+  #         - --exit-zero
+
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+        exclude: ^genai_otel/__version__\.py$  # Exclude auto-generated file
+      - id: check-yaml
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml]
+        additional_dependencies: ["bandit[toml]"]
+        exclude: ^tests/
+
+  # Type checking with mypy (optional - can be slow)
+  # Uncomment if you want strict type checking
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.11.2
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies: [types-all]
+  #       args: [--ignore-missing-imports, --no-strict-optional]
+
+# Run these hooks on all files during first setup
+default_install_hook_types: [pre-commit, pre-push]
+
+# Exclude patterns
+exclude: |
+  (?x)(
+      ^genai_otel/__version__\.py$|
+      ^\.pytest_cache/|
+      ^\.mypy_cache/|
+      ^htmlcov/|
+      ^dist/|
+      ^build/|
+      ^\.eggs/
+  )
