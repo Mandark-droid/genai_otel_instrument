@@ -8,14 +8,15 @@ import genai_otel
 # Auto-instrument Google AI
 genai_otel.instrument()
 
+import os
+
 # Now use Google Generative AI normally
 import google.generativeai as genai
-import os
 
 genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
 
 # Create a model
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel("gemini-pro")
 
 # Generate content
 response = model.generate_content("Explain what observability means in software engineering.")

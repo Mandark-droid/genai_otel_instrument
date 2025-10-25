@@ -65,10 +65,10 @@ pip install -e ".[dev,all]"
    # Format code
    black genai_otel tests
    isort genai_otel tests
-   
+
    # Lint
    pylint genai_otel
-   
+
    # Type check
    mypy genai_otel
    ```
@@ -78,7 +78,7 @@ pip install -e ".[dev,all]"
    git add .
    git commit -m "feat: add new feature"
    ```
-   
+
    Use conventional commit messages:
    - `feat:` for new features
    - `fix:` for bug fixes
@@ -162,19 +162,19 @@ class XYZInstrumentor(BaseInstrumentor):
         super().__init__()
         self._xyz_available = False
         self._check_availability()
-    
+
     def _check_availability(self):
         try:
             import xyz
             self._xyz_available = True
         except ImportError:
             pass
-    
+
     def instrument(self, config: OTelConfig):
         if not self._xyz_available:
             return
         # Implementation
-    
+
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         # Implementation
 ```

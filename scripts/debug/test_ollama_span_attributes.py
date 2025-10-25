@@ -2,21 +2,21 @@
 
 This script traces the exact flow of attribute setting in Ollama instrumentor.
 """
+
 import logging
 import os
 
 # Set logging level to DEBUG to see all details
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 # Enable detailed logging for our modules
-logging.getLogger('genai_otel').setLevel(logging.DEBUG)
-logging.getLogger('genai_otel.instrumentors').setLevel(logging.DEBUG)
-logging.getLogger('genai_otel.instrumentors.base').setLevel(logging.DEBUG)
-logging.getLogger('genai_otel.instrumentors.ollama_instrumentor').setLevel(logging.DEBUG)
-logging.getLogger('genai_otel.cost_calculator').setLevel(logging.DEBUG)
+logging.getLogger("genai_otel").setLevel(logging.DEBUG)
+logging.getLogger("genai_otel.instrumentors").setLevel(logging.DEBUG)
+logging.getLogger("genai_otel.instrumentors.base").setLevel(logging.DEBUG)
+logging.getLogger("genai_otel.instrumentors.ollama_instrumentor").setLevel(logging.DEBUG)
+logging.getLogger("genai_otel.cost_calculator").setLevel(logging.DEBUG)
 
 print("=" * 80)
 print("Ollama Span Attributes Debug")
@@ -25,16 +25,14 @@ print("=" * 80)
 # Initialize instrumentation
 print("\nInitializing instrumentation...")
 import genai_otel
+
 genai_otel.instrument()
 
 # Make Ollama call
 print("\nMaking Ollama call...")
 import ollama
 
-response = ollama.generate(
-    model='smollm2:360m',
-    prompt='Say hello in 3 words'
-)
+response = ollama.generate(model="smollm2:360m", prompt="Say hello in 3 words")
 
 print(f"\nResponse received:")
 print(f"  model: {response.model}")
@@ -43,6 +41,7 @@ print(f"  eval_count: {response.eval_count}")
 
 # Give time for span to be exported
 import time
+
 time.sleep(2)
 
 print("\n" + "=" * 80)
