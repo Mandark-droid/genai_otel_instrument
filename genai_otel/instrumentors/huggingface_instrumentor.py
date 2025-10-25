@@ -49,7 +49,9 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
             self._inference_client_available = True
             logger.debug("HuggingFace InferenceClient detected and available for instrumentation")
         except ImportError:
-            logger.debug("huggingface_hub not installed, InferenceClient instrumentation will be skipped")
+            logger.debug(
+                "huggingface_hub not installed, InferenceClient instrumentation will be skipped"
+            )
             self._inference_client_available = False
 
     def instrument(self, config: OTelConfig):
@@ -74,7 +76,9 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                 self._instrument_inference_client()
                 instrumented_count += 1
             except Exception as e:
-                logger.error("Failed to instrument HuggingFace InferenceClient: %s", e, exc_info=True)
+                logger.error(
+                    "Failed to instrument HuggingFace InferenceClient: %s", e, exc_info=True
+                )
                 if config.fail_on_error:
                     raise
 

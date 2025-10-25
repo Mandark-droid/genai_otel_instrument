@@ -304,7 +304,9 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
                 def decorator(func):
                     def wrapped(*args, **kwargs):
                         return func(*args, **kwargs)
+
                     return wrapped
+
                 return decorator
 
             instrumentor.create_span_wrapper = mock_wrapper_factory
@@ -318,6 +320,7 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
 
             # Verify the methods were replaced (wrapped)
             from huggingface_hub import InferenceClient
+
             self.assertIsNotNone(InferenceClient.chat_completion)
             self.assertIsNotNone(InferenceClient.text_generation)
 

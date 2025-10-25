@@ -11,7 +11,7 @@ import logging
 import threading
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import wrapt
 from opentelemetry import metrics, trace
@@ -263,6 +263,26 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 span = self.tracer.start_span(span_name, attributes=initial_attributes)
                 start_time = time.time()
 
+                # Extract session and user context (Phase 4.1)
+                if self.config:
+                    if self.config.session_id_extractor:
+                        try:
+                            session_id = self.config.session_id_extractor(instance, args, kwargs)
+                            if session_id:
+                                span.set_attribute("session.id", session_id)
+                                logger.debug(f"Set session.id: {session_id}")
+                        except Exception as e:
+                            logger.debug(f"Failed to extract session ID: {e}")
+
+                    if self.config.user_id_extractor:
+                        try:
+                            user_id = self.config.user_id_extractor(instance, args, kwargs)
+                            if user_id:
+                                span.set_attribute("user.id", user_id)
+                                logger.debug(f"Set user.id: {user_id}")
+                        except Exception as e:
+                            logger.debug(f"Failed to extract user ID: {e}")
+
                 try:
                     # Call the original function
                     result = wrapped(*args, **kwargs)
@@ -434,9 +454,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                     self.cost_counter.add(total_cost, {"model": str(model)})
                                 # Always set span attributes (needed for cost tracking)
                                 span.set_attribute("gen_ai.usage.cost.total", total_cost)
-                                logger.debug(f"Set cost attribute: gen_ai.usage.cost.total={total_cost}")
+                                logger.debug(
+                                    f"Set cost attribute: gen_ai.usage.cost.total={total_cost}"
+                                )
                             else:
-                                logger.debug(f"Cost is zero, not setting attributes. Costs: {costs}")
+                                logger.debug(
+                                    f"Cost is zero, not setting attributes. Costs: {costs}"
+                                )
 
                             # Record and set attributes for granular costs
                             # Note: Metrics recording is optional, span attributes are always set
@@ -571,9 +595,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
                             if self.token_counter:
                                 self.token_counter.add(
-                                    completion_tokens, {"token_type": "completion", "operation": span.name}
+                                    completion_tokens,
+                                    {"token_type": "completion", "operation": span.name},
                                 )
-                            span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
+                            span.set_attribute(
+                                "gen_ai.usage.completion_tokens", int(completion_tokens)
+                            )
 
                         if isinstance(total_tokens, (int, float)) and total_tokens > 0:
                             span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))
@@ -601,37 +628,61 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                     # Record granular costs
                                     if costs["prompt"] > 0:
                                         if self.prompt_cost_counter:
-                                            self.prompt_cost_counter.add(costs["prompt"], {"model": str(model)})
-                                        span.set_attribute("gen_ai.usage.cost.prompt", costs["prompt"])
+                                            self.prompt_cost_counter.add(
+                                                costs["prompt"], {"model": str(model)}
+                                            )
+                                        span.set_attribute(
+                                            "gen_ai.usage.cost.prompt", costs["prompt"]
+                                        )
 
                                     if costs["completion"] > 0:
                                         if self.completion_cost_counter:
-                                            self.completion_cost_counter.add(costs["completion"], {"model": str(model)})
-                                        span.set_attribute("gen_ai.usage.cost.completion", costs["completion"])
+                                            self.completion_cost_counter.add(
+                                                costs["completion"], {"model": str(model)}
+                                            )
+                                        span.set_attribute(
+                                            "gen_ai.usage.cost.completion", costs["completion"]
+                                        )
 
                                     if costs["reasoning"] > 0:
                                         if self.reasoning_cost_counter:
-                                            self.reasoning_cost_counter.add(costs["reasoning"], {"model": str(model)})
-                                        span.set_attribute("gen_ai.usage.cost.reasoning", costs["reasoning"])
+                                            self.reasoning_cost_counter.add(
+                                                costs["reasoning"], {"model": str(model)}
+                                            )
+                                        span.set_attribute(
+                                            "gen_ai.usage.cost.reasoning", costs["reasoning"]
+                                        )
 
                                     if costs["cache_read"] > 0:
                                         if self.cache_read_cost_counter:
-                                            self.cache_read_cost_counter.add(costs["cache_read"], {"model": str(model)})
-                                        span.set_attribute("gen_ai.usage.cost.cache_read", costs["cache_read"])
+                                            self.cache_read_cost_counter.add(
+                                                costs["cache_read"], {"model": str(model)}
+                                            )
+                                        span.set_attribute(
+                                            "gen_ai.usage.cost.cache_read", costs["cache_read"]
+                                        )
 
                                     if costs["cache_write"] > 0:
                                         if self.cache_write_cost_counter:
-                                            self.cache_write_cost_counter.add(costs["cache_write"], {"model": str(model)})
-                                        span.set_attribute("gen_ai.usage.cost.cache_write", costs["cache_write"])
+                                            self.cache_write_cost_counter.add(
+                                                costs["cache_write"], {"model": str(model)}
+                                            )
+                                        span.set_attribute(
+                                            "gen_ai.usage.cost.cache_write", costs["cache_write"]
+                                        )
                                 else:
                                     # For non-chat requests, use simple cost calculation
-                                    cost = self.cost_calculator.calculate_cost(model, usage, call_type)
+                                    cost = self.cost_calculator.calculate_cost(
+                                        model, usage, call_type
+                                    )
                                     if cost and cost > 0:
                                         if self.cost_counter:
                                             self.cost_counter.add(cost, {"model": str(model)})
                                         span.set_attribute("gen_ai.usage.cost.total", cost)
                             except Exception as e:
-                                logger.warning("Failed to calculate cost for streaming response: %s", e)
+                                logger.warning(
+                                    "Failed to calculate cost for streaming response: %s", e
+                                )
                     else:
                         logger.debug("No usage information found in streaming response")
             except Exception as e:
@@ -650,6 +701,73 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 self.error_counter.add(1, {"operation": span.name, "error_type": type(e).__name__})
             logger.warning(f"Error in streaming wrapper: {e}")
             raise
+
+    # Phase 4.2: RAG/Embedding Helper Methods
+    def add_embedding_attributes(
+        self, span, model: str, input_text: str, vector: Optional[List[float]] = None
+    ):
+        """Add embedding-specific attributes to a span.
+
+        Args:
+            span: The OpenTelemetry span
+            model: The embedding model name
+            input_text: The text being embedded (will be truncated to 500 chars)
+            vector: Optional embedding vector (use with caution - can be large!)
+        """
+        span.set_attribute("embedding.model_name", model)
+        span.set_attribute("embedding.text", input_text[:500])  # Truncate to avoid large spans
+
+        if vector and self.config and hasattr(self.config, "capture_embedding_vectors"):
+            # Only capture vectors if explicitly enabled (they can be very large)
+            import json
+
+            span.set_attribute("embedding.vector", json.dumps(vector))
+            span.set_attribute("embedding.vector.dimension", len(vector))
+
+    def add_retrieval_attributes(
+        self,
+        span,
+        documents: List[Dict[str, Any]],
+        query: Optional[str] = None,
+        max_docs: int = 5,
+    ):
+        """Add retrieval/RAG-specific attributes to a span.
+
+        Args:
+            span: The OpenTelemetry span
+            documents: List of retrieved documents. Each dict should have:
+                - id: Document identifier
+                - score: Relevance score
+                - content: Document content
+                - metadata: Optional metadata dict
+            query: Optional query string
+            max_docs: Maximum number of documents to include in attributes (default: 5)
+        """
+        if query:
+            span.set_attribute("retrieval.query", query[:500])  # Truncate
+
+        # Limit to first N documents to avoid attribute explosion
+        for i, doc in enumerate(documents[:max_docs]):
+            prefix = f"retrieval.documents.{i}.document"
+
+            if "id" in doc:
+                span.set_attribute(f"{prefix}.id", str(doc["id"]))
+            if "score" in doc:
+                span.set_attribute(f"{prefix}.score", float(doc["score"]))
+            if "content" in doc:
+                # Truncate content to avoid large attributes
+                content = str(doc["content"])[:500]
+                span.set_attribute(f"{prefix}.content", content)
+
+            # Add metadata if present
+            if "metadata" in doc and isinstance(doc["metadata"], dict):
+                for key, value in doc["metadata"].items():
+                    # Flatten metadata, limit key names to avoid explosion
+                    safe_key = str(key)[:50]  # Limit key length
+                    safe_value = str(value)[:200]  # Limit value length
+                    span.set_attribute(f"{prefix}.metadata.{safe_key}", safe_value)
+
+        span.set_attribute("retrieval.document_count", len(documents))
 
     @abstractmethod
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
