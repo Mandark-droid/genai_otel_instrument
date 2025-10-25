@@ -9,10 +9,7 @@ from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
 
 from genai_otel.mcp_instrumentors.base import BaseMCPInstrumentor
-from genai_otel.metrics import (
-    _MCP_CLIENT_OPERATION_DURATION_BUCKETS,
-    _MCP_PAYLOAD_SIZE_BUCKETS,
-)
+from genai_otel.metrics import _MCP_CLIENT_OPERATION_DURATION_BUCKETS, _MCP_PAYLOAD_SIZE_BUCKETS
 
 
 class TestBaseMCPInstrumentor(unittest.TestCase):

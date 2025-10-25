@@ -5,6 +5,7 @@ and frameworks with cost tracking, metrics, and distributed tracing.
 """
 
 import time
+
 import genai_otel
 
 # Enable auto-instrumentation for all supported libraries
@@ -25,9 +26,9 @@ try:
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "What is OpenTelemetry in one sentence?"}
+            {"role": "user", "content": "What is OpenTelemetry in one sentence?"},
         ],
-        max_tokens=100
+        max_tokens=100,
     )
 
     print(f"✅ OpenAI Response: {response.choices[0].message.content}")
@@ -49,9 +50,7 @@ try:
     message = anthropic_client.messages.create(
         model="claude-3-5-sonnet-20241022",
         max_tokens=100,
-        messages=[
-            {"role": "user", "content": "What is distributed tracing?"}
-        ]
+        messages=[{"role": "user", "content": "What is distributed tracing?"}],
     )
 
     print(f"✅ Claude Response: {message.content[0].text}")
@@ -73,8 +72,7 @@ try:
 
     llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7)
     prompt = PromptTemplate(
-        input_variables=["topic"],
-        template="Explain {topic} in simple terms in one sentence."
+        input_variables=["topic"], template="Explain {topic} in simple terms in one sentence."
     )
     chain = LLMChain(llm=llm, prompt=prompt)
     result = chain.run(topic="observability")

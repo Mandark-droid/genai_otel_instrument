@@ -1,8 +1,10 @@
 """LlamaIndex Example"""
+
 import genai_otel
+
 genai_otel.instrument()
 
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 
 # Load documents and create index
 documents = SimpleDirectoryReader("data").load_data()
