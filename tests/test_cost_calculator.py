@@ -248,5 +248,158 @@ class TestCostCalculator(unittest.TestCase):
         self.assertEqual(costs["cache_write"], 0.0)
 
 
+class TestCustomPricing(unittest.TestCase):
+    """Test custom pricing functionality via JSON string."""
+
+    def test_custom_pricing_chat_model(self):
+        """Test adding custom pricing for a chat model."""
+        custom_pricing_json = json.dumps({
+            "chat": {
+                "my-custom-model": {
+                    "promptPrice": 0.001,
+                    "completionPrice": 0.002
+                }
+            }
+        })
+
+        with patch.object(CostCalculator, "_load_pricing", MagicMock()):
+            calculator = CostCalculator(custom_pricing_json=custom_pricing_json)
+            calculator.pricing_data["chat"] = {}  # Start with empty pricing
+
+            # Re-merge to test
+            calculator._merge_custom_pricing(custom_pricing_json)
+
+            # Verify custom pricing was added
+            self.assertIn("my-custom-model", calculator.pricing_data["chat"])
+            self.assertEqual(
+                calculator.pricing_data["chat"]["my-custom-model"]["promptPrice"], 0.001
+            )
+            self.assertEqual(
+                calculator.pricing_data["chat"]["my-custom-model"]["completionPrice"], 0.002
+            )
+
+            # Calculate cost with custom model
+            usage = {"prompt_tokens": 1000, "completion_tokens": 500}
+            cost = calculator.calculate_cost("my-custom-model", usage, "chat")
+            expected_cost = (1000 / 1000 * 0.001) + (500 / 1000 * 0.002)
+            self.assertAlmostEqual(cost, expected_cost)
+
+    def test_custom_pricing_override_existing(self):
+        """Test that custom pricing overrides default pricing."""
+        custom_pricing_json = json.dumps({
+            "chat": {
+                "gpt-4o": {
+                    "promptPrice": 0.999,
+                    "completionPrice": 0.999
+                }
+            }
+        })
+
+        with patch.object(CostCalculator, "_load_pricing", MagicMock()):
+            calculator = CostCalculator(custom_pricing_json=custom_pricing_json)
+            calculator.pricing_data = {
+                "chat": {
+                    "gpt-4o": {
+                        "promptPrice": 0.0005,
+                        "completionPrice": 0.0015
+                    }
+                }
+            }
+
+            # Merge custom pricing (should override)
+            calculator._merge_custom_pricing(custom_pricing_json)
+
+            # Verify override
+            self.assertEqual(calculator.pricing_data["chat"]["gpt-4o"]["promptPrice"], 0.999)
+            self.assertEqual(calculator.pricing_data["chat"]["gpt-4o"]["completionPrice"], 0.999)
+
+    def test_custom_pricing_multiple_categories(self):
+        """Test custom pricing across multiple categories."""
+        custom_pricing_json = json.dumps({
+            "chat": {
+                "custom-chat-model": {"promptPrice": 0.001, "completionPrice": 0.002}
+            },
+            "embeddings": {
+                "custom-embedding-model": 0.0001
+            },
+            "audio": {
+                "custom-tts-model": 0.02
+            }
+        })
+
+        with patch.object(CostCalculator, "_load_pricing", MagicMock()):
+            calculator = CostCalculator(custom_pricing_json=custom_pricing_json)
+            calculator.pricing_data = {"chat": {}, "embeddings": {}, "audio": {}}
+            calculator._merge_custom_pricing(custom_pricing_json)
+
+            # Verify all categories were added
+            self.assertIn("custom-chat-model", calculator.pricing_data["chat"])
+            self.assertIn("custom-embedding-model", calculator.pricing_data["embeddings"])
+            self.assertIn("custom-tts-model", calculator.pricing_data["audio"])
+
+    def test_custom_pricing_invalid_json(self):
+        """Test that invalid JSON is handled gracefully."""
+        custom_pricing_json = "this is not valid json {"
+
+        with patch.object(CostCalculator, "_load_pricing", MagicMock()):
+            calculator = CostCalculator()
+            calculator.pricing_data = {"chat": {}}
+
+            # Should not raise exception, just log error
+            calculator._merge_custom_pricing(custom_pricing_json)
+
+            # Pricing data should remain unchanged
+            self.assertEqual(calculator.pricing_data, {"chat": {}})
+
+    def test_custom_pricing_invalid_format(self):
+        """Test that non-dict custom pricing is handled gracefully."""
+        custom_pricing_json = json.dumps(["not", "a", "dict"])
+
+        with patch.object(CostCalculator, "_load_pricing", MagicMock()):
+            calculator = CostCalculator()
+            calculator.pricing_data = {"chat": {}}
+
+            calculator._merge_custom_pricing(custom_pricing_json)
+
+            # Pricing data should remain unchanged
+            self.assertEqual(calculator.pricing_data, {"chat": {}})
+
+    def test_custom_pricing_invalid_category(self):
+        """Test that invalid categories are ignored with warning."""
+        custom_pricing_json = json.dumps({
+            "invalid_category": {
+                "some-model": {"price": 0.001}
+            }
+        })
+
+        with patch.object(CostCalculator, "_load_pricing", MagicMock()):
+            calculator = CostCalculator()
+            calculator.pricing_data = {}
+
+            calculator._merge_custom_pricing(custom_pricing_json)
+
+            # Invalid category should not be added
+            self.assertNotIn("invalid_category", calculator.pricing_data)
+
+    def test_custom_pricing_with_embedding_model(self):
+        """Test custom pricing for embedding models."""
+        custom_pricing_json = json.dumps({
+            "embeddings": {
+                "my-custom-embeddings": 0.00005
+            }
+        })
+
+        with patch.object(CostCalculator, "_load_pricing", MagicMock()):
+            calculator = CostCalculator(custom_pricing_json=custom_pricing_json)
+            calculator.pricing_data = {"embeddings": {}}
+            calculator._merge_custom_pricing(custom_pricing_json)
+
+            # Calculate cost
+            usage = {"total_tokens": 10000}
+            cost = calculator.calculate_cost("my-custom-embeddings", usage, "embedding")
+            expected_cost = (10000 / 1000) * 0.00005
+            self.assertAlmostEqual(cost, expected_cost)
+
+
 if __name__ == "__main__":
     unittest.main()
