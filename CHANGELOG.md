@@ -6,7 +6,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2025-01-25
+
 ### Added
+
+- **Streaming Cost Tracking and Token Usage**
+  - Fixed missing cost calculation for streaming LLM requests
+  - `_wrap_streaming_response()` now extracts usage from the last chunk and calculates costs
+  - Streaming responses now record all cost metrics: `gen_ai.usage.cost.total`, `gen_ai.usage.cost.prompt`, `gen_ai.usage.cost.completion`, etc.
+  - Token usage metrics now properly recorded for streaming: `gen_ai.usage.prompt_tokens`, `gen_ai.usage.completion_tokens`, `gen_ai.usage.total_tokens`
+  - Works for all providers that include usage in final chunk (OpenAI, Anthropic, Google, etc.)
+  - Streaming metrics still captured: `gen_ai.server.ttft` (histogram), `gen_ai.server.tbt` (histogram), `gen_ai.streaming.token_count` (chunk count)
+  - Implementation in `genai_otel/instrumentors/base.py:551-638`
+  - Resolves issue where streaming requests had TTFT/TBT but no cost/usage tracking
+
+- **Custom Model Pricing via Environment Variable**
+  - Added `GENAI_CUSTOM_PRICING_JSON` environment variable for custom/proprietary model pricing
+  - Supports all pricing categories: chat, embeddings, audio, images
+  - Custom prices merged with default `llm_pricing.json` (custom takes precedence)
+  - Enables pricing for internal/proprietary models not in public pricing database
+  - Format: `{"chat":{"model-name":{"promptPrice":0.001,"completionPrice":0.002}}}`
+  - Added `custom_pricing_json` field to `OTelConfig` dataclass
+  - Updated `CostCalculator.__init__()` to accept custom pricing parameter
+  - Implemented `CostCalculator._merge_custom_pricing()` with validation and error handling
+  - Added `BaseInstrumentor._setup_config()` helper to reinitialize cost calculator
+  - Added 8 comprehensive tests in `TestCustomPricing` class
+  - Documented in README.md with usage examples and pricing format guide
+  - Documented in sample.env with multiple examples
+
+- **GPU Power Cost Tracking**
+  - Added `GENAI_POWER_COST_PER_KWH` environment variable for electricity cost tracking (default: $0.12/kWh)
+  - New metric `gen_ai.power.cost` tracks cumulative electricity costs in USD based on GPU power consumption
+  - Calculates cost from GPU power draw: (energy_Wh / 1000) * cost_per_kWh
+  - Includes `gpu_id` and `gpu_name` attributes for multi-GPU systems
+  - Works alongside existing CO2 emissions tracking (`gen_ai.co2.emissions`)
+  - Added `power_cost_per_kwh` field to `OTelConfig` dataclass
+  - Implemented in `GPUMetricsCollector._collect_loop()` in `gpu_metrics.py`
+  - Added 2 comprehensive tests: basic tracking and custom rate validation
+  - Documented in README.md, sample.env, and CHANGELOG.md
+  - Common electricity rates provided as reference: US $0.12, Europe $0.20, Industrial $0.07
 
 - **HuggingFace InferenceClient Instrumentation**
   - Added full instrumentation support for HuggingFace Inference API via `InferenceClient`

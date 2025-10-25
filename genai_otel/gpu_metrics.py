@@ -68,6 +68,11 @@ class GPUMetricsCollector:
             description="Cumulative CO2 equivalent emissions in grams",
             unit="gCO2e",
         )
+        self.power_cost_counter = meter.create_counter(
+            "gen_ai.power.cost",  # New metric name
+            description="Cumulative electricity cost in USD based on GPU power consumption",
+            unit="USD",
+        )
         if not NVML_AVAILABLE:
             logger.warning(
                 "GPU metrics collection not available - nvidia-ml-py not installed. "
@@ -283,11 +288,23 @@ class GPUMetricsCollector:
                         delta_time_hours * 3600.0
                     )  # Wh (power in kW * hours = kWh, but track in Wh for precision)
                     self.cumulative_energy_wh[i] += delta_energy_wh
+
+                    # Calculate and record CO2 emissions if enabled
                     if self.config.enable_co2_tracking:
                         delta_co2_g = (
                             delta_energy_wh / 1000.0
                         ) * self.config.carbon_intensity  # gCO2e
                         self.co2_counter.add(delta_co2_g, {"gpu_id": str(i)})
+
+                    # Calculate and record power cost
+                    # delta_energy_wh is in Wh, convert to kWh and multiply by cost per kWh
+                    delta_cost_usd = (delta_energy_wh / 1000.0) * self.config.power_cost_per_kwh
+                    device_name = self._get_device_name(handle, i)
+                    self.power_cost_counter.add(
+                        delta_cost_usd,
+                        {"gpu_id": str(i), "gpu_name": device_name}
+                    )
+
                     self.last_timestamp[i] = current_time
                 except Exception as e:
                     logger.error(f"Error collecting GPU {i} metrics: {e}")

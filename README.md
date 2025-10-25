@@ -134,6 +134,40 @@ The library includes comprehensive cost tracking with pricing data for **145+ mo
 - **Cache Pricing**: Anthropic prompt caching costs (read/write)
 - **Granular Cost Metrics**: Per-request cost breakdown by token type
 - **Auto-Updated Pricing**: Pricing data maintained in `llm_pricing.json`
+- **Custom Pricing**: Add pricing for custom/proprietary models via environment variable
+
+### Adding Custom Model Pricing
+
+For custom or proprietary models not in `llm_pricing.json`, you can provide custom pricing via the `GENAI_CUSTOM_PRICING_JSON` environment variable:
+
+```bash
+# For chat models
+export GENAI_CUSTOM_PRICING_JSON='{"chat":{"my-custom-model":{"promptPrice":0.001,"completionPrice":0.002}}}'
+
+# For embeddings
+export GENAI_CUSTOM_PRICING_JSON='{"embeddings":{"my-custom-embeddings":0.00005}}'
+
+# For multiple categories
+export GENAI_CUSTOM_PRICING_JSON='{
+  "chat": {
+    "my-custom-chat": {"promptPrice": 0.001, "completionPrice": 0.002}
+  },
+  "embeddings": {
+    "my-custom-embed": 0.00005
+  },
+  "audio": {
+    "my-custom-tts": 0.02
+  }
+}'
+```
+
+**Pricing Format:**
+- **Chat models**: `{"promptPrice": <$/1k tokens>, "completionPrice": <$/1k tokens>}`
+- **Embeddings**: Single number for price per 1k tokens
+- **Audio**: Price per 1k characters (TTS) or per second (STT)
+- **Images**: Nested structure with quality/size pricing (see `llm_pricing.json` for examples)
+
+**Hybrid Pricing:** Custom prices are merged with default pricing from `llm_pricing.json`. If you provide custom pricing for an existing model, the custom price overrides the default.
 
 **Coverage Statistics**: As of v0.1.3, 89% test coverage with 415 passing tests, including comprehensive cost calculation validation and cost enrichment processor tests (supporting both GenAI and OpenInference semantic conventions).
 
@@ -156,7 +190,8 @@ Every LLM call, database query, API request, and vector search is traced with fu
 - `gen_ai.usage.cost.cache_write` - Cache write cost (Anthropic)
 - `gen_ai.client.errors` - Error counts by operation and type
 - `gen_ai.gpu.*` - GPU utilization, memory, temperature, power (ObservableGauges)
-- `gen_ai.co2.emissions` - CO2 emissions tracking (opt-in)
+- `gen_ai.co2.emissions` - CO2 emissions tracking (opt-in via `GENAI_ENABLE_CO2_TRACKING`)
+- `gen_ai.power.cost` - Cumulative electricity cost in USD based on GPU power consumption (configurable via `GENAI_POWER_COST_PER_KWH`)
 - `gen_ai.server.ttft` - Time to First Token for streaming responses (histogram, 1ms-10s buckets)
 - `gen_ai.server.tbt` - Time Between Tokens for streaming responses (histogram, 10ms-2.5s buckets)
 
