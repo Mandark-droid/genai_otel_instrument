@@ -77,7 +77,8 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 
 ### LLM Providers (Auto-detected)
 - **With Full Cost Tracking**: OpenAI, Anthropic, Google AI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, Vertex AI
-- **Hardware/Local Pricing**: Replicate (hardware-based $/second), HuggingFace (local execution, free)
+- **Hardware/Local Pricing**: Replicate (hardware-based $/second), HuggingFace (local execution with estimated costs)
+  - **HuggingFace Support**: `pipeline()`, `AutoModelForCausalLM.generate()`, `AutoModelForSeq2SeqLM.generate()`, `InferenceClient` API calls
 - **Other Providers**: Anyscale
 
 ### Frameworks
@@ -127,7 +128,10 @@ The library includes comprehensive cost tracking with pricing data for **145+ mo
 
 ### Special Pricing Models
 - **Replicate**: Hardware-based pricing ($/second of GPU/CPU time) - not token-based
-- **HuggingFace Transformers**: Local execution - no API costs
+- **HuggingFace Transformers**: Local model execution with estimated costs based on parameter count
+  - Supports `pipeline()`, `AutoModelForCausalLM.generate()`, `AutoModelForSeq2SeqLM.generate()`
+  - Cost estimation uses GPU/compute resource pricing tiers (tiny/small/medium/large)
+  - Automatic token counting from tensor shapes
 
 ### Pricing Features
 - **Differential Pricing**: Separate rates for prompt tokens vs. completion tokens
