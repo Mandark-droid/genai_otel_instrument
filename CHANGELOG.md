@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **HuggingFace AutoModelForCausalLM and AutoModelForSeq2SeqLM Instrumentation**
+  - Added support for direct model usage via `AutoModelForCausalLM.generate()` and `AutoModelForSeq2SeqLM.generate()`
+  - Automatic token counting from input and output tensor shapes
+  - Cost calculation based on model parameter count (uses CostCalculator's local model pricing tiers)
+  - Span attributes: `gen_ai.system`, `gen_ai.request.model`, `gen_ai.operation.name`, token counts, costs
+  - Metrics: request counter, token counter, latency histogram, cost counter
+  - Supports generation parameters: `max_length`, `max_new_tokens`, `temperature`, `top_p`
+  - Implementation in `genai_otel/instrumentors/huggingface_instrumentor.py:184-333`
+  - Example usage in `examples/huggingface/example_automodel.py`
+  - All 443 tests pass (added 1 new test)
+
 ### Fixed
 
 - **CRITICAL: Cost Tracking for OpenInference Instrumentors (smolagents, litellm, mcp)**
