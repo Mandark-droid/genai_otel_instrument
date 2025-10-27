@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8] - 2025-01-27
+
 ### Added
 
 - **HuggingFace AutoModelForCausalLM and AutoModelForSeq2SeqLM Instrumentation**
@@ -37,6 +39,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `genai_otel/auto_instrument.py` to wrap OTLP and Console exporters
   - Model name normalization handles provider prefixes (e.g., `openai/gpt-3.5-turbo` → `gpt-3.5-turbo`)
   - All 442 existing tests continue to pass
+
+- **HuggingFace AutoModelForCausalLM AttributeError Fix**
+  - Fixed `AttributeError: type object 'AutoModelForCausalLM' has no attribute 'generate'`
+  - Root cause: `AutoModelForCausalLM` is a factory class; `generate()` exists on `GenerationMixin`
+  - Solution: Wrap `GenerationMixin.generate()` which all generative models inherit from
+  - This covers all model types: `AutoModelForCausalLM`, `AutoModelForSeq2SeqLM`, `GPT2LMHeadModel`, etc.
+  - Added fallback import for older transformers versions
+  - Implementation in `genai_otel/instrumentors/huggingface_instrumentor.py:184-346`
+
+## [0.1.7] - 2025-01-25
 
 ### Added
 
