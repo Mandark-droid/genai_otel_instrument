@@ -19,6 +19,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 from .config import OTelConfig
 from .cost_calculator import CostCalculator
 from .cost_enrichment_processor import CostEnrichmentSpanProcessor
+from .cost_enriching_exporter import CostEnrichingSpanExporter
 from .gpu_metrics import GPUMetricsCollector
 from .mcp_instrumentors import MCPInstrumentorManager
 from .metrics import (
@@ -169,14 +170,17 @@ def setup_auto_instrumentation(config: OTelConfig):
 
     set_global_textmap(TraceContextTextMapPropagator())
 
-    # Add cost enrichment processor for OpenInference instrumentors
-    # This enriches spans from smolagents, litellm, mcp with cost attributes
+    # Add cost enrichment processor for custom instrumentors (OpenAI, Ollama, etc.)
+    # These instrumentors set cost attributes directly, so processor is mainly for logging
+    # Also attempts to enrich OpenInference spans (smolagents, litellm, mcp), though
+    # the processor can't modify ReadableSpan - the exporter below handles that
+    cost_calculator = None
     if config.enable_cost_tracking:
         try:
             cost_calculator = CostCalculator()
             cost_processor = CostEnrichmentSpanProcessor(cost_calculator)
             tracer_provider.add_span_processor(cost_processor)
-            logger.info("Cost enrichment processor added for OpenInference instrumentors")
+            logger.info("Cost enrichment processor added")
         except Exception as e:
             logger.warning(f"Failed to add cost enrichment processor: {e}", exc_info=True)
 

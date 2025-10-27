@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CRITICAL: Cost Tracking for OpenInference Instrumentors (smolagents, litellm, mcp)**
+  - Replaced `CostEnrichmentSpanProcessor` with `CostEnrichingSpanExporter` to properly add cost attributes
+  - **Root Cause**: SpanProcessor's `on_end()` receives immutable `ReadableSpan` objects that cannot be modified
+  - **Solution**: Custom SpanExporter that enriches span data before export, creating new ReadableSpan instances with cost attributes
+  - Cost attributes now correctly appear for smolagents, litellm, and mcp spans:
+    - `gen_ai.usage.cost.total`: Total cost in USD
+    - `gen_ai.usage.cost.prompt`: Prompt tokens cost
+    - `gen_ai.usage.cost.completion`: Completion tokens cost
+  - Supports all OpenInference semantic conventions:
+    - Model name: `llm.model_name`, `gen_ai.request.model`, `embedding.model_name`
+    - Token counts: `llm.token_count.{prompt,completion}`, `gen_ai.usage.{prompt_tokens,completion_tokens}`
+    - Span kinds: `openinference.span.kind` (LLM, EMBEDDING, CHAIN, etc.)
+  - Implementation in `genai_otel/cost_enriching_exporter.py`
+  - Updated `genai_otel/auto_instrument.py` to wrap OTLP and Console exporters
+  - Model name normalization handles provider prefixes (e.g., `openai/gpt-3.5-turbo` → `gpt-3.5-turbo`)
+  - All 442 existing tests continue to pass
+
 ### Added
 
 - **Phase 4: Session and User Tracking (4.1)**
