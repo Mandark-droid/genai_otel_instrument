@@ -399,6 +399,32 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
 
                 # Should complete without errors (pass block executes)
 
+    # ------------------------------------------------------------------
+    # 9. Test AutoModelForCausalLM instrumentation doesn't fail
+    # ------------------------------------------------------------------
+    def test_instrument_model_classes_no_error(self):
+        """Test that model class instrumentation attempt completes without error.
+
+        Note: Full integration test with real transformers models is in examples.
+        This test just verifies the instrumentation code doesn't crash.
+        """
+        # Mock transformers module
+        mock_transformers = MagicMock()
+
+        with patch.dict("sys.modules", {"transformers": mock_transformers}):
+            instrumentor = HuggingFaceInstrumentor()
+            self.assertTrue(instrumentor._transformers_available)
+
+            config = MagicMock()
+            config.fail_on_error = False
+
+            # Act - should complete without raising even if mocks aren't perfect
+            # The _instrument_model_classes method has try/except handling
+            instrumentor.instrument(config)
+
+            # If we get here, no exceptions were raised - test passes
+            self.assertTrue(instrumentor._instrumented)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
