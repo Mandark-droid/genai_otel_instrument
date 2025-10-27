@@ -185,151 +185,154 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
         """Instrument HuggingFace model classes for direct model usage."""
         try:
             import wrapt
-            from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM
+
+            # Import GenerationMixin - the base class that provides generate() method
+            # All generative models (AutoModelForCausalLM, AutoModelForSeq2SeqLM, etc.) inherit from it
+            try:
+                from transformers.generation.utils import GenerationMixin
+            except ImportError:
+                # Fallback for older transformers versions
+                from transformers.generation import GenerationMixin
 
             # Store reference to instrumentor for use in wrapper
             instrumentor = self
 
-            # Wrap the generate() method for both model types
-            for model_class in [AutoModelForCausalLM, AutoModelForSeq2SeqLM]:
-                original_generate = model_class.generate
+            # Wrap the generate() method at GenerationMixin level (all models inherit from this)
+            original_generate = GenerationMixin.generate
 
-                @wrapt.decorator
-                def generate_wrapper(wrapped, instance, args, kwargs):
-                    """Wrapper for model.generate() method."""
-                    # Extract model info
-                    model_name = getattr(instance, "name_or_path", "unknown")
-                    if hasattr(instance.config, "_name_or_path"):
-                        model_name = instance.config._name_or_path
+            @wrapt.decorator
+            def generate_wrapper(wrapped, instance, args, kwargs):
+                """Wrapper for model.generate() method."""
+                # Extract model info
+                model_name = getattr(instance, "name_or_path", "unknown")
+                if hasattr(instance.config, "_name_or_path"):
+                    model_name = instance.config._name_or_path
 
-                    # Get input token count
-                    input_ids = kwargs.get("input_ids") or (args[0] if args else None)
-                    prompt_tokens = 0
-                    if input_ids is not None:
-                        if hasattr(input_ids, "shape"):
-                            prompt_tokens = int(input_ids.shape[-1])
-                        elif isinstance(input_ids, (list, tuple)):
-                            prompt_tokens = len(input_ids[0]) if input_ids else 0
+                # Get input token count
+                input_ids = kwargs.get("input_ids") or (args[0] if args else None)
+                prompt_tokens = 0
+                if input_ids is not None:
+                    if hasattr(input_ids, "shape"):
+                        prompt_tokens = int(input_ids.shape[-1])
+                    elif isinstance(input_ids, (list, tuple)):
+                        prompt_tokens = len(input_ids[0]) if input_ids else 0
 
-                    # Create span
-                    with instrumentor.tracer.start_as_current_span(
-                        "huggingface.model.generate"
-                    ) as span:
-                        # Set attributes
-                        span.set_attribute("gen_ai.system", "huggingface")
-                        span.set_attribute("gen_ai.request.model", model_name)
-                        span.set_attribute("gen_ai.operation.name", "text_generation")
-                        span.set_attribute("gen_ai.request.type", "chat")
+                # Create span
+                with instrumentor.tracer.start_as_current_span(
+                    "huggingface.model.generate"
+                ) as span:
+                    # Set attributes
+                    span.set_attribute("gen_ai.system", "huggingface")
+                    span.set_attribute("gen_ai.request.model", model_name)
+                    span.set_attribute("gen_ai.operation.name", "text_generation")
+                    span.set_attribute("gen_ai.request.type", "chat")
 
-                        # Extract generation parameters
-                        if "max_length" in kwargs:
-                            span.set_attribute("gen_ai.request.max_tokens", kwargs["max_length"])
-                        if "max_new_tokens" in kwargs:
-                            span.set_attribute(
-                                "gen_ai.request.max_tokens", kwargs["max_new_tokens"]
-                            )
-                        if "temperature" in kwargs:
-                            span.set_attribute("gen_ai.request.temperature", kwargs["temperature"])
-                        if "top_p" in kwargs:
-                            span.set_attribute("gen_ai.request.top_p", kwargs["top_p"])
+                    # Extract generation parameters
+                    if "max_length" in kwargs:
+                        span.set_attribute("gen_ai.request.max_tokens", kwargs["max_length"])
+                    if "max_new_tokens" in kwargs:
+                        span.set_attribute("gen_ai.request.max_tokens", kwargs["max_new_tokens"])
+                    if "temperature" in kwargs:
+                        span.set_attribute("gen_ai.request.temperature", kwargs["temperature"])
+                    if "top_p" in kwargs:
+                        span.set_attribute("gen_ai.request.top_p", kwargs["top_p"])
 
-                        # Call original generate
-                        import time
+                    # Call original generate
+                    import time
 
-                        start_time = time.time()
-                        result = wrapped(*args, **kwargs)
-                        duration = time.time() - start_time
+                    start_time = time.time()
+                    result = wrapped(*args, **kwargs)
+                    duration = time.time() - start_time
 
-                        # Extract output token count
-                        completion_tokens = 0
-                        if hasattr(result, "shape"):
-                            # result is a tensor
-                            total_length = int(result.shape[-1])
+                    # Extract output token count
+                    completion_tokens = 0
+                    if hasattr(result, "shape"):
+                        # result is a tensor
+                        total_length = int(result.shape[-1])
+                        completion_tokens = max(0, total_length - prompt_tokens)
+                    elif isinstance(result, (list, tuple)):
+                        # result is a list of sequences
+                        if result and hasattr(result[0], "shape"):
+                            total_length = int(result[0].shape[-1])
                             completion_tokens = max(0, total_length - prompt_tokens)
-                        elif isinstance(result, (list, tuple)):
-                            # result is a list of sequences
-                            if result and hasattr(result[0], "shape"):
-                                total_length = int(result[0].shape[-1])
-                                completion_tokens = max(0, total_length - prompt_tokens)
 
-                        total_tokens = prompt_tokens + completion_tokens
+                    total_tokens = prompt_tokens + completion_tokens
 
-                        # Set token usage attributes
+                    # Set token usage attributes
+                    if prompt_tokens > 0:
+                        span.set_attribute("gen_ai.usage.prompt_tokens", prompt_tokens)
+                    if completion_tokens > 0:
+                        span.set_attribute("gen_ai.usage.completion_tokens", completion_tokens)
+                    if total_tokens > 0:
+                        span.set_attribute("gen_ai.usage.total_tokens", total_tokens)
+
+                    # Record metrics
+                    if instrumentor.request_counter:
+                        instrumentor.request_counter.add(
+                            1, {"model": model_name, "provider": "huggingface"}
+                        )
+
+                    if instrumentor.token_counter and total_tokens > 0:
                         if prompt_tokens > 0:
-                            span.set_attribute("gen_ai.usage.prompt_tokens", prompt_tokens)
+                            instrumentor.token_counter.add(
+                                prompt_tokens, {"token_type": "prompt", "operation": span.name}
+                            )
                         if completion_tokens > 0:
-                            span.set_attribute("gen_ai.usage.completion_tokens", completion_tokens)
-                        if total_tokens > 0:
-                            span.set_attribute("gen_ai.usage.total_tokens", total_tokens)
-
-                        # Record metrics
-                        if instrumentor.request_counter:
-                            instrumentor.request_counter.add(
-                                1, {"model": model_name, "provider": "huggingface"}
+                            instrumentor.token_counter.add(
+                                completion_tokens,
+                                {"token_type": "completion", "operation": span.name},
                             )
 
-                        if instrumentor.token_counter and total_tokens > 0:
-                            if prompt_tokens > 0:
-                                instrumentor.token_counter.add(
-                                    prompt_tokens, {"token_type": "prompt", "operation": span.name}
-                                )
-                            if completion_tokens > 0:
-                                instrumentor.token_counter.add(
-                                    completion_tokens,
-                                    {"token_type": "completion", "operation": span.name},
-                                )
+                    if instrumentor.latency_histogram:
+                        instrumentor.latency_histogram.record(duration, {"operation": span.name})
 
-                        if instrumentor.latency_histogram:
-                            instrumentor.latency_histogram.record(
-                                duration, {"operation": span.name}
+                    # Calculate and record cost if enabled
+                    if (
+                        instrumentor.config
+                        and instrumentor.config.enable_cost_tracking
+                        and total_tokens > 0
+                    ):
+                        try:
+                            usage = {
+                                "prompt_tokens": prompt_tokens,
+                                "completion_tokens": completion_tokens,
+                                "total_tokens": total_tokens,
+                            }
+
+                            costs = instrumentor.cost_calculator.calculate_granular_cost(
+                                model=model_name, usage=usage, call_type="chat"
                             )
 
-                        # Calculate and record cost if enabled
-                        if (
-                            instrumentor.config
-                            and instrumentor.config.enable_cost_tracking
-                            and total_tokens > 0
-                        ):
-                            try:
-                                usage = {
-                                    "prompt_tokens": prompt_tokens,
-                                    "completion_tokens": completion_tokens,
-                                    "total_tokens": total_tokens,
-                                }
-
-                                costs = instrumentor.cost_calculator.calculate_granular_cost(
-                                    model=model_name, usage=usage, call_type="chat"
-                                )
-
-                                if costs["total"] > 0:
-                                    if instrumentor.cost_counter:
-                                        instrumentor.cost_counter.add(
-                                            costs["total"], {"model": model_name}
-                                        )
-                                    span.set_attribute("gen_ai.usage.cost.total", costs["total"])
-                                    if costs["prompt"] > 0:
-                                        span.set_attribute(
-                                            "gen_ai.usage.cost.prompt", costs["prompt"]
-                                        )
-                                    if costs["completion"] > 0:
-                                        span.set_attribute(
-                                            "gen_ai.usage.cost.completion", costs["completion"]
-                                        )
-
-                                    logger.debug(
-                                        f"HuggingFace model {model_name}: {total_tokens} tokens, "
-                                        f"cost: ${costs['total']:.6f}"
+                            if costs["total"] > 0:
+                                if instrumentor.cost_counter:
+                                    instrumentor.cost_counter.add(
+                                        costs["total"], {"model": model_name}
                                     )
-                            except Exception as e:
-                                logger.warning(f"Failed to calculate cost: {e}")
+                                span.set_attribute("gen_ai.usage.cost.total", costs["total"])
+                                if costs["prompt"] > 0:
+                                    span.set_attribute("gen_ai.usage.cost.prompt", costs["prompt"])
+                                if costs["completion"] > 0:
+                                    span.set_attribute(
+                                        "gen_ai.usage.cost.completion", costs["completion"]
+                                    )
 
-                        return result
+                                logger.debug(
+                                    f"HuggingFace model {model_name}: {total_tokens} tokens, "
+                                    f"cost: ${costs['total']:.6f}"
+                                )
+                        except Exception as e:
+                            logger.warning(f"Failed to calculate cost: {e}")
 
-                # Apply wrapper
-                model_class.generate = generate_wrapper(original_generate)
+                    return result
+
+            # Apply wrapper to GenerationMixin.generate (all models inherit this)
+            GenerationMixin.generate = generate_wrapper(original_generate)
 
             self._model_classes_instrumented = True
-            logger.debug("HuggingFace model classes instrumented (AutoModelForCausalLM, etc.)")
+            logger.debug(
+                "HuggingFace GenerationMixin.generate() instrumented "
+                "(covers all models: AutoModelForCausalLM, AutoModelForSeq2SeqLM, etc.)"
+            )
 
         except ImportError as e:
             logger.debug(f"Could not import model classes for instrumentation: {e}")
