@@ -132,9 +132,8 @@ class CostEnrichmentSpanProcessor(SpanProcessor):
 
             if cost_info and cost_info.get("total", 0.0) > 0:
                 # Add cost attributes to the span
-                # Note: We can't modify ReadableSpan attributes directly,
-                # but we can if span is still a Span instance
-                if isinstance(span, Span):
+                # Use duck typing to check if span supports set_attribute
+                if hasattr(span, "set_attribute") and callable(getattr(span, "set_attribute")):
                     span.set_attribute("gen_ai.usage.cost.total", cost_info["total"])
 
                     if cost_info.get("prompt", 0.0) > 0:
