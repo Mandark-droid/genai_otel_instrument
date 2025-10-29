@@ -109,6 +109,16 @@
         "512x512": 0.01,
         "1024x1024": 0.012
       }
+    },
+    "grok-image": {
+      "standard": {
+        "per_image": 0.07
+      }
+    },
+    "xai-grok-image": {
+      "standard": {
+        "per_image": 0.07
+      }
     }
   },
   "audio": {
@@ -148,6 +158,22 @@
     "gpt-4.1": {
       "promptPrice": 0.002,
       "completionPrice": 0.008
+    },
+    "gpt-5": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01
+    },
+    "gpt-5-2025-08-07": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01
+    },
+    "gpt-5-mini": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.002
+    },
+    "gpt-5-nano": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0004
     },
     "gpt-4o": {
       "promptPrice": 0.0005,
@@ -249,6 +275,22 @@
       "promptPrice": 0.015,
       "completionPrice": 0.075
     },
+    "claude-4-opus": {
+      "promptPrice": 0.015,
+      "completionPrice": 0.075
+    },
+    "claude-opus-4": {
+      "promptPrice": 0.015,
+      "completionPrice": 0.075
+    },
+    "claude-opus-4-1": {
+      "promptPrice": 0.015,
+      "completionPrice": 0.075
+    },
+    "claude-opus-4.1": {
+      "promptPrice": 0.015,
+      "completionPrice": 0.075
+    },
     "claude-3-sonnet-20240229": {
       "promptPrice": 0.003,
       "completionPrice": 0.015
@@ -256,6 +298,34 @@
     "claude-3-haiku-20240307": {
       "promptPrice": 0.00025,
       "completionPrice": 0.00125
+    },
+    "claude-3-5-sonnet-20240620": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015
+    },
+    "claude-3-5-sonnet-20241022": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015
+    },
+    "claude-3-5-haiku-20241022": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.004
+    },
+    "claude-sonnet-4-5": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015
+    },
+    "claude-sonnet-4-5-20250929": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015
+    },
+    "claude-3-7-sonnet": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015
+    },
+    "claude-haiku-4-5": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.005
     },
     "command": {
       "promptPrice": 0.001,
@@ -441,6 +511,14 @@
       "promptPrice": 0.00125,
       "completionPrice": 0.01
     },
+    "gemini-2-5-flash-image": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.03
+    },
+    "nano-banana": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.03
+    },
     "text-bison": {
       "promptPrice": 0.001,
       "completionPrice": 0.002
@@ -537,6 +615,38 @@
       "promptPrice": 0.0005,
       "completionPrice": 0.0015
     },
+    "grok-2-1212": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01
+    },
+    "grok-2-vision-1212": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01
+    },
+    "grok-3": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015
+    },
+    "grok-3-mini": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0005
+    },
+    "grok-3-fast": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025
+    },
+    "grok-3-mini-fast": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.004
+    },
+    "grok-4": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015
+    },
+    "grok-4-fast": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0005
+    },
     "jamba-1.5-mini": {
       "promptPrice": 0.0002,
       "completionPrice": 0.0004
@@ -564,6 +674,26 @@
     "Qwen/QwQ-32B-Preview": {
       "promptPrice": 0.0012,
       "completionPrice": 0.0012
+    },
+    "qwen3-next-80b-a3b-instruct": {
+      "promptPrice": 0.000525,
+      "completionPrice": 0.0021
+    },
+    "qwen3-next-80b-a3b-thinking": {
+      "promptPrice": 0.000525,
+      "completionPrice": 0.0063
+    },
+    "qwen3-coder-480b-a35b-instruct": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.005
+    },
+    "qwen3-max": {
+      "promptPrice": 0.0012,
+      "completionPrice": 0.006
+    },
+    "qwen-qwen3-max": {
+      "promptPrice": 0.0012,
+      "completionPrice": 0.006
     },
     "codellama/CodeLlama-34b-Instruct-hf": {
       "promptPrice": 0.0008,
@@ -613,13 +743,29 @@
       "promptPrice": 0.00059,
       "completionPrice": 0.00079
     },
+    "llama-4-scout": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0005
+    },
     "llama-4-scout-17bx16e-128k": {
-      "promptPrice": 0.00011,
-      "completionPrice": 0.00034
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0005
+    },
+    "llama-4-maverick": {
+      "promptPrice": 0.00022,
+      "completionPrice": 0.00085
     },
     "llama-4-maverick-17bx128e-128k": {
-      "promptPrice": 0.0002,
-      "completionPrice": 0.0006
+      "promptPrice": 0.00022,
+      "completionPrice": 0.00085
+    },
+    "meta-llama/Llama-4-Scout": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0005
+    },
+    "meta-llama/Llama-4-Maverick": {
+      "promptPrice": 0.00022,
+      "completionPrice": 0.00085
     },
     "llama-guard-4-12b": {
       "promptPrice": 0.0002,
@@ -773,7 +919,7 @@
       "promptPrice": 0.0003,
       "completionPrice": 0.0006
     },
-    "qwen3:3b": {
+    "qwen3:4b": {
       "promptPrice": 0.0003,
       "completionPrice": 0.0006
     },
@@ -857,9 +1003,161 @@
       "promptPrice": 0.0008,
       "completionPrice": 0.0008
     },
+    "ibm-granite-3-1-8b-instruct": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "ibm-granite-3-8b-instruct": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "granite-3-8b-instruct": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "granite-embedding-107m-multilingual": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0001
+    },
+    "granite-embedding-278m-multilingual": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0001
+    },
     "deepseek-v3.1": {
-      "promptPrice": 0.0012,
-      "completionPrice": 0.0012
+      "promptPrice": 0.00056,
+      "completionPrice": 0.00168
+    },
+    "sarvam-m": {
+      "promptPrice": 0,
+      "completionPrice": 0
+    },
+    "sarvamai/sarvam-m": {
+      "promptPrice": 0,
+      "completionPrice": 0
+    },
+    "sarvam-chat": {
+      "promptPrice": 0,
+      "completionPrice": 0
+    },
+    "granite-4-0-h-small": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "granite-4-0-h-tiny": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "granite-4-0-h-micro": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "granite-4-0-micro": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "ibm-granite/granite-4.0-h-small": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "ibm-granite/granite-4.0-h-tiny": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "ibm-granite/granite-4.0-h-micro": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "granite:3b": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "granite:8b": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002
+    },
+    "mistral-large-24-11": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.024
+    },
+    "mistral-large-2411": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.024
+    },
+    "mistral-small-3-1": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003
+    },
+    "mistral-small-3.1": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003
+    },
+    "mistral-medium-3": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.002
+    },
+    "mistral-medium-2025": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.002
+    },
+    "magistral-small": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003
+    },
+    "magistral-medium": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.009
+    },
+    "codestral-25-01": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003
+    },
+    "codestral-2501": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003
+    },
+    "lfm-7b": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006
+    },
+    "liquid/lfm-7b": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006
+    },
+    "snowflake-arctic": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024
+    },
+    "snowflake-arctic-instruct": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024
+    },
+    "snowflake/snowflake-arctic-instruct": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024
+    },
+    "snowflake-arctic-embed-l-v2.0": {
+      "promptPrice": 0.00005,
+      "completionPrice": 0.00005
+    },
+    "nvidia-nemotron-4-340b-instruct": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.009
+    },
+    "nvidia/nemotron-4-340b-instruct": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.009
+    },
+    "nvidia-nemotron-mini": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0004
+    },
+    "nvidia/llama-3.1-nemotron-70b-instruct": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0008
+    },
+    "servicenow-now-assist": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003
     },
     "llama3.1:405b": {
       "promptPrice": 0.0012,
