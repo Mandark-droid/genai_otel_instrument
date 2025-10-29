@@ -6,6 +6,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.12] - 2025-10-29
+
+### Added
+
+- **Enhanced README Documentation**
+  - Added professional project logo centered at the top of README
+  - Added landing page hero image showcasing the project overview
+  - Added comprehensive Screenshots section with 5 embedded demonstration images:
+    - OpenAI instrumentation with token usage, costs, and latency metrics
+    - Ollama (local LLM) zero-code instrumentation
+    - HuggingFace Transformers with automatic token counting
+    - SmolAgents framework with complete agent workflow tracing
+    - GPU metrics collection dashboard
+  - Added links to additional screenshots (Token Cost Breakdown, OpenSearch Dashboard)
+  - Added Demo Video section with placeholder for future video content
+  - All images follow OSS documentation standards with professional formatting
+
+### Changed
+
+- **Roadmap Section Cleanup**
+  - Removed Phase 4 implementation details from roadmap (Session & User Tracking, RAG/Embedding Attributes)
+  - Phase 4 features are now fully implemented and documented in the Advanced Features section
+  - Roadmap now focuses exclusively on future releases (v0.2.0 onwards)
+
+### Improved
+
+- **Comprehensive Model Pricing Database Update**
+  - Expanded pricing coverage from 145+ to 240+ models across 15+ providers
+  - **OpenAI GPT-5 Series** (4 new models):
+    - `gpt-5` - $1.25/$10 per 1M tokens
+    - `gpt-5-2025-08-07` - $1.25/$10 per 1M tokens
+    - `gpt-5-mini` - $0.25/$2 per 1M tokens
+    - `gpt-5-nano` - $0.10/$0.40 per 1M tokens
+  - **Anthropic Claude 4/3.5 Variants** (13 new models):
+    - Claude 4 Opus series: `claude-4-opus`, `claude-opus-4`, `claude-opus-4-1`, `claude-opus-4.1` - $15/$75 per 1M tokens
+    - Claude 3.5 Sonnet: `claude-3-5-sonnet-20240620`, `claude-3-5-sonnet-20241022`, `claude-sonnet-4-5`, `claude-sonnet-4-5-20250929`, `claude-3-7-sonnet` - $3/$15 per 1M tokens
+    - Claude 3.5 Haiku: `claude-3-5-haiku-20241022` - $0.80/$4 per 1M tokens
+    - Claude Haiku 4.5: `claude-haiku-4-5` - $1/$5 per 1M tokens
+  - **XAI Grok Models** (10 new models):
+    - Grok 2: `grok-2-1212`, `grok-2-vision-1212` - $2/$10 per 1M tokens
+    - Grok 3: `grok-3` - $3/$15 per 1M tokens, `grok-3-mini` - $0.30/$0.50 per 1M tokens
+    - Grok 3 Fast: `grok-3-fast` - $5/$25 per 1M tokens, `grok-3-mini-fast` - $0.60/$4 per 1M tokens
+    - Grok 4: `grok-4` - $3/$15 per 1M tokens, `grok-4-fast` - $0.20/$0.50 per 1M tokens
+    - Image models: `grok-image`, `xai-grok-image` - $0.07 per image
+  - **Google Gemini Variants** (2 new models):
+    - `gemini-2-5-flash-image` - $0.30/$30 per 1M tokens
+    - `nano-banana` - $0.30/$30 per 1M tokens
+  - **Qwen Series** (6 new models):
+    - `qwen3-next-80b-a3b-instruct` - $0.525/$2.10 per 1M tokens
+    - `qwen3-next-80b-a3b-thinking` - $0.525/$6.30 per 1M tokens
+    - `qwen3-coder-480b-a35b-instruct` - $1/$5 per 1M tokens
+    - `qwen3-max`, `qwen-qwen3-max` - $1.20/$6 per 1M tokens
+  - **Meta Llama 4 Scout & Maverick** (6 models with updated pricing):
+    - `llama-4-scout`, `llama-4-scout-17bx16e-128k`, `meta-llama/Llama-4-Scout` - $0.15/$0.50 per 1M tokens
+    - `llama-4-maverick`, `llama-4-maverick-17bx128e-128k`, `meta-llama/Llama-4-Maverick` - $0.22/$0.85 per 1M tokens
+  - **IBM Granite Models** (13 new models):
+    - Granite 3 series: `ibm-granite-3-1-8b-instruct`, `ibm-granite-3-8b-instruct`, `granite-3-8b-instruct` - $0.20/$0.20 per 1M tokens
+    - Granite 4 series: `granite-4-0-h-small`, `granite-4-0-h-tiny`, `granite-4-0-h-micro`, `granite-4-0-micro` - $0.20/$0.20 per 1M tokens
+    - Embeddings: `granite-embedding-107m-multilingual`, `granite-embedding-278m-multilingual` - $0.10/$0.10 per 1M tokens
+    - Ollama variants: `granite:3b`, `granite:8b` - $0.20/$0.20 per 1M tokens
+  - **Mistral AI Updates** (10 new models):
+    - `mistral-large-24-11`, `mistral-large-2411` - $8/$24 per 1M tokens
+    - `mistral-small-3-1`, `mistral-small-3.1` - $1/$3 per 1M tokens
+    - `mistral-medium-3`, `mistral-medium-2025` - $0.40/$2 per 1M tokens
+    - Magistral series: `magistral-small` - $1/$3, `magistral-medium` - $3/$9 per 1M tokens
+    - Codestral: `codestral-25-01`, `codestral-2501` - $1/$3 per 1M tokens
+  - **Additional Providers**:
+    - **Sarvam AI**: `sarvam-m`, `sarvamai/sarvam-m`, `sarvam-chat` - Free (Open source)
+    - **Liquid AI**: `lfm-7b`, `liquid/lfm-7b` - $0.30/$0.60 per 1M tokens
+    - **Snowflake**: `snowflake-arctic`, `snowflake-arctic-instruct` - $0.80/$2.40 per 1M tokens, `snowflake-arctic-embed-l-v2.0` - $0.05/$0.05 per 1M tokens
+    - **NVIDIA Nemotron**: `nvidia-nemotron-4-340b-instruct` - $3/$9 per 1M tokens, `nvidia-nemotron-mini` - $0.20/$0.40 per 1M tokens, `nvidia/llama-3.1-nemotron-70b-instruct` - $0.80/$0.80 per 1M tokens
+    - **ServiceNow**: `servicenow-now-assist` - $1/$3 per 1M tokens
+  - **Pricing Corrections**:
+    - `deepseek-v3.1`: Updated to $0.56/$1.68 per 1M tokens (from $1.20/$1.20)
+    - `qwen3:3b`: Renamed to `qwen3:4b` (4B parameter model)
+  - All pricing reflects official provider rates as of October 2025
+
 ## [0.1.9] - 2025-01-27
 
 ### Added
