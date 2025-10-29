@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.13] - 2025-10-29
+
+### Changed
+
+- **BREAKING: License changed from Apache-2.0 to AGPL-3.0-or-later**
+  - Provides stronger copyleft protection for the project
+  - Network provision requires sharing source code for modified versions used over network
+  - Full license text in LICENSE file with Copyright (C) 2025 Kshitij Thakkar
+  - Updated all license references in pyproject.toml, __init__.py, and README.md
+
+- **Project Rebranding to TraceVerde**
+  - Display name changed from "GenAI OpenTelemetry Auto-Instrumentation" to "TraceVerde"
+  - Package name remains `genai-otel-instrument` for PyPI compatibility (no breaking changes)
+  - Updated README.md title, branding, and license badges
+
+**⚠️ Important**: Users should review AGPL-3.0 license terms before upgrading, especially for commercial/SaaS deployments
+
 ## [0.1.12] - 2025-10-29
 
 ### Added
