@@ -1,5 +1,11 @@
 # GenAI OpenTelemetry Auto-Instrumentation
 
+<div align="center">
+  <img src=".github/images/Logo.jpg" alt="GenAI OpenTelemetry Instrumentation Logo" width="400"/>
+</div>
+
+<br/>
+
 [![PyPI version](https://badge.fury.io/py/genai-otel-instrument.svg)](https://badge.fury.io/py/genai-otel-instrument)
 [![Python Versions](https://img.shields.io/pypi/pyversions/genai-otel-instrument.svg)](https://pypi.org/project/genai-otel-instrument/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -19,6 +25,14 @@
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-1.20%2B-blueviolet)](https://opentelemetry.io/)
 [![Semantic Conventions](https://img.shields.io/badge/OTel%20Semconv-GenAI%20v1.28-orange)](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/Mandark-droid/genai_otel_instrument/actions)
+
+---
+
+<div align="center">
+  <img src=".github/images/Landing_Page.jpg" alt="GenAI OpenTelemetry Instrumentation Overview" width="800"/>
+</div>
+
+---
 
 Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with zero-code setup.
 
@@ -108,6 +122,65 @@ The processor supports OpenInference semantic conventions:
 ```bash
 pip install genai-otel-instrument[openinference]
 ```
+
+## Screenshots
+
+See the instrumentation in action across different LLM providers and observability backends.
+
+### OpenAI Instrumentation
+Full trace capture for OpenAI API calls with token usage, costs, and latency metrics.
+
+<div align="center">
+  <img src=".github/images/Screenshots/Traces_OpenAI.png" alt="OpenAI Traces" width="900"/>
+</div>
+
+### Ollama (Local LLM) Instrumentation
+Zero-code instrumentation for local models running on Ollama with comprehensive observability.
+
+<div align="center">
+  <img src=".github/images/Screenshots/Traces_Ollama.png" alt="Ollama Traces" width="900"/>
+</div>
+
+### HuggingFace Transformers
+Direct instrumentation of HuggingFace Transformers with automatic token counting and cost estimation.
+
+<div align="center">
+  <img src=".github/images/Screenshots/Trace_HuggingFace_Transformer_Models.png" alt="HuggingFace Transformer Traces" width="900"/>
+</div>
+
+### SmolAgents Framework
+Complete agent workflow tracing with tool calls, iterations, and cost breakdown.
+
+<div align="center">
+  <img src=".github/images/Screenshots/Traces_SmolAgent_with_tool_calls.png" alt="SmolAgent Traces with Tool Calls" width="900"/>
+</div>
+
+### GPU Metrics Collection
+Real-time GPU utilization, memory, temperature, and power consumption metrics.
+
+<div align="center">
+  <img src=".github/images/Screenshots/GPU_Metrics.png" alt="GPU Metrics Dashboard" width="900"/>
+</div>
+
+### Additional Screenshots
+
+- **[Token Cost Breakdown](.github/images/Screenshots/Traces_SmolAgent_Token_Cost_breakdown.png)** - Detailed token usage and cost analysis for SmolAgent workflows
+- **[OpenSearch Dashboard](.github/images/Screenshots/GENAI_OpenSearch_output.png)** - GenAI metrics visualization in OpenSearch/Kibana
+
+---
+
+## Demo Video
+
+Watch a comprehensive walkthrough of GenAI OpenTelemetry Auto-Instrumentation in action, demonstrating setup, configuration, and real-time observability across multiple LLM providers.
+
+<div align="center">
+
+  **🎥 [Watch Demo Video](https://youtu.be/YOUR_VIDEO_ID_HERE)**
+  *(Coming Soon)*
+
+</div>
+
+---
 
 ## Cost Tracking Coverage
 
@@ -659,38 +732,6 @@ genai_otel.instrument(
 - `gen_ai.guardrail.blocked` - Whether request was blocked (boolean)
 - `gen_ai.eval.bias_categories` - Detected bias types (array)
 - `gen_ai.eval.toxicity_categories` - Toxicity categories (array)
-
-#### 📊 Enhanced OpenTelemetry Compliance
-
-Completing remaining items from [OTEL_SEMANTIC_GAP_ANALYSIS_AND_IMPLEMENTATION_PLAN.md](OTEL_SEMANTIC_GAP_ANALYSIS_AND_IMPLEMENTATION_PLAN.md):
-
-**Phase 4: Optional Enhancements (✅ COMPLETED)**
-
-All Phase 4 features are now available! See the [Advanced Features](#advanced-features) section for detailed documentation.
-
-- ✅ **Session & User Tracking** - Track sessions and users across requests with custom extractor functions
-  - Configurable via `session_id_extractor` and `user_id_extractor` in `OTelConfig`
-  - Automatically adds `session.id` and `user.id` span attributes
-  - See [Session and User Tracking](#session-and-user-tracking) for usage examples
-
-- ✅ **RAG/Embedding Attributes** - Enhanced observability for retrieval-augmented generation
-  - Helper methods: `add_embedding_attributes()` and `add_retrieval_attributes()`
-  - Embedding attributes: `embedding.model_name`, `embedding.text`, `embedding.vector.dimension`
-  - Retrieval attributes: `retrieval.query`, `retrieval.document_count`, `retrieval.documents.{i}.document.*`
-  - See [RAG and Embedding Attributes](#rag-and-embedding-attributes) for usage examples
-  - Complete example: `examples/phase4_session_rag_tracking.py`
-
-**Note on Agent Workflow Tracking:**
-
-Agent workflow observability is already provided by the OpenInference Smolagents instrumentor (included when `smolagents` is in `enabled_instrumentors`). This is not a new Phase 4 feature, but an existing capability:
-
-- `openinference.span.kind: "AGENT"` - Identifies agent spans
-- `agent.name` - Agent identifier (via OpenInference)
-- `agent.iteration` - Current iteration number (via OpenInference)
-- `agent.action` - Action taken (via OpenInference)
-- `agent.observation` - Observation received (via OpenInference)
-
-Agent tracking requires Python >= 3.10 and the `smolagents` library. See [OpenInference Integration](#openinference-optional---python-310-only) for details.
 
 #### 🔄 Migration Support
 
