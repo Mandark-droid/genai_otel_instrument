@@ -21,7 +21,7 @@ from .__version__ import __version__
 # Package metadata (from pyproject.toml)
 __author__ = "Kshitij Thakkar"
 __email__ = "kshitijthakkar@rocketmail.com"
-__license__ = "Apache-2.0"
+__license__ = "AGPL-3.0-or-later"
 
 # Re-exporting key components for easier access
 from .auto_instrument import setup_auto_instrumentation  # Restoring direct import

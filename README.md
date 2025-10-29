@@ -1,14 +1,14 @@
-# GenAI OpenTelemetry Auto-Instrumentation
+# TraceVerde
 
 <div align="center">
-  <img src=".github/images/Logo.jpg" alt="GenAI OpenTelemetry Instrumentation Logo" width="400"/>
+  <img src=".github/images/Logo.jpg" alt="TraceVerde - GenAI OpenTelemetry Instrumentation Logo" width="400"/>
 </div>
 
 <br/>
 
 [![PyPI version](https://badge.fury.io/py/genai-otel-instrument.svg)](https://badge.fury.io/py/genai-otel-instrument)
 [![Python Versions](https://img.shields.io/pypi/pyversions/genai-otel-instrument.svg)](https://pypi.org/project/genai-otel-instrument/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Downloads](https://static.pepy.tech/badge/genai-otel-instrument)](https://pepy.tech/project/genai-otel-instrument)
 [![Downloads/Month](https://static.pepy.tech/badge/genai-otel-instrument/month)](https://pepy.tech/project/genai-otel-instrument)
 
@@ -769,4 +769,11 @@ We welcome feedback on our roadmap! Please:
 See [Contributing.md](Contributing.md) for how to get involved.
 
 ## License
-Apache-2.0 license
+
+TraceVerde is licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
+
+Copyright (C) 2025 Kshitij Thakkar
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+See the [LICENSE](LICENSE) file for the full license text.
