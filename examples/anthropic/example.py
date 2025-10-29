@@ -15,7 +15,7 @@ client = Anthropic()
 
 # Make a simple message request
 message = client.messages.create(
-    model="claude-3-5-sonnet-20241022",
+    model="claude-haiku-4-5",
     max_tokens=150,
     messages=[{"role": "user", "content": "Explain OpenTelemetry in one sentence."}],
 )
