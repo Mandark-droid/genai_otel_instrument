@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Comprehensive OpenTelemetry auto-instrumentation for LLM/GenAI applications"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "Apache-2.0"}
+license = {text = "AGPL-3.0-or-later"}
 authors = [
     {name = "Kshitij Thakkar", email = "kshitijthakkar@rocketmail.com"}
 ]
@@ -27,7 +27,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Monitoring",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
