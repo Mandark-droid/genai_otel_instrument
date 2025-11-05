@@ -349,7 +349,8 @@ GENAI_ENABLE_MCP_INSTRUMENTATION=true
 GENAI_GPU_COLLECTION_INTERVAL=5  # GPU metrics collection interval in seconds (default: 5)
 OTEL_SERVICE_INSTANCE_ID=instance-1 # Optional service instance id
 OTEL_ENVIRONMENT=production # Optional environment
-OTEL_EXPORTER_OTLP_TIMEOUT=10.0 # Optional timeout for OTLP exporter
+OTEL_EXPORTER_OTLP_TIMEOUT=60 # Timeout for OTLP exporter in seconds (default: 60)
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf # Protocol: "http/protobuf" (default) or "grpc"
 
 # Semantic conventions (NEW)
 OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai  # "gen_ai" for new conventions only, "gen_ai/dup" for dual emission
