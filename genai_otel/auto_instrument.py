@@ -186,8 +186,13 @@ def setup_auto_instrumentation(config: OTelConfig):
 
     logger.debug(f"OTelConfig endpoint: {config.endpoint}")
     if config.endpoint:
-        # Use timeout from config (already validated as int)
-        timeout = config.exporter_timeout
+        # Convert timeout to float safely
+        timeout_str = os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "10.0")
+        try:
+            timeout = float(timeout_str)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid timeout value '{timeout_str}', using default 10.0")
+            timeout = 10.0
 
         # CRITICAL FIX: Set endpoint in environment variable so exporters can append correct paths
         # The exporters only call _append_trace_path() when reading from env vars
@@ -216,7 +221,7 @@ def setup_auto_instrumentation(config: OTelConfig):
         os.environ["OTEL_PYTHON_REQUESTS_EXCLUDED_URLS"] = ",".join(excluded_urls)
         logger.info(f"Excluded OTLP endpoints from instrumentation: {base_url}")
 
-        # Set timeout in environment variable as integer string (OTLP exporters expect int)
+        # Set timeout in environment variable
         os.environ["OTEL_EXPORTER_OTLP_TIMEOUT"] = str(timeout)
 
         # Create exporters WITHOUT passing endpoint (let them read from env vars)

@@ -6,41 +6,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Enhanced LangChain Chat Model Instrumentation**
-  - Added direct instrumentation for LangChain chat model methods: `invoke()`, `ainvoke()`, `batch()`, and `abatch()`
-  - Captures model name, provider, message count, and token usage from LangChain responses
-  - Supports both newer `usage_metadata` and older `response_metadata` formats
-  - Creates dedicated `langchain.chat_model.*` spans providing visibility into LangChain-level operations
-  - Works alongside existing provider SDK instrumentation for complete distributed tracing
-  - All 449 tests passing (6 new tests added)
-
-### Fixed
-
-- **CRITICAL: Fixed OTLP Exporter Timeout Type Conversion Error**
-  - Fixed `ValueError: invalid literal for int() with base 10: '10.0'` when initializing OTLP exporters
-  - **Root cause**: `exporter_timeout` was defined as `float` but OTLP exporters expect `int` in seconds
-  - Changed `exporter_timeout` type from `float` to `int` in `OTelConfig` (`config.py:116`)
-  - Added graceful error handling for invalid timeout values with `_get_exporter_timeout()` helper function
-  - Invalid timeout values now log a warning and default to 60 seconds instead of crashing
-  - Simplified timeout handling in `auto_instrument.py` - removed unnecessary type conversion juggling
-  - All 450 tests passing
-
-### Improved
-
-- **Comprehensive Environment Variable Documentation**
-  - Added complete documentation for all supported environment variables in `sample.env`
-  - **Added missing environment variables**:
-    - `OTEL_EXPORTER_OTLP_TIMEOUT` - Timeout for OTLP exporter in seconds (default: 60)
-    - `OTEL_EXPORTER_OTLP_PROTOCOL` - Protocol selection: `"http/protobuf"` (default) or `"grpc"`
-    - `OTEL_SERVICE_INSTANCE_ID` - Optional service instance identifier (e.g., container ID, pod name)
-    - `OTEL_ENVIRONMENT` - Deployment environment (e.g., dev, staging, production)
-    - `GENAI_GPU_COLLECTION_INTERVAL` - GPU metrics collection frequency in seconds (default: 5)
-  - Documented console mode trigger (empty `OTEL_EXPORTER_OTLP_ENDPOINT` uses console exporters)
-  - Added detailed descriptions and usage examples for all configuration options
-  - Ensures all environment variables are discoverable and properly documented
-
 ## [0.1.14] - 2025-10-29
 
 ### Changed

@@ -62,22 +62,6 @@ def _get_enabled_instrumentors() -> List[str]:
     return DEFAULT_INSTRUMENTORS
 
 
-def _get_exporter_timeout() -> int:
-    """
-    Gets the OTLP exporter timeout from environment variable.
-    Returns default of 60 seconds if not set or invalid.
-    """
-    timeout_str = os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "60")
-    try:
-        return int(timeout_str)
-    except ValueError:
-        logger.warning(
-            f"Invalid timeout value '{timeout_str}' in OTEL_EXPORTER_OTLP_TIMEOUT. "
-            f"Using default of 60 seconds."
-        )
-        return 60
-
-
 @dataclass
 class OTelConfig:
     """Configuration for OpenTelemetry instrumentation.
@@ -113,7 +97,9 @@ class OTelConfig:
     enable_co2_tracking: bool = field(
         default_factory=lambda: os.getenv("GENAI_ENABLE_CO2_TRACKING", "false").lower() == "true"
     )
-    exporter_timeout: int = field(default_factory=_get_exporter_timeout)
+    exporter_timeout: float = field(
+        default_factory=lambda: float(os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT", "60.0"))
+    )
     carbon_intensity: float = field(
         default_factory=lambda: float(os.getenv("GENAI_CARBON_INTENSITY", "475.0"))
     )  # gCO2e/kWh
