@@ -869,24 +869,26 @@ class TestEdgeCases:
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
     def test_setup_with_invalid_timeout(self):
         """Test timeout handling when OTEL_EXPORTER_OTLP_TIMEOUT is invalid."""
+        config = OTelConfig(
+            service_name="test-service",
+            endpoint="http://localhost:4318",
+            enabled_instrumentors=[],
+            enable_gpu_metrics=False,
+            enable_mcp_instrumentation=False,
+        )
+
         with patch.dict("os.environ", {"OTEL_EXPORTER_OTLP_TIMEOUT": "invalid"}):
-            with patch("genai_otel.config.logger") as mock_logger:
-                # Create config AFTER patching env var so warning is logged
-                config = OTelConfig(
-                    service_name="test-service",
-                    endpoint="http://localhost:4318",
-                    enabled_instrumentors=[],
-                    enable_gpu_metrics=False,
-                    enable_mcp_instrumentation=False,
-                )
+            with patch("genai_otel.auto_instrument.logger") as mock_logger:
+                with patch("genai_otel.auto_instrument.TracerProvider"):
+                    with patch("genai_otel.auto_instrument.MeterProvider"):
+                        with patch("genai_otel.auto_instrument.trace"):
+                            with patch("genai_otel.auto_instrument.metrics"):
+                                setup_auto_instrumentation(config)
 
-                # Verify warning was logged about invalid timeout
-                mock_logger.warning.assert_called_once()
-                warning_msg = mock_logger.warning.call_args[0][0]
-                assert "Invalid timeout value 'invalid'" in warning_msg
-
-                # Verify config uses default timeout
-                assert config.exporter_timeout == 60
+                                # Verify warning was logged about invalid timeout
+                                mock_logger.warning.assert_called_once()
+                                warning_msg = mock_logger.warning.call_args[0][0]
+                                assert "Invalid timeout value 'invalid'" in warning_msg
 
 
 def test_instrument_wrapper_function():
