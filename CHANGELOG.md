@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Improved
+
+- **Test Coverage Enhancements**
+  - Added comprehensive tests for GPU metrics collection (11 new tests)
+  - Added comprehensive tests for cost enriching exporter (20 new tests)
+  - Improved `genai_otel/gpu_metrics.py` coverage from 72% to 93%
+  - Improved `genai_otel/cost_enriching_exporter.py` coverage from 20% to 100%
+  - Overall test coverage improved from 81% to 83%
+  - 480 total tests passing (30 new tests added)
+
 ## [0.1.17] - 2025-11-05
 
 ### Added
