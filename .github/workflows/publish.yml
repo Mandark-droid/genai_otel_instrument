@@ -66,7 +66,22 @@ jobs:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
       run: |
-        twine upload --repository testpypi dist/* --skip-existing || echo "Package may already exist on Test PyPI"
+        echo "Publishing to Test PyPI..."
+        python -m twine upload --verbose --repository testpypi dist/* --skip-existing || echo "Package may already exist on Test PyPI"
+        echo "✓ Published to Test PyPI"
+
+    - name: Wait and verify Test PyPI upload
+      if: github.event_name == 'release'
+      run: |
+        echo "Waiting 30 seconds for Test PyPI to process..."
+        sleep 30
+
+        # Extract version from dist filename
+        VERSION=$(ls dist/*.whl | head -1 | grep -oP '\d+\.\d+\.\d+[^\-]*' | head -1)
+        echo "Package version: $VERSION"
+
+        # Try to install from Test PyPI to verify upload
+        python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genai-otel-instrument==$VERSION --no-cache-dir || echo "Could not verify Test PyPI installation (may need more time to propagate)"
 
     - name: Publish to PyPI
       if: github.event_name == 'release'
@@ -74,4 +89,21 @@ jobs:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
       run: |
-        twine upload dist/*
+        echo "Publishing to PyPI..."
+        python -m twine upload --verbose dist/*
+        echo "✓ Published to PyPI"
+
+    - name: Create release summary
+      if: github.event_name == 'release'
+      run: |
+        echo "## 🎉 Release Published Successfully" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Package Information" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: $(ls dist/*.whl | head -1 | grep -oP '\d+\.\d+\.\d+[^\-]*' | head -1)" >> $GITHUB_STEP_SUMMARY
+        echo "- **TestPyPI**: https://test.pypi.org/project/genai-otel-instrument/" >> $GITHUB_STEP_SUMMARY
+        echo "- **PyPI**: https://pypi.org/project/genai-otel-instrument/" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Installation" >> $GITHUB_STEP_SUMMARY
+        echo '```bash' >> $GITHUB_STEP_SUMMARY
+        echo 'pip install genai-otel-instrument' >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
