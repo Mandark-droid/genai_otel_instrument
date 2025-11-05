@@ -107,14 +107,18 @@ class LangChainInstrumentor(BaseInstrumentor):
 
             @functools.wraps(original_invoke)
             def wrapped_invoke(instance, *args, **kwargs):
+                import time
+
                 model_name = self._get_model_name(instance)
                 with self.tracer.start_as_current_span("langchain.chat_model.invoke") as span:
+                    start_time = time.time()
                     self._set_chat_attributes(span, instance, args, kwargs, model_name)
 
                     result = original_invoke(instance, *args, **kwargs)
 
-                    # Extract and record usage information
-                    self._extract_and_record_usage(span, result, model_name)
+                    # Use standard metrics recording from BaseInstrumentor
+                    # This will extract usage, calculate costs, and record metrics
+                    self._record_result_metrics(span, result, start_time, kwargs)
 
                     return result
 
@@ -125,14 +129,18 @@ class LangChainInstrumentor(BaseInstrumentor):
 
             @functools.wraps(original_ainvoke)
             async def wrapped_ainvoke(instance, *args, **kwargs):
+                import time
+
                 model_name = self._get_model_name(instance)
                 with self.tracer.start_as_current_span("langchain.chat_model.ainvoke") as span:
+                    start_time = time.time()
                     self._set_chat_attributes(span, instance, args, kwargs, model_name)
 
                     result = await original_ainvoke(instance, *args, **kwargs)
 
-                    # Extract and record usage information
-                    self._extract_and_record_usage(span, result, model_name)
+                    # Use standard metrics recording from BaseInstrumentor
+                    # This will extract usage, calculate costs, and record metrics
+                    self._record_result_metrics(span, result, start_time, kwargs)
 
                     return result
 
@@ -143,8 +151,23 @@ class LangChainInstrumentor(BaseInstrumentor):
 
             @functools.wraps(original_batch)
             def wrapped_batch(instance, *args, **kwargs):
+                import time
+
                 model_name = self._get_model_name(instance)
                 with self.tracer.start_as_current_span("langchain.chat_model.batch") as span:
+                    start_time = time.time()
+
+                    # Set standard GenAI attributes
+                    provider = self._extract_provider(instance)
+                    if provider:
+                        span.set_attribute("gen_ai.system", provider)
+                    else:
+                        span.set_attribute("gen_ai.system", "langchain")
+
+                    span.set_attribute("gen_ai.request.model", model_name)
+                    span.set_attribute("gen_ai.operation.name", "batch")
+
+                    # Also set LangChain-specific attributes
                     span.set_attribute("langchain.chat_model.name", model_name)
                     span.set_attribute("langchain.chat_model.operation", "batch")
 
@@ -155,6 +178,9 @@ class LangChainInstrumentor(BaseInstrumentor):
 
                     result = original_batch(instance, *args, **kwargs)
 
+                    # Record metrics (though batch results may not have usage info)
+                    self._record_result_metrics(span, result, start_time, kwargs)
+
                     return result
 
             BaseChatModel.batch = wrapped_batch
@@ -164,8 +190,23 @@ class LangChainInstrumentor(BaseInstrumentor):
 
             @functools.wraps(original_abatch)
             async def wrapped_abatch(instance, *args, **kwargs):
+                import time
+
                 model_name = self._get_model_name(instance)
                 with self.tracer.start_as_current_span("langchain.chat_model.abatch") as span:
+                    start_time = time.time()
+
+                    # Set standard GenAI attributes
+                    provider = self._extract_provider(instance)
+                    if provider:
+                        span.set_attribute("gen_ai.system", provider)
+                    else:
+                        span.set_attribute("gen_ai.system", "langchain")
+
+                    span.set_attribute("gen_ai.request.model", model_name)
+                    span.set_attribute("gen_ai.operation.name", "batch")
+
+                    # Also set LangChain-specific attributes
                     span.set_attribute("langchain.chat_model.name", model_name)
                     span.set_attribute("langchain.chat_model.operation", "abatch")
 
@@ -175,6 +216,9 @@ class LangChainInstrumentor(BaseInstrumentor):
                         span.set_attribute("langchain.chat_model.batch_size", batch_size)
 
                     result = await original_abatch(instance, *args, **kwargs)
+
+                    # Record metrics (though batch results may not have usage info)
+                    self._record_result_metrics(span, result, start_time, kwargs)
 
                     return result
 
@@ -201,11 +245,19 @@ class LangChainInstrumentor(BaseInstrumentor):
 
     def _set_chat_attributes(self, span, instance: Any, args: tuple, kwargs: dict, model_name: str):
         """Set span attributes for chat model invocations."""
+        # Set standard GenAI semantic convention attributes
+        provider = self._extract_provider(instance)
+        if provider:
+            span.set_attribute("gen_ai.system", provider)
+        else:
+            span.set_attribute("gen_ai.system", "langchain")
+
+        span.set_attribute("gen_ai.request.model", model_name)
+        span.set_attribute("gen_ai.operation.name", "chat")
+
+        # Also set LangChain-specific attributes for backward compatibility
         span.set_attribute("langchain.chat_model.name", model_name)
         span.set_attribute("langchain.chat_model.operation", "invoke")
-
-        # Try to extract provider from class name or module
-        provider = self._extract_provider(instance)
         if provider:
             span.set_attribute("langchain.chat_model.provider", provider)
 
@@ -213,7 +265,9 @@ class LangChainInstrumentor(BaseInstrumentor):
         if args and len(args) > 0:
             messages = args[0]
             if hasattr(messages, "__len__"):
-                span.set_attribute("langchain.chat_model.message_count", len(messages))
+                message_count = len(messages)
+                span.set_attribute("gen_ai.request.message_count", message_count)
+                span.set_attribute("langchain.chat_model.message_count", message_count)
 
     def _extract_provider(self, instance: Any) -> Optional[str]:
         """Extract provider name from chat model instance."""
@@ -243,58 +297,6 @@ class LangChainInstrumentor(BaseInstrumentor):
                 return value
 
         return None
-
-    def _extract_and_record_usage(self, span, result: Any, model_name: str):
-        """Extract usage information from LangChain response."""
-        try:
-            # LangChain responses may have usage_metadata or response_metadata
-            usage_data = None
-
-            # Check for usage_metadata (newer LangChain versions)
-            if hasattr(result, "usage_metadata") and result.usage_metadata:
-                usage_data = result.usage_metadata
-
-            # Check for response_metadata (older versions)
-            elif hasattr(result, "response_metadata") and result.response_metadata:
-                metadata = result.response_metadata
-                if "token_usage" in metadata:
-                    usage_data = metadata["token_usage"]
-                elif "usage" in metadata:
-                    usage_data = metadata["usage"]
-
-            if usage_data:
-                # Extract token counts (handle both dict and object)
-                if isinstance(usage_data, dict):
-                    prompt_tokens = usage_data.get("input_tokens") or usage_data.get(
-                        "prompt_tokens"
-                    )
-                    completion_tokens = usage_data.get("output_tokens") or usage_data.get(
-                        "completion_tokens"
-                    )
-                    total_tokens = usage_data.get("total_tokens")
-                else:
-                    prompt_tokens = getattr(usage_data, "input_tokens", None) or getattr(
-                        usage_data, "prompt_tokens", None
-                    )
-                    completion_tokens = getattr(usage_data, "output_tokens", None) or getattr(
-                        usage_data, "completion_tokens", None
-                    )
-                    total_tokens = getattr(usage_data, "total_tokens", None)
-
-                # Set span attributes
-                if prompt_tokens:
-                    span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
-                if completion_tokens:
-                    span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
-                if total_tokens:
-                    span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))
-                elif prompt_tokens and completion_tokens:
-                    span.set_attribute(
-                        "gen_ai.usage.total_tokens", int(prompt_tokens) + int(completion_tokens)
-                    )
-
-        except Exception as e:
-            logger.debug(f"Could not extract usage information: {e}")
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract usage information for BaseInstrumentor compatibility."""
