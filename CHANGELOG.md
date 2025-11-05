@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.16] - 2025-11-05
+
+### Fixed
+
+- Reverted test coverage improvements that caused test suite hangs
+  - Reverted commit 73842f5 which introduced OpenTelemetry global state pollution
+  - Test suite now completes successfully (442 tests passing)
+  - Eliminated hanging issues in test_vertexai_instrumentor.py and related tests
+  - Restored stable test execution for CI/CD pipeline
+
+### Note
+
+This release focuses on stability by reverting problematic test coverage improvements. The test coverage improvements will be reintroduced in a future release with proper test isolation.
+
 ## [0.1.14] - 2025-10-29
 
 ### Changed
