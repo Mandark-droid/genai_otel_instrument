@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.19] - 2025-01-05
+
+### Fixed
+
+- **LangChain Instrumentation: Standard GenAI Attributes and Cost Tracking**
+  - Fixed missing standard GenAI semantic convention attributes (gen_ai.system, gen_ai.request.model, gen_ai.operation.name, gen_ai.request.message_count)
+  - Fixed missing token usage metrics (gen_ai.usage.prompt_tokens, gen_ai.usage.completion_tokens, gen_ai.usage.total_tokens)
+  - Fixed missing cost calculation and tracking (gen_ai.usage.cost.total and granular costs)
+  - Fixed missing latency metrics recording
+  - Applied fixes to all chat model methods: invoke(), ainvoke(), batch(), abatch()
+  - Maintained backward compatibility with langchain.* attributes
+  - Removed redundant _extract_and_record_usage() method, improved code coverage from 71% to 81%
+  - LangChain instrumentation now provides the same comprehensive observability as other provider instrumentors
+
 ## [0.1.18] - 2025-11-05
 
 ### Improved
