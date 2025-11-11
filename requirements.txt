@@ -43,7 +43,7 @@ opentelemetry-instrumentation-pymongo>=0.41b0
 pymongo>=4.0.0
 opentelemetry-instrumentation-psycopg2>=0.41b0
 psycopg2-binary>=2.9.0
-mysql-connector-python>=8.0.0,<9.0.0
+mysql-connector-python>=9.1.0
 
 # Messaging
 opentelemetry-instrumentation-kafka-python>=0.41b0
