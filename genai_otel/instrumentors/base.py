@@ -92,6 +92,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     # Streaming metrics (Phase 3.4)
     _shared_ttft_histogram = None
     _shared_tbt_histogram = None
+    # Token distribution histograms
+    _shared_prompt_tokens_histogram = None
+    _shared_completion_tokens_histogram = None
+    # Finish reason tracking counters
+    _shared_request_finish_counter = None
+    _shared_request_success_counter = None
+    _shared_request_failure_counter = None
 
     def __init__(self):
         """Initializes the instrumentor with OpenTelemetry tracers, meters, and common metrics."""
@@ -119,6 +126,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         # Streaming metrics
         self.ttft_histogram = self._shared_ttft_histogram
         self.tbt_histogram = self._shared_tbt_histogram
+        # Token distribution histograms
+        self.prompt_tokens_histogram = self._shared_prompt_tokens_histogram
+        self.completion_tokens_histogram = self._shared_completion_tokens_histogram
+        # Finish reason tracking counters
+        self.request_finish_counter = self._shared_request_finish_counter
+        self.request_success_counter = self._shared_request_success_counter
+        self.request_failure_counter = self._shared_request_failure_counter
 
     @classmethod
     def _ensure_shared_metrics_created(cls):
@@ -186,6 +200,30 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     description="Time between tokens in seconds",
                     unit="s",
                 )
+                # Token distribution histograms
+                cls._shared_prompt_tokens_histogram = meter.create_histogram(
+                    "gen_ai.client.token.usage.prompt",
+                    description="Distribution of prompt tokens per request",
+                    unit="tokens",
+                )
+                cls._shared_completion_tokens_histogram = meter.create_histogram(
+                    "gen_ai.client.token.usage.completion",
+                    description="Distribution of completion tokens per request",
+                    unit="tokens",
+                )
+                # Finish reason tracking counters
+                cls._shared_request_finish_counter = meter.create_counter(
+                    "gen_ai.server.request.finish",
+                    description="Number of finished requests by finish reason",
+                )
+                cls._shared_request_success_counter = meter.create_counter(
+                    "gen_ai.server.request.success",
+                    description="Number of successfully completed requests",
+                )
+                cls._shared_request_failure_counter = meter.create_counter(
+                    "gen_ai.server.request.failure",
+                    description="Number of failed requests",
+                )
 
                 _SHARED_METRICS_CREATED = True
                 logger.debug("Shared metrics created successfully")
@@ -205,6 +243,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 cls._shared_error_counter = None
                 cls._shared_ttft_histogram = None
                 cls._shared_tbt_histogram = None
+                cls._shared_prompt_tokens_histogram = None
+                cls._shared_completion_tokens_histogram = None
+                cls._shared_request_finish_counter = None
+                cls._shared_request_success_counter = None
+                cls._shared_request_failure_counter = None
 
     def _setup_config(self, config: OTelConfig):
         """Set up configuration and reinitialize cost calculator with custom pricing if provided.
@@ -396,10 +439,16 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
                 # Record prompt tokens
                 if isinstance(prompt_tokens, (int, float)) and prompt_tokens > 0:
-                    # Record metric if available
+                    # Record counter metric if available
                     if self.token_counter:
                         self.token_counter.add(
                             prompt_tokens, {"token_type": "prompt", "operation": span.name}
+                        )
+                    # Record histogram for distribution analysis
+                    if self.prompt_tokens_histogram:
+                        model = span.attributes.get("gen_ai.request.model", "unknown")
+                        self.prompt_tokens_histogram.record(
+                            int(prompt_tokens), {"model": str(model), "operation": span.name}
                         )
                     # Always set span attributes (needed for cost calculation)
                     span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
@@ -409,10 +458,16 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
                 # Record completion tokens
                 if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
-                    # Record metric if available
+                    # Record counter metric if available
                     if self.token_counter:
                         self.token_counter.add(
                             completion_tokens, {"token_type": "completion", "operation": span.name}
+                        )
+                    # Record histogram for distribution analysis
+                    if self.completion_tokens_histogram:
+                        model = span.attributes.get("gen_ai.request.model", "unknown")
+                        self.completion_tokens_histogram.record(
+                            int(completion_tokens), {"model": str(model), "operation": span.name}
                         )
                     # Always set span attributes (needed for cost calculation)
                     span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
@@ -521,6 +576,41 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 "Failed to extract or record usage metrics for span '%s': %s", span.name, e
             )
 
+        # Extract and record finish reason if available (for request outcome tracking)
+        try:
+            if hasattr(self, "_extract_finish_reason"):
+                finish_reason = self._extract_finish_reason(result)
+                if finish_reason:
+                    model = span.attributes.get("gen_ai.request.model", "unknown")
+
+                    # Record finish reason counter
+                    if self.request_finish_counter:
+                        self.request_finish_counter.add(
+                            1, {"finish_reason": finish_reason, "model": str(model)}
+                        )
+
+                    # Set span attribute
+                    span.set_attribute("gen_ai.response.finish_reason", finish_reason)
+
+                    # Track success vs failure based on finish reason
+                    # Success: stop, length, end_turn, etc.
+                    # Failure: error, content_filter, timeout, etc.
+                    success_reasons = {"stop", "length", "end_turn", "max_tokens"}
+                    failure_reasons = {"error", "content_filter", "timeout", "rate_limit"}
+
+                    if finish_reason in success_reasons:
+                        if self.request_success_counter:
+                            self.request_success_counter.add(1, {"model": str(model)})
+                    elif finish_reason in failure_reasons:
+                        if self.request_failure_counter:
+                            self.request_failure_counter.add(
+                                1, {"finish_reason": finish_reason, "model": str(model)}
+                            )
+        except Exception as e:
+            logger.debug(
+                "Failed to extract or record finish reason for span '%s': %s", span.name, e
+            )
+
     def _wrap_streaming_response(self, stream, span, start_time: float, model: str):
         """Wrap a streaming response to capture TTFT and TBT metrics.
 
@@ -591,6 +681,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 self.token_counter.add(
                                     prompt_tokens, {"token_type": "prompt", "operation": span.name}
                                 )
+                            # Record histogram for distribution analysis
+                            if self.prompt_tokens_histogram:
+                                self.prompt_tokens_histogram.record(
+                                    int(prompt_tokens), {"model": model, "operation": span.name}
+                                )
                             span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
 
                         if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
@@ -598,6 +693,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 self.token_counter.add(
                                     completion_tokens,
                                     {"token_type": "completion", "operation": span.name},
+                                )
+                            # Record histogram for distribution analysis
+                            if self.completion_tokens_histogram:
+                                self.completion_tokens_histogram.record(
+                                    int(completion_tokens), {"model": model, "operation": span.name}
                                 )
                             span.set_attribute(
                                 "gen_ai.usage.completion_tokens", int(completion_tokens)

@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **NVIDIA NIM-Inspired Server Metrics**
+  - Added KV cache usage tracking: `gen_ai.server.kv_cache.usage` (Gauge) - GPU KV-cache usage percentage per model
+  - Added request queue metrics:
+    - `gen_ai.server.requests.running` (Gauge) - Active requests currently executing
+    - `gen_ai.server.requests.waiting` (Gauge) - Requests waiting in queue
+    - `gen_ai.server.requests.max` (Gauge) - Maximum concurrent request capacity
+  - New `ServerMetricsCollector` class with thread-safe manual instrumentation API
+  - Exported via `genai_otel.get_server_metrics()` for programmatic access
+
+- **Token Distribution Histograms**
+  - `gen_ai.client.token.usage.prompt` (Histogram) - Distribution of prompt tokens per request
+  - `gen_ai.client.token.usage.completion` (Histogram) - Distribution of completion tokens per request
+  - Configurable buckets from 1 to 67M tokens for analyzing token usage patterns
+  - Enables p50, p95, p99 analysis of token consumption
+
+- **Finish Reason Tracking**
+  - `gen_ai.server.request.finish` (Counter) - All finished requests by finish reason (stop, length, error, content_filter, etc.)
+  - `gen_ai.server.request.success` (Counter) - Successful completions (stop/length reasons)
+  - `gen_ai.server.request.failure` (Counter) - Failed requests (error/content_filter/timeout reasons)
+  - `gen_ai.response.finish_reason` span attribute for detailed tracing
+  - Implemented `_extract_finish_reason()` in OpenAI instrumentor (example for other providers)
+
+### Improved
+
+- **Test Coverage**
+  - Added 16 new tests covering server metrics, token histograms, and finish reason tracking
+  - Total tests increased from 480 to 496
+  - Overall coverage maintained at 83%, new server_metrics.py has 100% coverage
+  - All metrics are thread-safe with comprehensive concurrency tests
+
 ## [0.1.19] - 2025-01-05
 
 ### Fixed

@@ -22,8 +22,10 @@ from .cost_enrichment_processor import CostEnrichmentSpanProcessor
 from .cost_enriching_exporter import CostEnrichingSpanExporter
 from .gpu_metrics import GPUMetricsCollector
 from .mcp_instrumentors import MCPInstrumentorManager
+from .server_metrics import initialize_server_metrics
 from .metrics import (
     _GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS,
+    _GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS,
     _GEN_AI_SERVER_TBT,
     _GEN_AI_SERVER_TFTT,
     _MCP_CLIENT_OPERATION_DURATION_BUCKETS,
@@ -272,6 +274,21 @@ def setup_auto_instrumentation(config: OTelConfig):
             aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TBT),
         )
 
+        # Create Views for token distribution histograms
+        prompt_tokens_view = View(
+            instrument_name="gen_ai.client.token.usage.prompt",
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
+            ),
+        )
+
+        completion_tokens_view = View(
+            instrument_name="gen_ai.client.token.usage.completion",
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
+            ),
+        )
+
         meter_provider = MeterProvider(
             resource=resource,
             metric_readers=[metric_reader],
@@ -282,6 +299,8 @@ def setup_auto_instrumentation(config: OTelConfig):
                 mcp_response_size_view,
                 ttft_view,
                 tbt_view,
+                prompt_tokens_view,
+                completion_tokens_view,
             ],
         )
         metrics.set_meter_provider(meter_provider)
@@ -334,6 +353,21 @@ def setup_auto_instrumentation(config: OTelConfig):
             aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TBT),
         )
 
+        # Create Views for token distribution histograms
+        prompt_tokens_view = View(
+            instrument_name="gen_ai.client.token.usage.prompt",
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
+            ),
+        )
+
+        completion_tokens_view = View(
+            instrument_name="gen_ai.client.token.usage.completion",
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
+            ),
+        )
+
         meter_provider = MeterProvider(
             resource=resource,
             metric_readers=[metric_reader],
@@ -344,6 +378,8 @@ def setup_auto_instrumentation(config: OTelConfig):
                 mcp_response_size_view,
                 ttft_view,
                 tbt_view,
+                prompt_tokens_view,
+                completion_tokens_view,
             ],
         )
         metrics.set_meter_provider(meter_provider)
@@ -405,6 +441,16 @@ def setup_auto_instrumentation(config: OTelConfig):
             logger.error(f"Failed to start GPU metrics collection: {e}", exc_info=True)
             if config.fail_on_error:
                 raise
+
+    # Initialize server metrics collector (KV cache, request queue, etc.)
+    try:
+        meter_provider = metrics.get_meter_provider()
+        initialize_server_metrics(meter_provider.get_meter("genai.server"))
+        logger.info("Server metrics collector initialized (KV cache, request queue)")
+    except Exception as e:
+        logger.error(f"Failed to initialize server metrics: {e}", exc_info=True)
+        if config.fail_on_error:
+            raise
 
     logger.info("Auto-instrumentation setup complete")
 
