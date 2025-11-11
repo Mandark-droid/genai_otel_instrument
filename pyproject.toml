@@ -49,7 +49,7 @@ dependencies = [
     "httpx>=0.23.0",
     # Database instrumentations and clients - required for MCP
     "opentelemetry-instrumentation-mysql>=0.41b0",
-    "mysql-connector-python>=8.0.0,<9.0.0",
+    "mysql-connector-python>=9.1.0",
     "opentelemetry-instrumentation-psycopg2>=0.41b0",
     "psycopg2-binary>=2.9.0",
     "opentelemetry-instrumentation-redis>=0.41b0",
@@ -106,7 +106,7 @@ databases = [
     "opentelemetry-instrumentation-psycopg2>=0.41b0",
     "psycopg2-binary>=2.9.0",
     "opentelemetry-instrumentation-mysql>=0.41b0",
-    "mysql-connector-python>=8.0.0,<9.0.0"
+    "mysql-connector-python>=9.1.0"
 ]
 
 # Message queue instrumentation
