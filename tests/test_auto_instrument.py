@@ -159,8 +159,8 @@ class TestAutoInstrumentation:
                         assert call_kwargs["metric_readers"] == [mock_metric_reader_instance]
                         assert "views" in call_kwargs
                         assert (
-                            len(call_kwargs["views"]) == 6
-                        )  # GenAI duration + 3 MCP + 2 streaming (Phase 3.4)
+                            len(call_kwargs["views"]) == 8
+                        )  # GenAI duration + 3 MCP + 2 streaming + 2 token histograms
                         mock_metrics.set_meter_provider.assert_called_once_with(
                             mock_meter_provider_instance
                         )
@@ -403,7 +403,10 @@ class TestAutoInstrumentation:
                         mock_gpu_instance = MagicMock()
                         mock_gpu_collector.return_value = mock_gpu_instance
                         setup_auto_instrumentation(config)
-                        mock_meter_provider_instance.get_meter.assert_called_once_with("genai.gpu")
+                        # Check that get_meter was called for both GPU and server metrics
+                        assert mock_meter_provider_instance.get_meter.call_count == 2
+                        mock_meter_provider_instance.get_meter.assert_any_call("genai.gpu")
+                        mock_meter_provider_instance.get_meter.assert_any_call("genai.server")
                         mock_gpu_collector.assert_called_once_with(
                             mock_meter, config, interval=config.gpu_collection_interval
                         )
