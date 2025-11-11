@@ -5,6 +5,7 @@ This example demonstrates:
 2. Automatic token counting (prompt + completion tokens)
 3. Cost calculation for local model inference
 4. Full observability with traces and metrics
+5. Manual server metrics (KV cache, request queue)
 
 Requirements:
     pip install transformers torch
@@ -17,6 +18,9 @@ genai_otel.instrument()
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+# Get server metrics collector for manual instrumentation
+server_metrics = genai_otel.get_server_metrics()
+
 print("\n" + "=" * 80)
 print("Loading model and tokenizer...")
 print("=" * 80 + "\n")
@@ -28,6 +32,22 @@ model = AutoModelForCausalLM.from_pretrained(model_name)
 
 print(f"Model loaded: {model_name}")
 print(f"Model config: {model.config._name_or_path}\n")
+
+# Set server metrics (simulating server-side metrics)
+# In production, these would be populated from your serving framework (vLLM, TGI, etc.)
+print("=" * 80)
+print("Setting server metrics...")
+print("=" * 80 + "\n")
+
+# Simulate KV cache usage (would come from serving framework in production)
+server_metrics.set_kv_cache_usage(model_name, 45.5)  # 45.5% cache usage
+print(f"KV cache usage set: 45.5% for {model_name}")
+
+# Set request queue metrics
+server_metrics.set_requests_max(10)  # Max 10 concurrent requests
+server_metrics.set_requests_running(1)  # 1 request currently running (this one)
+server_metrics.set_requests_waiting(0)  # No requests waiting
+print("Request queue metrics set: running=1, waiting=0, max=10\n")
 
 # Prepare input
 prompt = "The future of AI is"
@@ -63,6 +83,11 @@ print(f"Total output tokens: {outputs.shape[-1]}")
 print(f"Input tokens: {inputs['input_ids'].shape[-1]}")
 print(f"Generated (new) tokens: {outputs.shape[-1] - inputs['input_ids'].shape[-1]}\n")
 
+# Update server metrics after generation (simulate cache usage increase)
+server_metrics.set_kv_cache_usage(model_name, 62.3)  # Cache usage increased
+server_metrics.set_requests_running(0)  # Request completed
+print("Server metrics updated: KV cache now at 62.3%, request completed\n")
+
 print("=" * 80)
 print("Telemetry captured:")
 print("=" * 80)
@@ -80,10 +105,19 @@ print("  - gen_ai.usage.cost.completion: $X.XXXXXX")
 print("\n✓ Metrics recorded:")
 print("  - gen_ai.requests counter")
 print("  - gen_ai.client.token.usage (prompt + completion)")
+print("  - gen_ai.client.token.usage.prompt histogram")
+print("  - gen_ai.client.token.usage.completion histogram")
 print("  - gen_ai.client.operation.duration histogram")
 print("  - gen_ai.usage.cost counter")
+print("\n✓ Server metrics (manual):")
+print(f"  - gen_ai.server.kv_cache.usage: 62.3% (model={model_name})")
+print("  - gen_ai.server.requests.running: 0")
+print("  - gen_ai.server.requests.waiting: 0")
+print("  - gen_ai.server.requests.max: 10")
 print("\n✓ Traces and metrics exported to OTLP endpoint!")
 print("=" * 80)
 
 print("\nNote: Cost is estimated based on model size (GPT-2 = 117M params)")
 print("Local models are free to run, but costs reflect GPU/compute resources.")
+print("\nServer metrics are manually set for demonstration.")
+print("In production, integrate with your serving framework (vLLM, TGI, etc.) to populate these.")
