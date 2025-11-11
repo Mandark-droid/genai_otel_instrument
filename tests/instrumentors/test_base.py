@@ -39,6 +39,13 @@ def reset_shared_metrics():
     # Phase 3.4: Streaming metrics
     BaseInstrumentor._shared_ttft_histogram = None
     BaseInstrumentor._shared_tbt_histogram = None
+    # Token distribution histograms
+    BaseInstrumentor._shared_prompt_tokens_histogram = None
+    BaseInstrumentor._shared_completion_tokens_histogram = None
+    # Finish reason tracking counters
+    BaseInstrumentor._shared_request_finish_counter = None
+    BaseInstrumentor._shared_request_success_counter = None
+    BaseInstrumentor._shared_request_failure_counter = None
     base._SHARED_METRICS_CREATED = False
     yield
 
@@ -72,6 +79,13 @@ def instrumentor(monkeypatch):
         # Phase 3.4: Streaming metrics
         mock_ttft_histogram = MagicMock()
         mock_tbt_histogram = MagicMock()
+        # Token distribution histograms
+        mock_prompt_tokens_histogram = MagicMock()
+        mock_completion_tokens_histogram = MagicMock()
+        # Finish reason tracking counters
+        mock_request_finish_counter = MagicMock()
+        mock_request_success_counter = MagicMock()
+        mock_request_failure_counter = MagicMock()
 
         # Configure mock_get_meter to return a meter instance that provides distinct mocks for each counter
         mock_meter_instance = MagicMock()
@@ -86,11 +100,16 @@ def instrumentor(monkeypatch):
             mock_cache_read_cost_counter,
             mock_cache_write_cost_counter,
             mock_error_counter,
+            mock_request_finish_counter,
+            mock_request_success_counter,
+            mock_request_failure_counter,
         ]
         mock_meter_instance.create_histogram.side_effect = [
             mock_latency_histogram,
             mock_ttft_histogram,
             mock_tbt_histogram,
+            mock_prompt_tokens_histogram,
+            mock_completion_tokens_histogram,
         ]
 
         # Patch the class-level shared metrics with mocks
@@ -117,6 +136,25 @@ def instrumentor(monkeypatch):
         # Phase 3.4: Streaming metrics
         monkeypatch.setattr(BaseInstrumentor, "_shared_ttft_histogram", mock_ttft_histogram)
         monkeypatch.setattr(BaseInstrumentor, "_shared_tbt_histogram", mock_tbt_histogram)
+        # Token distribution histograms
+        monkeypatch.setattr(
+            BaseInstrumentor, "_shared_prompt_tokens_histogram", mock_prompt_tokens_histogram
+        )
+        monkeypatch.setattr(
+            BaseInstrumentor,
+            "_shared_completion_tokens_histogram",
+            mock_completion_tokens_histogram,
+        )
+        # Finish reason tracking counters
+        monkeypatch.setattr(
+            BaseInstrumentor, "_shared_request_finish_counter", mock_request_finish_counter
+        )
+        monkeypatch.setattr(
+            BaseInstrumentor, "_shared_request_success_counter", mock_request_success_counter
+        )
+        monkeypatch.setattr(
+            BaseInstrumentor, "_shared_request_failure_counter", mock_request_failure_counter
+        )
 
         # Create instrumentor with cost tracking ENABLED
         config = OTelConfig()
@@ -687,3 +725,204 @@ def test_granular_cost_tracking_only_prompt_cost(instrumentor):
     inst._shared_reasoning_cost_counter.add.assert_not_called()
     inst._shared_cache_read_cost_counter.add.assert_not_called()
     inst._shared_cache_write_cost_counter.add.assert_not_called()
+
+
+def test_token_histograms_recorded(instrumentor):
+    """Test that token distribution histograms are recorded alongside counters."""
+    inst, mock_span = instrumentor
+    mock_span.attributes = {"gen_ai.request.model": "gpt-4"}
+
+    # Create mock usage data
+    result = {
+        "usage": {
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+            "total_tokens": 150,
+        }
+    }
+
+    # Record metrics
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify counter metrics are recorded
+    assert inst._shared_token_counter.add.call_count == 2
+    inst._shared_token_counter.add.assert_any_call(
+        100, {"token_type": "prompt", "operation": "test.span"}
+    )
+    inst._shared_token_counter.add.assert_any_call(
+        50, {"token_type": "completion", "operation": "test.span"}
+    )
+
+    # Verify histogram metrics are recorded
+    assert inst._shared_prompt_tokens_histogram.record.call_count == 1
+    inst._shared_prompt_tokens_histogram.record.assert_called_once_with(
+        100, {"model": "gpt-4", "operation": "test.span"}
+    )
+
+    assert inst._shared_completion_tokens_histogram.record.call_count == 1
+    inst._shared_completion_tokens_histogram.record.assert_called_once_with(
+        50, {"model": "gpt-4", "operation": "test.span"}
+    )
+
+    # Verify span attributes are set
+    assert mock_span.set_attribute.call_count >= 3
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.prompt_tokens", 100)
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.completion_tokens", 50)
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.total_tokens", 150)
+
+
+def test_token_histograms_with_zero_tokens(instrumentor):
+    """Test that histograms are not recorded for zero token counts."""
+    inst, mock_span = instrumentor
+    mock_span.attributes = {"gen_ai.request.model": "gpt-4"}
+
+    # Create mock usage data with zero tokens
+    result = {
+        "usage": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+        }
+    }
+
+    # Record metrics
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify histograms are NOT recorded for zero values
+    inst._shared_prompt_tokens_histogram.record.assert_not_called()
+    inst._shared_completion_tokens_histogram.record.assert_not_called()
+
+    # Verify counters are also not called for zero values
+    inst._shared_token_counter.add.assert_not_called()
+
+
+def test_token_histograms_handle_missing_model(instrumentor):
+    """Test that histograms handle missing model attribute gracefully."""
+    inst, mock_span = instrumentor
+    # Mock attributes.get to return "unknown" as default when model key is not found
+    mock_attributes = MagicMock()
+    mock_attributes.get = MagicMock(
+        side_effect=lambda key, default=None: (
+            default if key == "gen_ai.request.model" else "test_value"
+        )
+    )
+    mock_span.attributes = mock_attributes
+
+    result = {
+        "usage": {
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+            "total_tokens": 150,
+        }
+    }
+
+    # Record metrics
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify histograms are recorded with "unknown" model
+    inst._shared_prompt_tokens_histogram.record.assert_called_once_with(
+        100, {"model": "unknown", "operation": "test.span"}
+    )
+    inst._shared_completion_tokens_histogram.record.assert_called_once_with(
+        50, {"model": "unknown", "operation": "test.span"}
+    )
+
+
+def test_finish_reason_success_recorded(instrumentor):
+    """Test that finish reasons are recorded and success is tracked."""
+    inst, mock_span = instrumentor
+    mock_span.attributes = {"gen_ai.request.model": "gpt-4"}
+
+    # Add _extract_finish_reason method to instance
+    inst._extract_finish_reason = lambda result: result.get("finish_reason")
+
+    result = {
+        "finish_reason": "stop",
+        "usage": {"prompt_tokens": 100, "completion_tokens": 50},
+    }
+
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify finish reason counter was called
+    inst._shared_request_finish_counter.add.assert_called_once_with(
+        1, {"finish_reason": "stop", "model": "gpt-4"}
+    )
+
+    # Verify success counter was called (stop is a success reason)
+    inst._shared_request_success_counter.add.assert_called_once_with(1, {"model": "gpt-4"})
+
+    # Verify failure counter was NOT called
+    inst._shared_request_failure_counter.add.assert_not_called()
+
+    # Verify span attribute was set
+    mock_span.set_attribute.assert_any_call("gen_ai.response.finish_reason", "stop")
+
+
+def test_finish_reason_failure_recorded(instrumentor):
+    """Test that failure finish reasons are tracked separately."""
+    inst, mock_span = instrumentor
+    mock_span.attributes = {"gen_ai.request.model": "gpt-4"}
+
+    # Add _extract_finish_reason method to instance
+    inst._extract_finish_reason = lambda result: result.get("finish_reason")
+
+    result = {
+        "finish_reason": "content_filter",
+        "usage": {"prompt_tokens": 100, "completion_tokens": 0},
+    }
+
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify finish reason counter was called
+    inst._shared_request_finish_counter.add.assert_called_once_with(
+        1, {"finish_reason": "content_filter", "model": "gpt-4"}
+    )
+
+    # Verify failure counter was called (content_filter is a failure reason)
+    inst._shared_request_failure_counter.add.assert_called_once_with(
+        1, {"finish_reason": "content_filter", "model": "gpt-4"}
+    )
+
+    # Verify success counter was NOT called
+    inst._shared_request_success_counter.add.assert_not_called()
+
+
+def test_finish_reason_not_recorded_when_missing(instrumentor):
+    """Test that finish reason metrics are not recorded when unavailable."""
+    inst, mock_span = instrumentor
+    mock_span.attributes = {"gen_ai.request.model": "gpt-4"}
+
+    # Instrumentor without _extract_finish_reason method
+    result = {"usage": {"prompt_tokens": 100, "completion_tokens": 50}}
+
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify finish reason counters were NOT called
+    inst._shared_request_finish_counter.add.assert_not_called()
+    inst._shared_request_success_counter.add.assert_not_called()
+    inst._shared_request_failure_counter.add.assert_not_called()
+
+
+def test_finish_reason_ambiguous_not_categorized(instrumentor):
+    """Test that ambiguous finish reasons are recorded but not categorized as success/failure."""
+    inst, mock_span = instrumentor
+    mock_span.attributes = {"gen_ai.request.model": "gpt-4"}
+
+    # Add _extract_finish_reason method to instance
+    inst._extract_finish_reason = lambda result: result.get("finish_reason")
+
+    result = {
+        "finish_reason": "custom_stop",  # Not in success or failure lists
+        "usage": {"prompt_tokens": 100, "completion_tokens": 50},
+    }
+
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+
+    # Verify finish reason counter was called
+    inst._shared_request_finish_counter.add.assert_called_once_with(
+        1, {"finish_reason": "custom_stop", "model": "gpt-4"}
+    )
+
+    # Verify neither success nor failure counters were called
+    inst._shared_request_success_counter.add.assert_not_called()
+    inst._shared_request_failure_counter.add.assert_not_called()

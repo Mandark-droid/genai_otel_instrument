@@ -239,3 +239,22 @@ class OpenAIInstrumentor(BaseInstrumentor):
                             "gen_ai.completion.content": str(content),
                         },
                     )
+
+    def _extract_finish_reason(self, result) -> Optional[str]:
+        """Extract finish reason from OpenAI response.
+
+        Args:
+            result: The OpenAI API response object.
+
+        Returns:
+            Optional[str]: The finish reason string or None if not available.
+        """
+        try:
+            if hasattr(result, "choices") and result.choices:
+                # Get the first finish_reason from the first choice
+                first_choice = result.choices[0]
+                if hasattr(first_choice, "finish_reason"):
+                    return first_choice.finish_reason
+        except Exception as e:
+            logger.debug("Failed to extract finish_reason: %s", e)
+        return None

@@ -49,6 +49,7 @@ from .instrumentors import (
     VertexAIInstrumentor,
 )
 from .mcp_instrumentors.manager import MCPInstrumentorManager
+from .server_metrics import ServerMetricsCollector, get_server_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,8 @@ __all__ = [
     # Utilities
     "CostCalculator",
     "GPUMetricsCollector",
+    "ServerMetricsCollector",
+    "get_server_metrics",
     # Instrumentors
     "OpenAIInstrumentor",
     "AnthropicInstrumentor",
