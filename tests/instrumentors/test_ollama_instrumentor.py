@@ -257,36 +257,32 @@ def test_instrument_starts_server_metrics_poller():
     instrumentor._ollama_available = True
     instrumentor._ollama_module = mock_ollama_module
 
-    # Mock the tracer and metrics
-    mock_span = Mock()
-    mock_span.set_attribute = Mock()
-    mock_span.set_status = Mock()
-    mock_span.end = Mock()
-    mock_context_manager = MagicMock()
-    mock_context_manager.__enter__ = Mock(return_value=mock_span)
-    mock_context_manager.__exit__ = Mock(return_value=None)
-    instrumentor.tracer = Mock()
-    instrumentor.tracer.start_as_current_span = Mock(return_value=mock_context_manager)
-    instrumentor.tracer.start_span = Mock(return_value=mock_span)
-    instrumentor.request_counter = Mock()
-    instrumentor.token_counter = Mock()
-    instrumentor.latency_histogram = Mock()
-    instrumentor.cost_gauge = Mock()
+    # Mock create_span_wrapper to avoid wrapt complexity in this test
+    # We're testing poller startup, not span creation
+    def mock_wrapper_factory(*args, **kwargs):
+        # Return a simple passthrough decorator
+        def decorator(func):
+            return func
+
+        return decorator
 
     # Mock the poller start function
     with patch(
         "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
     ) as mock_start_poller:
         with patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False):
-            instrumentor.instrument(mock_config)
+            with patch.object(
+                instrumentor, "create_span_wrapper", side_effect=mock_wrapper_factory
+            ):
+                instrumentor.instrument(mock_config)
 
-            # Verify poller was started
-            mock_start_poller.assert_called_once()
-            # Verify it was called with correct defaults
-            call_kwargs = mock_start_poller.call_args[1]
-            assert call_kwargs["base_url"] == "http://localhost:11434"
-            assert call_kwargs["interval"] == 5.0
-            assert call_kwargs["max_vram_gb"] is None
+                # Verify poller was started
+                mock_start_poller.assert_called_once()
+                # Verify it was called with correct defaults
+                call_kwargs = mock_start_poller.call_args[1]
+                assert call_kwargs["base_url"] == "http://localhost:11434"
+                assert call_kwargs["interval"] == 5.0
+                assert call_kwargs["max_vram_gb"] is None
 
 
 def test_instrument_starts_poller_with_custom_config():
@@ -310,21 +306,12 @@ def test_instrument_starts_poller_with_custom_config():
     instrumentor._ollama_available = True
     instrumentor._ollama_module = mock_ollama_module
 
-    # Mock the tracer and metrics
-    mock_span = Mock()
-    mock_span.set_attribute = Mock()
-    mock_span.set_status = Mock()
-    mock_span.end = Mock()
-    mock_context_manager = MagicMock()
-    mock_context_manager.__enter__ = Mock(return_value=mock_span)
-    mock_context_manager.__exit__ = Mock(return_value=None)
-    instrumentor.tracer = Mock()
-    instrumentor.tracer.start_as_current_span = Mock(return_value=mock_context_manager)
-    instrumentor.tracer.start_span = Mock(return_value=mock_span)
-    instrumentor.request_counter = Mock()
-    instrumentor.token_counter = Mock()
-    instrumentor.latency_histogram = Mock()
-    instrumentor.cost_gauge = Mock()
+    # Mock create_span_wrapper to avoid wrapt complexity in this test
+    def mock_wrapper_factory(*args, **kwargs):
+        def decorator(func):
+            return func
+
+        return decorator
 
     # Mock environment with custom config
     with patch(
@@ -340,14 +327,17 @@ def test_instrument_starts_poller_with_custom_config():
             },
             clear=False,
         ):
-            instrumentor.instrument(mock_config)
+            with patch.object(
+                instrumentor, "create_span_wrapper", side_effect=mock_wrapper_factory
+            ):
+                instrumentor.instrument(mock_config)
 
-            # Verify poller was started with custom config
-            mock_start_poller.assert_called_once()
-            call_kwargs = mock_start_poller.call_args[1]
-            assert call_kwargs["base_url"] == "http://192.168.1.100:11434"
-            assert call_kwargs["interval"] == 3.0
-            assert call_kwargs["max_vram_gb"] == 24.0
+                # Verify poller was started with custom config
+                mock_start_poller.assert_called_once()
+                call_kwargs = mock_start_poller.call_args[1]
+                assert call_kwargs["base_url"] == "http://192.168.1.100:11434"
+                assert call_kwargs["interval"] == 3.0
+                assert call_kwargs["max_vram_gb"] == 24.0
 
 
 def test_instrument_doesnt_start_poller_when_disabled():
@@ -371,31 +361,25 @@ def test_instrument_doesnt_start_poller_when_disabled():
     instrumentor._ollama_available = True
     instrumentor._ollama_module = mock_ollama_module
 
-    # Mock the tracer and metrics
-    mock_span = Mock()
-    mock_span.set_attribute = Mock()
-    mock_span.set_status = Mock()
-    mock_span.end = Mock()
-    mock_context_manager = MagicMock()
-    mock_context_manager.__enter__ = Mock(return_value=mock_span)
-    mock_context_manager.__exit__ = Mock(return_value=None)
-    instrumentor.tracer = Mock()
-    instrumentor.tracer.start_as_current_span = Mock(return_value=mock_context_manager)
-    instrumentor.tracer.start_span = Mock(return_value=mock_span)
-    instrumentor.request_counter = Mock()
-    instrumentor.token_counter = Mock()
-    instrumentor.latency_histogram = Mock()
-    instrumentor.cost_gauge = Mock()
+    # Mock create_span_wrapper to avoid wrapt complexity in this test
+    def mock_wrapper_factory(*args, **kwargs):
+        def decorator(func):
+            return func
+
+        return decorator
 
     # Disable server metrics
     with patch(
         "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
     ) as mock_start_poller:
         with patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "false"}, clear=False):
-            instrumentor.instrument(mock_config)
+            with patch.object(
+                instrumentor, "create_span_wrapper", side_effect=mock_wrapper_factory
+            ):
+                instrumentor.instrument(mock_config)
 
-            # Verify poller was NOT started
-            mock_start_poller.assert_not_called()
+                # Verify poller was NOT started
+                mock_start_poller.assert_not_called()
 
 
 def test_instrument_poller_start_failure_continues():
@@ -419,21 +403,12 @@ def test_instrument_poller_start_failure_continues():
     instrumentor._ollama_available = True
     instrumentor._ollama_module = mock_ollama_module
 
-    # Mock the tracer and metrics
-    mock_span = Mock()
-    mock_span.set_attribute = Mock()
-    mock_span.set_status = Mock()
-    mock_span.end = Mock()
-    mock_context_manager = MagicMock()
-    mock_context_manager.__enter__ = Mock(return_value=mock_span)
-    mock_context_manager.__exit__ = Mock(return_value=None)
-    instrumentor.tracer = Mock()
-    instrumentor.tracer.start_as_current_span = Mock(return_value=mock_context_manager)
-    instrumentor.tracer.start_span = Mock(return_value=mock_span)
-    instrumentor.request_counter = Mock()
-    instrumentor.token_counter = Mock()
-    instrumentor.latency_histogram = Mock()
-    instrumentor.cost_gauge = Mock()
+    # Mock create_span_wrapper to avoid wrapt complexity in this test
+    def mock_wrapper_factory(*args, **kwargs):
+        def decorator(func):
+            return func
+
+        return decorator
 
     # Make poller start fail
     with patch(
@@ -441,11 +416,14 @@ def test_instrument_poller_start_failure_continues():
         side_effect=Exception("Poller failed"),
     ):
         with patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False):
-            # Should not raise exception (fail_on_error is False)
-            instrumentor.instrument(mock_config)
+            with patch.object(
+                instrumentor, "create_span_wrapper", side_effect=mock_wrapper_factory
+            ):
+                # Should not raise exception (fail_on_error is False)
+                instrumentor.instrument(mock_config)
 
-            # Instrumentation should still succeed
-            assert instrumentor._instrumented is True
+                # Instrumentation should still succeed
+                assert instrumentor._instrumented is True
 
 
 def test_instrument_poller_start_failure_with_fail_on_error():
@@ -469,21 +447,12 @@ def test_instrument_poller_start_failure_with_fail_on_error():
     instrumentor._ollama_available = True
     instrumentor._ollama_module = mock_ollama_module
 
-    # Mock the tracer and metrics
-    mock_span = Mock()
-    mock_span.set_attribute = Mock()
-    mock_span.set_status = Mock()
-    mock_span.end = Mock()
-    mock_context_manager = MagicMock()
-    mock_context_manager.__enter__ = Mock(return_value=mock_span)
-    mock_context_manager.__exit__ = Mock(return_value=None)
-    instrumentor.tracer = Mock()
-    instrumentor.tracer.start_as_current_span = Mock(return_value=mock_context_manager)
-    instrumentor.tracer.start_span = Mock(return_value=mock_span)
-    instrumentor.request_counter = Mock()
-    instrumentor.token_counter = Mock()
-    instrumentor.latency_histogram = Mock()
-    instrumentor.cost_gauge = Mock()
+    # Mock create_span_wrapper to avoid wrapt complexity in this test
+    def mock_wrapper_factory(*args, **kwargs):
+        def decorator(func):
+            return func
+
+        return decorator
 
     # Make poller start fail
     with patch(
@@ -491,6 +460,9 @@ def test_instrument_poller_start_failure_with_fail_on_error():
         side_effect=Exception("Poller failed"),
     ):
         with patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False):
-            # Should raise exception
-            with pytest.raises(Exception, match="Poller failed"):
-                instrumentor.instrument(mock_config)
+            with patch.object(
+                instrumentor, "create_span_wrapper", side_effect=mock_wrapper_factory
+            ):
+                # Should raise exception
+                with pytest.raises(Exception, match="Poller failed"):
+                    instrumentor.instrument(mock_config)
