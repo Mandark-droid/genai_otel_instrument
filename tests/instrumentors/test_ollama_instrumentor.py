@@ -249,21 +249,19 @@ def test_instrument_starts_server_metrics_poller():
     instrumentor._ollama_module = mock_ollama_module
 
     # Mock the poller start function
-    with (
-        patch(
-            "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
-        ) as mock_start_poller,
-        patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False),
-    ):
-        instrumentor.instrument(mock_config)
+    with patch(
+        "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
+    ) as mock_start_poller:
+        with patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False):
+            instrumentor.instrument(mock_config)
 
-        # Verify poller was started
-        mock_start_poller.assert_called_once()
-        # Verify it was called with correct defaults
-        call_kwargs = mock_start_poller.call_args[1]
-        assert call_kwargs["base_url"] == "http://localhost:11434"
-        assert call_kwargs["interval"] == 5.0
-        assert call_kwargs["max_vram_gb"] is None
+            # Verify poller was started
+            mock_start_poller.assert_called_once()
+            # Verify it was called with correct defaults
+            call_kwargs = mock_start_poller.call_args[1]
+            assert call_kwargs["base_url"] == "http://localhost:11434"
+            assert call_kwargs["interval"] == 5.0
+            assert call_kwargs["max_vram_gb"] is None
 
 
 def test_instrument_starts_poller_with_custom_config():
@@ -283,11 +281,10 @@ def test_instrument_starts_poller_with_custom_config():
     instrumentor._ollama_module = mock_ollama_module
 
     # Mock environment with custom config
-    with (
-        patch(
-            "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
-        ) as mock_start_poller,
-        patch.dict(
+    with patch(
+        "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
+    ) as mock_start_poller:
+        with patch.dict(
             "os.environ",
             {
                 "GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true",
@@ -296,16 +293,15 @@ def test_instrument_starts_poller_with_custom_config():
                 "GENAI_OLLAMA_MAX_VRAM_GB": "24",
             },
             clear=False,
-        ),
-    ):
-        instrumentor.instrument(mock_config)
+        ):
+            instrumentor.instrument(mock_config)
 
-        # Verify poller was started with custom config
-        mock_start_poller.assert_called_once()
-        call_kwargs = mock_start_poller.call_args[1]
-        assert call_kwargs["base_url"] == "http://192.168.1.100:11434"
-        assert call_kwargs["interval"] == 3.0
-        assert call_kwargs["max_vram_gb"] == 24.0
+            # Verify poller was started with custom config
+            mock_start_poller.assert_called_once()
+            call_kwargs = mock_start_poller.call_args[1]
+            assert call_kwargs["base_url"] == "http://192.168.1.100:11434"
+            assert call_kwargs["interval"] == 3.0
+            assert call_kwargs["max_vram_gb"] == 24.0
 
 
 def test_instrument_doesnt_start_poller_when_disabled():
@@ -325,16 +321,14 @@ def test_instrument_doesnt_start_poller_when_disabled():
     instrumentor._ollama_module = mock_ollama_module
 
     # Disable server metrics
-    with (
-        patch(
-            "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
-        ) as mock_start_poller,
-        patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "false"}, clear=False),
-    ):
-        instrumentor.instrument(mock_config)
+    with patch(
+        "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
+    ) as mock_start_poller:
+        with patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "false"}, clear=False):
+            instrumentor.instrument(mock_config)
 
-        # Verify poller was NOT started
-        mock_start_poller.assert_not_called()
+            # Verify poller was NOT started
+            mock_start_poller.assert_not_called()
 
 
 def test_instrument_poller_start_failure_continues():
@@ -354,18 +348,16 @@ def test_instrument_poller_start_failure_continues():
     instrumentor._ollama_module = mock_ollama_module
 
     # Make poller start fail
-    with (
-        patch(
-            "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller",
-            side_effect=Exception("Poller failed"),
-        ),
-        patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False),
+    with patch(
+        "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller",
+        side_effect=Exception("Poller failed"),
     ):
-        # Should not raise exception (fail_on_error is False)
-        instrumentor.instrument(mock_config)
+        with patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False):
+            # Should not raise exception (fail_on_error is False)
+            instrumentor.instrument(mock_config)
 
-        # Instrumentation should still succeed
-        assert instrumentor._instrumented is True
+            # Instrumentation should still succeed
+            assert instrumentor._instrumented is True
 
 
 def test_instrument_poller_start_failure_with_fail_on_error():
@@ -385,13 +377,11 @@ def test_instrument_poller_start_failure_with_fail_on_error():
     instrumentor._ollama_module = mock_ollama_module
 
     # Make poller start fail
-    with (
-        patch(
-            "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller",
-            side_effect=Exception("Poller failed"),
-        ),
-        patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False),
+    with patch(
+        "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller",
+        side_effect=Exception("Poller failed"),
     ):
-        # Should raise exception
-        with pytest.raises(Exception, match="Poller failed"):
-            instrumentor.instrument(mock_config)
+        with patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False):
+            # Should raise exception
+            with pytest.raises(Exception, match="Poller failed"):
+                instrumentor.instrument(mock_config)
