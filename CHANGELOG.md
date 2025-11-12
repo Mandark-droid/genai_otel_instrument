@@ -6,6 +6,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.21] - 2025-11-12
+
+### Added
+
+- **Automatic Server Metrics for ALL Instrumentors**
+  - Integrated server metrics tracking into `BaseInstrumentor` - ALL instrumentors (OpenAI, Anthropic, Ollama, etc.) now automatically track active requests
+  - `gen_ai.server.requests.running` counter automatically increments/decrements during request execution
+  - Works for both streaming and non-streaming requests
+  - Works across success and error paths
+  - Implementation in `genai_otel/instrumentors/base.py:311-391, 816-839`
+
+- **Ollama Automatic Server Metrics Collection**
+  - Created `OllamaServerMetricsPoller` that automatically polls Ollama's `/api/ps` endpoint
+  - Collects per-model VRAM usage and updates `gen_ai.server.kv_cache.usage{model="llama2"}` metric
+  - Extracts model details: parameter size, quantization level, format, total size
+  - Updates `gen_ai.server.requests.max` based on number of loaded models
+  - Runs in background daemon thread with configurable interval (default: 5 seconds)
+  - Enabled by default when Ollama instrumentation is active
+  - Zero configuration required - works out of the box
+  - Implementation in `genai_otel/instrumentors/ollama_server_metrics_poller.py` (157 lines, 94% coverage)
+
+- **GPU VRAM Auto-Detection**
+  - Automatic GPU VRAM detection using multiple fallback methods:
+    1. **nvidia-ml-py** (pynvml) - preferred method, requires `pip install genai-otel-instrument[gpu]`
+    2. **nvidia-smi** - automatic fallback using command-line tool
+    3. **Manual override** - `GENAI_OLLAMA_MAX_VRAM_GB` environment variable (now optional)
+  - Auto-detection runs once during poller initialization
+  - Logs detected VRAM: "Auto-detected GPU VRAM: 24.0GB" or "GPU VRAM not detected, using heuristic-based percentages"
+  - Eliminates need for manual VRAM configuration in most cases
+  - Supports multi-GPU systems (uses first GPU for Ollama)
+  - Implementation in `genai_otel/instrumentors/ollama_server_metrics_poller.py:81-172`
+
+- **Enhanced Ollama Server Metrics Configuration**
+  - New environment variables for Ollama server metrics:
+    - `GENAI_ENABLE_OLLAMA_SERVER_METRICS` - Enable/disable automatic metrics (default: true)
+    - `OLLAMA_BASE_URL` - Ollama server URL (default: http://localhost:11434)
+    - `GENAI_OLLAMA_METRICS_INTERVAL` - Polling interval in seconds (default: 5.0)
+    - `GENAI_OLLAMA_MAX_VRAM_GB` - Manual VRAM override (optional, auto-detected if not set)
+  - Poller integrates with OllamaInstrumentor automatically
+  - Graceful error handling for offline Ollama server or missing GPU
+  - Implementation in `genai_otel/instrumentors/ollama_instrumentor.py:76-104`
+
+### Improved
+
+- **Test Coverage Enhancements**
+  - Added 31 new comprehensive tests:
+    - 18 tests for `OllamaServerMetricsPoller` (metrics collection, error handling, lifecycle)
+    - 8 tests for GPU VRAM auto-detection (nvidia-ml-py, nvidia-smi, fallbacks, manual override)
+    - 5 tests for Ollama instrumentor integration (poller startup, configuration, error handling)
+  - Total tests increased from 496 to **527** (6.25% increase)
+  - Improved `ollama_server_metrics_poller.py` coverage to **94%**
+  - Improved `ollama_instrumentor.py` coverage to **97%**
+  - Overall coverage maintained at **84%**
+  - All tests passing with zero regressions
+
+- **Documentation Updates**
+  - Added "Ollama Automatic Integration" section to `docs/SERVER_METRICS.md`
+  - Documented GPU VRAM auto-detection workflow with fallback methods
+  - Updated `sample.env` with detailed comments on auto-detection
+  - Created comprehensive example: `examples/ollama/example_with_server_metrics.py`
+  - All Ollama server metrics are now fully documented with configuration examples
+
+### Changed
+
+- **GENAI_OLLAMA_MAX_VRAM_GB Now Optional**
+  - Environment variable is no longer required
+  - Auto-detection attempts to determine GPU VRAM automatically
+  - Only set this variable if you want to override auto-detection or if auto-detection fails
+  - Fallback heuristic still works if both auto-detection methods fail
+
 ## [0.1.20] - 2025-11-11
 
 ### Added

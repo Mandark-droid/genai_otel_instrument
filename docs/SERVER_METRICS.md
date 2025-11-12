@@ -5,11 +5,14 @@ This guide explains how to use the **Server Metrics Collector** for manual instr
 ## Overview
 
 Server metrics are designed for production LLM serving scenarios where you have access to server-side statistics from frameworks like:
+- **Ollama** - Local LLM serving with automatic metrics collection (see Automatic Integration section)
 - **vLLM** - High-throughput LLM serving
 - **TGI** (Text Generation Inference) - HuggingFace's serving solution
 - **Custom serving infrastructure** - Your own LLM servers
 
 These metrics complement the automatic client-side instrumentation and provide insights into server capacity, memory usage, and request processing.
+
+> **Note**: Ollama integration is **automatic** - no manual instrumentation needed! See the [Ollama Automatic Integration](#ollama-automatic-integration) section below.
 
 ## Available Metrics
 
@@ -81,7 +84,144 @@ server_metrics.increment_requests_waiting()
 server_metrics.decrement_requests_waiting()
 ```
 
-## Integration Patterns
+## Ollama Automatic Integration
+
+**Ollama server metrics are collected automatically** - no manual instrumentation required!
+
+When you enable Ollama instrumentation, the library automatically:
+1. Polls Ollama's `/api/ps` endpoint every 5 seconds (configurable)
+2. Extracts VRAM usage per model
+3. Updates `gen_ai.server.kv_cache.usage` metrics
+4. Tracks number of models loaded in memory
+
+### Quick Start with Ollama
+
+```python
+import genai_otel
+
+# Initialize instrumentation (Ollama server metrics enabled by default)
+genai_otel.instrument()
+
+import ollama
+
+# Make requests - metrics are collected automatically in the background
+response = ollama.generate(model="llama2", prompt="Hello!")
+```
+
+That's it! The metrics will appear automatically.
+
+### Configuration
+
+Control Ollama server metrics via environment variables:
+
+```bash
+# Enable/disable automatic Ollama server metrics (default: true)
+export GENAI_ENABLE_OLLAMA_SERVER_METRICS=true
+
+# Ollama server URL (default: http://localhost:11434)
+export OLLAMA_BASE_URL=http://localhost:11434
+
+# Polling interval in seconds (default: 5.0)
+export GENAI_OLLAMA_METRICS_INTERVAL=5.0
+
+# OPTIONAL: Your GPU's VRAM in GB for accurate percentage calculation
+# If not set, VRAM is auto-detected using nvidia-ml-py or nvidia-smi
+# Only set this if auto-detection fails or you want to override
+# Example: 24 for RTX 4090, 16 for RTX 4080, 12 for RTX 3080
+# export GENAI_OLLAMA_MAX_VRAM_GB=24
+```
+
+**GPU VRAM Auto-Detection:**
+The poller automatically detects your GPU's VRAM using:
+1. **nvidia-ml-py** (preferred) - Requires `pip install genai-otel-instrument[gpu]`
+2. **nvidia-smi** (fallback) - Uses the command-line tool if available
+3. **Manual override** - Set `GENAI_OLLAMA_MAX_VRAM_GB` to bypass auto-detection
+
+Auto-detection logs:
+```
+INFO - Auto-detected GPU VRAM: 24.0GB  # Success via nvidia-ml-py
+INFO - Auto-detected GPU VRAM: 16.0GB  # Success via nvidia-smi
+INFO - GPU VRAM not detected, using heuristic-based percentages  # Both failed
+```
+
+### What Gets Collected
+
+The automatic poller queries `/api/ps` and collects:
+
+**Per-Model Metrics:**
+- `gen_ai.server.kv_cache.usage{model="llama2"}` - VRAM usage percentage
+- Calculated from model's `size_vram` field
+
+**Example Output:**
+```json
+{
+  "name": "gen_ai.server.kv_cache.usage",
+  "description": "GPU KV-cache usage percentage",
+  "unit": "%",
+  "data": {
+    "attributes": {"model": "llama2:latest"},
+    "value": 45.2
+  }
+}
+```
+
+### Disabling Automatic Collection
+
+To disable (and use manual instrumentation instead):
+
+```bash
+export GENAI_ENABLE_OLLAMA_SERVER_METRICS=false
+```
+
+### Example with Configuration
+
+See `examples/ollama/example_with_server_metrics.py` for a complete demonstration.
+
+```python
+import os
+import genai_otel
+
+# Configure before instrumentation
+os.environ["GENAI_OLLAMA_METRICS_INTERVAL"] = "3.0"  # Poll every 3 seconds
+os.environ["GENAI_OLLAMA_MAX_VRAM_GB"] = "24"  # 24GB GPU
+
+genai_otel.instrument()
+
+import ollama
+
+# Use Ollama normally - metrics collected automatically
+response = ollama.chat(
+    model="llama2",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+
+# Check what metrics were collected
+from genai_otel import get_server_metrics
+server_metrics = get_server_metrics()
+
+# View KV cache usage
+for model, usage in server_metrics._kv_cache_usage.items():
+    print(f"{model}: {usage:.2f}% VRAM")
+```
+
+### How It Works
+
+The `OllamaServerMetricsPoller`:
+1. Runs in a background daemon thread
+2. Queries `http://localhost:11434/api/ps` every N seconds
+3. Parses the JSON response to extract model VRAM usage
+4. Calculates percentage based on either:
+   - `GENAI_OLLAMA_MAX_VRAM_GB` (if configured) - accurate percentage
+   - Model size heuristic (if not configured) - approximation
+5. Updates the global `ServerMetricsCollector` instance
+
+The poller gracefully handles:
+- Ollama server not running (logs debug message)
+- Connection timeouts (2 second timeout per request)
+- Parse errors (logs warnings)
+- No models loaded (metrics show 0)
+
+## Integration Patterns (Manual Instrumentation)
 
 ### vLLM Integration
 
