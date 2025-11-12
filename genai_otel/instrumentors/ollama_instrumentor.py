@@ -10,6 +10,7 @@ VRAM usage and running models.
 
 import logging
 import os
+import sys
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
@@ -74,6 +75,15 @@ class OllamaInstrumentor(BaseInstrumentor):
             logger.info("Ollama instrumentation enabled")
 
             # Start server metrics poller if enabled
+            # Note: Server metrics poller requires Python 3.11+ due to implementation dependencies
+            python_version = sys.version_info
+            if python_version < (3, 11):
+                logger.debug(
+                    "Ollama server metrics poller requires Python 3.11+, skipping "
+                    f"(current: {python_version.major}.{python_version.minor})"
+                )
+                return
+
             enable_server_metrics = (
                 os.getenv("GENAI_ENABLE_OLLAMA_SERVER_METRICS", "true").lower() == "true"
             )

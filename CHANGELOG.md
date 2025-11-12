@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Runs in background daemon thread with configurable interval (default: 5 seconds)
   - Enabled by default when Ollama instrumentation is active
   - Zero configuration required - works out of the box
+  - **Requires Python 3.11+** (feature is skipped on Python 3.9 and 3.10)
   - Implementation in `genai_otel/instrumentors/ollama_server_metrics_poller.py` (157 lines, 94% coverage)
 
 - **GPU VRAM Auto-Detection**
