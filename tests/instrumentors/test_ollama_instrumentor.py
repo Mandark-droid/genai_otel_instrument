@@ -5,6 +5,12 @@ import pytest
 
 from genai_otel.instrumentors.ollama_instrumentor import OllamaInstrumentor
 
+# Ollama server metrics poller requires Python 3.11+
+POLLER_TESTS_SUPPORTED = sys.version_info >= (3, 11)
+skipif_poller_not_supported = pytest.mark.skipif(
+    not POLLER_TESTS_SUPPORTED, reason="Ollama server metrics poller requires Python 3.11+"
+)
+
 
 @pytest.fixture
 def instrumentor():
@@ -234,6 +240,7 @@ def test_extract_usage(instrumentor):
     assert instrumentor._extract_usage(result_zero) is None
 
 
+@skipif_poller_not_supported
 def test_instrument_starts_server_metrics_poller():
     """Test that instrumentation starts the server metrics poller by default."""
     from unittest.mock import patch
@@ -285,6 +292,7 @@ def test_instrument_starts_server_metrics_poller():
                 assert call_kwargs["max_vram_gb"] is None
 
 
+@skipif_poller_not_supported
 def test_instrument_starts_poller_with_custom_config():
     """Test that instrumentation uses custom poller configuration."""
     from unittest.mock import patch
@@ -340,6 +348,7 @@ def test_instrument_starts_poller_with_custom_config():
                 assert call_kwargs["max_vram_gb"] == 24.0
 
 
+@skipif_poller_not_supported
 def test_instrument_doesnt_start_poller_when_disabled():
     """Test that poller is not started when disabled via env var."""
     from unittest.mock import patch
@@ -382,6 +391,7 @@ def test_instrument_doesnt_start_poller_when_disabled():
                 mock_start_poller.assert_not_called()
 
 
+@skipif_poller_not_supported
 def test_instrument_poller_start_failure_continues():
     """Test that instrumentation continues even if poller fails to start."""
     from unittest.mock import patch
@@ -426,6 +436,7 @@ def test_instrument_poller_start_failure_continues():
                 assert instrumentor._instrumented is True
 
 
+@skipif_poller_not_supported
 def test_instrument_poller_start_failure_with_fail_on_error():
     """Test that instrumentation fails if poller fails and fail_on_error is True."""
     from unittest.mock import patch
