@@ -3,13 +3,18 @@
 This instrumentor automatically traces calls to Ollama models for both
 generation and chat functionalities, capturing relevant attributes such as
 the model name and token usage.
+
+Optionally enables server metrics polling via /api/ps endpoint to track
+VRAM usage and running models.
 """
 
 import logging
+import os
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
 from .base import BaseInstrumentor
+from .ollama_server_metrics_poller import start_ollama_metrics_poller
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +72,36 @@ class OllamaInstrumentor(BaseInstrumentor):
 
             self._instrumented = True
             logger.info("Ollama instrumentation enabled")
+
+            # Start server metrics poller if enabled
+            enable_server_metrics = (
+                os.getenv("GENAI_ENABLE_OLLAMA_SERVER_METRICS", "true").lower() == "true"
+            )
+
+            if enable_server_metrics:
+                try:
+                    # Get configuration from environment variables
+                    ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+                    ollama_metrics_interval = float(
+                        os.getenv("GENAI_OLLAMA_METRICS_INTERVAL", "5.0")
+                    )
+                    ollama_max_vram_gb = os.getenv("GENAI_OLLAMA_MAX_VRAM_GB")
+                    max_vram = float(ollama_max_vram_gb) if ollama_max_vram_gb else None
+
+                    # Start the poller
+                    start_ollama_metrics_poller(
+                        base_url=ollama_base_url,
+                        interval=ollama_metrics_interval,
+                        max_vram_gb=max_vram,
+                    )
+                    logger.info(
+                        f"Ollama server metrics poller started (url={ollama_base_url}, "
+                        f"interval={ollama_metrics_interval}s)"
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to start Ollama server metrics poller: {e}")
+                    if config.fail_on_error:
+                        raise
 
         except Exception as e:
             logger.error("Failed to instrument Ollama: %s", e, exc_info=True)

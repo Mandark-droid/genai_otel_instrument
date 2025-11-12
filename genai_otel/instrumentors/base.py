@@ -27,6 +27,7 @@ from opentelemetry.trace import Status, StatusCode
 
 from ..config import OTelConfig
 from ..cost_calculator import CostCalculator
+from ..server_metrics import get_server_metrics
 
 # Import semantic conventions
 try:
@@ -307,6 +308,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 span = self.tracer.start_span(span_name, attributes=initial_attributes)
                 start_time = time.time()
 
+                # Increment server metrics: running requests counter
+                server_metrics = get_server_metrics()
+                if server_metrics:
+                    server_metrics.increment_requests_running()
+                    logger.debug(f"Incremented running requests for {span_name}")
+
                 # Extract session and user context (Phase 4.1)
                 if self.config:
                     if self.config.session_id_extractor:
@@ -353,6 +360,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     # Set span status to OK on successful execution
                     span.set_status(Status(StatusCode.OK))
                     span.end()
+
+                    # Decrement server metrics: running requests counter
+                    server_metrics = get_server_metrics()
+                    if server_metrics:
+                        server_metrics.decrement_requests_running()
+                        logger.debug(f"Decremented running requests for {span_name}")
+
                     return result
 
                 except Exception as e:
@@ -369,6 +383,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     span.record_exception(e)
                     span.end()
+
+                    # Decrement server metrics: running requests counter (error path)
+                    server_metrics = get_server_metrics()
+                    if server_metrics:
+                        server_metrics.decrement_requests_running()
+                        logger.debug(f"Decremented running requests for {span_name} (error)")
+
                     raise
 
             except Exception as e:
@@ -791,6 +812,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
             span.set_status(Status(StatusCode.OK))
             span.end()  # Close the span when streaming completes
+
+            # Decrement server metrics: running requests counter (streaming success)
+            server_metrics = get_server_metrics()
+            if server_metrics:
+                server_metrics.decrement_requests_running()
+                logger.debug("Decremented running requests (streaming success)")
+
             logger.debug(f"Streaming completed: {token_count} chunks in {duration:.3f}s")
 
         except Exception as e:
@@ -798,6 +826,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             span.set_status(Status(StatusCode.ERROR, str(e)))
             span.record_exception(e)
             span.end()  # Close the span even on error
+
+            # Decrement server metrics: running requests counter (streaming error)
+            server_metrics = get_server_metrics()
+            if server_metrics:
+                server_metrics.decrement_requests_running()
+                logger.debug("Decremented running requests (streaming error)")
+
             if self.error_counter:
                 self.error_counter.add(1, {"operation": span.name, "error_type": type(e).__name__})
             logger.warning(f"Error in streaming wrapper: {e}")
