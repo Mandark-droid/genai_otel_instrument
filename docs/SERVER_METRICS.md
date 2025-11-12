@@ -88,6 +88,8 @@ server_metrics.decrement_requests_waiting()
 
 **Ollama server metrics are collected automatically** - no manual instrumentation required!
 
+> **Note**: This feature requires **Python 3.11 or higher**. On Python 3.9 and 3.10, the feature is automatically skipped and a debug message is logged. Basic Ollama instrumentation (tracing and metrics) still works on all supported Python versions.
+
 When you enable Ollama instrumentation, the library automatically:
 1. Polls Ollama's `/api/ps` endpoint every 5 seconds (configurable)
 2. Extracts VRAM usage per model
