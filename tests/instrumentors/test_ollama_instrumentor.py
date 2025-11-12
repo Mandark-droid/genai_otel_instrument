@@ -248,6 +248,18 @@ def test_instrument_starts_server_metrics_poller():
     instrumentor._ollama_available = True
     instrumentor._ollama_module = mock_ollama_module
 
+    # Mock the tracer and metrics
+    mock_span = Mock()
+    mock_context_manager = MagicMock()
+    mock_context_manager.__enter__ = Mock(return_value=mock_span)
+    mock_context_manager.__exit__ = Mock(return_value=None)
+    instrumentor.tracer = Mock()
+    instrumentor.tracer.start_as_current_span = Mock(return_value=mock_context_manager)
+    instrumentor.request_counter = Mock()
+    instrumentor.token_counter = Mock()
+    instrumentor.latency_histogram = Mock()
+    instrumentor.cost_gauge = Mock()
+
     # Mock the poller start function
     with patch(
         "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
@@ -279,6 +291,18 @@ def test_instrument_starts_poller_with_custom_config():
 
     instrumentor._ollama_available = True
     instrumentor._ollama_module = mock_ollama_module
+
+    # Mock the tracer and metrics
+    mock_span = Mock()
+    mock_context_manager = MagicMock()
+    mock_context_manager.__enter__ = Mock(return_value=mock_span)
+    mock_context_manager.__exit__ = Mock(return_value=None)
+    instrumentor.tracer = Mock()
+    instrumentor.tracer.start_as_current_span = Mock(return_value=mock_context_manager)
+    instrumentor.request_counter = Mock()
+    instrumentor.token_counter = Mock()
+    instrumentor.latency_histogram = Mock()
+    instrumentor.cost_gauge = Mock()
 
     # Mock environment with custom config
     with patch(
@@ -320,6 +344,18 @@ def test_instrument_doesnt_start_poller_when_disabled():
     instrumentor._ollama_available = True
     instrumentor._ollama_module = mock_ollama_module
 
+    # Mock the tracer and metrics
+    mock_span = Mock()
+    mock_context_manager = MagicMock()
+    mock_context_manager.__enter__ = Mock(return_value=mock_span)
+    mock_context_manager.__exit__ = Mock(return_value=None)
+    instrumentor.tracer = Mock()
+    instrumentor.tracer.start_as_current_span = Mock(return_value=mock_context_manager)
+    instrumentor.request_counter = Mock()
+    instrumentor.token_counter = Mock()
+    instrumentor.latency_histogram = Mock()
+    instrumentor.cost_gauge = Mock()
+
     # Disable server metrics
     with patch(
         "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
@@ -346,6 +382,18 @@ def test_instrument_poller_start_failure_continues():
 
     instrumentor._ollama_available = True
     instrumentor._ollama_module = mock_ollama_module
+
+    # Mock the tracer and metrics
+    mock_span = Mock()
+    mock_context_manager = MagicMock()
+    mock_context_manager.__enter__ = Mock(return_value=mock_span)
+    mock_context_manager.__exit__ = Mock(return_value=None)
+    instrumentor.tracer = Mock()
+    instrumentor.tracer.start_as_current_span = Mock(return_value=mock_context_manager)
+    instrumentor.request_counter = Mock()
+    instrumentor.token_counter = Mock()
+    instrumentor.latency_histogram = Mock()
+    instrumentor.cost_gauge = Mock()
 
     # Make poller start fail
     with patch(
@@ -375,6 +423,18 @@ def test_instrument_poller_start_failure_with_fail_on_error():
 
     instrumentor._ollama_available = True
     instrumentor._ollama_module = mock_ollama_module
+
+    # Mock the tracer and metrics
+    mock_span = Mock()
+    mock_context_manager = MagicMock()
+    mock_context_manager.__enter__ = Mock(return_value=mock_span)
+    mock_context_manager.__exit__ = Mock(return_value=None)
+    instrumentor.tracer = Mock()
+    instrumentor.tracer.start_as_current_span = Mock(return_value=mock_context_manager)
+    instrumentor.request_counter = Mock()
+    instrumentor.token_counter = Mock()
+    instrumentor.latency_histogram = Mock()
+    instrumentor.cost_gauge = Mock()
 
     # Make poller start fail
     with patch(
