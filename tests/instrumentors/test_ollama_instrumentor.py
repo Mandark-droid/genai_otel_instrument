@@ -228,3 +228,170 @@ def test_extract_usage(instrumentor):
     # Test with zero tokens (should return None)
     result_zero = {"response": "test", "prompt_eval_count": 0, "eval_count": 0}
     assert instrumentor._extract_usage(result_zero) is None
+
+
+def test_instrument_starts_server_metrics_poller():
+    """Test that instrumentation starts the server metrics poller by default."""
+    from unittest.mock import patch
+
+    mock_config = Mock()
+    mock_config.fail_on_error = False
+
+    # Create a fresh instrumentor
+    instrumentor = OllamaInstrumentor()
+
+    # Set up the instrumentor state
+    mock_ollama_module = MagicMock()
+    mock_ollama_module.generate = Mock(return_value={"response": "test"})
+    mock_ollama_module.chat = Mock(return_value={"response": "test"})
+
+    instrumentor._ollama_available = True
+    instrumentor._ollama_module = mock_ollama_module
+
+    # Mock the poller start function
+    with (
+        patch(
+            "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
+        ) as mock_start_poller,
+        patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False),
+    ):
+        instrumentor.instrument(mock_config)
+
+        # Verify poller was started
+        mock_start_poller.assert_called_once()
+        # Verify it was called with correct defaults
+        call_kwargs = mock_start_poller.call_args[1]
+        assert call_kwargs["base_url"] == "http://localhost:11434"
+        assert call_kwargs["interval"] == 5.0
+        assert call_kwargs["max_vram_gb"] is None
+
+
+def test_instrument_starts_poller_with_custom_config():
+    """Test that instrumentation uses custom poller configuration."""
+    from unittest.mock import patch
+
+    mock_config = Mock()
+    mock_config.fail_on_error = False
+
+    instrumentor = OllamaInstrumentor()
+
+    mock_ollama_module = MagicMock()
+    mock_ollama_module.generate = Mock(return_value={"response": "test"})
+    mock_ollama_module.chat = Mock(return_value={"response": "test"})
+
+    instrumentor._ollama_available = True
+    instrumentor._ollama_module = mock_ollama_module
+
+    # Mock environment with custom config
+    with (
+        patch(
+            "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
+        ) as mock_start_poller,
+        patch.dict(
+            "os.environ",
+            {
+                "GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true",
+                "OLLAMA_BASE_URL": "http://192.168.1.100:11434",
+                "GENAI_OLLAMA_METRICS_INTERVAL": "3.0",
+                "GENAI_OLLAMA_MAX_VRAM_GB": "24",
+            },
+            clear=False,
+        ),
+    ):
+        instrumentor.instrument(mock_config)
+
+        # Verify poller was started with custom config
+        mock_start_poller.assert_called_once()
+        call_kwargs = mock_start_poller.call_args[1]
+        assert call_kwargs["base_url"] == "http://192.168.1.100:11434"
+        assert call_kwargs["interval"] == 3.0
+        assert call_kwargs["max_vram_gb"] == 24.0
+
+
+def test_instrument_doesnt_start_poller_when_disabled():
+    """Test that poller is not started when disabled via env var."""
+    from unittest.mock import patch
+
+    mock_config = Mock()
+    mock_config.fail_on_error = False
+
+    instrumentor = OllamaInstrumentor()
+
+    mock_ollama_module = MagicMock()
+    mock_ollama_module.generate = Mock(return_value={"response": "test"})
+    mock_ollama_module.chat = Mock(return_value={"response": "test"})
+
+    instrumentor._ollama_available = True
+    instrumentor._ollama_module = mock_ollama_module
+
+    # Disable server metrics
+    with (
+        patch(
+            "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller"
+        ) as mock_start_poller,
+        patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "false"}, clear=False),
+    ):
+        instrumentor.instrument(mock_config)
+
+        # Verify poller was NOT started
+        mock_start_poller.assert_not_called()
+
+
+def test_instrument_poller_start_failure_continues():
+    """Test that instrumentation continues even if poller fails to start."""
+    from unittest.mock import patch
+
+    mock_config = Mock()
+    mock_config.fail_on_error = False
+
+    instrumentor = OllamaInstrumentor()
+
+    mock_ollama_module = MagicMock()
+    mock_ollama_module.generate = Mock(return_value={"response": "test"})
+    mock_ollama_module.chat = Mock(return_value={"response": "test"})
+
+    instrumentor._ollama_available = True
+    instrumentor._ollama_module = mock_ollama_module
+
+    # Make poller start fail
+    with (
+        patch(
+            "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller",
+            side_effect=Exception("Poller failed"),
+        ),
+        patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False),
+    ):
+        # Should not raise exception (fail_on_error is False)
+        instrumentor.instrument(mock_config)
+
+        # Instrumentation should still succeed
+        assert instrumentor._instrumented is True
+
+
+def test_instrument_poller_start_failure_with_fail_on_error():
+    """Test that instrumentation fails if poller fails and fail_on_error is True."""
+    from unittest.mock import patch
+
+    mock_config = Mock()
+    mock_config.fail_on_error = True
+
+    instrumentor = OllamaInstrumentor()
+
+    mock_ollama_module = MagicMock()
+    mock_ollama_module.generate = Mock(return_value={"response": "test"})
+    mock_ollama_module.chat = Mock(return_value={"response": "test"})
+
+    instrumentor._ollama_available = True
+    instrumentor._ollama_module = mock_ollama_module
+
+    # Make poller start fail
+    with (
+        patch(
+            "genai_otel.instrumentors.ollama_instrumentor.start_ollama_metrics_poller",
+            side_effect=Exception("Poller failed"),
+        ),
+        patch.dict("os.environ", {"GENAI_ENABLE_OLLAMA_SERVER_METRICS": "true"}, clear=False),
+    ):
+        # Should raise exception
+        with pytest.raises(Exception, match="Poller failed"):
+            instrumentor.instrument(mock_config)
