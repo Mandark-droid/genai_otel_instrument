@@ -234,6 +234,11 @@ def test_instrument_starts_server_metrics_poller():
     """Test that instrumentation starts the server metrics poller by default."""
     from unittest.mock import patch
 
+    # Reset global state first
+    import genai_otel.instrumentors.ollama_server_metrics_poller as poller_module
+
+    poller_module._global_poller = None
+
     mock_config = Mock()
     mock_config.fail_on_error = False
 
@@ -279,6 +284,11 @@ def test_instrument_starts_server_metrics_poller():
 def test_instrument_starts_poller_with_custom_config():
     """Test that instrumentation uses custom poller configuration."""
     from unittest.mock import patch
+
+    # Reset global state first
+    import genai_otel.instrumentors.ollama_server_metrics_poller as poller_module
+
+    poller_module._global_poller = None
 
     mock_config = Mock()
     mock_config.fail_on_error = False
@@ -332,6 +342,11 @@ def test_instrument_doesnt_start_poller_when_disabled():
     """Test that poller is not started when disabled via env var."""
     from unittest.mock import patch
 
+    # Reset global state first
+    import genai_otel.instrumentors.ollama_server_metrics_poller as poller_module
+
+    poller_module._global_poller = None
+
     mock_config = Mock()
     mock_config.fail_on_error = False
 
@@ -370,6 +385,11 @@ def test_instrument_doesnt_start_poller_when_disabled():
 def test_instrument_poller_start_failure_continues():
     """Test that instrumentation continues even if poller fails to start."""
     from unittest.mock import patch
+
+    # Reset global state first
+    import genai_otel.instrumentors.ollama_server_metrics_poller as poller_module
+
+    poller_module._global_poller = None
 
     mock_config = Mock()
     mock_config.fail_on_error = False
@@ -411,6 +431,11 @@ def test_instrument_poller_start_failure_continues():
 def test_instrument_poller_start_failure_with_fail_on_error():
     """Test that instrumentation fails if poller fails and fail_on_error is True."""
     from unittest.mock import patch
+
+    # Reset global state first
+    import genai_otel.instrumentors.ollama_server_metrics_poller as poller_module
+
+    poller_module._global_poller = None
 
     mock_config = Mock()
     mock_config.fail_on_error = True
