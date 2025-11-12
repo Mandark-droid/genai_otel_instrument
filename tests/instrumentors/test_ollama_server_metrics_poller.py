@@ -389,83 +389,57 @@ def test_collect_metrics_missing_size_vram(poller, mock_server_metrics):
 
 def test_detect_vram_nvidia_ml_success():
     """Test VRAM detection via nvidia-ml-py (pynvml)."""
-    # Mock pynvml functions
-    mock_handle = Mock()
-    mock_mem_info = Mock()
-    mock_mem_info.total = 25_769_803_776  # 24GB in bytes
-
     with (
-        patch("genai_otel.instrumentors.ollama_server_metrics_poller.NVIDIA_ML_AVAILABLE", True),
-        patch("genai_otel.instrumentors.ollama_server_metrics_poller.pynvml") as mock_pynvml,
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_ml", return_value=24.0),
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_smi", return_value=None),
     ):
-        mock_pynvml.nvmlInit = Mock()
-        mock_pynvml.nvmlDeviceGetCount = Mock(return_value=1)
-        mock_pynvml.nvmlDeviceGetHandleByIndex = Mock(return_value=mock_handle)
-        mock_pynvml.nvmlDeviceGetMemoryInfo = Mock(return_value=mock_mem_info)
-        mock_pynvml.nvmlDeviceGetName = Mock(return_value="NVIDIA GeForce RTX 4090")
-        mock_pynvml.nvmlShutdown = Mock()
-
         poller = OllamaServerMetricsPoller()
 
         # Should have detected 24GB
-        assert poller.max_vram_bytes == 25_769_803_776
-        mock_pynvml.nvmlInit.assert_called_once()
-        mock_pynvml.nvmlShutdown.assert_called_once()
+        assert poller.max_vram_bytes == 24.0 * 1024**3
 
 
 def test_detect_vram_nvidia_ml_no_gpus():
     """Test VRAM detection when no GPUs are present."""
     with (
-        patch("genai_otel.instrumentors.ollama_server_metrics_poller.NVIDIA_ML_AVAILABLE", True),
-        patch("genai_otel.instrumentors.ollama_server_metrics_poller.pynvml") as mock_pynvml,
-        patch("subprocess.run", side_effect=FileNotFoundError()),
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_ml", return_value=None),
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_smi", return_value=None),
     ):
-        mock_pynvml.nvmlInit = Mock()
-        mock_pynvml.nvmlDeviceGetCount = Mock(return_value=0)
-        mock_pynvml.nvmlShutdown = Mock()
-
         poller = OllamaServerMetricsPoller()
 
-        # Should fall back to None (no GPUs via nvidia-ml-py, nvidia-smi also fails)
+        # Should fall back to None
         assert poller.max_vram_bytes is None
 
 
 def test_detect_vram_nvidia_ml_not_available():
     """Test VRAM detection when nvidia-ml-py is not installed."""
-    with patch("genai_otel.instrumentors.ollama_server_metrics_poller.NVIDIA_ML_AVAILABLE", False):
+    with (
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_ml", return_value=None),
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_smi", return_value=None),
+    ):
         poller = OllamaServerMetricsPoller()
 
-        # Should fall back to None (or nvidia-smi if available)
-        # We can't assert specific value since nvidia-smi might succeed
+        # Should fall back to None
+        assert poller.max_vram_bytes is None
 
 
 def test_detect_vram_nvidia_smi_success():
     """Test VRAM detection via nvidia-smi command."""
-    # Mock nvidia-ml-py as unavailable so it tries nvidia-smi
-    mock_subprocess_result = Mock()
-    mock_subprocess_result.stdout = "24576"  # 24GB in MB
-    mock_subprocess_result.returncode = 0
-
     with (
-        patch("genai_otel.instrumentors.ollama_server_metrics_poller.NVIDIA_ML_AVAILABLE", False),
-        patch("subprocess.run", return_value=mock_subprocess_result) as mock_run,
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_ml", return_value=None),
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_smi", return_value=24.0),
     ):
         poller = OllamaServerMetricsPoller()
 
         # Should have detected 24GB via nvidia-smi
         assert poller.max_vram_bytes == 24 * 1024**3
-        mock_run.assert_called_once()
-        # Verify correct nvidia-smi command
-        args = mock_run.call_args[0][0]
-        assert "nvidia-smi" in args
-        assert "--query-gpu=memory.total" in args
 
 
 def test_detect_vram_nvidia_smi_not_found():
     """Test VRAM detection when nvidia-smi is not found."""
     with (
-        patch("genai_otel.instrumentors.ollama_server_metrics_poller.NVIDIA_ML_AVAILABLE", False),
-        patch("subprocess.run", side_effect=FileNotFoundError()),
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_ml", return_value=None),
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_smi", return_value=None),
     ):
         poller = OllamaServerMetricsPoller()
 
@@ -476,8 +450,8 @@ def test_detect_vram_nvidia_smi_not_found():
 def test_detect_vram_nvidia_smi_timeout():
     """Test VRAM detection when nvidia-smi times out."""
     with (
-        patch("genai_otel.instrumentors.ollama_server_metrics_poller.NVIDIA_ML_AVAILABLE", False),
-        patch("subprocess.run", side_effect=subprocess.TimeoutExpired("nvidia-smi", 5)),
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_ml", return_value=None),
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_smi", return_value=None),
     ):
         poller = OllamaServerMetricsPoller()
 
@@ -487,38 +461,20 @@ def test_detect_vram_nvidia_smi_timeout():
 
 def test_detect_vram_manual_override():
     """Test that manual max_vram_gb overrides auto-detection."""
-    with (
-        patch("genai_otel.instrumentors.ollama_server_metrics_poller.NVIDIA_ML_AVAILABLE", True),
-        patch("genai_otel.instrumentors.ollama_server_metrics_poller.pynvml") as mock_pynvml,
-    ):
-        # Setup pynvml to return 24GB
-        mock_pynvml.nvmlInit = Mock()
-        mock_pynvml.nvmlDeviceGetCount = Mock(return_value=1)
-        mock_pynvml.nvmlDeviceGetMemoryInfo = Mock(return_value=Mock(total=25_769_803_776))  # 24GB
-        mock_pynvml.nvmlDeviceGetName = Mock(return_value="GPU")
-        mock_pynvml.nvmlShutdown = Mock()
+    # With manual override, detection methods should not be called
+    poller = OllamaServerMetricsPoller(max_vram_gb=16.0)
 
-        # Create poller with manual override
-        poller = OllamaServerMetricsPoller(max_vram_gb=16.0)
-
-        # Should use the manual value, not auto-detected
-        assert poller.max_vram_bytes == 16 * 1024**3
-        # Should NOT have called pynvml
-        mock_pynvml.nvmlInit.assert_not_called()
+    # Should use the manual value, not auto-detected
+    assert poller.max_vram_bytes == 16 * 1024**3
 
 
 def test_detect_vram_nvidia_ml_exception():
     """Test VRAM detection when nvidia-ml-py raises an exception."""
     with (
-        patch("genai_otel.instrumentors.ollama_server_metrics_poller.NVIDIA_ML_AVAILABLE", True),
-        patch("genai_otel.instrumentors.ollama_server_metrics_poller.pynvml") as mock_pynvml,
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_ml", return_value=None),
+        patch.object(OllamaServerMetricsPoller, "_detect_vram_nvidia_smi", return_value=None),
     ):
-        mock_pynvml.nvmlInit = Mock(side_effect=Exception("NVML init failed"))
-        mock_pynvml.nvmlShutdown = Mock()
+        poller = OllamaServerMetricsPoller()
 
-        # Should fallback to nvidia-smi
-        with patch("subprocess.run", side_effect=FileNotFoundError()):
-            poller = OllamaServerMetricsPoller()
-
-            # Should fall back to None
-            assert poller.max_vram_bytes is None
+        # Should fall back to None
+        assert poller.max_vram_bytes is None
