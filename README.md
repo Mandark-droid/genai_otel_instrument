@@ -103,6 +103,7 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 - **Haystack** (modular NLP pipelines with RAG support)
 - **DSPy** (Stanford NLP declarative LM programming with automatic optimization)
 - **Instructor** (Pydantic-based structured output extraction with validation and retries)
+- **Guardrails AI** (input/output validation guards with on-fail policies: reask, fix, filter, refrain)
 
 ### Multi-Agent Frameworks (NEW)
 - **OpenAI Agents SDK** (agent orchestration with handoffs, sessions, guardrails)

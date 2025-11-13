@@ -19,6 +19,7 @@ from .crewai_instrumentor import CrewAIInstrumentor
 from .dspy_instrumentor import DSPyInstrumentor
 from .google_ai_instrumentor import GoogleAIInstrumentor
 from .groq_instrumentor import GroqInstrumentor
+from .guardrails_ai_instrumentor import GuardrailsAIInstrumentor
 from .haystack_instrumentor import HaystackInstrumentor
 from .huggingface_instrumentor import HuggingFaceInstrumentor
 from .hyperbolic_instrumentor import HyperbolicInstrumentor
@@ -53,6 +54,7 @@ __all__ = [
     "MistralAIInstrumentor",
     "TogetherAIInstrumentor",
     "GroqInstrumentor",
+    "GuardrailsAIInstrumentor",
     "HaystackInstrumentor",
     "InstructorInstrumentor",
     "OllamaInstrumentor",
