@@ -46,6 +46,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Example: `examples/pii_detection_example.py` (9 comprehensive scenarios)
   - Dependencies (optional): `pip install presidio-analyzer presidio-anonymizer spacy`
 
+- **Toxicity Detection (v0.2.0 Phase 1)**
+  - Automatic toxicity detection for harmful content in prompts and responses
+  - Dual detection methods:
+    - Google Perspective API integration (cloud-based, production-grade)
+    - Detoxify local ML model (offline, privacy-friendly)
+    - Automatic fallback from Perspective API to Detoxify on errors
+  - Six toxicity categories detected:
+    - `toxicity`: General toxic language
+    - `severe_toxicity`: Extremely harmful content
+    - `identity_attack`: Discrimination and hate speech
+    - `insult`: Insulting or demeaning language
+    - `profanity`: Swearing and obscene content
+    - `threat`: Threatening or violent language
+  - Configurable threshold (0.0-1.0) for detection sensitivity
+  - Blocking mode to prevent toxic content processing
+  - Batch processing support for efficient analysis
+  - OpenTelemetry span attributes for toxicity detection:
+    - `evaluation.toxicity.prompt.detected` - Toxicity in prompts
+    - `evaluation.toxicity.response.detected` - Toxicity in responses
+    - `evaluation.toxicity.*.max_score` - Maximum toxicity score
+    - `evaluation.toxicity.*.categories` - List of toxic categories detected
+    - `evaluation.toxicity.*.<category>_score` - Individual category scores
+    - `evaluation.toxicity.*.blocked` - Whether content was blocked
+  - OpenTelemetry metrics for monitoring:
+    - `genai.evaluation.toxicity.detections` - Detection events counter
+    - `genai.evaluation.toxicity.categories` - Category-specific counter
+    - `genai.evaluation.toxicity.blocked` - Blocked requests counter
+    - `genai.evaluation.toxicity.score` - Score distribution histogram
+  - Environment variable configuration:
+    - `GENAI_ENABLE_TOXICITY_DETECTION` - Enable/disable toxicity detection
+    - `GENAI_TOXICITY_THRESHOLD` - Detection threshold (0.0-1.0)
+    - `GENAI_TOXICITY_USE_PERSPECTIVE_API` - Use Perspective API
+    - `GENAI_TOXICITY_PERSPECTIVE_API_KEY` - API key for Perspective
+    - `GENAI_TOXICITY_BLOCK_ON_DETECTION` - Block toxic content
+  - Implementation: `genai_otel/evaluation/` module
+    - `toxicity_detector.py` - ToxicityDetector with dual detection methods
+    - `span_processor.py` - Extended with toxicity detection
+    - `config.py` - ToxicityConfig dataclass
+  - Tests: `tests/evaluation/` (35+ test cases)
+    - `test_toxicity_detector.py` - Unit tests for ToxicityDetector
+    - `test_integration.py` - Integration tests with span processor
+  - Example: `examples/toxicity_detection_example.py` (8 comprehensive scenarios)
+  - Dependencies (optional):
+    - Detoxify: `pip install detoxify`
+    - Perspective API: `pip install google-api-python-client`
+
 - **Multi-Agent & AI Framework Instrumentation (Phase 1-4)**
   - Comprehensive instrumentation for 11 AI frameworks with 13 implementations total
   - Zero-code setup with automatic tracing and cost tracking
