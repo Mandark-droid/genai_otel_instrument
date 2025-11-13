@@ -12,6 +12,7 @@ from opentelemetry import metrics
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 from opentelemetry.trace import Status, StatusCode
 
+from .bias_detector import BiasDetector
 from .config import (
     BiasConfig,
     HallucinationConfig,
@@ -93,8 +94,15 @@ class EvaluationSpanProcessor(SpanProcessor):
                     "  - Detoxify: pip install detoxify"
                 )
 
-        # TODO: Initialize other detectors in future phases
         self.bias_detector = None
+        if self.bias_config.enabled:
+            self.bias_detector = BiasDetector(self.bias_config)
+            if not self.bias_detector.is_available():
+                logger.warning(
+                    "Bias detector not available (pattern-based detection always available)"
+                )
+
+        # TODO: Initialize other detectors in future phases
         self.prompt_injection_detector = None
         self.restricted_topics_detector = None
         self.hallucination_detector = None
@@ -146,8 +154,32 @@ class EvaluationSpanProcessor(SpanProcessor):
             unit="1",
         )
 
+        # Bias Detection Metrics
+        self.bias_detection_counter = meter.create_counter(
+            name="genai.evaluation.bias.detections",
+            description="Number of bias detections in prompts and responses",
+            unit="1",
+        )
+
+        self.bias_type_counter = meter.create_counter(
+            name="genai.evaluation.bias.types",
+            description="Bias detections by type",
+            unit="1",
+        )
+
+        self.bias_blocked_counter = meter.create_counter(
+            name="genai.evaluation.bias.blocked",
+            description="Number of requests/responses blocked due to bias",
+            unit="1",
+        )
+
+        self.bias_score_histogram = meter.create_histogram(
+            name="genai.evaluation.bias.score",
+            description="Bias score distribution",
+            unit="1",
+        )
+
         # TODO: Add metrics for other evaluation features in future phases
-        # self.bias_detection_counter = ...
         # self.prompt_injection_counter = ...
         # self.restricted_topics_counter = ...
         # self.hallucination_counter = ...
@@ -200,10 +232,11 @@ class EvaluationSpanProcessor(SpanProcessor):
             if self.toxicity_config.enabled and self.toxicity_detector:
                 self._check_toxicity(span, prompt, response)
 
+            # Run bias detection
+            if self.bias_config.enabled and self.bias_detector:
+                self._check_bias(span, prompt, response)
+
             # TODO: Add other checks in future phases
-            # if self.bias_config.enabled and self.bias_detector:
-            #     self._check_bias(span, prompt, response)
-            #
             # if self.prompt_injection_config.enabled and self.prompt_injection_detector:
             #     self._check_prompt_injection(span, prompt)
             #
@@ -515,6 +548,128 @@ class EvaluationSpanProcessor(SpanProcessor):
         except Exception as e:
             logger.error("Error checking toxicity: %s", e, exc_info=True)
             span.set_attribute("evaluation.toxicity.error", str(e))
+
+    def _check_bias(
+        self, span: Span, prompt: Optional[str], response: Optional[str]
+    ) -> None:
+        """Check for bias in prompt and response.
+
+        Args:
+            span: The span to add bias attributes to
+            prompt: Prompt text (optional)
+            response: Response text (optional)
+        """
+        if not self.bias_detector:
+            return
+
+        try:
+            # Check prompt for bias
+            if prompt:
+                result = self.bias_detector.detect(prompt)
+                if result.has_bias:
+                    span.set_attribute("evaluation.bias.prompt.detected", True)
+                    span.set_attribute(
+                        "evaluation.bias.prompt.max_score", result.max_score
+                    )
+                    span.set_attribute(
+                        "evaluation.bias.prompt.detected_biases",
+                        result.detected_biases,
+                    )
+
+                    # Add individual bias type scores
+                    for bias_type, score in result.bias_scores.items():
+                        if score > 0:
+                            span.set_attribute(
+                                f"evaluation.bias.prompt.{bias_type}_score", score
+                            )
+
+                    # Add patterns matched
+                    for bias_type, patterns in result.patterns_matched.items():
+                        span.set_attribute(
+                            f"evaluation.bias.prompt.{bias_type}_patterns",
+                            patterns[:5],  # Limit to first 5 patterns
+                        )
+
+                    # Record metrics
+                    self.bias_detection_counter.add(1, {"location": "prompt"})
+                    self.bias_score_histogram.record(
+                        result.max_score, {"location": "prompt"}
+                    )
+
+                    # Record bias type metrics
+                    for bias_type in result.detected_biases:
+                        self.bias_type_counter.add(
+                            1, {"bias_type": bias_type, "location": "prompt"}
+                        )
+
+                    # If blocking mode and threshold exceeded, set error status
+                    if self.bias_config.block_on_detection and result.has_bias:
+                        span.set_status(
+                            Status(
+                                StatusCode.ERROR,
+                                "Request blocked due to bias detection",
+                            )
+                        )
+                        span.set_attribute("evaluation.bias.prompt.blocked", True)
+                        self.bias_blocked_counter.add(1, {"location": "prompt"})
+                else:
+                    span.set_attribute("evaluation.bias.prompt.detected", False)
+
+            # Check response for bias
+            if response:
+                result = self.bias_detector.detect(response)
+                if result.has_bias:
+                    span.set_attribute("evaluation.bias.response.detected", True)
+                    span.set_attribute(
+                        "evaluation.bias.response.max_score", result.max_score
+                    )
+                    span.set_attribute(
+                        "evaluation.bias.response.detected_biases",
+                        result.detected_biases,
+                    )
+
+                    # Add individual bias type scores
+                    for bias_type, score in result.bias_scores.items():
+                        if score > 0:
+                            span.set_attribute(
+                                f"evaluation.bias.response.{bias_type}_score", score
+                            )
+
+                    # Add patterns matched
+                    for bias_type, patterns in result.patterns_matched.items():
+                        span.set_attribute(
+                            f"evaluation.bias.response.{bias_type}_patterns",
+                            patterns[:5],  # Limit to first 5 patterns
+                        )
+
+                    # Record metrics
+                    self.bias_detection_counter.add(1, {"location": "response"})
+                    self.bias_score_histogram.record(
+                        result.max_score, {"location": "response"}
+                    )
+
+                    # Record bias type metrics
+                    for bias_type in result.detected_biases:
+                        self.bias_type_counter.add(
+                            1, {"bias_type": bias_type, "location": "response"}
+                        )
+
+                    # If blocking mode and threshold exceeded, set error status
+                    if self.bias_config.block_on_detection and result.has_bias:
+                        span.set_status(
+                            Status(
+                                StatusCode.ERROR,
+                                "Response blocked due to bias detection",
+                            )
+                        )
+                        span.set_attribute("evaluation.bias.response.blocked", True)
+                        self.bias_blocked_counter.add(1, {"location": "response"})
+                else:
+                    span.set_attribute("evaluation.bias.response.detected", False)
+
+        except Exception as e:
+            logger.error("Error checking bias: %s", e, exc_info=True)
+            span.set_attribute("evaluation.bias.error", str(e))
 
     def shutdown(self) -> None:
         """Shutdown the span processor.
