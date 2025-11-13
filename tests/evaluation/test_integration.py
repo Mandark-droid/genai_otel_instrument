@@ -8,9 +8,10 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.trace import TraceFlags, SpanContext, SpanKind
 from opentelemetry import trace
 
-from genai_otel.evaluation.config import PIIConfig, PIIMode
+from genai_otel.evaluation.config import PIIConfig, PIIMode, ToxicityConfig
 from genai_otel.evaluation.span_processor import EvaluationSpanProcessor
 from genai_otel.evaluation.pii_detector import PIIDetector
+from genai_otel.evaluation.toxicity_detector import ToxicityDetector
 
 
 class TestEvaluationSpanProcessorIntegration:
@@ -375,3 +376,290 @@ class TestMetricsIntegration:
         # Verify metrics were recorded
         # Note: Actual metric recording depends on mock setup
         # In real integration, these would be recorded to the meter provider
+
+
+class TestToxicityIntegration:
+    """Integration tests for toxicity detection."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        resource = Resource.create({"service.name": "test-service"})
+        self.tracer_provider = TracerProvider(resource=resource)
+        trace.set_tracer_provider(self.tracer_provider)
+        self.tracer = self.tracer_provider.get_tracer(__name__)
+
+    def _create_span(self, name="test-span", attributes=None):
+        """Helper to create a span with attributes."""
+        span_context = SpanContext(
+            trace_id=1,
+            span_id=1,
+            is_remote=False,
+            trace_flags=TraceFlags(0x01),
+        )
+        span = Span(
+            name=name,
+            context=span_context,
+            parent=None,
+            sampler=None,
+            trace_config=None,
+            resource=Resource.create({}),
+            attributes=attributes or {},
+            span_processor=Mock(),
+            kind=SpanKind.CLIENT,
+            instrumentation_scope=None,
+        )
+        return span
+
+    @patch("genai_otel.evaluation.toxicity_detector.Detoxify")
+    @patch("genai_otel.evaluation.toxicity_detector.ToxicityDetector._check_availability")
+    def test_toxicity_detection_in_prompt(self, mock_check, mock_detoxify_class):
+        """Test toxicity detection in prompt attributes."""
+        # Mock Detoxify model
+        mock_model = Mock()
+        mock_model.predict.return_value = {
+            "toxicity": 0.92,
+            "severe_toxicity": 0.3,
+            "obscene": 0.2,
+            "threat": 0.1,
+            "insult": 0.85,
+            "identity_attack": 0.15,
+        }
+        mock_detoxify_class.return_value = mock_model
+
+        # Configure toxicity detection
+        toxicity_config = ToxicityConfig(enabled=True, use_local_model=True, threshold=0.7)
+        processor = EvaluationSpanProcessor(toxicity_config=toxicity_config)
+        processor.toxicity_detector._detoxify_model = mock_model
+        processor.toxicity_detector._detoxify_available = True
+        processor.toxicity_detector._perspective_available = False
+
+        # Create span with toxic prompt
+        attributes = {
+            "gen_ai.prompt": "You are stupid and worthless",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check toxicity detection attributes
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.toxicity.prompt.detected") is True
+        assert span_attributes.get("evaluation.toxicity.prompt.max_score") == 0.92
+        assert "toxicity" in span_attributes.get("evaluation.toxicity.prompt.categories", [])
+        assert "insult" in span_attributes.get("evaluation.toxicity.prompt.categories", [])
+
+    @patch("genai_otel.evaluation.toxicity_detector.Detoxify")
+    @patch("genai_otel.evaluation.toxicity_detector.ToxicityDetector._check_availability")
+    def test_toxicity_detection_in_response(self, mock_check, mock_detoxify_class):
+        """Test toxicity detection in response attributes."""
+        mock_model = Mock()
+        mock_model.predict.return_value = {
+            "toxicity": 0.88,
+            "severe_toxicity": 0.2,
+            "obscene": 0.75,
+            "threat": 0.05,
+            "insult": 0.65,
+            "identity_attack": 0.1,
+        }
+        mock_detoxify_class.return_value = mock_model
+
+        toxicity_config = ToxicityConfig(enabled=True, use_local_model=True, threshold=0.7)
+        processor = EvaluationSpanProcessor(toxicity_config=toxicity_config)
+        processor.toxicity_detector._detoxify_model = mock_model
+        processor.toxicity_detector._detoxify_available = True
+        processor.toxicity_detector._perspective_available = False
+
+        # Create span with toxic response
+        attributes = {
+            "gen_ai.response": "This is offensive content",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check toxicity attributes
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.toxicity.response.detected") is True
+        assert span_attributes.get("evaluation.toxicity.response.max_score") >= 0.7
+
+    @patch("genai_otel.evaluation.toxicity_detector.Detoxify")
+    @patch("genai_otel.evaluation.toxicity_detector.ToxicityDetector._check_availability")
+    def test_toxicity_block_mode(self, mock_check, mock_detoxify_class):
+        """Test toxicity blocking mode sets error status."""
+        mock_model = Mock()
+        mock_model.predict.return_value = {
+            "toxicity": 0.95,
+            "severe_toxicity": 0.9,
+            "obscene": 0.85,
+            "threat": 0.8,
+            "insult": 0.92,
+            "identity_attack": 0.7,
+        }
+        mock_detoxify_class.return_value = mock_model
+
+        toxicity_config = ToxicityConfig(
+            enabled=True, use_local_model=True, threshold=0.7, block_on_detection=True
+        )
+        processor = EvaluationSpanProcessor(toxicity_config=toxicity_config)
+        processor.toxicity_detector._detoxify_model = mock_model
+        processor.toxicity_detector._detoxify_available = True
+        processor.toxicity_detector._perspective_available = False
+
+        # Create span with toxic content
+        attributes = {
+            "gen_ai.prompt": "Extremely toxic content",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check blocked status
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.toxicity.prompt.detected") is True
+        assert span_attributes.get("evaluation.toxicity.prompt.blocked") is True
+
+    @patch("genai_otel.evaluation.toxicity_detector.Detoxify")
+    @patch("genai_otel.evaluation.toxicity_detector.ToxicityDetector._check_availability")
+    def test_no_toxicity_detected(self, mock_check, mock_detoxify_class):
+        """Test clean text without toxicity."""
+        mock_model = Mock()
+        mock_model.predict.return_value = {
+            "toxicity": 0.1,
+            "severe_toxicity": 0.05,
+            "obscene": 0.02,
+            "threat": 0.01,
+            "insult": 0.03,
+            "identity_attack": 0.02,
+        }
+        mock_detoxify_class.return_value = mock_model
+
+        toxicity_config = ToxicityConfig(enabled=True, use_local_model=True, threshold=0.7)
+        processor = EvaluationSpanProcessor(toxicity_config=toxicity_config)
+        processor.toxicity_detector._detoxify_model = mock_model
+        processor.toxicity_detector._detoxify_available = True
+        processor.toxicity_detector._perspective_available = False
+
+        # Create span without toxicity
+        attributes = {
+            "gen_ai.prompt": "What is the weather like today?",
+            "gen_ai.response": "The weather is sunny and warm.",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check no toxicity detected
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.toxicity.prompt.detected") is False
+        assert span_attributes.get("evaluation.toxicity.response.detected") is False
+
+    def test_disabled_toxicity_detection(self):
+        """Test toxicity detection is skipped when disabled."""
+        toxicity_config = ToxicityConfig(enabled=False)
+        processor = EvaluationSpanProcessor(toxicity_config=toxicity_config)
+
+        # Create span with toxic content
+        attributes = {
+            "gen_ai.prompt": "Toxic content here",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check no toxicity attributes added
+        span_attributes = dict(span.attributes)
+        assert "evaluation.toxicity.prompt.detected" not in span_attributes
+
+    @patch("genai_otel.evaluation.toxicity_detector.Detoxify")
+    @patch("genai_otel.evaluation.toxicity_detector.ToxicityDetector._check_availability")
+    def test_category_scores(self, mock_check, mock_detoxify_class):
+        """Test individual category scores are tracked."""
+        mock_model = Mock()
+        mock_model.predict.return_value = {
+            "toxicity": 0.85,
+            "severe_toxicity": 0.4,
+            "obscene": 0.75,
+            "threat": 0.3,
+            "insult": 0.8,
+            "identity_attack": 0.2,
+        }
+        mock_detoxify_class.return_value = mock_model
+
+        toxicity_config = ToxicityConfig(enabled=True, use_local_model=True, threshold=0.7)
+        processor = EvaluationSpanProcessor(toxicity_config=toxicity_config)
+        processor.toxicity_detector._detoxify_model = mock_model
+        processor.toxicity_detector._detoxify_available = True
+        processor.toxicity_detector._perspective_available = False
+
+        # Create span
+        attributes = {
+            "gen_ai.prompt": "Toxic message",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check individual category scores
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.toxicity.prompt.toxicity_score") == 0.85
+        assert span_attributes.get("evaluation.toxicity.prompt.insult_score") == 0.8
+        assert span_attributes.get("evaluation.toxicity.prompt.profanity_score") == 0.75
+
+    @patch("genai_otel.evaluation.toxicity_detector.Detoxify")
+    @patch("genai_otel.evaluation.toxicity_detector.ToxicityDetector._check_availability")
+    def test_both_prompt_and_response_toxicity(self, mock_check, mock_detoxify_class):
+        """Test toxicity detection in both prompt and response."""
+        mock_model = Mock()
+        # Return different values for different calls
+        call_count = [0]
+
+        def mock_predict(text):
+            call_count[0] += 1
+            if call_count[0] == 1:  # First call (prompt)
+                return {
+                    "toxicity": 0.9,
+                    "severe_toxicity": 0.3,
+                    "obscene": 0.2,
+                    "threat": 0.1,
+                    "insult": 0.85,
+                    "identity_attack": 0.15,
+                }
+            else:  # Second call (response)
+                return {
+                    "toxicity": 0.88,
+                    "severe_toxicity": 0.25,
+                    "obscene": 0.75,
+                    "threat": 0.05,
+                    "insult": 0.65,
+                    "identity_attack": 0.1,
+                }
+
+        mock_model.predict.side_effect = mock_predict
+        mock_detoxify_class.return_value = mock_model
+
+        toxicity_config = ToxicityConfig(enabled=True, use_local_model=True, threshold=0.7)
+        processor = EvaluationSpanProcessor(toxicity_config=toxicity_config)
+        processor.toxicity_detector._detoxify_model = mock_model
+        processor.toxicity_detector._detoxify_available = True
+        processor.toxicity_detector._perspective_available = False
+
+        # Create span with both toxic
+        attributes = {
+            "gen_ai.prompt": "Toxic prompt",
+            "gen_ai.response": "Toxic response",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check both detected
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.toxicity.prompt.detected") is True
+        assert span_attributes.get("evaluation.toxicity.response.detected") is True
