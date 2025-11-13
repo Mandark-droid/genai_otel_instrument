@@ -19,6 +19,7 @@ from .groq_instrumentor import GroqInstrumentor
 from .huggingface_instrumentor import HuggingFaceInstrumentor
 from .hyperbolic_instrumentor import HyperbolicInstrumentor
 from .langchain_instrumentor import LangChainInstrumentor
+from .langgraph_instrumentor import LangGraphInstrumentor
 from .llamaindex_instrumentor import LlamaIndexInstrumentor
 from .mistralai_instrumentor import MistralAIInstrumentor
 from .ollama_instrumentor import OllamaInstrumentor
@@ -50,6 +51,7 @@ __all__ = [
     "SambaNovaInstrumentor",
     "HyperbolicInstrumentor",
     "LangChainInstrumentor",
+    "LangGraphInstrumentor",
     "LlamaIndexInstrumentor",
     "HuggingFaceInstrumentor",
 ]

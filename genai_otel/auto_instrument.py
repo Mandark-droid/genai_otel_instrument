@@ -57,6 +57,7 @@ try:
         HuggingFaceInstrumentor,
         HyperbolicInstrumentor,
         LangChainInstrumentor,
+        LangGraphInstrumentor,
         LlamaIndexInstrumentor,
         MistralAIInstrumentor,
         OllamaInstrumentor,
@@ -81,6 +82,7 @@ except ImportError:
         HuggingFaceInstrumentor,
         HyperbolicInstrumentor,
         LangChainInstrumentor,
+        LangGraphInstrumentor,
         LlamaIndexInstrumentor,
         MistralAIInstrumentor,
         OllamaInstrumentor,
@@ -129,6 +131,7 @@ INSTRUMENTORS = {
     "sambanova": SambaNovaInstrumentor,
     "hyperbolic": HyperbolicInstrumentor,
     "langchain": LangChainInstrumentor,
+    "langgraph": LangGraphInstrumentor,  # LangGraph stateful workflow framework
     "llama_index": LlamaIndexInstrumentor,
     "transformers": HuggingFaceInstrumentor,
 }
