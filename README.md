@@ -40,7 +40,7 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 
 🚀 **Zero-Code Instrumentation** - Just install and set env vars
 🤖 **17+ LLM Providers** - OpenAI, Anthropic, Google, AWS, Azure, SambaNova, Hyperbolic, and more
-🤝 **Multi-Agent Frameworks** - CrewAI, LangGraph, OpenAI Agents SDK for agent orchestration
+🤝 **Multi-Agent Frameworks** - CrewAI, LangGraph, OpenAI Agents SDK, AutoGen, Pydantic AI for agent orchestration
 🔧 **MCP Tool Support** - Auto-instrument databases, APIs, caches, vector DBs
 💰 **Cost Tracking** - Automatic cost calculation for both streaming and non-streaming requests
 ⚡ **Streaming Support** - Full observability for streaming responses with TTFT/TBT metrics and cost tracking
@@ -105,6 +105,8 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 - **OpenAI Agents SDK** (agent orchestration with handoffs, sessions, guardrails)
 - **CrewAI** (role-based multi-agent collaboration with crews and tasks)
 - **LangGraph** (stateful workflows with graph-based orchestration)
+- **AutoGen** (Microsoft multi-agent conversations with group chats)
+- **Pydantic AI** (type-safe agents with Pydantic validation and multi-provider support)
 
 ### MCP Tools (Model Context Protocol)
 - **Databases**: PostgreSQL, MySQL, MongoDB, SQLAlchemy
