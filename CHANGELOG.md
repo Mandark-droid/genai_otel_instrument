@@ -8,6 +8,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PII Detection and Safety Features (v0.2.0 Phase 1)**
+  - Automatic PII detection with Microsoft Presidio integration
+  - Three operation modes: detect (monitor only), redact (mask PII), block (prevent requests/responses)
+  - GDPR compliance mode with EU-specific entity types (IBAN, UK NHS, NRP)
+  - HIPAA compliance mode for healthcare data (medical licenses, PHI, dates)
+  - PCI-DSS compliance mode for payment card data (credit cards, bank accounts)
+  - 15+ PII entity types detected: email, phone, SSN, credit card, IP address, passport, etc.
+  - Configurable confidence threshold (0.0-1.0) for detection sensitivity
+  - Regex fallback patterns when Presidio library not available
+  - OpenTelemetry span attributes for PII detection events:
+    - `evaluation.pii.prompt.detected` - PII found in prompts
+    - `evaluation.pii.response.detected` - PII found in responses
+    - `evaluation.pii.*.entity_count` - Number of entities detected
+    - `evaluation.pii.*.entity_types` - Array of detected entity types
+    - `evaluation.pii.*.score` - Detection confidence score
+    - `evaluation.pii.*.redacted` - Redacted text in redact mode
+    - `evaluation.pii.*.blocked` - Whether request was blocked
+  - OpenTelemetry metrics for monitoring:
+    - `genai.evaluation.pii.detections` - Counter by location and mode
+    - `genai.evaluation.pii.entities` - Counter by entity type
+    - `genai.evaluation.pii.blocked` - Counter for blocked requests
+  - Environment variable configuration:
+    - `GENAI_ENABLE_PII_DETECTION` - Enable/disable PII detection
+    - `GENAI_PII_MODE` - Set mode (detect/redact/block)
+    - `GENAI_PII_THRESHOLD` - Confidence threshold
+    - `GENAI_PII_GDPR_MODE` - Enable GDPR compliance
+    - `GENAI_PII_HIPAA_MODE` - Enable HIPAA compliance
+    - `GENAI_PII_PCI_DSS_MODE` - Enable PCI-DSS compliance
+  - Implementation: `genai_otel/evaluation/` module
+    - `config.py` - Configuration dataclasses for all evaluation features
+    - `pii_detector.py` - PIIDetector with Presidio integration
+    - `span_processor.py` - EvaluationSpanProcessor for span enrichment
+  - Tests: `tests/evaluation/` (40+ test cases)
+    - `test_pii_detector.py` - Unit tests for PII detection
+    - `test_integration.py` - Integration tests with span processor
+  - Example: `examples/pii_detection_example.py` (9 comprehensive scenarios)
+  - Dependencies (optional): `pip install presidio-analyzer presidio-anonymizer spacy`
+
 - **Multi-Agent & AI Framework Instrumentation (Phase 1-4)**
   - Comprehensive instrumentation for 11 AI frameworks with 13 implementations total
   - Zero-code setup with automatic tracing and cost tracking
