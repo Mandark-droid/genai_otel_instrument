@@ -6,6 +6,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **SambaNova Instrumentation**
+  - Full OpenTelemetry instrumentation for SambaNova AI models
+  - Automatic tracing with `gen_ai.system="sambanova"` attribute
+  - Token usage tracking and cost calculation
+  - Support for Llama 4 Maverick and Llama 3.1 model family
+  - Enabled by default in `DEFAULT_INSTRUMENTORS`
+  - Example: `examples/sambanova_example.py`
+  - Implementation: `genai_otel/instrumentors/sambanova_instrumentor.py`
+  - Tests: `tests/instrumentors/test_sambanova_instrumentor.py`
+
+- **Hyperbolic API Instrumentation**
+  - Full OpenTelemetry instrumentation for Hyperbolic's cost-effective API
+  - HTTP request-level instrumentation for raw API calls
+  - Automatic tracing with `gen_ai.system="hyperbolic"` attribute
+  - Token usage tracking and cost calculation
+  - Support for Qwen3, DeepSeek R1/V3 models
+  - **Disabled by default** - requires OTLP gRPC exporters due to requests library conflict
+  - Configuration: Set `OTEL_EXPORTER_OTLP_PROTOCOL=grpc` and add "hyperbolic" to `GENAI_ENABLED_INSTRUMENTORS`
+  - Example: `examples/hyperbolic_example.py` (complete working configuration)
+  - Implementation: `genai_otel/instrumentors/hyperbolic_instrumentor.py`
+  - Tests: `tests/instrumentors/test_hyperbolic_instrumentor.py`
+  - Documentation: Added limitation section in `CLAUDE.md`
+
+- **Nebius AI Studio Support**
+  - Pricing data for Nebius models (uses OpenAI-compatible API, works automatically)
+  - Model support: `openai/gpt-oss-120b` and Llama 3.1 family
+  - Nebius uses OpenAI SDK with custom `base_url`, so existing OpenAI instrumentor handles it
+  - Cost tracking enabled via pricing database entries
+
 ### Improved
 
 - **Comprehensive Model Pricing Database Update**

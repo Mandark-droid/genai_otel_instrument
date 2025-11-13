@@ -1641,6 +1641,36 @@
       "promptPrice": 0.0002,
       "completionPrice": 0.0002,
       "note": "ASR + Translation - 30+ languages"
+    },
+    "Llama-4-Maverick-17B-128E-Instruct": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "SambaNova - Maverick model (estimated pricing)"
+    },
+    "Qwen/Qwen3-Next-80B-A3B-Thinking": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0004,
+      "note": "Hyperbolic - Qwen3 Next 80B"
+    },
+    "Qwen/Qwen3-235B": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0004,
+      "note": "Hyperbolic - Qwen3 235B"
+    },
+    "deepseek-ai/DeepSeek-R1": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.002,
+      "note": "Hyperbolic - DeepSeek R1"
+    },
+    "deepseek-ai/DeepSeek-V3": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.00025,
+      "note": "Hyperbolic - DeepSeek V3"
+    },
+    "openai/gpt-oss-120b": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Nebius - GPT OSS 120B (estimated pricing)"
     }
   }
 }

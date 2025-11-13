@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 # which is a specialized dependency for Model Context Protocol servers/clients.
 # Users can enable it by setting GENAI_ENABLED_INSTRUMENTORS="...,mcp" if needed.
 #
+# Note: "hyperbolic" is excluded by default because it wraps requests.post globally,
+# which conflicts with OTLP HTTP exporters (same issue as RequestsInstrumentor).
+# Users can enable it when using OTLP gRPC exporters by setting:
+# OTEL_EXPORTER_OTLP_PROTOCOL=grpc and GENAI_ENABLED_INSTRUMENTORS="...,hyperbolic"
+#
 # Note: "smolagents" and "litellm" OpenInference instrumentors require Python >= 3.10
 # They are only added to the default list if Python version is compatible.
 DEFAULT_INSTRUMENTORS = [
@@ -38,6 +43,7 @@ DEFAULT_INSTRUMENTORS = [
     "vertexai",
     "replicate",
     "anyscale",
+    "sambanova",
     "langchain",
     "llama_index",
     "transformers",

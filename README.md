@@ -39,7 +39,7 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 ## Features
 
 🚀 **Zero-Code Instrumentation** - Just install and set env vars
-🤖 **15+ LLM Providers** - OpenAI, Anthropic, Google, AWS, Azure, and more
+🤖 **17+ LLM Providers** - OpenAI, Anthropic, Google, AWS, Azure, SambaNova, Hyperbolic, and more
 🔧 **MCP Tool Support** - Auto-instrument databases, APIs, caches, vector DBs
 💰 **Cost Tracking** - Automatic cost calculation for both streaming and non-streaming requests
 ⚡ **Streaming Support** - Full observability for streaming responses with TTFT/TBT metrics and cost tracking
@@ -90,10 +90,11 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 ## What Gets Instrumented?
 
 ### LLM Providers (Auto-detected)
-- **With Full Cost Tracking**: OpenAI, Anthropic, Google AI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, Vertex AI
+- **With Full Cost Tracking**: OpenAI, Anthropic, Google AI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, Vertex AI, SambaNova, Hyperbolic
 - **Hardware/Local Pricing**: Replicate (hardware-based $/second), HuggingFace (local execution with estimated costs)
   - **HuggingFace Support**: `pipeline()`, `AutoModelForCausalLM.generate()`, `AutoModelForSeq2SeqLM.generate()`, `InferenceClient` API calls
 - **Other Providers**: Anyscale
+- **Special Configuration**: Hyperbolic (requires OTLP gRPC exporter - see `examples/hyperbolic_example.py`)
 
 ### Frameworks
 - LangChain (chains, agents, tools)
@@ -111,7 +112,7 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 - MCP - Model Context Protocol instrumentation
 - LiteLLM - Multi-provider LLM proxy
 
-**Cost Enrichment:** OpenInference instrumentors are automatically enriched with cost tracking! When cost tracking is enabled (`GENAI_ENABLE_COST_TRACKING=true`), a custom `CostEnrichmentSpanProcessor` extracts model and token usage from OpenInference spans and adds cost attributes (`gen_ai.usage.cost.total`, `gen_ai.usage.cost.prompt`, `gen_ai.usage.cost.completion`) using our comprehensive pricing database of 145+ models.
+**Cost Enrichment:** OpenInference instrumentors are automatically enriched with cost tracking! When cost tracking is enabled (`GENAI_ENABLE_COST_TRACKING=true`), a custom `CostEnrichmentSpanProcessor` extracts model and token usage from OpenInference spans and adds cost attributes (`gen_ai.usage.cost.total`, `gen_ai.usage.cost.prompt`, `gen_ai.usage.cost.completion`) using our comprehensive pricing database of 340+ models across 20+ providers.
 
 The processor supports OpenInference semantic conventions:
 - Model: `llm.model_name`, `embedding.model_name`
@@ -184,7 +185,7 @@ Watch a comprehensive walkthrough of GenAI OpenTelemetry Auto-Instrumentation in
 
 ## Cost Tracking Coverage
 
-The library includes comprehensive cost tracking with pricing data for **145+ models** across **11 providers**:
+The library includes comprehensive cost tracking with pricing data for **340+ models** across **20+ providers**:
 
 ### Providers with Full Token-Based Cost Tracking
 - **OpenAI**: GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo, o1/o3 series, embeddings, audio, vision (35+ models)

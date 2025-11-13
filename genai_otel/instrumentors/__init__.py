@@ -16,6 +16,7 @@ from .cohere_instrumentor import CohereInstrumentor
 from .google_ai_instrumentor import GoogleAIInstrumentor
 from .groq_instrumentor import GroqInstrumentor
 from .huggingface_instrumentor import HuggingFaceInstrumentor
+from .hyperbolic_instrumentor import HyperbolicInstrumentor
 from .langchain_instrumentor import LangChainInstrumentor
 from .llamaindex_instrumentor import LlamaIndexInstrumentor
 from .mistralai_instrumentor import MistralAIInstrumentor
@@ -24,6 +25,7 @@ from .ollama_instrumentor import OllamaInstrumentor
 # Import instrumentors only - they handle their own dependency checking
 from .openai_instrumentor import OpenAIInstrumentor
 from .replicate_instrumentor import ReplicateInstrumentor
+from .sambanova_instrumentor import SambaNovaInstrumentor
 from .togetherai_instrumentor import TogetherAIInstrumentor
 from .vertexai_instrumentor import VertexAIInstrumentor
 
@@ -41,6 +43,8 @@ __all__ = [
     "VertexAIInstrumentor",
     "ReplicateInstrumentor",
     "AnyscaleInstrumentor",
+    "SambaNovaInstrumentor",
+    "HyperbolicInstrumentor",
     "LangChainInstrumentor",
     "LlamaIndexInstrumentor",
     "HuggingFaceInstrumentor",
