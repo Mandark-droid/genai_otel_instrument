@@ -48,6 +48,7 @@ try:
     from .instrumentors import (
         AnthropicInstrumentor,
         AnyscaleInstrumentor,
+        AutoGenInstrumentor,
         AWSBedrockInstrumentor,
         AzureOpenAIInstrumentor,
         CohereInstrumentor,
@@ -73,6 +74,7 @@ except ImportError:
     from genai_otel.instrumentors import (
         AnthropicInstrumentor,
         AnyscaleInstrumentor,
+        AutoGenInstrumentor,
         AWSBedrockInstrumentor,
         AzureOpenAIInstrumentor,
         CohereInstrumentor,
@@ -119,6 +121,7 @@ INSTRUMENTORS = {
     "google.generativeai": GoogleAIInstrumentor,
     "boto3": AWSBedrockInstrumentor,
     "azure.ai.openai": AzureOpenAIInstrumentor,
+    "autogen": AutoGenInstrumentor,  # AutoGen multi-agent framework
     "cohere": CohereInstrumentor,
     "crewai": CrewAIInstrumentor,  # CrewAI multi-agent framework
     "mistralai": MistralAIInstrumentor,
