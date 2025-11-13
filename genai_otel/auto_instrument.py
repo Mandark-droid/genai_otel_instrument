@@ -54,6 +54,7 @@ try:
         BedrockAgentsInstrumentor,
         CohereInstrumentor,
         CrewAIInstrumentor,
+        DSPyInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
         HaystackInstrumentor,
@@ -83,6 +84,7 @@ except ImportError:
         BedrockAgentsInstrumentor,
         CohereInstrumentor,
         CrewAIInstrumentor,
+        DSPyInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
         HaystackInstrumentor,
@@ -131,6 +133,7 @@ INSTRUMENTORS = {
     "bedrock_agents": BedrockAgentsInstrumentor,  # AWS Bedrock Agents
     "cohere": CohereInstrumentor,
     "crewai": CrewAIInstrumentor,  # CrewAI multi-agent framework
+    "dspy": DSPyInstrumentor,  # DSPy declarative LM programming framework
     "mistralai": MistralAIInstrumentor,
     "together": TogetherAIInstrumentor,
     "groq": GroqInstrumentor,
