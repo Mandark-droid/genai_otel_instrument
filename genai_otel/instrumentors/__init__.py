@@ -22,6 +22,7 @@ from .groq_instrumentor import GroqInstrumentor
 from .haystack_instrumentor import HaystackInstrumentor
 from .huggingface_instrumentor import HuggingFaceInstrumentor
 from .hyperbolic_instrumentor import HyperbolicInstrumentor
+from .instructor_instrumentor import InstructorInstrumentor
 from .langchain_instrumentor import LangChainInstrumentor
 from .langgraph_instrumentor import LangGraphInstrumentor
 from .llamaindex_instrumentor import LlamaIndexInstrumentor
@@ -53,6 +54,7 @@ __all__ = [
     "TogetherAIInstrumentor",
     "GroqInstrumentor",
     "HaystackInstrumentor",
+    "InstructorInstrumentor",
     "OllamaInstrumentor",
     "VertexAIInstrumentor",
     "ReplicateInstrumentor",

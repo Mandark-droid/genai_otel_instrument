@@ -60,6 +60,7 @@ try:
         HaystackInstrumentor,
         HuggingFaceInstrumentor,
         HyperbolicInstrumentor,
+        InstructorInstrumentor,
         LangChainInstrumentor,
         LangGraphInstrumentor,
         LlamaIndexInstrumentor,
@@ -90,6 +91,7 @@ except ImportError:
         HaystackInstrumentor,
         HuggingFaceInstrumentor,
         HyperbolicInstrumentor,
+        InstructorInstrumentor,
         LangChainInstrumentor,
         LangGraphInstrumentor,
         LlamaIndexInstrumentor,
@@ -138,6 +140,7 @@ INSTRUMENTORS = {
     "together": TogetherAIInstrumentor,
     "groq": GroqInstrumentor,
     "haystack": HaystackInstrumentor,  # Haystack NLP pipeline framework
+    "instructor": InstructorInstrumentor,  # Instructor structured output extraction
     "ollama": OllamaInstrumentor,
     "vertexai": VertexAIInstrumentor,
     "replicate": ReplicateInstrumentor,
