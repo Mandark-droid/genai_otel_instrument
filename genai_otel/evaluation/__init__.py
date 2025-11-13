@@ -34,27 +34,30 @@ Requirements:
     ```
 """
 
+from .bias_detector import BiasDetector, BiasDetectionResult
 from .config import (
-    PIIConfig,
-    ToxicityConfig,
     BiasConfig,
+    HallucinationConfig,
+    PIIConfig,
     PromptInjectionConfig,
     RestrictedTopicsConfig,
-    HallucinationConfig,
+    ToxicityConfig,
 )
 from .pii_detector import PIIDetector, PIIDetectionResult
-from .toxicity_detector import ToxicityDetector, ToxicityDetectionResult
 from .span_processor import EvaluationSpanProcessor
+from .toxicity_detector import ToxicityDetector, ToxicityDetectionResult
 
 __all__ = [
     # Config classes
-    "PIIConfig",
-    "ToxicityConfig",
     "BiasConfig",
+    "HallucinationConfig",
+    "PIIConfig",
     "PromptInjectionConfig",
     "RestrictedTopicsConfig",
-    "HallucinationConfig",
+    "ToxicityConfig",
     # Detectors
+    "BiasDetector",
+    "BiasDetectionResult",
     "PIIDetector",
     "PIIDetectionResult",
     "ToxicityDetector",

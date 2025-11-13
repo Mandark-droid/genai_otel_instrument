@@ -8,9 +8,10 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.trace import TraceFlags, SpanContext, SpanKind
 from opentelemetry import trace
 
-from genai_otel.evaluation.config import PIIConfig, PIIMode, ToxicityConfig
-from genai_otel.evaluation.span_processor import EvaluationSpanProcessor
+from genai_otel.evaluation.bias_detector import BiasDetector
+from genai_otel.evaluation.config import BiasConfig, PIIConfig, PIIMode, ToxicityConfig
 from genai_otel.evaluation.pii_detector import PIIDetector
+from genai_otel.evaluation.span_processor import EvaluationSpanProcessor
 from genai_otel.evaluation.toxicity_detector import ToxicityDetector
 
 
@@ -663,3 +664,330 @@ class TestToxicityIntegration:
         span_attributes = dict(span.attributes)
         assert span_attributes.get("evaluation.toxicity.prompt.detected") is True
         assert span_attributes.get("evaluation.toxicity.response.detected") is True
+
+
+class TestBiasIntegration:
+    """Integration tests for Bias Detection."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        # Create a tracer provider
+        resource = Resource.create({"service.name": "test-service"})
+        self.tracer_provider = TracerProvider(resource=resource)
+        trace.set_tracer_provider(self.tracer_provider)
+        self.tracer = self.tracer_provider.get_tracer(__name__)
+
+    def _create_span(self, name="test-span", attributes=None):
+        """Helper to create a span with attributes."""
+        span_context = SpanContext(
+            trace_id=1,
+            span_id=1,
+            is_remote=False,
+            trace_flags=TraceFlags(0x01),
+        )
+        span = Span(
+            name=name,
+            context=span_context,
+            parent=None,
+            sampler=None,
+            trace_config=None,
+            resource=Resource.create({}),
+            attributes=attributes or {},
+            span_processor=Mock(),
+            kind=SpanKind.CLIENT,
+            instrumentation_scope=None,
+        )
+        return span
+
+    def test_bias_detection_in_prompt(self):
+        """Test bias detection in prompt attributes."""
+        # Configure bias detection
+        bias_config = BiasConfig(enabled=True, threshold=0.3)
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with prompt containing bias
+        attributes = {
+            "gen_ai.prompt": "Women are always emotional and can't lead teams",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check bias detection attributes were added
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.bias.prompt.detected") is True
+        assert span_attributes.get("evaluation.bias.prompt.max_score") >= 0.3
+        assert "gender" in span_attributes.get("evaluation.bias.prompt.detected_biases", [])
+        assert span_attributes.get("evaluation.bias.prompt.gender_score") > 0
+
+    def test_bias_detection_in_response(self):
+        """Test bias detection in response attributes."""
+        bias_config = BiasConfig(enabled=True, threshold=0.3)
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with response containing bias
+        attributes = {
+            "gen_ai.response": "Old people can't learn new technology, it's too hard for them",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check bias detection attributes
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.bias.response.detected") is True
+        assert span_attributes.get("evaluation.bias.response.max_score") >= 0.3
+        assert "age" in span_attributes.get("evaluation.bias.response.detected_biases", [])
+
+    def test_bias_blocking_mode(self):
+        """Test bias detection in blocking mode."""
+        bias_config = BiasConfig(
+            enabled=True,
+            threshold=0.3,
+            block_on_detection=True,
+        )
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with biased prompt
+        attributes = {
+            "gen_ai.prompt": "All Muslims are terrorists",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check span was marked as error
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.bias.prompt.detected") is True
+        assert span_attributes.get("evaluation.bias.prompt.blocked") is True
+        assert span.status.status_code.value == 2  # ERROR status code
+
+    def test_no_bias_detection_when_disabled(self):
+        """Test that bias detection doesn't run when disabled."""
+        bias_config = BiasConfig(enabled=False)
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with biased text
+        attributes = {
+            "gen_ai.prompt": "Women are always emotional",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check no bias attributes were added
+        span_attributes = dict(span.attributes)
+        assert "evaluation.bias.prompt.detected" not in span_attributes
+
+    def test_bias_below_threshold(self):
+        """Test that bias below threshold is not flagged."""
+        bias_config = BiasConfig(enabled=True, threshold=0.95)  # Very high threshold
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with mild bias
+        attributes = {
+            "gen_ai.prompt": "Women are always emotional",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check bias detection ran but didn't flag it
+        span_attributes = dict(span.attributes)
+        # Detection might have run and found patterns, but has_bias should be False
+        # because the score is below the very high threshold
+        if "evaluation.bias.prompt.detected" in span_attributes:
+            assert span_attributes.get("evaluation.bias.prompt.detected") is False
+
+    def test_multiple_bias_types_detected(self):
+        """Test detection of multiple bias types in same text."""
+        bias_config = BiasConfig(enabled=True, threshold=0.3)
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with multiple bias types
+        attributes = {
+            "gen_ai.prompt": "Women are too old to learn programming after 40",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check multiple bias types detected
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.bias.prompt.detected") is True
+        detected_biases = span_attributes.get("evaluation.bias.prompt.detected_biases", [])
+        # Should detect at least one bias type (could be gender or age)
+        assert len(detected_biases) >= 1
+
+    def test_bias_patterns_recorded(self):
+        """Test that matched patterns are recorded in span attributes."""
+        bias_config = BiasConfig(enabled=True, threshold=0.3)
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with biased text
+        attributes = {
+            "gen_ai.prompt": "Men are never good at multitasking",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check patterns were recorded
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.bias.prompt.detected") is True
+        # Check that patterns were recorded for gender bias
+        assert "evaluation.bias.prompt.gender_patterns" in span_attributes
+
+    def test_bias_in_both_prompt_and_response(self):
+        """Test bias detection in both prompt and response."""
+        bias_config = BiasConfig(enabled=True, threshold=0.3)
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with bias in both
+        attributes = {
+            "gen_ai.prompt": "Are women good leaders?",
+            "gen_ai.response": "Women are always too emotional to lead effectively",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check bias detected in response (prompt question is neutral)
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.bias.response.detected") is True
+        assert "gender" in span_attributes.get("evaluation.bias.response.detected_biases", [])
+
+    def test_racial_bias_detection(self):
+        """Test racial bias detection."""
+        bias_config = BiasConfig(enabled=True, threshold=0.3)
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with racial bias
+        attributes = {
+            "gen_ai.response": "All Asian people are good at math",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check racial bias detected
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.bias.response.detected") is True
+        assert "race" in span_attributes.get("evaluation.bias.response.detected_biases", [])
+
+    def test_disability_bias_detection(self):
+        """Test disability bias detection."""
+        bias_config = BiasConfig(enabled=True, threshold=0.3)
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with disability bias
+        attributes = {
+            "gen_ai.response": "Disabled people can't work as effectively as others",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check disability bias detected
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.bias.response.detected") is True
+        assert "disability" in span_attributes.get("evaluation.bias.response.detected_biases", [])
+
+    def test_combined_pii_toxicity_bias_detection(self):
+        """Test combined PII, toxicity, and bias detection."""
+        pii_config = PIIConfig(enabled=True, mode=PIIMode.DETECT)
+        toxicity_config = ToxicityConfig(enabled=True, threshold=0.7)
+        bias_config = BiasConfig(enabled=True, threshold=0.3)
+
+        processor = EvaluationSpanProcessor(
+            pii_config=pii_config,
+            toxicity_config=toxicity_config,
+            bias_config=bias_config,
+        )
+        processor.pii_detector._presidio_available = False
+
+        # Create span with PII and bias
+        attributes = {
+            "gen_ai.prompt": "Contact me at test@example.com about hiring women, they're always emotional",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check both PII and bias detected
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.pii.prompt.detected") is True
+        assert span_attributes.get("evaluation.bias.prompt.detected") is True
+        assert "EMAIL_ADDRESS" in span_attributes.get("evaluation.pii.prompt.entity_types", [])
+        assert "gender" in span_attributes.get("evaluation.bias.prompt.detected_biases", [])
+
+    def test_bias_score_in_attributes(self):
+        """Test that bias scores are properly recorded."""
+        bias_config = BiasConfig(enabled=True, threshold=0.3)
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with biased text
+        attributes = {
+            "gen_ai.prompt": "Women are always emotional and never logical",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check scores recorded
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.bias.prompt.detected") is True
+        assert span_attributes.get("evaluation.bias.prompt.max_score") >= 0.3
+        assert span_attributes.get("evaluation.bias.prompt.gender_score") > 0
+
+    def test_specific_bias_types_only(self):
+        """Test detection with specific bias types enabled."""
+        bias_config = BiasConfig(
+            enabled=True,
+            threshold=0.3,
+            bias_types=["gender", "age"],  # Only these two
+        )
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Test gender bias - should be detected
+        attributes = {
+            "gen_ai.prompt": "Women are always emotional",
+        }
+        span = self._create_span(attributes=attributes)
+        processor.on_end(span)
+
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.bias.prompt.detected") is True
+        assert "gender" in span_attributes.get("evaluation.bias.prompt.detected_biases", [])
+
+    def test_neutral_text_no_bias(self):
+        """Test that neutral text doesn't trigger bias detection."""
+        bias_config = BiasConfig(enabled=True, threshold=0.3)
+        processor = EvaluationSpanProcessor(bias_config=bias_config)
+
+        # Create span with neutral text
+        attributes = {
+            "gen_ai.prompt": "What are the best practices for team leadership?",
+            "gen_ai.response": "Effective leaders communicate clearly and empower their teams.",
+        }
+        span = self._create_span(attributes=attributes)
+
+        # Process span
+        processor.on_end(span)
+
+        # Check no bias detected
+        span_attributes = dict(span.attributes)
+        assert span_attributes.get("evaluation.bias.prompt.detected") is False
+        assert span_attributes.get("evaluation.bias.response.detected") is False

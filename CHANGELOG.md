@@ -92,6 +92,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Detoxify: `pip install detoxify`
     - Perspective API: `pip install google-api-python-client`
 
+- **Bias Detection (v0.2.0 Phase 2)**
+  - Automatic bias detection for demographic and other biases in prompts and responses
+  - Pattern-based detection (always available, no external dependencies)
+  - Eight bias types monitored:
+    - `gender`: Gender stereotypes and discrimination
+    - `race`: Racial bias and discrimination
+    - `ethnicity`: Ethnic stereotypes and xenophobia
+    - `religion`: Religious bias and discrimination
+    - `age`: Age-based stereotypes (ageism)
+    - `disability`: Disability bias and ableism
+    - `sexual_orientation`: LGBTQ+ discrimination and bias
+    - `political`: Political bias and partisan stereotyping
+  - Comprehensive pattern matching with 50+ regex patterns and keywords
+  - Score calculation based on pattern matches (0.0-1.0)
+  - Configurable threshold for detection sensitivity
+  - Blocking mode to prevent biased content processing
+  - Batch processing support for analyzing multiple texts
+  - Statistics generation for bias analysis and reporting
+  - Optional ML-based detection with Fairlearn integration
+  - Sensitive attributes configuration for custom monitoring
+  - OpenTelemetry span attributes for bias detection:
+    - `evaluation.bias.prompt.detected` - Bias in prompts
+    - `evaluation.bias.response.detected` - Bias in responses
+    - `evaluation.bias.*.max_score` - Maximum bias score
+    - `evaluation.bias.*.detected_biases` - Array of detected bias types
+    - `evaluation.bias.*.<bias_type>_score` - Individual bias type scores
+    - `evaluation.bias.*.<bias_type>_patterns` - Matched patterns per type
+    - `evaluation.bias.*.blocked` - Whether content was blocked
+  - OpenTelemetry metrics for monitoring:
+    - `genai.evaluation.bias.detections` - Detection events counter by location
+    - `genai.evaluation.bias.types` - Detections by bias type
+    - `genai.evaluation.bias.blocked` - Blocked requests counter
+    - `genai.evaluation.bias.score` - Score distribution histogram
+  - Environment variable configuration:
+    - `GENAI_ENABLE_BIAS_DETECTION` - Enable/disable bias detection
+    - `GENAI_BIAS_THRESHOLD` - Detection threshold (0.0-1.0, default 0.5)
+    - `GENAI_BIAS_BLOCK_ON_DETECTION` - Block biased content
+    - `GENAI_BIAS_TYPES` - Comma-separated list of bias types to monitor
+    - `GENAI_BIAS_USE_FAIRLEARN` - Enable ML-based detection with Fairlearn
+  - Implementation: `genai_otel/evaluation/` module
+    - `bias_detector.py` - BiasDetector with pattern and ML-based detection
+    - `span_processor.py` - Extended with bias detection support
+    - `config.py` - BiasConfig dataclass
+  - Tests: `tests/evaluation/` (56+ test cases)
+    - `test_bias_detector.py` - Unit tests for BiasDetector (40+ test cases)
+    - `test_integration.py` - Integration tests with span processor (16 test cases)
+  - Example: `examples/bias_detection_example.py` (12 comprehensive scenarios)
+  - Dependencies (optional):
+    - Fairlearn: `pip install fairlearn scikit-learn` (for ML-based detection)
+
 - **Multi-Agent & AI Framework Instrumentation (Phase 1-4)**
   - Comprehensive instrumentation for 11 AI frameworks with 13 implementations total
   - Zero-code setup with automatic tracing and cost tracking
