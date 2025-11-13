@@ -6,6 +6,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Improved
+
+- **Comprehensive Model Pricing Database Update**
+  - Expanded pricing coverage from 240+ to 340+ models across 20+ providers
+  - **DeepSeek Models** (25 new models):
+    - R1 Distillations: `deepseek-ai/DeepSeek-R1-Distill-Qwen-32B` ($0.80/$2.40), `DeepSeek-R1-Distill-Qwen-1.5B` ($0.20/$0.40), `DeepSeek-R1-Distill-Llama-8B` ($0.50/$1.00), `DeepSeek-R1-Distill-Qwen-7B` ($0.40/$0.80)
+    - Latest Releases: `DeepSeek-R1-0528` ($1.40/$2.80), `DeepSeek-V3.1` ($0.60/$1.70), `DeepSeek-V3-0324` ($0.60/$1.70), `DeepSeek-R1-0528-Qwen3-8B` ($0.50/$1.00)
+    - Experimental: `DeepSeek-V3.2-Exp` ($0.80/$2.00), `DeepSeek-V3.1-Terminus` ($0.60/$1.70)
+    - Specialized: `DeepSeek-OCR` ($1.00/$3.00 - 3.6M downloads), `deepseek-vl2` ($0.80/$2.40), `Janus-Pro-7B` ($0.80/$2.40 multimodal)
+  - **Liquid AI LFM2 Series** (8 new models):
+    - Edge Models: `LFM2-350M` ($0.10/$0.20), `LFM2-700M` ($0.15/$0.30), `LFM2-1.2B` ($0.20/$0.40 - 506K downloads), `LFM2-2.6B` ($0.30/$0.60)
+    - MoE: `LFM2-8B-A1B` ($0.30/$0.90)
+    - Vision-Language: `LFM2-VL-450M` ($0.20/$0.60), `LFM2-VL-1.6B` ($0.30/$0.90), `LFM2-VL-3B` ($0.40/$1.20)
+  - **HuggingFace SmolLM Series** (8 new models):
+    - SmolLM2: `SmolLM2-135M` ($0.05/$0.10 - 733K downloads), `SmolLM2-360M` ($0.10/$0.20), `SmolLM2-1.7B` ($0.20/$0.40)
+    - SmolLM3: `SmolLM3-3B` ($0.30/$0.60)
+    - Instruct variants for all sizes with same pricing
+  - **Meta Llama Variants** (13 new models):
+    - Llama 3.1/3.2: `Llama-3.1-8B-Instruct` ($0.50/$1.50 - 5M downloads), `Llama-3.1-70B-Instruct` ($2.00/$6.00), `Llama-3.2-1B-Instruct` ($0.10/$0.30), `Llama-3.2-3B-Instruct` ($0.30/$0.60)
+    - Llama 3.3: `Llama-3.3-70B-Instruct` ($2.00/$6.00 - 659K downloads)
+    - Vision: `Llama-3.2-11B-Vision-Instruct` ($1.00/$3.00 - 257K downloads)
+    - Llama 4: `Llama-4-Scout-17B-16E-Instruct` ($1.20/$3.60 - 199K downloads)
+    - Guard Models: `Llama-Guard-3-8B` ($0.50/$1.50), `Llama-Guard-3-1B` ($0.10/$0.30)
+  - **Google Gemma 3 Series** (6 new models):
+    - `gemma-3-1b-it` ($0.10/$0.20 - most popular), `gemma-2-2b-it` ($0.20/$0.40)
+    - Vision-capable: `gemma-3-4b-it` ($0.50/$1.50), `gemma-3-12b-it` ($1.00/$3.00 - 1.5M downloads), `gemma-3-27b-it` ($1.50/$4.50)
+    - Medical: `medgemma-4b-it` ($0.50/$1.50 - radiology, clinical reasoning, dermatology)
+  - **ServiceNow Apriel Models** (3 new models):
+    - `Apriel-5B-Instruct` ($0.50/$1.50), `Apriel-Nemotron-15b-Thinker` ($1.00/$3.00), `Apriel-1.5-15b-Thinker` ($1.00/$3.00 - 49K downloads)
+  - **NVIDIA Models** (8 new models):
+    - Nemotron Nano: `NVIDIA-Nemotron-Nano-9B-v2` ($0.50/$1.50), `NVIDIA-Nemotron-Nano-12B-v2` ($0.70/$2.10), `Llama-3.1-Nemotron-Nano-4B-v1.1` ($0.30/$0.90)
+    - Nemotron Super: `Llama-3_3-Nemotron-Super-49B-v1_5` ($1.50/$4.50)
+    - Vision: `Llama-3.1-Nemotron-Nano-VL-8B-V1` ($1.00/$3.00 - 747K downloads), `NVLM-D-72B` ($2.00/$6.00)
+    - Specialized: `OpenReasoning-Nemotron-7B` ($0.40/$1.20), `Cosmos-Reason1-7B` ($0.80/$2.40 - 413K downloads)
+  - **Qwen3 Series** (18 new models):
+    - Base Models: `Qwen3-0.6B` ($0.05/$0.10), `Qwen3-1.7B` ($0.10/$0.20), `Qwen3-4B` ($0.30/$0.60), `Qwen3-8B` ($0.50/$1.00), `Qwen3-14B` ($0.80/$1.60), `Qwen3-32B` ($1.20/$2.40)
+    - Instruct: `Qwen3-4B-Instruct-2507` ($0.30/$0.60 - 5M+ downloads), `Qwen3-4B-Thinking-2507` ($0.60/$1.80)
+    - MoE: `Qwen3-30B-A3B-Instruct-2507` ($0.40/$1.20), `Qwen3-30B-A3B-Thinking-2507` ($0.80/$2.40), `Qwen3-Next-80B-A3B-Instruct` ($0.60/$1.80), `Qwen3-235B-A22B` ($0.50/$1.50)
+    - Specialized: `Qwen3-Coder-30B-A3B-Instruct` ($0.40/$1.20), `Qwen3-Omni-30B-A3B-Instruct` ($0.60/$1.80 - multimodal with text-to-audio)
+  - **Ollama Variants** (9 new models):
+    - `gemma3:1b` ($0.10/$0.20 - 2.6M downloads), `gemma3:4b` ($0.50/$1.50), `gemma3:12b` ($1.00/$3.00)
+    - `deepseek-r1:1.5b` ($0.20/$0.40 - 1.0M downloads), `deepseek-r1:671b` ($1.40/$2.80)
+    - `llama3.3:70b` ($2.00/$6.00 - 659K downloads)
+    - `granite3.1:1b` ($0.10/$0.30), `granite3.1:3b` ($0.30/$0.90), `granite3.1:8b` ($0.50/$1.50)
+  - **Embedding Models** (4 new models):
+    - Snowflake: `Snowflake/snowflake-arctic-embed-m` ($0.03/$0.03 - 496K downloads), `snowflake-arctic-embed-s` ($0.02/$0.02), `snowflake-arctic-embed-m-v2.0` ($0.03/$0.03), `snowflake-arctic-embed-xs` ($0.01/$0.01)
+    - NVIDIA: `nvidia/NV-Embed-v2` ($0.05/$0.05 - 198K downloads), `llama-embed-nemotron-8b` ($0.06/$0.06), `omni-embed-nemotron-3b` ($0.04/$0.04)
+    - Google: `google/embeddinggemma-300m` ($0.02/$0.02)
+  - **Speech-to-Text Models** (4 new models):
+    - NVIDIA Parakeet: `parakeet-tdt-0.6b-v2` ($0.15/$0.15 - 3.7M downloads), `parakeet-rnnt-0.6b` ($0.15/$0.15 - 3.1M downloads), `parakeet-tdt-0.6b-v3` ($0.15/$0.15 - 49 languages)
+    - NVIDIA Canary: `canary-1b-v2` ($0.20/$0.20 - ASR + Translation, 30+ languages)
+  - All pricing reflects official provider rates and HuggingFace popularity metrics as of January 2025
+
 ## [0.1.21] - 2025-11-12
 
 ### Added

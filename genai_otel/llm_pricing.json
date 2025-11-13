@@ -25,7 +25,47 @@
     "textembedding-gecko": 0.0001,
     "textembedding-gecko@001": 0.0001,
     "textembedding-gecko@002": 0.0001,
-    "textembedding-gecko@003": 0.0001
+    "textembedding-gecko@003": 0.0001,
+    "google/embeddinggemma-300m": {
+      "promptPrice": 2e-05,
+      "completionPrice": 2e-05,
+      "note": "Googles embedding model - already noted in earlier analysis"
+    },
+    "Snowflake/snowflake-arctic-embed-m": {
+      "promptPrice": 3e-05,
+      "completionPrice": 3e-05,
+      "note": "Medium Arctic embedding - 496K downloads"
+    },
+    "Snowflake/snowflake-arctic-embed-s": {
+      "promptPrice": 2e-05,
+      "completionPrice": 2e-05,
+      "note": "Small Arctic embedding"
+    },
+    "Snowflake/snowflake-arctic-embed-m-v2.0": {
+      "promptPrice": 3e-05,
+      "completionPrice": 3e-05,
+      "note": "Medium v2.0 Arctic embedding"
+    },
+    "Snowflake/snowflake-arctic-embed-xs": {
+      "promptPrice": 1e-05,
+      "completionPrice": 1e-05,
+      "note": "Extra small Arctic embedding"
+    },
+    "nvidia/NV-Embed-v2": {
+      "promptPrice": 5e-05,
+      "completionPrice": 5e-05,
+      "note": "NV-Embed v2 - high-quality text embeddings, 198K downloads"
+    },
+    "nvidia/llama-embed-nemotron-8b": {
+      "promptPrice": 6e-05,
+      "completionPrice": 6e-05,
+      "note": "Llama-based embedding model - multilingual"
+    },
+    "nvidia/omni-embed-nemotron-3b": {
+      "promptPrice": 4e-05,
+      "completionPrice": 4e-05,
+      "note": "Multimodal embedding - text, image, video, audio"
+    }
   },
   "images": {
     "dall-e-3": {
@@ -760,11 +800,11 @@
       "completionPrice": 0.00085
     },
     "meta-llama/Llama-4-Scout": {
-      "promptPrice": 0.00015,
-      "completionPrice": 0.0005
+      "promptPrice": 0.00018,
+      "completionPrice": 0.00059
     },
     "meta-llama/Llama-4-Maverick": {
-      "promptPrice": 0.00022,
+      "promptPrice": 0.00027,
       "completionPrice": 0.00085
     },
     "llama-guard-4-12b": {
@@ -786,14 +826,6 @@
     "kimi-k2-0905": {
       "promptPrice": 0.001,
       "completionPrice": 0.003
-    },
-    "meta-llama/Llama-4-Maverick": {
-      "promptPrice": 0.00027,
-      "completionPrice": 0.00085
-    },
-    "meta-llama/Llama-4-Scout": {
-      "promptPrice": 0.00018,
-      "completionPrice": 0.00059
     },
     "meta-llama/Llama-3.2-3B-Instruct-Turbo": {
       "promptPrice": 6e-05,
@@ -1136,8 +1168,8 @@
       "completionPrice": 0.0024
     },
     "snowflake-arctic-embed-l-v2.0": {
-      "promptPrice": 0.00005,
-      "completionPrice": 0.00005
+      "promptPrice": 5e-05,
+      "completionPrice": 5e-05
     },
     "nvidia-nemotron-4-340b-instruct": {
       "promptPrice": 0.003,
@@ -1162,6 +1194,453 @@
     "llama3.1:405b": {
       "promptPrice": 0.0012,
       "completionPrice": 0.0012
+    },
+    "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024,
+      "note": "R1 distilled into Qwen-32B - VERY POPULAR (1.7M downloads)"
+    },
+    "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0004,
+      "note": "Tiny R1 distillation - 1M+ downloads"
+    },
+    "deepseek-ai/DeepSeek-R1-Distill-Llama-8B": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.001,
+      "note": "R1 distilled into Llama-8B"
+    },
+    "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0008,
+      "note": "R1 distilled into Qwen-7B"
+    },
+    "deepseek-ai/DeepSeek-R1-0528": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0028,
+      "note": "Latest R1 release from May 2025"
+    },
+    "deepseek-ai/DeepSeek-V3.1": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0017,
+      "note": "V3.1 - improved version, similar to your existing deepseek-v3.1 entry"
+    },
+    "deepseek-ai/DeepSeek-V3-0324": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0017,
+      "note": "V3 March 2025 release"
+    },
+    "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.001,
+      "note": "R1 based on Qwen3-8B backbone"
+    },
+    "deepseek-ai/DeepSeek-V3.2-Exp": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.002,
+      "note": "V3.2 experimental release"
+    },
+    "deepseek-ai/DeepSeek-V3.1-Terminus": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0017,
+      "note": "V3.1 Terminus variant"
+    },
+    "deepseek-ai/DeepSeek-OCR": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "HIGHEST PRIORITY - OCR specialist, 3.6M downloads - already noted in earlier analysis"
+    },
+    "deepseek-ai/deepseek-vl2": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024,
+      "note": "Vision-language model v2"
+    },
+    "deepseek-ai/Janus-Pro-7B": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024,
+      "note": "Multimodal any-to-any model including text-to-image"
+    },
+    "LiquidAI/LFM2-1.2B": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0004,
+      "note": "MOST POPULAR LiquidAI model - 506K downloads, edge-optimized"
+    },
+    "LiquidAI/LFM2-2.6B": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "Larger LFM2 variant"
+    },
+    "LiquidAI/LFM2-350M": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "Smallest LFM2 variant, edge-optimized"
+    },
+    "LiquidAI/LFM2-700M": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0003,
+      "note": "Mid-size LFM2 variant"
+    },
+    "LiquidAI/LFM2-8B-A1B": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0009,
+      "note": "MoE model with 8B total, 1B active parameters"
+    },
+    "LiquidAI/LFM2-VL-450M": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0006,
+      "note": "Vision-language 450M model"
+    },
+    "LiquidAI/LFM2-VL-1.6B": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0009,
+      "note": "Vision-language 1.6B model"
+    },
+    "LiquidAI/LFM2-VL-3B": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0012,
+      "note": "Largest LiquidAI vision model"
+    },
+    "HuggingFaceTB/SmolLM2-135M": {
+      "promptPrice": 5e-05,
+      "completionPrice": 0.0001,
+      "note": "MOST POPULAR SmolLM - 733K downloads, tiny edge model"
+    },
+    "HuggingFaceTB/SmolLM2-360M-Instruct": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "360M instruct variant - very popular"
+    },
+    "HuggingFaceTB/SmolLM-135M": {
+      "promptPrice": 5e-05,
+      "completionPrice": 0.0001,
+      "note": "Original SmolLM v1 - 135M"
+    },
+    "HuggingFaceTB/SmolLM2-360M": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "360M base model"
+    },
+    "HuggingFaceTB/SmolLM2-135M-Instruct": {
+      "promptPrice": 5e-05,
+      "completionPrice": 0.0001,
+      "note": "135M instruct variant"
+    },
+    "HuggingFaceTB/SmolLM3-3B": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "Latest SmolLM3 3B model - LARGEST in series"
+    },
+    "HuggingFaceTB/SmolLM2-1.7B-Instruct": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0004,
+      "note": "1.7B instruct variant"
+    },
+    "HuggingFaceTB/SmolLM2-1.7B": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0004,
+      "note": "1.7B base model"
+    },
+    "meta-llama/Llama-3.1-8B-Instruct": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "HIGHEST PRIORITY - Most popular Llama 3.1 model with 5M downloads"
+    },
+    "meta-llama/Llama-3.2-1B-Instruct": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Small edge-optimized model - 3.7M downloads"
+    },
+    "meta-llama/Llama-3.2-3B-Instruct": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "Mid-size edge model - 1.8M downloads"
+    },
+    "meta-llama/Llama-3.2-1B": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Base 1B model - 1.7M downloads"
+    },
+    "meta-llama/Llama-3.1-70B-Instruct": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "Large 70B model - 725K downloads"
+    },
+    "meta-llama/Llama-3.3-70B-Instruct": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "Latest Llama 3.3 70B - 659K downloads"
+    },
+    "meta-llama/Llama-3.2-3B": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "Base 3B model"
+    },
+    "meta-llama/Llama-Guard-3-8B": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Safety/moderation model - 183K downloads"
+    },
+    "meta-llama/Llama-Guard-3-1B": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Small safety model"
+    },
+    "meta-llama/Llama-3.2-11B-Vision-Instruct": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "Llama 3.2 vision model - 257K downloads"
+    },
+    "meta-llama/Llama-4-Scout-17B-16E-Instruct": {
+      "promptPrice": 0.0012,
+      "completionPrice": 0.0036,
+      "note": "NEW LLAMA 4 vision model - 199K downloads"
+    },
+    "google/gemma-3-1b-it": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "HIGHEST PRIORITY - Most popular Gemma 3, already noted in earlier analysis"
+    },
+    "google/gemma-2-2b-it": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0004,
+      "note": "Gemma 2 2B instruct"
+    },
+    "google/gemma-3-12b-it": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "Gemma 3 12B with vision capabilities - 1.5M downloads"
+    },
+    "google/gemma-3-4b-it": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Gemma 3 4B with vision"
+    },
+    "google/gemma-3-27b-it": {
+      "promptPrice": 0.0015,
+      "completionPrice": 0.0045,
+      "note": "Large Gemma 3 27B with vision"
+    },
+    "google/medgemma-4b-it": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Medical-specialized vision model - radiology, clinical reasoning, dermatology"
+    },
+    "ServiceNow-AI/Apriel-5B-Instruct": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "ServiceNow 5B instruct model"
+    },
+    "ServiceNow-AI/Apriel-Nemotron-15b-Thinker": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "ServiceNow reasoning model based on Nemotron"
+    },
+    "ServiceNow-AI/Apriel-1.5-15b-Thinker": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "ServiceNows vision-language reasoning model - 49K downloads"
+    },
+    "nvidia/NVIDIA-Nemotron-Nano-9B-v2": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Nano series 9B v2 - efficient edge model"
+    },
+    "nvidia/Llama-3_3-Nemotron-Super-49B-v1_5": {
+      "promptPrice": 0.0015,
+      "completionPrice": 0.0045,
+      "note": "Nemotron Super 49B - high-performance model"
+    },
+    "nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0009,
+      "note": "Nano 4B - small efficient model"
+    },
+    "nvidia/OpenReasoning-Nemotron-7B": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0012,
+      "note": "Reasoning-focused 7B model based on Qwen2.5"
+    },
+    "nvidia/NVIDIA-Nemotron-Nano-12B-v2": {
+      "promptPrice": 0.0007,
+      "completionPrice": 0.0021,
+      "note": "Nano series 12B v2"
+    },
+    "nvidia/Llama-3.1-Nemotron-Nano-VL-8B-V1": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "HIGHEST PRIORITY - Most popular Nvidia vision model, 747K downloads"
+    },
+    "nvidia/Cosmos-Reason1-7B": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024,
+      "note": "Cosmos reasoning vision model - 413K downloads"
+    },
+    "nvidia/NVLM-D-72B": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "Large 72B vision-language model"
+    },
+    "Qwen/Qwen3-0.6B": {
+      "promptPrice": 5e-05,
+      "completionPrice": 0.0001,
+      "note": "600M parameter model, smallest Qwen3 variant"
+    },
+    "Qwen/Qwen3-1.7B": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "1.7B parameter model"
+    },
+    "Qwen/Qwen3-4B": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "4B parameter base model"
+    },
+    "Qwen/Qwen3-8B": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.001,
+      "note": "8B parameter base model"
+    },
+    "Qwen/Qwen3-14B": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0016,
+      "note": "14B parameter base model"
+    },
+    "Qwen/Qwen3-32B": {
+      "promptPrice": 0.0012,
+      "completionPrice": 0.0024,
+      "note": "32B parameter base model"
+    },
+    "Qwen/Qwen3-4B-Instruct-2507": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "4B instruct model, very popular (5M+ downloads)"
+    },
+    "Qwen/Qwen3-4B-Thinking-2507": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0018,
+      "note": "4B reasoning model with thinking process"
+    },
+    "Qwen/Qwen3-30B-A3B-Instruct-2507": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0012,
+      "note": "MoE model with 30B total, 3B active params"
+    },
+    "Qwen/Qwen3-30B-A3B-Thinking-2507": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024,
+      "note": "MoE reasoning model with 30B total, 3B active"
+    },
+    "Qwen/Qwen3-Next-80B-A3B-Instruct": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0018,
+      "note": "Large MoE model with 80B total, 3B active"
+    },
+    "Qwen/Qwen3-235B-A22B": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Largest Qwen3 MoE with 235B total, 22B active - similar to existing Qwen3-235B-A22B models in your list"
+    },
+    "Qwen/Qwen3-Coder-30B-A3B-Instruct": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0012,
+      "note": "Code-specialized MoE model"
+    },
+    "Qwen/Qwen3-Omni-30B-A3B-Instruct": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0018,
+      "note": "Multimodal model with text-to-audio, any-to-any capabilities"
+    },
+    "gemma3:1b": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "Ollama variant of google/gemma-3-1b-it - 2.6M downloads"
+    },
+    "gemma3:4b": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Ollama variant of google/gemma-3-4b-it - vision capable"
+    },
+    "gemma3:12b": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "Ollama variant of google/gemma-3-12b-it - vision capable"
+    },
+    "deepseek-r1:1.5b": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0004,
+      "note": "Ollama variant of deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B - 1.0M downloads"
+    },
+    "deepseek-r1:671b": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0028,
+      "note": "Ollama variant of deepseek-ai/DeepSeek-R1"
+    },
+    "llama3.3:70b": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "Ollama variant of meta-llama/Llama-3.3-70B-Instruct - 659K downloads"
+    },
+    "granite3.1:8b": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Ollama variant of ibm-granite/granite-3.1-8b-instruct"
+    },
+    "granite3.1:3b": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0009,
+      "note": "Ollama variant of ibm-granite/granite-3.1-3b-instruct"
+    },
+    "granite3.1:1b": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Ollama variant of ibm-granite/granite-3.1-1b-instruct"
+    },
+    "phi4": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024,
+      "note": "Ollama variant of microsoft/Phi-4"
+    },
+    "qwen3:14b": {
+      "promptPrice": 0.0007,
+      "completionPrice": 0.0021,
+      "note": "Ollama variant of Qwen/Qwen3-14B-Instruct"
+    },
+    "qwen3:32b": {
+      "promptPrice": 0.0015,
+      "completionPrice": 0.0045,
+      "note": "Ollama variant of Qwen/Qwen3-32B-Instruct"
+    },
+    "mistral-small": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "Ollama variant of mistralai/Mistral-Small-Instruct-2409"
+    },
+    "mistral-large": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "Ollama variant of mistralai/Mistral-Large-Instruct-2407"
+    }
+  },
+  "speech_to_text": {
+    "nvidia/parakeet-tdt-0.6b-v2": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00015,
+      "note": "HIGHEST PRIORITY - Most popular ASR model, 3.7M downloads"
+    },
+    "nvidia/parakeet-rnnt-0.6b": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00015,
+      "note": "Parakeet RNNT ASR - 3.1M downloads"
+    },
+    "nvidia/parakeet-tdt-0.6b-v3": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00015,
+      "note": "Multilingual ASR v3 - 49 languages"
+    },
+    "nvidia/canary-1b-v2": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0002,
+      "note": "ASR + Translation - 30+ languages"
     }
   }
 }
