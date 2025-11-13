@@ -51,6 +51,7 @@ try:
         AWSBedrockInstrumentor,
         AzureOpenAIInstrumentor,
         CohereInstrumentor,
+        CrewAIInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
         HuggingFaceInstrumentor,
@@ -74,6 +75,7 @@ except ImportError:
         AWSBedrockInstrumentor,
         AzureOpenAIInstrumentor,
         CohereInstrumentor,
+        CrewAIInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
         HuggingFaceInstrumentor,
@@ -116,6 +118,7 @@ INSTRUMENTORS = {
     "boto3": AWSBedrockInstrumentor,
     "azure.ai.openai": AzureOpenAIInstrumentor,
     "cohere": CohereInstrumentor,
+    "crewai": CrewAIInstrumentor,  # CrewAI multi-agent framework
     "mistralai": MistralAIInstrumentor,
     "together": TogetherAIInstrumentor,
     "groq": GroqInstrumentor,
