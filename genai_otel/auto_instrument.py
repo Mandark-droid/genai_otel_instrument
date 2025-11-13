@@ -55,6 +55,7 @@ try:
         CrewAIInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
+        HaystackInstrumentor,
         HuggingFaceInstrumentor,
         HyperbolicInstrumentor,
         LangChainInstrumentor,
@@ -82,6 +83,7 @@ except ImportError:
         CrewAIInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
+        HaystackInstrumentor,
         HuggingFaceInstrumentor,
         HyperbolicInstrumentor,
         LangChainInstrumentor,
@@ -129,6 +131,7 @@ INSTRUMENTORS = {
     "mistralai": MistralAIInstrumentor,
     "together": TogetherAIInstrumentor,
     "groq": GroqInstrumentor,
+    "haystack": HaystackInstrumentor,  # Haystack NLP pipeline framework
     "ollama": OllamaInstrumentor,
     "vertexai": VertexAIInstrumentor,
     "replicate": ReplicateInstrumentor,
