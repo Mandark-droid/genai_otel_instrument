@@ -57,6 +57,7 @@ try:
         DSPyInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
+        GuardrailsAIInstrumentor,
         HaystackInstrumentor,
         HuggingFaceInstrumentor,
         HyperbolicInstrumentor,
@@ -88,6 +89,7 @@ except ImportError:
         DSPyInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
+        GuardrailsAIInstrumentor,
         HaystackInstrumentor,
         HuggingFaceInstrumentor,
         HyperbolicInstrumentor,
@@ -139,6 +141,7 @@ INSTRUMENTORS = {
     "mistralai": MistralAIInstrumentor,
     "together": TogetherAIInstrumentor,
     "groq": GroqInstrumentor,
+    "guardrails": GuardrailsAIInstrumentor,  # Guardrails AI validation framework
     "haystack": HaystackInstrumentor,  # Haystack NLP pipeline framework
     "instructor": InstructorInstrumentor,  # Instructor structured output extraction
     "ollama": OllamaInstrumentor,

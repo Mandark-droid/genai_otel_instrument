@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Multi-Agent Framework Instrumentation (Phase 1-3)**
-  - Comprehensive instrumentation for 8 AI frameworks with 10 implementations total
+- **Multi-Agent & AI Framework Instrumentation (Phase 1-4)**
+  - Comprehensive instrumentation for 11 AI frameworks with 13 implementations total
   - Zero-code setup with automatic tracing and cost tracking
-  - Production-ready with 110+ test cases and 29 example scenarios
+  - Production-ready with 185+ test cases and 47 example scenarios
+  - New frameworks: DSPy, Instructor, Guardrails AI
 
 - **OpenAI Agents SDK Instrumentation**
   - Full OpenTelemetry instrumentation for OpenAI's production Agents SDK
@@ -85,6 +86,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implementation: `genai_otel/instrumentors/bedrock_agents_instrumentor.py`
   - Tests: `tests/instrumentors/test_bedrock_agents_instrumentor.py` (20 test cases)
   - Example: `examples/bedrock_agents_example.py` (4 scenarios)
+
+- **DSPy Framework Instrumentation**
+  - Full OpenTelemetry instrumentation for Stanford NLP's DSPy framework
+  - Automatic tracing with `gen_ai.system="dspy"` attribute
+  - Declarative language model programming with automatic optimization
+  - Module execution tracking (Module.__call__, Predict, ChainOfThought, ReAct)
+  - Optimizer/Teleprompter operations (COPRO, MIPROv2, BootstrapFewShot)
+  - Signature and field tracking (input/output fields, rationales)
+  - Tool usage and trajectory tracking for ReAct
+  - Implementation: `genai_otel/instrumentors/dspy_instrumentor.py`
+  - Tests: `tests/instrumentors/test_dspy_instrumentor.py` (25 test cases)
+  - Example: `examples/dspy_example.py` (6 scenarios)
+
+- **Instructor Framework Instrumentation**
+  - Full OpenTelemetry instrumentation for Instructor (8K+ GitHub stars)
+  - Automatic tracing with `gen_ai.system="instructor"` attribute
+  - Pydantic-based structured output extraction with validation
+  - Multi-provider support (OpenAI, Anthropic, Google, Ollama, etc.)
+  - Automatic retry on validation failure tracking
+  - Streaming partial results (Partial models)
+  - Response model schema capture (fields, field count, types)
+  - Implementation: `genai_otel/instrumentors/instructor_instrumentor.py`
+  - Tests: `tests/instrumentors/test_instructor_instrumentor.py` (22 test cases)
+  - Example: `examples/instructor_example.py` (6 scenarios)
+
+- **Guardrails AI Framework Instrumentation**
+  - Full OpenTelemetry instrumentation for Guardrails AI validation framework
+  - Automatic tracing with `gen_ai.system="guardrails"` attribute
+  - Input/output validation guards with risk detection
+  - Validator tracking (names, on-fail actions, pass/fail status)
+  - On-fail policies: reask, fix, filter, refrain, noop, exception, fix_reask
+  - ValidationOutcome tracking (validation_passed, reasks count, errors)
+  - Guard operations: __call__, validate, parse, use
+  - Implementation: `genai_otel/instrumentors/guardrails_ai_instrumentor.py`
+  - Tests: `tests/instrumentors/test_guardrails_ai_instrumentor.py` (8 test cases)
 
 ### Improved
 
