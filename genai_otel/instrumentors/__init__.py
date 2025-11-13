@@ -28,6 +28,7 @@ from .ollama_instrumentor import OllamaInstrumentor
 # Import instrumentors only - they handle their own dependency checking
 from .openai_instrumentor import OpenAIInstrumentor
 from .openai_agents_instrumentor import OpenAIAgentsInstrumentor
+from .pydantic_ai_instrumentor import PydanticAIInstrumentor
 from .replicate_instrumentor import ReplicateInstrumentor
 from .sambanova_instrumentor import SambaNovaInstrumentor
 from .togetherai_instrumentor import TogetherAIInstrumentor
@@ -56,4 +57,5 @@ __all__ = [
     "LangGraphInstrumentor",
     "LlamaIndexInstrumentor",
     "HuggingFaceInstrumentor",
+    "PydanticAIInstrumentor",
 ]
