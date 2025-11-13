@@ -64,6 +64,7 @@ try:
         OllamaInstrumentor,
         OpenAIInstrumentor,
         OpenAIAgentsInstrumentor,
+        PydanticAIInstrumentor,
         ReplicateInstrumentor,
         SambaNovaInstrumentor,
         TogetherAIInstrumentor,
@@ -90,6 +91,7 @@ except ImportError:
         OllamaInstrumentor,
         OpenAIInstrumentor,
         OpenAIAgentsInstrumentor,
+        PydanticAIInstrumentor,
         ReplicateInstrumentor,
         SambaNovaInstrumentor,
         TogetherAIInstrumentor,
@@ -136,6 +138,7 @@ INSTRUMENTORS = {
     "langchain": LangChainInstrumentor,
     "langgraph": LangGraphInstrumentor,  # LangGraph stateful workflow framework
     "llama_index": LlamaIndexInstrumentor,
+    "pydantic_ai": PydanticAIInstrumentor,  # Pydantic AI type-safe agent framework
     "transformers": HuggingFaceInstrumentor,
 }
 
