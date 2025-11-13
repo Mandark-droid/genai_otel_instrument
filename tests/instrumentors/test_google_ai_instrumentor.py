@@ -8,22 +8,34 @@ from genai_otel.instrumentors.google_ai_instrumentor import GoogleAIInstrumentor
 class TestGoogleAIInstrumentor(unittest.TestCase):
     """Tests for GoogleAIInstrumentor"""
 
-    def test_init_with_google_available(self):
-        """Test that __init__ detects google.generativeai availability."""
+    def test_init_with_new_sdk_available(self):
+        """Test that __init__ detects new google-genai SDK availability."""
+        # Mock the new SDK (from google import genai)
+        mock_google = MagicMock()
+        mock_google.genai = MagicMock()
+
+        with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_google.genai}):
+            instrumentor = GoogleAIInstrumentor()
+            self.assertTrue(instrumentor._google_available)
+            self.assertTrue(instrumentor._using_new_sdk)
+
+    def test_init_with_legacy_sdk_available(self):
+        """Test that __init__ detects legacy google.generativeai availability."""
         # Only patch google.generativeai, not the google namespace package
         with patch.dict("sys.modules", {"google.generativeai": MagicMock()}):
             instrumentor = GoogleAIInstrumentor()
             self.assertTrue(instrumentor._google_available)
+            self.assertFalse(instrumentor._using_new_sdk)
 
     def test_init_with_google_not_available(self):
-        """Test that __init__ handles missing google.generativeai gracefully."""
-        # Remove google.generativeai from sys.modules if it exists
-        with patch.dict("sys.modules", {"google.generativeai": None}):
+        """Test that __init__ handles missing google SDKs gracefully."""
+        # Remove both SDKs from sys.modules
+        with patch.dict("sys.modules", {"google.generativeai": None, "google": None}):
             instrumentor = GoogleAIInstrumentor()
             self.assertFalse(instrumentor._google_available)
 
     def test_instrument_with_google_not_available(self):
-        """Test that instrument skips when google.generativeai is not available."""
+        """Test that instrument skips when google SDKs are not available."""
         with patch.dict("sys.modules", {"google": None, "google.generativeai": None}):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig()
@@ -31,8 +43,8 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
             # Should not raise
             instrumentor.instrument(config)
 
-    def test_instrument_with_google_available(self):
-        """Test that instrument wraps GenerativeModel when available."""
+    def test_instrument_with_legacy_sdk(self):
+        """Test that instrument wraps GenerativeModel when legacy SDK available."""
 
         # Create mock GenerativeModel
         class MockGenerativeModel:
@@ -43,7 +55,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         mock_genai = MagicMock()
         mock_genai.GenerativeModel = MockGenerativeModel
 
-        with patch.dict("sys.modules", {"google": MagicMock(), "google.generativeai": mock_genai}):
+        with patch.dict("sys.modules", {"google.generativeai": mock_genai}):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig()
 
@@ -71,13 +83,48 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
             self.assertIsNotNone(mock_genai.GenerativeModel.generate_content)
             self.assertTrue(instrumentor._instrumented)
 
+    def test_instrument_with_new_sdk(self):
+        """Test that instrument wraps Client when new SDK available."""
+
+        # Create mock Client
+        class MockClient:
+            def __init__(self, *args, **kwargs):
+                self.models = MagicMock()
+                self.models.generate_content = MagicMock(return_value="result")
+
+        # Create mock google.genai module (new SDK)
+        mock_google = MagicMock()
+        mock_genai = MagicMock()
+        mock_genai.Client = MockClient
+        mock_google.genai = mock_genai
+
+        mock_wrapt = MagicMock()
+
+        with patch.dict(
+            "sys.modules",
+            {
+                "google": mock_google,
+                "google.genai": mock_genai,
+                "wrapt": mock_wrapt,
+            },
+        ):
+            instrumentor = GoogleAIInstrumentor()
+            config = OTelConfig()
+
+            # Call instrument
+            instrumentor.instrument(config)
+
+            # Verify FunctionWrapper was called to wrap Client.__init__
+            self.assertTrue(mock_wrapt.FunctionWrapper.called)
+            self.assertTrue(instrumentor._instrumented)
+
     def test_instrument_with_missing_generate_content(self):
         """Test that instrument handles missing generate_content method."""
         # Create mock GenerativeModel without generate_content attribute
         mock_genai = MagicMock()
         mock_genai.GenerativeModel = MagicMock(spec=[])  # Empty spec means no attributes
 
-        with patch.dict("sys.modules", {"google": MagicMock(), "google.generativeai": mock_genai}):
+        with patch.dict("sys.modules", {"google.generativeai": mock_genai}):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig()
 
@@ -95,7 +142,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
             lambda self: (_ for _ in ()).throw(RuntimeError("Access failed"))
         )
 
-        with patch.dict("sys.modules", {"google": MagicMock(), "google.generativeai": mock_genai}):
+        with patch.dict("sys.modules", {"google.generativeai": mock_genai}):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig(fail_on_error=False)
 
@@ -114,7 +161,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         mock_genai = MagicMock()
         mock_genai.GenerativeModel = MockGenerativeModel
 
-        with patch.dict("sys.modules", {"google": MagicMock(), "google.generativeai": mock_genai}):
+        with patch.dict("sys.modules", {"google.generativeai": mock_genai}):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig(fail_on_error=True)
 
@@ -128,18 +175,53 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
 
             self.assertEqual(str(context.exception), "Wrapper creation failed")
 
-    def test_extract_google_ai_attributes(self):
-        """Test that _extract_google_ai_attributes extracts correct attributes."""
+    def test_extract_google_ai_attributes_legacy_sdk(self):
+        """Test that _extract_google_ai_attributes extracts correct attributes for legacy SDK."""
         instrumentor = GoogleAIInstrumentor()
 
         # Create mock instance with model_name
         mock_instance = MagicMock()
         mock_instance.model_name = "gemini-pro"
 
-        attrs = instrumentor._extract_google_ai_attributes(mock_instance, None, None)
+        # Mock generation config
+        mock_config = MagicMock()
+        mock_config.temperature = 0.7
+        mock_config.top_p = 0.9
+        mock_config.max_output_tokens = 1024
+
+        kwargs = {"generation_config": mock_config, "safety_settings": [MagicMock(), MagicMock()]}
+
+        attrs = instrumentor._extract_google_ai_attributes(mock_instance, None, kwargs)
 
         self.assertEqual(attrs["gen_ai.system"], "google")
         self.assertEqual(attrs["gen_ai.request.model"], "gemini-pro")
+        self.assertEqual(attrs["gen_ai.operation.name"], "chat")
+        self.assertEqual(attrs["gen_ai.request.temperature"], 0.7)
+        self.assertEqual(attrs["gen_ai.request.top_p"], 0.9)
+        self.assertEqual(attrs["gen_ai.request.max_tokens"], 1024)
+        self.assertEqual(attrs["gen_ai.request.safety_settings_count"], 2)
+
+    def test_extract_google_ai_attributes_new_sdk(self):
+        """Test that _extract_google_ai_attributes_new_sdk extracts correct attributes."""
+        instrumentor = GoogleAIInstrumentor()
+
+        kwargs = {
+            "model": "gemini-2.0-flash",
+            "config": {
+                "temperature": 0.8,
+                "top_p": 0.95,
+                "max_output_tokens": 2048,
+            },
+        }
+
+        attrs = instrumentor._extract_google_ai_attributes_new_sdk(None, None, kwargs)
+
+        self.assertEqual(attrs["gen_ai.system"], "google")
+        self.assertEqual(attrs["gen_ai.operation.name"], "chat")
+        self.assertEqual(attrs["gen_ai.request.model"], "gemini-2.0-flash")
+        self.assertEqual(attrs["gen_ai.request.temperature"], 0.8)
+        self.assertEqual(attrs["gen_ai.request.top_p"], 0.95)
+        self.assertEqual(attrs["gen_ai.request.max_tokens"], 2048)
 
     def test_extract_google_ai_attributes_with_unknown_model(self):
         """Test that _extract_google_ai_attributes uses 'unknown' as default."""
@@ -150,7 +232,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         if hasattr(mock_instance, "model_name"):
             delattr(mock_instance, "model_name")
 
-        attrs = instrumentor._extract_google_ai_attributes(mock_instance, None, None)
+        attrs = instrumentor._extract_google_ai_attributes(mock_instance, None, {})
 
         self.assertEqual(attrs["gen_ai.system"], "google")
         self.assertEqual(attrs["gen_ai.request.model"], "unknown")
@@ -172,14 +254,35 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         self.assertEqual(usage["completion_tokens"], 25)
         self.assertEqual(usage["total_tokens"], 40)
 
-    def test_extract_usage_without_usage_metadata(self):
-        """Test that _extract_usage returns None when no usage_metadata field."""
+    def test_extract_usage_with_alternative_format(self):
+        """Test that _extract_usage handles alternative attribute names."""
         instrumentor = GoogleAIInstrumentor()
 
-        # Create mock result without usage_metadata
+        # Create mock result with alternative usage format
+        result = MagicMock()
+        del result.usage_metadata  # Remove usage_metadata
+        result.usage = MagicMock()
+        result.usage.prompt_tokens = 20
+        result.usage.completion_tokens = 30
+        result.usage.total_tokens = 50
+
+        usage = instrumentor._extract_usage(result)
+
+        self.assertIsNotNone(usage)
+        self.assertEqual(usage["prompt_tokens"], 20)
+        self.assertEqual(usage["completion_tokens"], 30)
+        self.assertEqual(usage["total_tokens"], 50)
+
+    def test_extract_usage_without_usage_metadata(self):
+        """Test that _extract_usage returns None when no usage fields."""
+        instrumentor = GoogleAIInstrumentor()
+
+        # Create mock result without usage fields
         result = MagicMock(spec=[])
         if hasattr(result, "usage_metadata"):
             delattr(result, "usage_metadata")
+        if hasattr(result, "usage"):
+            delattr(result, "usage")
 
         usage = instrumentor._extract_usage(result)
 
@@ -195,6 +298,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
 
         usage = instrumentor._extract_usage(result)
 
+        # Should try alternative format
         self.assertIsNone(usage)
 
     def test_extract_usage_with_missing_token_counts(self):
@@ -217,6 +321,56 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         self.assertEqual(usage["prompt_tokens"], 0)
         self.assertEqual(usage["completion_tokens"], 0)
         self.assertEqual(usage["total_tokens"], 0)
+
+    def test_extract_response_attributes(self):
+        """Test that _extract_response_attributes extracts correct attributes."""
+        instrumentor = GoogleAIInstrumentor()
+
+        # Create mock result
+        result = MagicMock()
+        result.model = "gemini-1.5-pro"
+
+        # Create mock candidates with finish reasons
+        candidate1 = MagicMock()
+        candidate1.finish_reason = "STOP"
+        candidate1.safety_ratings = [
+            MagicMock(category="HARM_CATEGORY_HATE_SPEECH", probability="LOW"),
+            MagicMock(category="HARM_CATEGORY_DANGEROUS_CONTENT", probability="NEGLIGIBLE"),
+        ]
+        result.candidates = [candidate1]
+
+        attrs = instrumentor._extract_response_attributes(result)
+
+        self.assertEqual(attrs["gen_ai.response.model"], "gemini-1.5-pro")
+        self.assertIn("STOP", attrs["gen_ai.response.finish_reasons"])
+        self.assertEqual(attrs["gen_ai.safety.HARM_CATEGORY_HATE_SPEECH"], "LOW")
+        self.assertEqual(attrs["gen_ai.safety.HARM_CATEGORY_DANGEROUS_CONTENT"], "NEGLIGIBLE")
+
+    def test_extract_finish_reason(self):
+        """Test that _extract_finish_reason extracts finish reason."""
+        instrumentor = GoogleAIInstrumentor()
+
+        # Create mock result with candidates
+        result = MagicMock()
+        candidate = MagicMock()
+        candidate.finish_reason = "STOP"
+        result.candidates = [candidate]
+
+        finish_reason = instrumentor._extract_finish_reason(result)
+
+        self.assertEqual(finish_reason, "STOP")
+
+    def test_extract_finish_reason_no_candidates(self):
+        """Test that _extract_finish_reason returns None when no candidates."""
+        instrumentor = GoogleAIInstrumentor()
+
+        # Create mock result without candidates
+        result = MagicMock()
+        result.candidates = []
+
+        finish_reason = instrumentor._extract_finish_reason(result)
+
+        self.assertIsNone(finish_reason)
 
 
 if __name__ == "__main__":
