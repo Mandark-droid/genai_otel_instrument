@@ -16,6 +16,7 @@ from .azure_openai_instrumentor import AzureOpenAIInstrumentor
 from .bedrock_agents_instrumentor import BedrockAgentsInstrumentor
 from .cohere_instrumentor import CohereInstrumentor
 from .crewai_instrumentor import CrewAIInstrumentor
+from .dspy_instrumentor import DSPyInstrumentor
 from .google_ai_instrumentor import GoogleAIInstrumentor
 from .groq_instrumentor import GroqInstrumentor
 from .haystack_instrumentor import HaystackInstrumentor
@@ -47,6 +48,7 @@ __all__ = [
     "BedrockAgentsInstrumentor",
     "CohereInstrumentor",
     "CrewAIInstrumentor",
+    "DSPyInstrumentor",
     "MistralAIInstrumentor",
     "TogetherAIInstrumentor",
     "GroqInstrumentor",
