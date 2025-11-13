@@ -51,6 +51,7 @@ try:
         AutoGenInstrumentor,
         AWSBedrockInstrumentor,
         AzureOpenAIInstrumentor,
+        BedrockAgentsInstrumentor,
         CohereInstrumentor,
         CrewAIInstrumentor,
         GoogleAIInstrumentor,
@@ -79,6 +80,7 @@ except ImportError:
         AutoGenInstrumentor,
         AWSBedrockInstrumentor,
         AzureOpenAIInstrumentor,
+        BedrockAgentsInstrumentor,
         CohereInstrumentor,
         CrewAIInstrumentor,
         GoogleAIInstrumentor,
@@ -126,6 +128,7 @@ INSTRUMENTORS = {
     "boto3": AWSBedrockInstrumentor,
     "azure.ai.openai": AzureOpenAIInstrumentor,
     "autogen": AutoGenInstrumentor,  # AutoGen multi-agent framework
+    "bedrock_agents": BedrockAgentsInstrumentor,  # AWS Bedrock Agents
     "cohere": CohereInstrumentor,
     "crewai": CrewAIInstrumentor,  # CrewAI multi-agent framework
     "mistralai": MistralAIInstrumentor,
