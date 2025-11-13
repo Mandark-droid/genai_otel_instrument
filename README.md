@@ -46,6 +46,7 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 ⚡ **Streaming Support** - Full observability for streaming responses with TTFT/TBT metrics and cost tracking
 🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature, power, and electricity cost tracking
 🛡️ **PII Detection** (NEW) - Automatic PII detection with GDPR/HIPAA/PCI-DSS compliance modes
+☢️ **Toxicity Detection** (NEW) - Detect harmful content with Perspective API and Detoxify
 📊 **Complete Observability** - Traces, metrics, and rich span attributes
 ➕ **Service Instance ID & Environment** - Identify your services and environments
 ⏱️ **Configurable Exporter Timeout** - Set timeout for OTLP exporter
@@ -661,6 +662,15 @@ We're implementing significant enhancements for this release, focusing on evalua
   - Span attributes and metrics for PII detections
   - Example: `examples/pii_detection_example.py`
 
+- **Toxicity Detection** - Monitor and alert on toxic or harmful content
+  - Dual detection methods: Perspective API (cloud) and Detoxify (local)
+  - Six toxicity categories: toxicity, severe_toxicity, identity_attack, insult, profanity, threat
+  - Automatic fallback from Perspective API to Detoxify
+  - Configurable threshold and blocking mode
+  - Batch processing support
+  - Span attributes and metrics for toxicity detections
+  - Example: `examples/toxicity_detection_example.py`
+
 #### 🎯 Evaluation & Monitoring
 
 **LLM Output Quality Metrics**
@@ -668,12 +678,6 @@ We're implementing significant enhancements for this release, focusing on evalua
   - Gender, racial, political, and cultural bias detection
   - Bias score metrics with configurable thresholds
   - Integration with fairness libraries (e.g., Fairlearn, AIF360)
-
-- **Toxicity Detection** - Monitor and alert on toxic or harmful content
-  - Perspective API integration for toxicity scoring
-  - Custom toxicity models support
-  - Real-time toxicity metrics and alerts
-  - Configurable severity levels
 
 - **Hallucination Detection** - Track factual accuracy and groundedness
   - Fact-checking against provided context
@@ -751,9 +755,12 @@ genai_otel.instrument(
 - ✅ `genai.evaluation.pii.detections` - PII detection events (by location and mode)
 - ✅ `genai.evaluation.pii.entities` - PII entities detected by type
 - ✅ `genai.evaluation.pii.blocked` - Requests/responses blocked due to PII
+- ✅ `genai.evaluation.toxicity.detections` - Toxicity detection events
+- ✅ `genai.evaluation.toxicity.categories` - Toxicity by category
+- ✅ `genai.evaluation.toxicity.blocked` - Blocked due to toxicity
+- ✅ `genai.evaluation.toxicity.score` - Toxicity score distribution (histogram)
 - 🚧 `gen_ai.guardrail.prompt_injection_detected` - Injection attempts blocked (Coming Soon)
 - 🚧 `gen_ai.guardrail.restricted_topic_blocked` - Restricted topic violations (Coming Soon)
-- 🚧 `gen_ai.guardrail.violations` - Total guardrail violations by type (Coming Soon)
 
 **Span Attributes:**
 - ✅ `evaluation.pii.prompt.detected` - PII detected in prompt (boolean)
@@ -763,10 +770,15 @@ genai_otel.instrument(
 - ✅ `evaluation.pii.*.score` - Detection confidence score
 - ✅ `evaluation.pii.*.redacted` - Redacted text (in redact mode)
 - ✅ `evaluation.pii.*.blocked` - Whether blocked due to PII (boolean)
+- ✅ `evaluation.toxicity.prompt.detected` - Toxicity in prompt (boolean)
+- ✅ `evaluation.toxicity.response.detected` - Toxicity in response (boolean)
+- ✅ `evaluation.toxicity.*.max_score` - Maximum toxicity score
+- ✅ `evaluation.toxicity.*.categories` - Toxic categories detected (array)
+- ✅ `evaluation.toxicity.*.<category>_score` - Individual category scores
+- ✅ `evaluation.toxicity.*.blocked` - Whether blocked due to toxicity
 - 🚧 `gen_ai.guardrail.violation_type` - Type of violation detected (Coming Soon)
 - 🚧 `gen_ai.guardrail.violation_severity` - Severity level (Coming Soon)
 - 🚧 `gen_ai.eval.bias_categories` - Detected bias types (Coming Soon)
-- `gen_ai.eval.toxicity_categories` - Toxicity categories (array)
 
 #### 🔄 Migration Support
 
