@@ -60,6 +60,7 @@ try:
         MistralAIInstrumentor,
         OllamaInstrumentor,
         OpenAIInstrumentor,
+        OpenAIAgentsInstrumentor,
         ReplicateInstrumentor,
         SambaNovaInstrumentor,
         TogetherAIInstrumentor,
@@ -82,6 +83,7 @@ except ImportError:
         MistralAIInstrumentor,
         OllamaInstrumentor,
         OpenAIInstrumentor,
+        OpenAIAgentsInstrumentor,
         ReplicateInstrumentor,
         SambaNovaInstrumentor,
         TogetherAIInstrumentor,
@@ -108,6 +110,7 @@ except ImportError:
 # Defines the available instrumentors. This is now at the module level for easier mocking in tests.
 INSTRUMENTORS = {
     "openai": OpenAIInstrumentor,
+    "agents": OpenAIAgentsInstrumentor,  # OpenAI Agents SDK
     "anthropic": AnthropicInstrumentor,
     "google.generativeai": GoogleAIInstrumentor,
     "boto3": AWSBedrockInstrumentor,

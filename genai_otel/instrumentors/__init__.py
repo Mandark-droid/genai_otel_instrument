@@ -24,6 +24,7 @@ from .ollama_instrumentor import OllamaInstrumentor
 
 # Import instrumentors only - they handle their own dependency checking
 from .openai_instrumentor import OpenAIInstrumentor
+from .openai_agents_instrumentor import OpenAIAgentsInstrumentor
 from .replicate_instrumentor import ReplicateInstrumentor
 from .sambanova_instrumentor import SambaNovaInstrumentor
 from .togetherai_instrumentor import TogetherAIInstrumentor
@@ -31,6 +32,7 @@ from .vertexai_instrumentor import VertexAIInstrumentor
 
 __all__ = [
     "OpenAIInstrumentor",
+    "OpenAIAgentsInstrumentor",
     "AnthropicInstrumentor",
     "GoogleAIInstrumentor",
     "AWSBedrockInstrumentor",
