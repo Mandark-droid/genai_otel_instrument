@@ -10,6 +10,7 @@ are not installed.
 
 from .anthropic_instrumentor import AnthropicInstrumentor
 from .anyscale_instrumentor import AnyscaleInstrumentor
+from .autogen_instrumentor import AutoGenInstrumentor
 from .aws_bedrock_instrumentor import AWSBedrockInstrumentor
 from .azure_openai_instrumentor import AzureOpenAIInstrumentor
 from .cohere_instrumentor import CohereInstrumentor
@@ -39,6 +40,7 @@ __all__ = [
     "GoogleAIInstrumentor",
     "AWSBedrockInstrumentor",
     "AzureOpenAIInstrumentor",
+    "AutoGenInstrumentor",
     "CohereInstrumentor",
     "CrewAIInstrumentor",
     "MistralAIInstrumentor",
