@@ -108,6 +108,7 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 - **LangGraph** (stateful workflows with graph-based orchestration)
 - **AutoGen** (Microsoft multi-agent conversations with group chats)
 - **Pydantic AI** (type-safe agents with Pydantic validation and multi-provider support)
+- **AWS Bedrock Agents** (managed agent runtime with knowledge bases and RAG)
 
 ### MCP Tools (Model Context Protocol)
 - **Databases**: PostgreSQL, MySQL, MongoDB, SQLAlchemy
