@@ -101,6 +101,7 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 - **LangChain** (chains, agents, tools)
 - **LlamaIndex** (query engines, indices)
 - **Haystack** (modular NLP pipelines with RAG support)
+- **DSPy** (Stanford NLP declarative LM programming with automatic optimization)
 
 ### Multi-Agent Frameworks (NEW)
 - **OpenAI Agents SDK** (agent orchestration with handoffs, sessions, guardrails)
