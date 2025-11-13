@@ -45,6 +45,7 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 💰 **Cost Tracking** - Automatic cost calculation for both streaming and non-streaming requests
 ⚡ **Streaming Support** - Full observability for streaming responses with TTFT/TBT metrics and cost tracking
 🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature, power, and electricity cost tracking
+🛡️ **PII Detection** (NEW) - Automatic PII detection with GDPR/HIPAA/PCI-DSS compliance modes
 📊 **Complete Observability** - Traces, metrics, and rich span attributes
 ➕ **Service Instance ID & Environment** - Identify your services and environments
 ⏱️ **Configurable Exporter Timeout** - Set timeout for OTLP exporter
@@ -648,9 +649,17 @@ genai-otel-instrument/
 
 ## Roadmap
 
-### Next Release (v0.2.0) - Q1 2026
+### v0.2.0 Release (In Progress) - Q1 2026
 
-We're planning significant enhancements for the next major release, focusing on evaluation metrics and safety guardrails alongside completing OpenTelemetry semantic convention compliance.
+We're implementing significant enhancements for this release, focusing on evaluation metrics and safety guardrails alongside completing OpenTelemetry semantic convention compliance.
+
+**✅ Completed Features:**
+- **PII Detection** - Automatic detection and handling of personally identifiable information with Microsoft Presidio
+  - Three modes: detect, redact, or block
+  - GDPR, HIPAA, and PCI-DSS compliance modes
+  - 15+ entity types (email, phone, SSN, credit cards, IP addresses, etc.)
+  - Span attributes and metrics for PII detections
+  - Example: `examples/pii_detection_example.py`
 
 #### 🎯 Evaluation & Monitoring
 
@@ -710,42 +719,53 @@ genai_otel.instrument(
   - Topic detection with confidence scoring
   - Custom topic definition support
 
-- **Sensitive Information Protection** - Prevent PII leakage
-  - PII detection (emails, phone numbers, SSN, credit cards)
-  - Automatic redaction or blocking
-  - Compliance mode (GDPR, HIPAA, PCI-DSS)
-  - Data leak prevention metrics
+- **Sensitive Information Protection** - ✅ COMPLETED - Prevent PII leakage
+  - ✅ PII detection (emails, phone numbers, SSN, credit cards, IPs, and more)
+  - ✅ Automatic redaction or blocking modes
+  - ✅ Compliance modes (GDPR, HIPAA, PCI-DSS)
+  - ✅ Data leak prevention metrics
+  - ✅ Microsoft Presidio integration with regex fallback
 
 **Implementation:**
 ```python
 import genai_otel
 
-# Configure guardrails
+# Configure guardrails (PII Detection is LIVE!)
 genai_otel.instrument(
+    # PII Detection (✅ AVAILABLE NOW)
+    enable_pii_detection=True,
+    pii_mode="redact",  # "detect", "redact", or "block"
+    pii_threshold=0.7,
+    pii_gdpr_mode=True,  # Enable GDPR compliance
+    pii_hipaa_mode=True,  # Enable HIPAA compliance
+    pii_pci_dss_mode=True,  # Enable PCI-DSS compliance
+
+    # Coming Soon:
     enable_prompt_injection_detection=True,
     enable_restricted_topics=True,
-    enable_sensitive_info_detection=True,
-
-    # Custom configuration
     restricted_topics=["medical_advice", "legal_advice", "financial_advice"],
-    pii_detection_mode="block",  # or "redact", "warn"
-
-    # Callbacks for custom handling
-    on_guardrail_violation=my_violation_handler
 )
 ```
 
 **Metrics Added:**
-- `gen_ai.guardrail.prompt_injection_detected` - Injection attempts blocked
-- `gen_ai.guardrail.restricted_topic_blocked` - Restricted topic violations
-- `gen_ai.guardrail.pii_detected` - PII detection events
-- `gen_ai.guardrail.violations` - Total guardrail violations by type
+- ✅ `genai.evaluation.pii.detections` - PII detection events (by location and mode)
+- ✅ `genai.evaluation.pii.entities` - PII entities detected by type
+- ✅ `genai.evaluation.pii.blocked` - Requests/responses blocked due to PII
+- 🚧 `gen_ai.guardrail.prompt_injection_detected` - Injection attempts blocked (Coming Soon)
+- 🚧 `gen_ai.guardrail.restricted_topic_blocked` - Restricted topic violations (Coming Soon)
+- 🚧 `gen_ai.guardrail.violations` - Total guardrail violations by type (Coming Soon)
 
 **Span Attributes:**
-- `gen_ai.guardrail.violation_type` - Type of violation detected
-- `gen_ai.guardrail.violation_severity` - Severity level (low, medium, high, critical)
-- `gen_ai.guardrail.blocked` - Whether request was blocked (boolean)
-- `gen_ai.eval.bias_categories` - Detected bias types (array)
+- ✅ `evaluation.pii.prompt.detected` - PII detected in prompt (boolean)
+- ✅ `evaluation.pii.response.detected` - PII detected in response (boolean)
+- ✅ `evaluation.pii.*.entity_count` - Number of PII entities found
+- ✅ `evaluation.pii.*.entity_types` - Types of PII detected (array)
+- ✅ `evaluation.pii.*.score` - Detection confidence score
+- ✅ `evaluation.pii.*.redacted` - Redacted text (in redact mode)
+- ✅ `evaluation.pii.*.blocked` - Whether blocked due to PII (boolean)
+- 🚧 `gen_ai.guardrail.violation_type` - Type of violation detected (Coming Soon)
+- 🚧 `gen_ai.guardrail.violation_severity` - Severity level (Coming Soon)
+- 🚧 `gen_ai.eval.bias_categories` - Detected bias types (Coming Soon)
 - `gen_ai.eval.toxicity_categories` - Toxicity categories (array)
 
 #### 🔄 Migration Support

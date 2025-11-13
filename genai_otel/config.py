@@ -151,6 +151,73 @@ class OTelConfig:
         default_factory=lambda: os.getenv("GENAI_CUSTOM_PRICING_JSON")
     )
 
+    # Evaluation and Safety Features (v0.2.0)
+    # PII Detection
+    enable_pii_detection: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_PII_DETECTION", "false").lower() == "true"
+    )
+    pii_mode: str = field(
+        default_factory=lambda: os.getenv("GENAI_PII_MODE", "detect")
+    )  # detect, redact, or block
+    pii_threshold: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_PII_THRESHOLD", "0.7"))
+    )
+    pii_gdpr_mode: bool = field(
+        default_factory=lambda: os.getenv("GENAI_PII_GDPR_MODE", "false").lower() == "true"
+    )
+    pii_hipaa_mode: bool = field(
+        default_factory=lambda: os.getenv("GENAI_PII_HIPAA_MODE", "false").lower() == "true"
+    )
+    pii_pci_dss_mode: bool = field(
+        default_factory=lambda: os.getenv("GENAI_PII_PCI_DSS_MODE", "false").lower() == "true"
+    )
+
+    # Toxicity Detection
+    enable_toxicity_detection: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_TOXICITY_DETECTION", "false").lower() == "true"
+    )
+    toxicity_threshold: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_TOXICITY_THRESHOLD", "0.7"))
+    )
+    toxicity_use_perspective_api: bool = field(
+        default_factory=lambda: os.getenv("GENAI_TOXICITY_USE_PERSPECTIVE_API", "false").lower() == "true"
+    )
+    toxicity_perspective_api_key: Optional[str] = field(
+        default_factory=lambda: os.getenv("GENAI_TOXICITY_PERSPECTIVE_API_KEY")
+    )
+
+    # Bias Detection
+    enable_bias_detection: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_BIAS_DETECTION", "false").lower() == "true"
+    )
+    bias_threshold: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_BIAS_THRESHOLD", "0.6"))
+    )
+
+    # Prompt Injection Detection
+    enable_prompt_injection_detection: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_PROMPT_INJECTION_DETECTION", "false").lower() == "true"
+    )
+    prompt_injection_threshold: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_PROMPT_INJECTION_THRESHOLD", "0.8"))
+    )
+
+    # Restricted Topics
+    enable_restricted_topics: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_RESTRICTED_TOPICS", "false").lower() == "true"
+    )
+    restricted_topics_threshold: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_RESTRICTED_TOPICS_THRESHOLD", "0.7"))
+    )
+
+    # Hallucination Detection
+    enable_hallucination_detection: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_HALLUCINATION_DETECTION", "false").lower() == "true"
+    )
+    hallucination_threshold: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_HALLUCINATION_THRESHOLD", "0.6"))
+    )
+
     # Session and user tracking (Phase 4.1)
     # Optional callable functions to extract session_id and user_id from requests
     # Signature: (instance, args, kwargs) -> Optional[str]
