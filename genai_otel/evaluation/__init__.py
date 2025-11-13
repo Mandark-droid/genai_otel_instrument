@@ -43,6 +43,7 @@ from .config import (
     HallucinationConfig,
 )
 from .pii_detector import PIIDetector, PIIDetectionResult
+from .toxicity_detector import ToxicityDetector, ToxicityDetectionResult
 from .span_processor import EvaluationSpanProcessor
 
 __all__ = [
@@ -56,6 +57,8 @@ __all__ = [
     # Detectors
     "PIIDetector",
     "PIIDetectionResult",
+    "ToxicityDetector",
+    "ToxicityDetectionResult",
     # Span processor
     "EvaluationSpanProcessor",
 ]

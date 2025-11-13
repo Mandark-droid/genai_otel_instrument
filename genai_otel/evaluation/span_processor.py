@@ -21,6 +21,7 @@ from .config import (
     ToxicityConfig,
 )
 from .pii_detector import PIIDetector
+from .toxicity_detector import ToxicityDetector
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +83,17 @@ class EvaluationSpanProcessor(SpanProcessor):
                     "PII detector not available, PII detection will use fallback patterns"
                 )
 
-        # TODO: Initialize other detectors in future phases
         self.toxicity_detector = None
+        if self.toxicity_config.enabled:
+            self.toxicity_detector = ToxicityDetector(self.toxicity_config)
+            if not self.toxicity_detector.is_available():
+                logger.warning(
+                    "Toxicity detector not available, please install either:\n"
+                    "  - Perspective API: pip install google-api-python-client\n"
+                    "  - Detoxify: pip install detoxify"
+                )
+
+        # TODO: Initialize other detectors in future phases
         self.bias_detector = None
         self.prompt_injection_detector = None
         self.restricted_topics_detector = None
@@ -111,8 +121,32 @@ class EvaluationSpanProcessor(SpanProcessor):
             unit="1",
         )
 
+        # Toxicity Detection Metrics
+        self.toxicity_detection_counter = meter.create_counter(
+            name="genai.evaluation.toxicity.detections",
+            description="Number of toxicity detections in prompts and responses",
+            unit="1",
+        )
+
+        self.toxicity_category_counter = meter.create_counter(
+            name="genai.evaluation.toxicity.categories",
+            description="Toxicity detections by category",
+            unit="1",
+        )
+
+        self.toxicity_blocked_counter = meter.create_counter(
+            name="genai.evaluation.toxicity.blocked",
+            description="Number of requests/responses blocked due to toxicity",
+            unit="1",
+        )
+
+        self.toxicity_score_histogram = meter.create_histogram(
+            name="genai.evaluation.toxicity.score",
+            description="Toxicity score distribution",
+            unit="1",
+        )
+
         # TODO: Add metrics for other evaluation features in future phases
-        # self.toxicity_detection_counter = ...
         # self.bias_detection_counter = ...
         # self.prompt_injection_counter = ...
         # self.restricted_topics_counter = ...
@@ -162,10 +196,11 @@ class EvaluationSpanProcessor(SpanProcessor):
             if self.pii_config.enabled and self.pii_detector:
                 self._check_pii(span, prompt, response)
 
+            # Run toxicity detection
+            if self.toxicity_config.enabled and self.toxicity_detector:
+                self._check_toxicity(span, prompt, response)
+
             # TODO: Add other checks in future phases
-            # if self.toxicity_config.enabled and self.toxicity_detector:
-            #     self._check_toxicity(span, prompt, response)
-            #
             # if self.bias_config.enabled and self.bias_detector:
             #     self._check_bias(span, prompt, response)
             #
@@ -370,6 +405,116 @@ class EvaluationSpanProcessor(SpanProcessor):
         except Exception as e:
             logger.error("Error checking PII: %s", e, exc_info=True)
             span.set_attribute("evaluation.pii.error", str(e))
+
+    def _check_toxicity(
+        self, span: Span, prompt: Optional[str], response: Optional[str]
+    ) -> None:
+        """Check for toxicity in prompt and response.
+
+        Args:
+            span: The span to add toxicity attributes to
+            prompt: Prompt text (optional)
+            response: Response text (optional)
+        """
+        if not self.toxicity_detector:
+            return
+
+        try:
+            # Check prompt for toxicity
+            if prompt:
+                result = self.toxicity_detector.detect(prompt)
+                if result.is_toxic:
+                    span.set_attribute("evaluation.toxicity.prompt.detected", True)
+                    span.set_attribute(
+                        "evaluation.toxicity.prompt.max_score", result.max_score
+                    )
+                    span.set_attribute(
+                        "evaluation.toxicity.prompt.categories",
+                        result.toxic_categories,
+                    )
+
+                    # Add individual category scores
+                    for category, score in result.scores.items():
+                        span.set_attribute(
+                            f"evaluation.toxicity.prompt.{category}_score", score
+                        )
+
+                    # Record metrics
+                    self.toxicity_detection_counter.add(
+                        1, {"location": "prompt"}
+                    )
+                    self.toxicity_score_histogram.record(
+                        result.max_score, {"location": "prompt"}
+                    )
+
+                    # Record category metrics
+                    for category in result.toxic_categories:
+                        self.toxicity_category_counter.add(
+                            1, {"category": category, "location": "prompt"}
+                        )
+
+                    # If blocking, set error status
+                    if result.blocked:
+                        span.set_status(
+                            Status(
+                                StatusCode.ERROR,
+                                "Request blocked due to toxic content",
+                            )
+                        )
+                        span.set_attribute("evaluation.toxicity.prompt.blocked", True)
+                        self.toxicity_blocked_counter.add(1, {"location": "prompt"})
+                else:
+                    span.set_attribute("evaluation.toxicity.prompt.detected", False)
+
+            # Check response for toxicity
+            if response:
+                result = self.toxicity_detector.detect(response)
+                if result.is_toxic:
+                    span.set_attribute("evaluation.toxicity.response.detected", True)
+                    span.set_attribute(
+                        "evaluation.toxicity.response.max_score", result.max_score
+                    )
+                    span.set_attribute(
+                        "evaluation.toxicity.response.categories",
+                        result.toxic_categories,
+                    )
+
+                    # Add individual category scores
+                    for category, score in result.scores.items():
+                        span.set_attribute(
+                            f"evaluation.toxicity.response.{category}_score", score
+                        )
+
+                    # Record metrics
+                    self.toxicity_detection_counter.add(
+                        1, {"location": "response"}
+                    )
+                    self.toxicity_score_histogram.record(
+                        result.max_score, {"location": "response"}
+                    )
+
+                    # Record category metrics
+                    for category in result.toxic_categories:
+                        self.toxicity_category_counter.add(
+                            1, {"category": category, "location": "response"}
+                        )
+
+                    # If blocking, set error status
+                    if result.blocked:
+                        span.set_status(
+                            Status(
+                                StatusCode.ERROR,
+                                "Response blocked due to toxic content",
+                            )
+                        )
+                        span.set_attribute("evaluation.toxicity.response.blocked", True)
+                        self.toxicity_blocked_counter.add(1, {"location": "response"})
+                else:
+                    span.set_attribute("evaluation.toxicity.response.detected", False)
+
+        except Exception as e:
+            logger.error("Error checking toxicity: %s", e, exc_info=True)
+            span.set_attribute("evaluation.toxicity.error", str(e))
 
     def shutdown(self) -> None:
         """Shutdown the span processor.
