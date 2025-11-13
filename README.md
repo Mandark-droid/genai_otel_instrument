@@ -47,6 +47,7 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature, power, and electricity cost tracking
 🛡️ **PII Detection** (NEW) - Automatic PII detection with GDPR/HIPAA/PCI-DSS compliance modes
 ☢️ **Toxicity Detection** (NEW) - Detect harmful content with Perspective API and Detoxify
+⚖️ **Bias Detection** (NEW) - Identify demographic and other biases in prompts and responses
 📊 **Complete Observability** - Traces, metrics, and rich span attributes
 ➕ **Service Instance ID & Environment** - Identify your services and environments
 ⏱️ **Configurable Exporter Timeout** - Set timeout for OTLP exporter
@@ -671,13 +672,18 @@ We're implementing significant enhancements for this release, focusing on evalua
   - Span attributes and metrics for toxicity detections
   - Example: `examples/toxicity_detection_example.py`
 
+- **Bias Detection** - Identify demographic and other biases in prompts and responses
+  - 8 bias types: gender, race, ethnicity, religion, age, disability, sexual_orientation, political
+  - Pattern-based detection (always available, no external dependencies)
+  - Optional ML-based detection with Fairlearn
+  - Configurable threshold and blocking mode
+  - Batch processing and statistics generation
+  - Span attributes and metrics for bias detections
+  - Example: `examples/bias_detection_example.py`
+
 #### 🎯 Evaluation & Monitoring
 
 **LLM Output Quality Metrics**
-- **Bias Detection** - Automatically detect and measure bias in LLM responses
-  - Gender, racial, political, and cultural bias detection
-  - Bias score metrics with configurable thresholds
-  - Integration with fairness libraries (e.g., Fairlearn, AIF360)
 
 - **Hallucination Detection** - Track factual accuracy and groundedness
   - Fact-checking against provided context
@@ -759,6 +765,10 @@ genai_otel.instrument(
 - ✅ `genai.evaluation.toxicity.categories` - Toxicity by category
 - ✅ `genai.evaluation.toxicity.blocked` - Blocked due to toxicity
 - ✅ `genai.evaluation.toxicity.score` - Toxicity score distribution (histogram)
+- ✅ `genai.evaluation.bias.detections` - Bias detection events (by location)
+- ✅ `genai.evaluation.bias.types` - Bias detections by type
+- ✅ `genai.evaluation.bias.blocked` - Requests/responses blocked due to bias
+- ✅ `genai.evaluation.bias.score` - Bias score distribution (histogram)
 - 🚧 `gen_ai.guardrail.prompt_injection_detected` - Injection attempts blocked (Coming Soon)
 - 🚧 `gen_ai.guardrail.restricted_topic_blocked` - Restricted topic violations (Coming Soon)
 
@@ -776,9 +786,15 @@ genai_otel.instrument(
 - ✅ `evaluation.toxicity.*.categories` - Toxic categories detected (array)
 - ✅ `evaluation.toxicity.*.<category>_score` - Individual category scores
 - ✅ `evaluation.toxicity.*.blocked` - Whether blocked due to toxicity
+- ✅ `evaluation.bias.prompt.detected` - Bias detected in prompt (boolean)
+- ✅ `evaluation.bias.response.detected` - Bias detected in response (boolean)
+- ✅ `evaluation.bias.*.max_score` - Maximum bias score
+- ✅ `evaluation.bias.*.detected_biases` - Bias types detected (array)
+- ✅ `evaluation.bias.*.<bias_type>_score` - Individual bias type scores
+- ✅ `evaluation.bias.*.<bias_type>_patterns` - Matched patterns for each bias type
+- ✅ `evaluation.bias.*.blocked` - Whether blocked due to bias
 - 🚧 `gen_ai.guardrail.violation_type` - Type of violation detected (Coming Soon)
 - 🚧 `gen_ai.guardrail.violation_severity` - Severity level (Coming Soon)
-- 🚧 `gen_ai.eval.bias_categories` - Detected bias types (Coming Soon)
 
 #### 🔄 Migration Support
 
