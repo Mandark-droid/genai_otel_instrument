@@ -6,6 +6,109 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-Agent Framework Instrumentation (Phase 1-3)**
+  - Comprehensive instrumentation for 8 AI frameworks with 10 implementations total
+  - Zero-code setup with automatic tracing and cost tracking
+  - Production-ready with 110+ test cases and 29 example scenarios
+
+- **OpenAI Agents SDK Instrumentation**
+  - Full OpenTelemetry instrumentation for OpenAI's production Agents SDK
+  - Automatic tracing with `gen_ai.system="agents"` attribute
+  - Agent orchestration with handoffs, sessions, and guardrails tracking
+  - Implementation: `genai_otel/instrumentors/openai_agents_instrumentor.py`
+  - Tests: `tests/instrumentors/test_openai_agents_instrumentor.py` (11 test cases)
+  - Example: `examples/openai_agents_example.py` (4 scenarios)
+
+- **CrewAI Multi-Agent Framework Instrumentation**
+  - Full OpenTelemetry instrumentation for CrewAI framework
+  - Automatic tracing with `gen_ai.system="crewai"` attribute
+  - Role-based agent collaboration with crews and tasks tracking
+  - Sequential and hierarchical process types supported
+  - Implementation: `genai_otel/instrumentors/crewai_instrumentor.py`
+  - Tests: `tests/instrumentors/test_crewai_instrumentor.py` (13 test cases)
+  - Example: `examples/crewai_example.py` (3 scenarios)
+
+- **LangGraph Stateful Workflow Instrumentation**
+  - Full OpenTelemetry instrumentation for LangGraph framework
+  - Automatic tracing with `gen_ai.system="langgraph"` attribute
+  - Graph-based orchestration with nodes, edges, and state tracking
+  - Support for sync/async execution and streaming
+  - Checkpoint and state management tracking
+  - Implementation: `genai_otel/instrumentors/langgraph_instrumentor.py`
+  - Tests: `tests/instrumentors/test_langgraph_instrumentor.py` (12 test cases)
+  - Example: `examples/langgraph_example.py` (3 scenarios)
+
+- **AutoGen Multi-Agent Conversation Instrumentation**
+  - Full OpenTelemetry instrumentation for Microsoft AutoGen framework
+  - Automatic tracing with `gen_ai.system="autogen"` attribute
+  - Multi-agent conversations with group chat orchestration
+  - Speaker selection and manager coordination tracking
+  - Support for both `autogen` and `pyautogen` package names
+  - Implementation: `genai_otel/instrumentors/autogen_instrumentor.py`
+  - Tests: `tests/instrumentors/test_autogen_instrumentor.py` (20 test cases)
+  - Example: `examples/autogen_example.py` (4 scenarios)
+
+- **Pydantic AI Type-Safe Agent Instrumentation**
+  - Full OpenTelemetry instrumentation for Pydantic AI framework
+  - Automatic tracing with `gen_ai.system="pydantic_ai"` attribute
+  - Type-safe agents with Pydantic validation tracking
+  - Multi-provider support (OpenAI, Anthropic, Gemini, etc.)
+  - Structured outputs with Pydantic models
+  - Tools/functions tracking with count and names
+  - Support for sync, async, and streaming execution
+  - Implementation: `genai_otel/instrumentors/pydantic_ai_instrumentor.py`
+  - Tests: `tests/instrumentors/test_pydantic_ai_instrumentor.py` (24 test cases)
+  - Example: `examples/pydantic_ai_example.py` (7 scenarios)
+
+- **Haystack NLP Pipeline Instrumentation**
+  - Full OpenTelemetry instrumentation for Haystack framework
+  - Automatic tracing with `gen_ai.system="haystack"` attribute
+  - Modular pipeline architecture with component tracking
+  - RAG (Retrieval-Augmented Generation) workflow support
+  - Generator, ChatGenerator, and Retriever component instrumentation
+  - Pipeline graph structure tracking (nodes, edges, connections)
+  - Custom metadata and configuration capture
+  - Implementation: `genai_otel/instrumentors/haystack_instrumentor.py`
+  - Tests: `tests/instrumentors/test_haystack_instrumentor.py` (23 test cases)
+  - Example: `examples/haystack_example.py` (5 scenarios)
+
+- **AWS Bedrock Agents Instrumentation**
+  - Full OpenTelemetry instrumentation for AWS Bedrock Agents
+  - Automatic tracing with `gen_ai.system="bedrock_agents"` attribute
+  - Managed agent runtime with session tracking
+  - Knowledge base retrieval and RAG operations
+  - InvokeAgent, Retrieve, and RetrieveAndGenerate operation support
+  - Session state and conversation tracking
+  - Integration via boto3 BaseClient instrumentation
+  - Implementation: `genai_otel/instrumentors/bedrock_agents_instrumentor.py`
+  - Tests: `tests/instrumentors/test_bedrock_agents_instrumentor.py` (20 test cases)
+  - Example: `examples/bedrock_agents_example.py` (4 scenarios)
+
+### Improved
+
+- **Google GenAI SDK - Dual SDK Support**
+  - Enhanced existing instrumentor to support BOTH legacy and new SDKs
+  - Automatic SDK detection: tries new `google-genai` first, falls back to legacy `google-generativeai`
+  - Deprecation warnings for legacy SDK users (support ends Nov 30, 2025)
+  - Migration guidance in examples
+  - Updated tests with dual SDK coverage (24 test cases)
+  - Example: `examples/google_genai_example.py` with both SDK demonstrations
+
+### Documentation
+
+- **Framework Research Documentation**
+  - Created `FRAMEWORK_RESEARCH.md` with comprehensive analysis of 9 AI frameworks
+  - Tiered prioritization (Tier 1-3) based on popularity and complexity
+  - Implementation estimates and recommended attributes
+  - Full research report with API analysis and instrumentation strategies
+
+- **README Updates**
+  - Added "Multi-Agent Frameworks" section highlighting 6 new frameworks
+  - Updated feature list with framework count
+  - Comprehensive framework descriptions and capabilities
+
 ## [0.1.23] - 2025-11-13
 
 ### Added
