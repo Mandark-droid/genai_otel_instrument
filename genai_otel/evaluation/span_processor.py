@@ -21,7 +21,10 @@ from .config import (
     RestrictedTopicsConfig,
     ToxicityConfig,
 )
+from .hallucination_detector import HallucinationDetector
 from .pii_detector import PIIDetector
+from .prompt_injection_detector import PromptInjectionDetector
+from .restricted_topics_detector import RestrictedTopicsDetector
 from .toxicity_detector import ToxicityDetector
 
 logger = logging.getLogger(__name__)
@@ -102,10 +105,21 @@ class EvaluationSpanProcessor(SpanProcessor):
                     "Bias detector not available (pattern-based detection always available)"
                 )
 
-        # TODO: Initialize other detectors in future phases
         self.prompt_injection_detector = None
+        if self.prompt_injection_config.enabled:
+            self.prompt_injection_detector = PromptInjectionDetector(
+                self.prompt_injection_config
+            )
+
         self.restricted_topics_detector = None
+        if self.restricted_topics_config.enabled:
+            self.restricted_topics_detector = RestrictedTopicsDetector(
+                self.restricted_topics_config
+            )
+
         self.hallucination_detector = None
+        if self.hallucination_config.enabled:
+            self.hallucination_detector = HallucinationDetector(self.hallucination_config)
 
         # Initialize metrics
         meter = metrics.get_meter(__name__)
@@ -179,10 +193,74 @@ class EvaluationSpanProcessor(SpanProcessor):
             unit="1",
         )
 
-        # TODO: Add metrics for other evaluation features in future phases
-        # self.prompt_injection_counter = ...
-        # self.restricted_topics_counter = ...
-        # self.hallucination_counter = ...
+        # Prompt Injection Detection Metrics
+        self.prompt_injection_counter = meter.create_counter(
+            name="genai.evaluation.prompt_injection.detections",
+            description="Number of prompt injection attempts detected",
+            unit="1",
+        )
+
+        self.prompt_injection_type_counter = meter.create_counter(
+            name="genai.evaluation.prompt_injection.types",
+            description="Prompt injection detections by type",
+            unit="1",
+        )
+
+        self.prompt_injection_blocked_counter = meter.create_counter(
+            name="genai.evaluation.prompt_injection.blocked",
+            description="Number of requests blocked due to prompt injection",
+            unit="1",
+        )
+
+        self.prompt_injection_score_histogram = meter.create_histogram(
+            name="genai.evaluation.prompt_injection.score",
+            description="Prompt injection score distribution",
+            unit="1",
+        )
+
+        # Restricted Topics Metrics
+        self.restricted_topics_counter = meter.create_counter(
+            name="genai.evaluation.restricted_topics.detections",
+            description="Number of restricted topics detected",
+            unit="1",
+        )
+
+        self.restricted_topics_type_counter = meter.create_counter(
+            name="genai.evaluation.restricted_topics.types",
+            description="Restricted topics by type",
+            unit="1",
+        )
+
+        self.restricted_topics_blocked_counter = meter.create_counter(
+            name="genai.evaluation.restricted_topics.blocked",
+            description="Number of requests/responses blocked due to restricted topics",
+            unit="1",
+        )
+
+        self.restricted_topics_score_histogram = meter.create_histogram(
+            name="genai.evaluation.restricted_topics.score",
+            description="Restricted topics score distribution",
+            unit="1",
+        )
+
+        # Hallucination Detection Metrics
+        self.hallucination_counter = meter.create_counter(
+            name="genai.evaluation.hallucination.detections",
+            description="Number of potential hallucinations detected",
+            unit="1",
+        )
+
+        self.hallucination_indicator_counter = meter.create_counter(
+            name="genai.evaluation.hallucination.indicators",
+            description="Hallucination detections by indicator type",
+            unit="1",
+        )
+
+        self.hallucination_score_histogram = meter.create_histogram(
+            name="genai.evaluation.hallucination.score",
+            description="Hallucination score distribution",
+            unit="1",
+        )
 
         logger.info("EvaluationSpanProcessor initialized with features:")
         logger.info("  - PII Detection: %s", self.pii_config.enabled)
@@ -236,15 +314,17 @@ class EvaluationSpanProcessor(SpanProcessor):
             if self.bias_config.enabled and self.bias_detector:
                 self._check_bias(span, prompt, response)
 
-            # TODO: Add other checks in future phases
-            # if self.prompt_injection_config.enabled and self.prompt_injection_detector:
-            #     self._check_prompt_injection(span, prompt)
-            #
-            # if self.restricted_topics_config.enabled and self.restricted_topics_detector:
-            #     self._check_restricted_topics(span, prompt, response)
-            #
-            # if self.hallucination_config.enabled and self.hallucination_detector:
-            #     self._check_hallucination(span, prompt, response, attributes)
+            # Run prompt injection detection (prompts only)
+            if self.prompt_injection_config.enabled and self.prompt_injection_detector:
+                self._check_prompt_injection(span, prompt)
+
+            # Run restricted topics detection
+            if self.restricted_topics_config.enabled and self.restricted_topics_detector:
+                self._check_restricted_topics(span, prompt, response)
+
+            # Run hallucination detection (responses only)
+            if self.hallucination_config.enabled and self.hallucination_detector:
+                self._check_hallucination(span, prompt, response, attributes)
 
         except Exception as e:
             logger.error("Error in evaluation span processor: %s", e, exc_info=True)
@@ -670,6 +750,247 @@ class EvaluationSpanProcessor(SpanProcessor):
         except Exception as e:
             logger.error("Error checking bias: %s", e, exc_info=True)
             span.set_attribute("evaluation.bias.error", str(e))
+
+    def _check_prompt_injection(self, span: Span, prompt: Optional[str]) -> None:
+        """Check for prompt injection attempts in prompt.
+
+        Args:
+            span: The span to add prompt injection attributes to
+            prompt: Prompt text (optional)
+        """
+        if not self.prompt_injection_detector or not prompt:
+            return
+
+        try:
+            result = self.prompt_injection_detector.detect(prompt)
+            if result.is_injection:
+                span.set_attribute("evaluation.prompt_injection.detected", True)
+                span.set_attribute(
+                    "evaluation.prompt_injection.score", result.injection_score
+                )
+                span.set_attribute(
+                    "evaluation.prompt_injection.types", result.injection_types
+                )
+
+                # Add patterns matched
+                for inj_type, patterns in result.patterns_matched.items():
+                    span.set_attribute(
+                        f"evaluation.prompt_injection.{inj_type}_patterns",
+                        patterns[:5],  # Limit to first 5 patterns
+                    )
+
+                # Record metrics
+                self.prompt_injection_counter.add(1, {"location": "prompt"})
+                self.prompt_injection_score_histogram.record(
+                    result.injection_score, {"location": "prompt"}
+                )
+
+                # Record injection type metrics
+                for inj_type in result.injection_types:
+                    self.prompt_injection_type_counter.add(
+                        1, {"injection_type": inj_type}
+                    )
+
+                # If blocking, set error status
+                if result.blocked:
+                    span.set_status(
+                        Status(
+                            StatusCode.ERROR,
+                            "Request blocked due to prompt injection attempt",
+                        )
+                    )
+                    span.set_attribute("evaluation.prompt_injection.blocked", True)
+                    self.prompt_injection_blocked_counter.add(1, {})
+            else:
+                span.set_attribute("evaluation.prompt_injection.detected", False)
+
+        except Exception as e:
+            logger.error("Error checking prompt injection: %s", e, exc_info=True)
+            span.set_attribute("evaluation.prompt_injection.error", str(e))
+
+    def _check_restricted_topics(
+        self, span: Span, prompt: Optional[str], response: Optional[str]
+    ) -> None:
+        """Check for restricted topics in prompt and response.
+
+        Args:
+            span: The span to add restricted topics attributes to
+            prompt: Prompt text (optional)
+            response: Response text (optional)
+        """
+        if not self.restricted_topics_detector:
+            return
+
+        try:
+            # Check prompt for restricted topics
+            if prompt:
+                result = self.restricted_topics_detector.detect(prompt)
+                if result.has_restricted_topic:
+                    span.set_attribute("evaluation.restricted_topics.prompt.detected", True)
+                    span.set_attribute(
+                        "evaluation.restricted_topics.prompt.max_score", result.max_score
+                    )
+                    span.set_attribute(
+                        "evaluation.restricted_topics.prompt.topics",
+                        result.detected_topics,
+                    )
+
+                    # Add individual topic scores
+                    for topic, score in result.topic_scores.items():
+                        if score > 0:
+                            span.set_attribute(
+                                f"evaluation.restricted_topics.prompt.{topic}_score", score
+                            )
+
+                    # Record metrics
+                    self.restricted_topics_counter.add(1, {"location": "prompt"})
+                    self.restricted_topics_score_histogram.record(
+                        result.max_score, {"location": "prompt"}
+                    )
+
+                    # Record topic metrics
+                    for topic in result.detected_topics:
+                        self.restricted_topics_type_counter.add(
+                            1, {"topic": topic, "location": "prompt"}
+                        )
+
+                    # If blocking, set error status
+                    if result.blocked:
+                        span.set_status(
+                            Status(
+                                StatusCode.ERROR,
+                                "Request blocked due to restricted topic",
+                            )
+                        )
+                        span.set_attribute("evaluation.restricted_topics.prompt.blocked", True)
+                        self.restricted_topics_blocked_counter.add(1, {"location": "prompt"})
+                else:
+                    span.set_attribute("evaluation.restricted_topics.prompt.detected", False)
+
+            # Check response for restricted topics
+            if response:
+                result = self.restricted_topics_detector.detect(response)
+                if result.has_restricted_topic:
+                    span.set_attribute("evaluation.restricted_topics.response.detected", True)
+                    span.set_attribute(
+                        "evaluation.restricted_topics.response.max_score", result.max_score
+                    )
+                    span.set_attribute(
+                        "evaluation.restricted_topics.response.topics",
+                        result.detected_topics,
+                    )
+
+                    # Add individual topic scores
+                    for topic, score in result.topic_scores.items():
+                        if score > 0:
+                            span.set_attribute(
+                                f"evaluation.restricted_topics.response.{topic}_score", score
+                            )
+
+                    # Record metrics
+                    self.restricted_topics_counter.add(1, {"location": "response"})
+                    self.restricted_topics_score_histogram.record(
+                        result.max_score, {"location": "response"}
+                    )
+
+                    # Record topic metrics
+                    for topic in result.detected_topics:
+                        self.restricted_topics_type_counter.add(
+                            1, {"topic": topic, "location": "response"}
+                        )
+
+                    # If blocking, set error status
+                    if result.blocked:
+                        span.set_status(
+                            Status(
+                                StatusCode.ERROR,
+                                "Response blocked due to restricted topic",
+                            )
+                        )
+                        span.set_attribute("evaluation.restricted_topics.response.blocked", True)
+                        self.restricted_topics_blocked_counter.add(1, {"location": "response"})
+                else:
+                    span.set_attribute("evaluation.restricted_topics.response.detected", False)
+
+        except Exception as e:
+            logger.error("Error checking restricted topics: %s", e, exc_info=True)
+            span.set_attribute("evaluation.restricted_topics.error", str(e))
+
+    def _check_hallucination(
+        self,
+        span: Span,
+        prompt: Optional[str],
+        response: Optional[str],
+        attributes: dict,
+    ) -> None:
+        """Check for potential hallucinations in response.
+
+        Args:
+            span: The span to add hallucination attributes to
+            prompt: Prompt text (optional, used as context)
+            response: Response text (optional)
+            attributes: Span attributes (for extracting context)
+        """
+        if not self.hallucination_detector or not response:
+            return
+
+        try:
+            # Use prompt as context if available
+            context = prompt
+
+            # Try to extract additional context from attributes
+            context_keys = [
+                "gen_ai.context",
+                "gen_ai.retrieval.documents",
+                "gen_ai.rag.context",
+            ]
+            for key in context_keys:
+                if key in attributes:
+                    value = attributes[key]
+                    if isinstance(value, str):
+                        context = f"{context}\n{value}" if context else value
+                        break
+
+            result = self.hallucination_detector.detect(response, context)
+            if result.has_hallucination:
+                span.set_attribute("evaluation.hallucination.detected", True)
+                span.set_attribute(
+                    "evaluation.hallucination.score", result.hallucination_score
+                )
+                span.set_attribute(
+                    "evaluation.hallucination.indicators", result.hallucination_indicators
+                )
+                span.set_attribute(
+                    "evaluation.hallucination.hedge_words_count", result.hedge_words_count
+                )
+                span.set_attribute(
+                    "evaluation.hallucination.citation_count", result.citation_count
+                )
+
+                # Add unsupported claims
+                if result.unsupported_claims:
+                    span.set_attribute(
+                        "evaluation.hallucination.unsupported_claims",
+                        result.unsupported_claims[:3],  # Limit to first 3
+                    )
+
+                # Record metrics
+                self.hallucination_counter.add(1, {"location": "response"})
+                self.hallucination_score_histogram.record(
+                    result.hallucination_score, {"location": "response"}
+                )
+
+                # Record indicator metrics
+                for indicator in result.hallucination_indicators:
+                    self.hallucination_indicator_counter.add(
+                        1, {"indicator": indicator}
+                    )
+            else:
+                span.set_attribute("evaluation.hallucination.detected", False)
+
+        except Exception as e:
+            logger.error("Error checking hallucination: %s", e, exc_info=True)
+            span.set_attribute("evaluation.hallucination.error", str(e))
 
     def shutdown(self) -> None:
         """Shutdown the span processor.
