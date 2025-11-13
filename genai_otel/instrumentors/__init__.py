@@ -17,6 +17,7 @@ from .cohere_instrumentor import CohereInstrumentor
 from .crewai_instrumentor import CrewAIInstrumentor
 from .google_ai_instrumentor import GoogleAIInstrumentor
 from .groq_instrumentor import GroqInstrumentor
+from .haystack_instrumentor import HaystackInstrumentor
 from .huggingface_instrumentor import HuggingFaceInstrumentor
 from .hyperbolic_instrumentor import HyperbolicInstrumentor
 from .langchain_instrumentor import LangChainInstrumentor
@@ -47,6 +48,7 @@ __all__ = [
     "MistralAIInstrumentor",
     "TogetherAIInstrumentor",
     "GroqInstrumentor",
+    "HaystackInstrumentor",
     "OllamaInstrumentor",
     "VertexAIInstrumentor",
     "ReplicateInstrumentor",
