@@ -20,6 +20,17 @@ from .config import OTelConfig
 from .cost_calculator import CostCalculator
 from .cost_enrichment_processor import CostEnrichmentSpanProcessor
 from .cost_enriching_exporter import CostEnrichingSpanExporter
+from .evaluation.config import (
+    BiasConfig,
+    HallucinationConfig,
+    PIIConfig,
+    PIIEntityType,
+    PIIMode,
+    PromptInjectionConfig,
+    RestrictedTopicsConfig,
+    ToxicityConfig,
+)
+from .evaluation.span_processor import EvaluationSpanProcessor
 from .gpu_metrics import GPUMetricsCollector
 from .mcp_instrumentors import MCPInstrumentorManager
 from .server_metrics import initialize_server_metrics
@@ -221,6 +232,84 @@ def setup_auto_instrumentation(config: OTelConfig):
             logger.info("Cost enrichment processor added")
         except Exception as e:
             logger.warning(f"Failed to add cost enrichment processor: {e}", exc_info=True)
+
+    # Add evaluation and safety span processor (v0.2.0)
+    if any([
+        config.enable_pii_detection,
+        config.enable_toxicity_detection,
+        config.enable_bias_detection,
+        config.enable_prompt_injection_detection,
+        config.enable_restricted_topics,
+        config.enable_hallucination_detection,
+    ]):
+        try:
+            # Build PII config from OTelConfig
+            pii_config = None
+            if config.enable_pii_detection:
+                pii_config = PIIConfig(
+                    enabled=True,
+                    mode=PIIMode(config.pii_mode),
+                    threshold=config.pii_threshold,
+                    gdpr_mode=config.pii_gdpr_mode,
+                    hipaa_mode=config.pii_hipaa_mode,
+                    pci_dss_mode=config.pii_pci_dss_mode,
+                )
+
+            # Build Toxicity config
+            toxicity_config = None
+            if config.enable_toxicity_detection:
+                toxicity_config = ToxicityConfig(
+                    enabled=True,
+                    threshold=config.toxicity_threshold,
+                    use_perspective_api=config.toxicity_use_perspective_api,
+                    perspective_api_key=config.toxicity_perspective_api_key,
+                )
+
+            # Build Bias config
+            bias_config = None
+            if config.enable_bias_detection:
+                bias_config = BiasConfig(
+                    enabled=True,
+                    threshold=config.bias_threshold,
+                )
+
+            # Build Prompt Injection config
+            prompt_injection_config = None
+            if config.enable_prompt_injection_detection:
+                prompt_injection_config = PromptInjectionConfig(
+                    enabled=True,
+                    threshold=config.prompt_injection_threshold,
+                )
+
+            # Build Restricted Topics config
+            restricted_topics_config = None
+            if config.enable_restricted_topics:
+                restricted_topics_config = RestrictedTopicsConfig(
+                    enabled=True,
+                    threshold=config.restricted_topics_threshold,
+                )
+
+            # Build Hallucination config
+            hallucination_config = None
+            if config.enable_hallucination_detection:
+                hallucination_config = HallucinationConfig(
+                    enabled=True,
+                    threshold=config.hallucination_threshold,
+                )
+
+            # Create and add evaluation processor
+            evaluation_processor = EvaluationSpanProcessor(
+                pii_config=pii_config,
+                toxicity_config=toxicity_config,
+                bias_config=bias_config,
+                prompt_injection_config=prompt_injection_config,
+                restricted_topics_config=restricted_topics_config,
+                hallucination_config=hallucination_config,
+            )
+            tracer_provider.add_span_processor(evaluation_processor)
+            logger.info("Evaluation and safety span processor added")
+        except Exception as e:
+            logger.warning(f"Failed to add evaluation span processor: {e}", exc_info=True)
 
     logger.debug(f"OTelConfig endpoint: {config.endpoint}")
     if config.endpoint:
