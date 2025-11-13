@@ -13,6 +13,7 @@ from .anyscale_instrumentor import AnyscaleInstrumentor
 from .autogen_instrumentor import AutoGenInstrumentor
 from .aws_bedrock_instrumentor import AWSBedrockInstrumentor
 from .azure_openai_instrumentor import AzureOpenAIInstrumentor
+from .bedrock_agents_instrumentor import BedrockAgentsInstrumentor
 from .cohere_instrumentor import CohereInstrumentor
 from .crewai_instrumentor import CrewAIInstrumentor
 from .google_ai_instrumentor import GoogleAIInstrumentor
@@ -43,6 +44,7 @@ __all__ = [
     "AWSBedrockInstrumentor",
     "AzureOpenAIInstrumentor",
     "AutoGenInstrumentor",
+    "BedrockAgentsInstrumentor",
     "CohereInstrumentor",
     "CrewAIInstrumentor",
     "MistralAIInstrumentor",
