@@ -13,6 +13,7 @@ from .anyscale_instrumentor import AnyscaleInstrumentor
 from .aws_bedrock_instrumentor import AWSBedrockInstrumentor
 from .azure_openai_instrumentor import AzureOpenAIInstrumentor
 from .cohere_instrumentor import CohereInstrumentor
+from .crewai_instrumentor import CrewAIInstrumentor
 from .google_ai_instrumentor import GoogleAIInstrumentor
 from .groq_instrumentor import GroqInstrumentor
 from .huggingface_instrumentor import HuggingFaceInstrumentor
@@ -38,6 +39,7 @@ __all__ = [
     "AWSBedrockInstrumentor",
     "AzureOpenAIInstrumentor",
     "CohereInstrumentor",
+    "CrewAIInstrumentor",
     "MistralAIInstrumentor",
     "TogetherAIInstrumentor",
     "GroqInstrumentor",
