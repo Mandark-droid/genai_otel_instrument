@@ -681,47 +681,56 @@ We're implementing significant enhancements for this release, focusing on evalua
   - Span attributes and metrics for bias detections
   - Example: `examples/bias_detection_example.py`
 
-#### 🎯 Evaluation & Monitoring
+- **Prompt Injection Detection** - Protect against prompt manipulation attacks
+  - 6 injection types: instruction_override, role_playing, jailbreak, context_switching, system_extraction, encoding_obfuscation
+  - Pattern-based detection (always available)
+  - Configurable threshold and blocking mode
+  - Automatic security blocking for high-risk prompts
+  - Span attributes and metrics for injection attempts
+  - Example: `examples/comprehensive_evaluation_example.py`
 
-**LLM Output Quality Metrics**
+- **Restricted Topics Detection** - Monitor and block sensitive topics
+  - 9 topic categories: medical_advice, legal_advice, financial_advice, violence, self_harm, illegal_activities, adult_content, personal_information, political_manipulation
+  - Pattern-based topic classification
+  - Configurable topic blacklists
+  - Industry-specific content filters
+  - Span attributes and metrics for topic violations
+  - Example: `examples/comprehensive_evaluation_example.py`
 
 - **Hallucination Detection** - Track factual accuracy and groundedness
-  - Fact-checking against provided context
-  - Citation validation for RAG applications
-  - Confidence scoring for generated claims
-  - Hallucination rate metrics by model and use case
+  - Factual claim extraction and validation
+  - Hedge word detection for uncertainty
+  - Citation and attribution tracking
+  - Context contradiction detection
+  - Unsupported claims identification
+  - Span attributes and metrics for hallucination risks
+  - Example: `examples/comprehensive_evaluation_example.py`
 
 **Implementation:**
 ```python
 import genai_otel
 
-# Enable evaluation metrics
+# Enable all 6 evaluation features
 genai_otel.instrument(
-    enable_bias_detection=True,
+    # Detection & Safety
+    enable_pii_detection=True,
     enable_toxicity_detection=True,
+    enable_bias_detection=True,
+    enable_prompt_injection_detection=True,
+    enable_restricted_topics=True,
     enable_hallucination_detection=True,
 
     # Configure thresholds
-    bias_threshold=0.7,
-    toxicity_threshold=0.5,
-    hallucination_threshold=0.8
+    pii_threshold=0.8,
+    toxicity_threshold=0.7,
+    bias_threshold=0.5,
+    prompt_injection_threshold=0.7,
+    restricted_topics_threshold=0.5,
+    hallucination_threshold=0.6,
 )
 ```
 
-**Metrics Added:**
-- `gen_ai.eval.bias_score` - Bias detection scores (histogram)
-- `gen_ai.eval.toxicity_score` - Toxicity scores (histogram)
-- `gen_ai.eval.hallucination_score` - Hallucination probability (histogram)
-- `gen_ai.eval.violations` - Count of threshold violations by type
-
-#### 🛡️ Safety Guardrails
-
-**Input/Output Filtering**
-- **Prompt Injection Detection** - Protect against prompt injection attacks
-  - Pattern-based detection (jailbreaking attempts)
-  - ML-based classifier for sophisticated attacks
-  - Real-time blocking with configurable policies
-  - Attack attempt metrics and logging
+**All Features Completed! ✅**
 
 - **Restricted Topics** - Block sensitive or inappropriate topics
   - Configurable topic blacklists (legal, medical, financial advice)
@@ -769,8 +778,17 @@ genai_otel.instrument(
 - ✅ `genai.evaluation.bias.types` - Bias detections by type
 - ✅ `genai.evaluation.bias.blocked` - Requests/responses blocked due to bias
 - ✅ `genai.evaluation.bias.score` - Bias score distribution (histogram)
-- 🚧 `gen_ai.guardrail.prompt_injection_detected` - Injection attempts blocked (Coming Soon)
-- 🚧 `gen_ai.guardrail.restricted_topic_blocked` - Restricted topic violations (Coming Soon)
+- ✅ `genai.evaluation.prompt_injection.detections` - Injection attempts detected
+- ✅ `genai.evaluation.prompt_injection.types` - Injection attempts by type
+- ✅ `genai.evaluation.prompt_injection.blocked` - Blocked due to injection
+- ✅ `genai.evaluation.prompt_injection.score` - Injection score distribution (histogram)
+- ✅ `genai.evaluation.restricted_topics.detections` - Restricted topics detected
+- ✅ `genai.evaluation.restricted_topics.types` - Detections by topic
+- ✅ `genai.evaluation.restricted_topics.blocked` - Blocked due to restricted topics
+- ✅ `genai.evaluation.restricted_topics.score` - Topic score distribution (histogram)
+- ✅ `genai.evaluation.hallucination.detections` - Hallucination risks detected
+- ✅ `genai.evaluation.hallucination.indicators` - Detections by indicator type
+- ✅ `genai.evaluation.hallucination.score` - Hallucination score distribution (histogram)
 
 **Span Attributes:**
 - ✅ `evaluation.pii.prompt.detected` - PII detected in prompt (boolean)
@@ -793,8 +811,23 @@ genai_otel.instrument(
 - ✅ `evaluation.bias.*.<bias_type>_score` - Individual bias type scores
 - ✅ `evaluation.bias.*.<bias_type>_patterns` - Matched patterns for each bias type
 - ✅ `evaluation.bias.*.blocked` - Whether blocked due to bias
-- 🚧 `gen_ai.guardrail.violation_type` - Type of violation detected (Coming Soon)
-- 🚧 `gen_ai.guardrail.violation_severity` - Severity level (Coming Soon)
+- ✅ `evaluation.prompt_injection.detected` - Injection attempt detected (boolean)
+- ✅ `evaluation.prompt_injection.score` - Injection risk score
+- ✅ `evaluation.prompt_injection.types` - Injection types detected (array)
+- ✅ `evaluation.prompt_injection.*_patterns` - Matched patterns by injection type
+- ✅ `evaluation.prompt_injection.blocked` - Whether blocked due to injection
+- ✅ `evaluation.restricted_topics.prompt.detected` - Restricted topic in prompt (boolean)
+- ✅ `evaluation.restricted_topics.response.detected` - Restricted topic in response (boolean)
+- ✅ `evaluation.restricted_topics.*.max_score` - Maximum topic score
+- ✅ `evaluation.restricted_topics.*.topics` - Detected topics (array)
+- ✅ `evaluation.restricted_topics.*.<topic>_score` - Individual topic scores
+- ✅ `evaluation.restricted_topics.*.blocked` - Whether blocked due to topic
+- ✅ `evaluation.hallucination.detected` - Hallucination risk detected (boolean)
+- ✅ `evaluation.hallucination.score` - Hallucination risk score
+- ✅ `evaluation.hallucination.indicators` - Indicators found (array)
+- ✅ `evaluation.hallucination.hedge_words_count` - Count of uncertainty markers
+- ✅ `evaluation.hallucination.citation_count` - Count of citations found
+- ✅ `evaluation.hallucination.unsupported_claims` - List of unsupported claims (limited)
 
 #### 🔄 Migration Support
 

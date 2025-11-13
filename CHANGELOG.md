@@ -142,6 +142,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dependencies (optional):
     - Fairlearn: `pip install fairlearn scikit-learn` (for ML-based detection)
 
+- **Prompt Injection Detection (v0.2.0 Phase 3)**
+  - Automatic prompt injection detection protecting against manipulation attacks
+  - 6 injection types: instruction_override, role_playing, jailbreak, context_switching, system_extraction, encoding_obfuscation
+  - Pattern-based detection (always available, no dependencies)
+  - Configurable threshold and blocking mode
+  - Span attributes: `evaluation.prompt_injection.*` for all detection results
+  - Metrics: 4 metrics (detections, types, blocked, score histogram)
+  - Implementation: `prompt_injection_detector.py` (250+ lines)
+  - Example: `examples/comprehensive_evaluation_example.py`
+
+- **Restricted Topics Detection (v0.2.0 Phase 3)**
+  - Topic classification for 9 sensitive categories (medical/legal/financial advice, violence, self-harm, etc.)
+  - Configurable topic blacklists
+  - Pattern and keyword-based detection
+  - Span attributes: `evaluation.restricted_topics.*` for topic detection
+  - Metrics: 4 metrics (detections, types, blocked, score histogram)
+  - Implementation: `restricted_topics_detector.py` (300+ lines)
+  - Example: `examples/comprehensive_evaluation_example.py`
+
+- **Hallucination Detection (v0.2.0 Phase 3)**
+  - Heuristic-based factual accuracy validation
+  - Factual claim extraction, hedge word detection, citation tracking
+  - Context contradiction detection
+  - Span attributes: `evaluation.hallucination.*` for risk indicators
+  - Metrics: 3 metrics (detections, indicators, score histogram)
+  - Implementation: `hallucination_detector.py` (380+ lines)
+  - Example: `examples/comprehensive_evaluation_example.py`
+
 - **Multi-Agent & AI Framework Instrumentation (Phase 1-4)**
   - Comprehensive instrumentation for 11 AI frameworks with 13 implementations total
   - Zero-code setup with automatic tracing and cost tracking
