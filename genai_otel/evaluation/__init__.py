@@ -43,7 +43,10 @@ from .config import (
     RestrictedTopicsConfig,
     ToxicityConfig,
 )
+from .hallucination_detector import HallucinationDetector, HallucinationResult
 from .pii_detector import PIIDetector, PIIDetectionResult
+from .prompt_injection_detector import PromptInjectionDetector, PromptInjectionResult
+from .restricted_topics_detector import RestrictedTopicsDetector, RestrictedTopicsResult
 from .span_processor import EvaluationSpanProcessor
 from .toxicity_detector import ToxicityDetector, ToxicityDetectionResult
 
@@ -58,8 +61,14 @@ __all__ = [
     # Detectors
     "BiasDetector",
     "BiasDetectionResult",
+    "HallucinationDetector",
+    "HallucinationResult",
     "PIIDetector",
     "PIIDetectionResult",
+    "PromptInjectionDetector",
+    "PromptInjectionResult",
+    "RestrictedTopicsDetector",
+    "RestrictedTopicsResult",
     "ToxicityDetector",
     "ToxicityDetectionResult",
     # Span processor
