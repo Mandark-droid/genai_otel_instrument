@@ -145,9 +145,7 @@ class ToxicityConfig:
             raise ValueError("threshold must be between 0.0 and 1.0")
 
         if self.use_perspective_api and not self.perspective_api_key:
-            raise ValueError(
-                "perspective_api_key is required when use_perspective_api is True"
-            )
+            raise ValueError("perspective_api_key is required when use_perspective_api is True")
 
 
 @dataclass
@@ -162,6 +160,7 @@ class BiasConfig:
         sensitive_attributes: Attributes to check for bias
         check_prompts: Check prompts for biased language
         check_responses: Check responses for biased language
+        block_on_detection: Block content when bias is detected
     """
 
     enabled: bool = False
@@ -182,6 +181,7 @@ class BiasConfig:
     sensitive_attributes: Optional[List[str]] = None
     check_prompts: bool = True
     check_responses: bool = True
+    block_on_detection: bool = False
 
     def __post_init__(self):
         """Validate configuration."""
@@ -223,30 +223,15 @@ class RestrictedTopicsConfig:
 
     Attributes:
         enabled: Whether restricted topics detection is enabled
-        topics: Set of restricted topics
-        use_zero_shot: Use zero-shot classification for topic detection
-        custom_classifier: Path to custom topic classifier model
+        restricted_topics: Optional list of specific topics to restrict
         threshold: Classification confidence threshold (0.0-1.0)
         block_on_detection: Block content matching restricted topics
-        allow_educational: Allow educational/informational content
     """
 
     enabled: bool = False
-    topics: Set[str] = field(
-        default_factory=lambda: {
-            "violence",
-            "self_harm",
-            "sexual_content",
-            "hate_speech",
-            "illegal_activity",
-            "child_safety",
-        }
-    )
-    use_zero_shot: bool = True
-    custom_classifier: Optional[str] = None
-    threshold: float = 0.7
-    block_on_detection: bool = True
-    allow_educational: bool = False
+    restricted_topics: Optional[List[str]] = None
+    threshold: float = 0.5
+    block_on_detection: bool = False
 
     def __post_init__(self):
         """Validate configuration."""
@@ -260,33 +245,17 @@ class HallucinationConfig:
 
     Attributes:
         enabled: Whether hallucination detection is enabled
-        use_selfcheck: Use SelfCheckGPT for consistency checking
-        use_citations: Check for citation validity
-        use_fact_check: Use fact-checking against knowledge base
         threshold: Hallucination score threshold (0.0-1.0)
-        num_samples: Number of samples for SelfCheckGPT
-        citation_required: Require citations for factual claims
-        knowledge_base_url: URL for fact-checking knowledge base
+        check_citations: Check for citation validity
+        check_hedging: Check for hedge words
     """
 
     enabled: bool = False
-    use_selfcheck: bool = True
-    use_citations: bool = False
-    use_fact_check: bool = False
-    threshold: float = 0.6
-    num_samples: int = 5
-    citation_required: bool = False
-    knowledge_base_url: Optional[str] = None
+    threshold: float = 0.7
+    check_citations: bool = True
+    check_hedging: bool = True
 
     def __post_init__(self):
         """Validate configuration."""
         if not 0.0 <= self.threshold <= 1.0:
             raise ValueError("threshold must be between 0.0 and 1.0")
-
-        if self.num_samples < 1:
-            raise ValueError("num_samples must be at least 1")
-
-        if self.use_fact_check and not self.knowledge_base_url:
-            raise ValueError(
-                "knowledge_base_url is required when use_fact_check is True"
-            )
