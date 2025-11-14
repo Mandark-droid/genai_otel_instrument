@@ -1,12 +1,13 @@
 """Tests for toxicity detection functionality."""
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 
 from genai_otel.evaluation.config import ToxicityConfig
 from genai_otel.evaluation.toxicity_detector import (
-    ToxicityDetector,
     ToxicityDetectionResult,
+    ToxicityDetector,
 )
 
 
