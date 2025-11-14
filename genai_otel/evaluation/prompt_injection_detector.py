@@ -53,9 +53,9 @@ class PromptInjectionDetector:
     INJECTION_PATTERNS = {
         "instruction_override": {
             "patterns": [
-                r"ignore\s+(?:all\s+)?(?:(?:previous|above|the|your)\s+)?(?:instructions?|prompts?|directions?|rules?)",
-                r"disregard\s+(?:all\s+)?(?:(?:previous|above|the|your)\s+)?(?:instructions?|prompts?|directions?)",
-                r"forget\s+(?:all\s+)?(?:(?:previous|above|the)\s+)?(?:instructions?|prompts?|directions?)",
+                r"ignore\s+(?:all\s+)?(?:(?:previous|above|the|your)\s+)*(?:instructions?|prompts?|directions?|rules?)",
+                r"disregard\s+(?:all\s+)?(?:(?:previous|above|the|your)\s+)*(?:instructions?|prompts?|directions?)",
+                r"forget\s+(?:all\s+)?(?:(?:previous|above|the)\s+)*(?:instructions?|prompts?|directions?)",
                 r"new\s+instructions?:\s*",
                 r"instead,?\s+(?:you\s+)?(?:will|must|should)\s+",
                 r"override\s+(?:your|the)\s+(?:instructions?|programming|rules)",
