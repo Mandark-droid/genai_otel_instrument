@@ -292,13 +292,13 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         """Test that _extract_usage returns None when usage_metadata is None."""
         instrumentor = GoogleAIInstrumentor()
 
-        # Create mock result with None usage_metadata
-        result = MagicMock()
+        # Create mock result with None usage_metadata and no usage attribute
+        result = MagicMock(spec=["usage_metadata"])
         result.usage_metadata = None
 
         usage = instrumentor._extract_usage(result)
 
-        # Should try alternative format
+        # Should return None when no usage data available
         self.assertIsNone(usage)
 
     def test_extract_usage_with_missing_token_counts(self):

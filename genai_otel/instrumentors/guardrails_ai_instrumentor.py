@@ -384,8 +384,8 @@ class GuardrailsAIInstrumentor(BaseInstrumentor):
                         attrs["guardrails.validated_output_type"] = type(validated_output).__name__
 
             # Extract reask count
-            if hasattr(result, "reasks") and result.reasks:
-                attrs["guardrails.reasks_count"] = len(result.reasks)
+            if hasattr(result, "reasks"):
+                attrs["guardrails.reasks_count"] = len(result.reasks) if result.reasks else 0
 
             # Extract error information
             if hasattr(result, "error") and result.error:
@@ -460,8 +460,8 @@ class GuardrailsAIInstrumentor(BaseInstrumentor):
                         attrs["guardrails.validated_output_length"] = len(validated_output)
 
             # Extract reask count
-            if hasattr(result, "reasks") and result.reasks:
-                attrs["guardrails.reasks_count"] = len(result.reasks)
+            if hasattr(result, "reasks"):
+                attrs["guardrails.reasks_count"] = len(result.reasks) if result.reasks else 0
 
         except Exception as e:
             logger.debug("Failed to extract guard.parse response attributes: %s", e)

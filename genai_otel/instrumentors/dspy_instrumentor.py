@@ -318,7 +318,7 @@ class DSPyInstrumentor(BaseInstrumentor):
                 sig = instance.signature
                 if hasattr(sig, "__name__"):
                     attrs["dspy.predict.signature"] = sig.__name__
-                elif hasattr(sig, "instructions") and sig.instructions:
+                if hasattr(sig, "instructions") and sig.instructions:
                     attrs["dspy.predict.instructions"] = str(sig.instructions)[:500]
 
                 # Extract input and output fields

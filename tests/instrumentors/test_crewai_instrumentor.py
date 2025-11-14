@@ -256,7 +256,7 @@ class TestCrewAIInstrumentor(unittest.TestCase):
 
             # Assert
             self.assertEqual(attrs["crewai.output"], "This is the crew output")
-            self.assertEqual(attrs["crewai.output_length"], 24)
+            self.assertEqual(attrs["crewai.output_length"], 23)
 
     def test_extract_response_attributes_crew_output(self):
         """Test extraction of response attributes from CrewOutput object."""
