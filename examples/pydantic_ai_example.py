@@ -294,9 +294,7 @@ def example_agent_with_message_history():
 
     # Second turn with history
     print("\nTurn 2: Asking follow-up with history...")
-    result2 = agent.run_sync(
-        "What is my favorite color?", message_history=result1.new_messages()
-    )
+    result2 = agent.run_sync("What is my favorite color?", message_history=result1.new_messages())
     print(f"Agent: {result2.data}")
 
     print("\n✓ Conversation completed. Check your telemetry backend!")

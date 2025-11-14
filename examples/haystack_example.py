@@ -32,11 +32,11 @@ instrument(
 # Step 2: Import Haystack after instrumentation is set up
 from haystack import Pipeline
 from haystack.components.builders import PromptBuilder
-from haystack.components.generators import OpenAIGenerator, OpenAIChatGenerator
+from haystack.components.generators import OpenAIChatGenerator, OpenAIGenerator
 from haystack.components.retrievers.in_memory import InMemoryBM25Retriever
+from haystack.components.writers import DocumentWriter
 from haystack.dataclasses import ChatMessage
 from haystack.document_stores.in_memory import InMemoryDocumentStore
-from haystack.components.writers import DocumentWriter
 
 
 def example_basic_pipeline():
@@ -257,9 +257,7 @@ def example_complex_pipeline():
         {"creative_generator": {"prompt": "Write a creative name for a coffee shop."}}
     )
 
-    result2 = pipeline.run(
-        {"factual_generator": {"prompt": "What are the ingredients in coffee?"}}
-    )
+    result2 = pipeline.run({"factual_generator": {"prompt": "What are the ingredients in coffee?"}})
 
     print(f"\nCreative: {result1['creative_generator']['replies'][0]}")
     print(f"Factual: {result2['factual_generator']['replies'][0]}")

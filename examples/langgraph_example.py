@@ -31,7 +31,7 @@ print("=" * 80 + "\n")
 
 # Import LangGraph
 try:
-    from langgraph.graph import StateGraph, END
+    from langgraph.graph import END, StateGraph
 except ImportError:
     print("ERROR: LangGraph not installed. Install with:")
     print("  pip install langgraph")

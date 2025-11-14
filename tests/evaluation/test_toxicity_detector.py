@@ -5,10 +5,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from genai_otel.evaluation.config import ToxicityConfig
-from genai_otel.evaluation.toxicity_detector import (
-    ToxicityDetectionResult,
-    ToxicityDetector,
-)
+from genai_otel.evaluation.toxicity_detector import ToxicityDetectionResult, ToxicityDetector
 
 
 class TestToxicityConfig:

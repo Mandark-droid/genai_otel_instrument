@@ -276,7 +276,8 @@ print("Example 7: Environment Variable Configuration")
 print("=" * 80)
 
 print("\nYou can also configure toxicity detection via environment variables:")
-print("""
+print(
+    """
 # Enable toxicity detection
 export GENAI_ENABLE_TOXICITY_DETECTION=true
 
@@ -289,13 +290,16 @@ export GENAI_TOXICITY_PERSPECTIVE_API_KEY=your_api_key_here
 
 # Block toxic content
 export GENAI_TOXICITY_BLOCK_ON_DETECTION=true
-""")
+"""
+)
 
 print("\nThen simply instrument without parameters:")
-print("""
+print(
+    """
 from genai_otel import instrument
 instrument(service_name="my-app")
-""")
+"""
+)
 
 
 # Example 8: Combining with PII Detection
@@ -343,7 +347,8 @@ print("\n" + "=" * 80)
 print("Summary: Toxicity Detection Features")
 print("=" * 80)
 
-print("""
+print(
+    """
 ✓ Detection Methods:
   - Detoxify: Local ML model (offline, privacy-friendly)
   - Perspective API: Cloud-based (more accurate, requires API key)
@@ -396,7 +401,8 @@ print("""
 For more information, see:
 - Detoxify: https://github.com/unitaryai/detoxify
 - Perspective API: https://perspectiveapi.com/
-""")
+"""
+)
 
 print("\n" + "=" * 80)
 print("All examples completed!")
