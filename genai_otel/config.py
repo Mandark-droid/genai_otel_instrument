@@ -174,13 +174,15 @@ class OTelConfig:
 
     # Toxicity Detection
     enable_toxicity_detection: bool = field(
-        default_factory=lambda: os.getenv("GENAI_ENABLE_TOXICITY_DETECTION", "false").lower() == "true"
+        default_factory=lambda: os.getenv("GENAI_ENABLE_TOXICITY_DETECTION", "false").lower()
+        == "true"
     )
     toxicity_threshold: float = field(
         default_factory=lambda: float(os.getenv("GENAI_TOXICITY_THRESHOLD", "0.7"))
     )
     toxicity_use_perspective_api: bool = field(
-        default_factory=lambda: os.getenv("GENAI_TOXICITY_USE_PERSPECTIVE_API", "false").lower() == "true"
+        default_factory=lambda: os.getenv("GENAI_TOXICITY_USE_PERSPECTIVE_API", "false").lower()
+        == "true"
     )
     toxicity_perspective_api_key: Optional[str] = field(
         default_factory=lambda: os.getenv("GENAI_TOXICITY_PERSPECTIVE_API_KEY")
@@ -196,7 +198,10 @@ class OTelConfig:
 
     # Prompt Injection Detection
     enable_prompt_injection_detection: bool = field(
-        default_factory=lambda: os.getenv("GENAI_ENABLE_PROMPT_INJECTION_DETECTION", "false").lower() == "true"
+        default_factory=lambda: os.getenv(
+            "GENAI_ENABLE_PROMPT_INJECTION_DETECTION", "false"
+        ).lower()
+        == "true"
     )
     prompt_injection_threshold: float = field(
         default_factory=lambda: float(os.getenv("GENAI_PROMPT_INJECTION_THRESHOLD", "0.8"))
@@ -204,7 +209,8 @@ class OTelConfig:
 
     # Restricted Topics
     enable_restricted_topics: bool = field(
-        default_factory=lambda: os.getenv("GENAI_ENABLE_RESTRICTED_TOPICS", "false").lower() == "true"
+        default_factory=lambda: os.getenv("GENAI_ENABLE_RESTRICTED_TOPICS", "false").lower()
+        == "true"
     )
     restricted_topics_threshold: float = field(
         default_factory=lambda: float(os.getenv("GENAI_RESTRICTED_TOPICS_THRESHOLD", "0.7"))
@@ -212,7 +218,8 @@ class OTelConfig:
 
     # Hallucination Detection
     enable_hallucination_detection: bool = field(
-        default_factory=lambda: os.getenv("GENAI_ENABLE_HALLUCINATION_DETECTION", "false").lower() == "true"
+        default_factory=lambda: os.getenv("GENAI_ENABLE_HALLUCINATION_DETECTION", "false").lower()
+        == "true"
     )
     hallucination_threshold: float = field(
         default_factory=lambda: float(os.getenv("GENAI_HALLUCINATION_THRESHOLD", "0.6"))

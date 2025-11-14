@@ -244,12 +244,15 @@ class GoogleAIInstrumentor(BaseInstrumentor):
         if hasattr(result, "usage") and result.usage:
             usage = result.usage
             return {
-                "prompt_tokens": getattr(usage, "prompt_tokens",
-                                       getattr(usage, "prompt_token_count", 0)),
-                "completion_tokens": getattr(usage, "completion_tokens",
-                                           getattr(usage, "candidates_token_count", 0)),
-                "total_tokens": getattr(usage, "total_tokens",
-                                      getattr(usage, "total_token_count", 0)),
+                "prompt_tokens": getattr(
+                    usage, "prompt_tokens", getattr(usage, "prompt_token_count", 0)
+                ),
+                "completion_tokens": getattr(
+                    usage, "completion_tokens", getattr(usage, "candidates_token_count", 0)
+                ),
+                "total_tokens": getattr(
+                    usage, "total_tokens", getattr(usage, "total_token_count", 0)
+                ),
             }
 
         return None

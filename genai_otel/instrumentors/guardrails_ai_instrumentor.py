@@ -261,9 +261,7 @@ class GuardrailsAIInstrumentor(BaseInstrumentor):
         try:
             # Extract validators
             if hasattr(instance, "_validators") and instance._validators:
-                validator_names = [
-                    v.__class__.__name__ for v in instance._validators[:10]
-                ]
+                validator_names = [v.__class__.__name__ for v in instance._validators[:10]]
                 attrs["guardrails.validators"] = validator_names
                 attrs["guardrails.validators_count"] = len(instance._validators)
 
@@ -302,9 +300,7 @@ class GuardrailsAIInstrumentor(BaseInstrumentor):
         try:
             # Extract validators
             if hasattr(instance, "_validators") and instance._validators:
-                validator_names = [
-                    v.__class__.__name__ for v in instance._validators[:10]
-                ]
+                validator_names = [v.__class__.__name__ for v in instance._validators[:10]]
                 attrs["guardrails.validators"] = validator_names
                 attrs["guardrails.validators_count"] = len(instance._validators)
 
@@ -327,9 +323,7 @@ class GuardrailsAIInstrumentor(BaseInstrumentor):
 
         return attrs
 
-    def _extract_guard_use_attributes(
-        self, args: Any, kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _extract_guard_use_attributes(self, args: Any, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Extract attributes from Guard.use.
 
         Args:
@@ -387,9 +381,7 @@ class GuardrailsAIInstrumentor(BaseInstrumentor):
                         attrs["guardrails.validated_output_length"] = len(validated_output)
                         attrs["guardrails.validated_output_preview"] = validated_output[:200]
                     else:
-                        attrs["guardrails.validated_output_type"] = type(
-                            validated_output
-                        ).__name__
+                        attrs["guardrails.validated_output_type"] = type(validated_output).__name__
 
             # Extract reask count
             if hasattr(result, "reasks") and result.reasks:

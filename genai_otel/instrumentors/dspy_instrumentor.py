@@ -250,9 +250,7 @@ class DSPyInstrumentor(BaseInstrumentor):
             extract_response_attributes=self._extract_optimizer_response_attributes,
         )(wrapped)(*args, **kwargs)
 
-    def _extract_module_attributes(
-        self, instance: Any, args: Any, kwargs: Any
-    ) -> Dict[str, Any]:
+    def _extract_module_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Module execution.
 
         Args:
@@ -298,9 +296,7 @@ class DSPyInstrumentor(BaseInstrumentor):
 
         return attrs
 
-    def _extract_predict_attributes(
-        self, instance: Any, kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _extract_predict_attributes(self, instance: Any, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Extract attributes from Predict execution.
 
         Args:
@@ -348,9 +344,7 @@ class DSPyInstrumentor(BaseInstrumentor):
 
         return attrs
 
-    def _extract_cot_attributes(
-        self, instance: Any, kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _extract_cot_attributes(self, instance: Any, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Extract attributes from ChainOfThought execution.
 
         Args:
@@ -391,9 +385,7 @@ class DSPyInstrumentor(BaseInstrumentor):
 
         return attrs
 
-    def _extract_react_attributes(
-        self, instance: Any, kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _extract_react_attributes(self, instance: Any, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Extract attributes from ReAct execution.
 
         Args:

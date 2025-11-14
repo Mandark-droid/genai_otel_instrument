@@ -169,9 +169,7 @@ class InstructorInstrumentor(BaseInstrumentor):
         """
         return self.create_span_wrapper(
             span_name="instructor.retry",
-            extract_attributes=lambda inst, args, kwargs: self._extract_retry_attributes(
-                kwargs
-            ),
+            extract_attributes=lambda inst, args, kwargs: self._extract_retry_attributes(kwargs),
         )(wrapped)(*args, **kwargs)
 
     def _extract_from_provider_attributes(
@@ -213,9 +211,7 @@ class InstructorInstrumentor(BaseInstrumentor):
 
         return attrs
 
-    def _extract_patch_attributes(
-        self, args: Any, kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _extract_patch_attributes(self, args: Any, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Extract attributes from patch call.
 
         Args:
@@ -247,9 +243,7 @@ class InstructorInstrumentor(BaseInstrumentor):
 
         return attrs
 
-    def _extract_create_attributes(
-        self, instance: Any, kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _extract_create_attributes(self, instance: Any, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Extract attributes from create_with_completion call.
 
         Args:

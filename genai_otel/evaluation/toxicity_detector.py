@@ -179,16 +179,10 @@ class ToxicityDetector:
             # Add requested categories
             for category in self.config.categories:
                 if category in category_mapping:
-                    analyze_request["requestedAttributes"][
-                        category_mapping[category]
-                    ] = {}
+                    analyze_request["requestedAttributes"][category_mapping[category]] = {}
 
             # Make the API call
-            response = (
-                self._perspective_client.comments()
-                .analyze(body=analyze_request)
-                .execute()
-            )
+            response = self._perspective_client.comments().analyze(body=analyze_request).execute()
 
             # Parse scores
             scores = {}
@@ -300,9 +294,7 @@ class ToxicityDetector:
             results.append(self.detect(text))
         return results
 
-    def _batch_detect_with_detoxify(
-        self, texts: List[str]
-    ) -> List[ToxicityDetectionResult]:
+    def _batch_detect_with_detoxify(self, texts: List[str]) -> List[ToxicityDetectionResult]:
         """Batch detect toxicity using Detoxify.
 
         Args:
@@ -329,18 +321,13 @@ class ToxicityDetector:
 
                 scores = {}
                 for our_cat, detoxify_cat in category_mapping.items():
-                    if (
-                        our_cat in self.config.categories
-                        and detoxify_cat in predictions
-                    ):
+                    if our_cat in self.config.categories and detoxify_cat in predictions:
                         scores[our_cat] = float(predictions[detoxify_cat][i])
 
                 # Determine if toxic
                 max_score = max(scores.values(), default=0.0)
                 toxic_categories = [
-                    cat
-                    for cat, score in scores.items()
-                    if score >= self.config.threshold
+                    cat for cat, score in scores.items() if score >= self.config.threshold
                 ]
                 is_toxic = len(toxic_categories) > 0
                 blocked = self.config.block_on_detection and is_toxic
@@ -360,14 +347,9 @@ class ToxicityDetector:
 
         except Exception as e:
             logger.error("Batch Detoxify error: %s", e, exc_info=True)
-            return [
-                ToxicityDetectionResult(is_toxic=False, original_text=text)
-                for text in texts
-            ]
+            return [ToxicityDetectionResult(is_toxic=False, original_text=text) for text in texts]
 
-    def get_statistics(
-        self, results: List[ToxicityDetectionResult]
-    ) -> Dict[str, Any]:
+    def get_statistics(self, results: List[ToxicityDetectionResult]) -> Dict[str, Any]:
         """Get statistics from multiple detection results.
 
         Args:
@@ -387,17 +369,13 @@ class ToxicityDetector:
         # Calculate average scores
         avg_scores: Dict[str, float] = {}
         for category in self.config.categories:
-            scores = [
-                r.scores.get(category, 0.0) for r in results if r.scores.get(category)
-            ]
+            scores = [r.scores.get(category, 0.0) for r in results if r.scores.get(category)]
             avg_scores[category] = sum(scores) / len(scores) if scores else 0.0
 
         # Calculate max scores seen
         max_scores: Dict[str, float] = {}
         for category in self.config.categories:
-            scores = [
-                r.scores.get(category, 0.0) for r in results if r.scores.get(category)
-            ]
+            scores = [r.scores.get(category, 0.0) for r in results if r.scores.get(category)]
             max_scores[category] = max(scores, default=0.0)
 
         return {

@@ -55,17 +55,13 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
                 # Instrument async run method
                 if hasattr(agents.Runner, "run"):
                     original_run = agents.Runner.run
-                    agents.Runner.run = wrapt.FunctionWrapper(
-                        original_run,
-                        self._wrap_runner_run
-                    )
+                    agents.Runner.run = wrapt.FunctionWrapper(original_run, self._wrap_runner_run)
 
                 # Instrument sync run method
                 if hasattr(agents.Runner, "run_sync"):
                     original_run_sync = agents.Runner.run_sync
                     agents.Runner.run_sync = wrapt.FunctionWrapper(
-                        original_run_sync,
-                        self._wrap_runner_run_sync
+                        original_run_sync, self._wrap_runner_run_sync
                     )
 
                 self._instrumented = True
@@ -145,9 +141,7 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
             # Extract tools
             if hasattr(agent, "tools") and agent.tools:
                 try:
-                    tool_names = [
-                        getattr(tool, "name", str(tool)[:50]) for tool in agent.tools
-                    ]
+                    tool_names = [getattr(tool, "name", str(tool)[:50]) for tool in agent.tools]
                     attrs["openai.agent.tools"] = tool_names
                     attrs["openai.agent.tool_count"] = len(agent.tools)
                 except Exception as e:
@@ -156,9 +150,7 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
             # Extract handoffs
             if hasattr(agent, "handoffs") and agent.handoffs:
                 try:
-                    handoff_names = [
-                        getattr(h, "name", str(h)[:50]) for h in agent.handoffs
-                    ]
+                    handoff_names = [getattr(h, "name", str(h)[:50]) for h in agent.handoffs]
                     attrs["openai.agent.handoffs"] = handoff_names
                     attrs["openai.agent.handoff_count"] = len(agent.handoffs)
                 except Exception as e:

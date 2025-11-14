@@ -55,8 +55,7 @@ class CrewAIInstrumentor(BaseInstrumentor):
                 if hasattr(crewai.Crew, "kickoff"):
                     original_kickoff = crewai.Crew.kickoff
                     crewai.Crew.kickoff = wrapt.FunctionWrapper(
-                        original_kickoff,
-                        self._wrap_crew_kickoff
+                        original_kickoff, self._wrap_crew_kickoff
                     )
 
                 self._instrumented = True
