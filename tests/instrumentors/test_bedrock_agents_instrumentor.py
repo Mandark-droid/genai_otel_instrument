@@ -41,9 +41,7 @@ class TestBedrockAgentsInstrumentor(unittest.TestCase):
             instrumentor = BedrockAgentsInstrumentor()
 
             self.assertFalse(instrumentor._bedrock_agents_available)
-            mock_logger.debug.assert_called_with(
-                "AWS Bedrock Agents runtime service not available"
-            )
+            mock_logger.debug.assert_called_with("AWS Bedrock Agents runtime service not available")
 
     @patch("genai_otel.instrumentors.bedrock_agents_instrumentor.logger")
     def test_init_with_boto3_not_installed(self, mock_logger):
@@ -88,7 +86,12 @@ class TestBedrockAgentsInstrumentor(unittest.TestCase):
 
         with patch.dict(
             "sys.modules",
-            {"boto3": mock_boto3, "botocore": mock_botocore, "botocore.client": mock_botocore.client, "wrapt": mock_wrapt},
+            {
+                "boto3": mock_boto3,
+                "botocore": mock_botocore,
+                "botocore.client": mock_botocore.client,
+                "wrapt": mock_wrapt,
+            },
         ):
             instrumentor = BedrockAgentsInstrumentor()
             config = MagicMock()
@@ -115,7 +118,9 @@ class TestBedrockAgentsInstrumentor(unittest.TestCase):
             lambda self: (_ for _ in ()).throw(RuntimeError("Access failed"))
         )
 
-        with patch.dict("sys.modules", {"boto3": mock_boto3, "botocore": mock_botocore, "wrapt": MagicMock()}):
+        with patch.dict(
+            "sys.modules", {"boto3": mock_boto3, "botocore": mock_botocore, "wrapt": MagicMock()}
+        ):
             instrumentor = BedrockAgentsInstrumentor()
             config = MagicMock()
             config.fail_on_error = False
@@ -139,7 +144,9 @@ class TestBedrockAgentsInstrumentor(unittest.TestCase):
             lambda self: (_ for _ in ()).throw(RuntimeError("Access failed"))
         )
 
-        with patch.dict("sys.modules", {"boto3": mock_boto3, "botocore": mock_botocore, "wrapt": MagicMock()}):
+        with patch.dict(
+            "sys.modules", {"boto3": mock_boto3, "botocore": mock_botocore, "wrapt": MagicMock()}
+        ):
             instrumentor = BedrockAgentsInstrumentor()
             config = MagicMock()
             config.fail_on_error = True
@@ -162,17 +169,19 @@ class TestBedrockAgentsInstrumentor(unittest.TestCase):
 
             # Create request dict
             request_dict = {
-                "body": json.dumps({
-                    "agentId": "test-agent-123",
-                    "agentAliasId": "alias-456",
-                    "sessionId": "session-789",
-                    "inputText": "What is the weather today?",
-                    "enableTrace": True,
-                    "sessionState": {
-                        "promptSessionAttributes": {"context": "weather"},
-                        "sessionAttributes": {"location": "SF"},
-                    },
-                })
+                "body": json.dumps(
+                    {
+                        "agentId": "test-agent-123",
+                        "agentAliasId": "alias-456",
+                        "sessionId": "session-789",
+                        "inputText": "What is the weather today?",
+                        "enableTrace": True,
+                        "sessionState": {
+                            "promptSessionAttributes": {"context": "weather"},
+                            "sessionAttributes": {"location": "SF"},
+                        },
+                    }
+                )
             }
 
             attrs = instrumentor._extract_invoke_agent_attributes(request_dict)
@@ -198,16 +207,18 @@ class TestBedrockAgentsInstrumentor(unittest.TestCase):
 
             # Create request dict
             request_dict = {
-                "body": json.dumps({
-                    "knowledgeBaseId": "kb-12345",
-                    "retrievalQuery": {"text": "company benefits policy"},
-                    "retrievalConfiguration": {
-                        "vectorSearchConfiguration": {
-                            "numberOfResults": 5,
-                            "overrideSearchType": "HYBRID",
-                        }
-                    },
-                })
+                "body": json.dumps(
+                    {
+                        "knowledgeBaseId": "kb-12345",
+                        "retrievalQuery": {"text": "company benefits policy"},
+                        "retrievalConfiguration": {
+                            "vectorSearchConfiguration": {
+                                "numberOfResults": 5,
+                                "overrideSearchType": "HYBRID",
+                            }
+                        },
+                    }
+                )
             }
 
             attrs = instrumentor._extract_retrieve_attributes(request_dict)
@@ -232,24 +243,26 @@ class TestBedrockAgentsInstrumentor(unittest.TestCase):
 
             # Create request dict
             request_dict = {
-                "body": json.dumps({
-                    "input": {"text": "What are the company values?"},
-                    "sessionId": "rag-session-123",
-                    "retrieveAndGenerateConfiguration": {
-                        "type": "KNOWLEDGE_BASE",
-                        "knowledgeBaseConfiguration": {
-                            "knowledgeBaseId": "kb-67890",
-                            "modelArn": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-v2",
-                            "generationConfiguration": {
-                                "inferenceConfig": {
-                                    "temperature": 0.7,
-                                    "maxTokens": 500,
-                                    "topP": 0.9,
-                                }
+                "body": json.dumps(
+                    {
+                        "input": {"text": "What are the company values?"},
+                        "sessionId": "rag-session-123",
+                        "retrieveAndGenerateConfiguration": {
+                            "type": "KNOWLEDGE_BASE",
+                            "knowledgeBaseConfiguration": {
+                                "knowledgeBaseId": "kb-67890",
+                                "modelArn": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-v2",
+                                "generationConfiguration": {
+                                    "inferenceConfig": {
+                                        "temperature": 0.7,
+                                        "maxTokens": 500,
+                                        "topP": 0.9,
+                                    }
+                                },
                             },
                         },
-                    },
-                })
+                    }
+                )
             }
 
             attrs = instrumentor._extract_retrieve_and_generate_attributes(request_dict)
@@ -343,7 +356,9 @@ class TestBedrockAgentsInstrumentor(unittest.TestCase):
 
             # Create mock result with output and citations
             result = {
-                "output": {"text": "The company values are integrity, innovation, and collaboration."},
+                "output": {
+                    "text": "The company values are integrity, innovation, and collaboration."
+                },
                 "citations": [{"reference": "policy_doc_1"}, {"reference": "handbook_2"}],
             }
 

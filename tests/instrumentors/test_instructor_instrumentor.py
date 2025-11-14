@@ -409,9 +409,7 @@ class TestInstructorInstrumentor(unittest.TestCase):
             mock_wrapped = MagicMock(return_value="result")
 
             # Call wrap
-            result = instrumentor._wrap_create_with_completion(
-                mock_wrapped, mock_instance, (), {}
-            )
+            result = instrumentor._wrap_create_with_completion(mock_wrapped, mock_instance, (), {})
 
             # Assert span wrapper was called
             mock_wrapper.assert_called_once()

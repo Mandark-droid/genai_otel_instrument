@@ -79,8 +79,7 @@ class AutoGenInstrumentor(BaseInstrumentor):
                 if hasattr(autogen.ConversableAgent, "initiate_chat"):
                     original_initiate = autogen.ConversableAgent.initiate_chat
                     autogen.ConversableAgent.initiate_chat = wrapt.FunctionWrapper(
-                        original_initiate,
-                        self._wrap_initiate_chat
+                        original_initiate, self._wrap_initiate_chat
                     )
 
             # Instrument GroupChat.run (group chat orchestration)
@@ -89,8 +88,7 @@ class AutoGenInstrumentor(BaseInstrumentor):
                 if hasattr(autogen.GroupChat, "select_speaker"):
                     original_select = autogen.GroupChat.select_speaker
                     autogen.GroupChat.select_speaker = wrapt.FunctionWrapper(
-                        original_select,
-                        self._wrap_select_speaker
+                        original_select, self._wrap_select_speaker
                     )
 
             # Instrument GroupChatManager if available
@@ -98,8 +96,7 @@ class AutoGenInstrumentor(BaseInstrumentor):
                 if hasattr(autogen.GroupChatManager, "run"):
                     original_run = autogen.GroupChatManager.run
                     autogen.GroupChatManager.run = wrapt.FunctionWrapper(
-                        original_run,
-                        self._wrap_group_chat_run
+                        original_run, self._wrap_group_chat_run
                     )
 
             self._instrumented = True
@@ -250,9 +247,7 @@ class AutoGenInstrumentor(BaseInstrumentor):
             attrs["autogen.group_chat.agent_count"] = len(instance.agents)
 
             # Extract agent names
-            agent_names = [
-                getattr(agent, "name", "unknown") for agent in instance.agents
-            ]
+            agent_names = [getattr(agent, "name", "unknown") for agent in instance.agents]
             attrs["autogen.group_chat.agents"] = agent_names[:10]  # Limit to 10
 
         # Extract selection mode/method
@@ -295,9 +290,7 @@ class AutoGenInstrumentor(BaseInstrumentor):
             if hasattr(groupchat, "agents") and groupchat.agents:
                 attrs["autogen.group_chat.agent_count"] = len(groupchat.agents)
 
-                agent_names = [
-                    getattr(agent, "name", "unknown") for agent in groupchat.agents
-                ]
+                agent_names = [getattr(agent, "name", "unknown") for agent in groupchat.agents]
                 attrs["autogen.group_chat.agents"] = agent_names[:10]
 
             if hasattr(groupchat, "speaker_selection_method"):

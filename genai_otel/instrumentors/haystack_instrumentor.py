@@ -62,9 +62,7 @@ class HaystackInstrumentor(BaseInstrumentor):
                 # Instrument Pipeline.run (main execution method)
                 if hasattr(Pipeline, "run"):
                     original_run = Pipeline.run
-                    Pipeline.run = wrapt.FunctionWrapper(
-                        original_run, self._wrap_pipeline_run
-                    )
+                    Pipeline.run = wrapt.FunctionWrapper(original_run, self._wrap_pipeline_run)
 
                 # Instrument Pipeline.run_async (async execution)
                 if hasattr(Pipeline, "run_async"):
@@ -190,9 +188,7 @@ class HaystackInstrumentor(BaseInstrumentor):
             extract_attributes=self._extract_retriever_attributes,
         )(wrapped)(instance, *args, **kwargs)
 
-    def _extract_pipeline_attributes(
-        self, instance: Any, args: Any, kwargs: Any
-    ) -> Dict[str, Any]:
+    def _extract_pipeline_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Pipeline.run call.
 
         Args:
@@ -356,9 +352,9 @@ class HaystackInstrumentor(BaseInstrumentor):
                     if messages:
                         last_msg = messages[-1]
                         if hasattr(last_msg, "content"):
-                            attrs["haystack.chat_generator.last_message"] = str(
-                                last_msg.content
-                            )[:500]
+                            attrs["haystack.chat_generator.last_message"] = str(last_msg.content)[
+                                :500
+                            ]
                         if hasattr(last_msg, "role"):
                             attrs["haystack.chat_generator.last_role"] = last_msg.role
             except Exception as e:
@@ -467,17 +463,13 @@ class HaystackInstrumentor(BaseInstrumentor):
                             replies = value["replies"]
                             if isinstance(replies, list) and replies:
                                 attrs[f"haystack.output.{key}.replies.count"] = len(replies)
-                                attrs[f"haystack.output.{key}.first_reply"] = str(
-                                    replies[0]
-                                )[:500]
+                                attrs[f"haystack.output.{key}.first_reply"] = str(replies[0])[:500]
 
                         # Check for documents (retriever output)
                         if "documents" in value:
                             documents = value["documents"]
                             if isinstance(documents, list):
-                                attrs[f"haystack.output.{key}.documents.count"] = len(
-                                    documents
-                                )
+                                attrs[f"haystack.output.{key}.documents.count"] = len(documents)
 
         except Exception as e:
             logger.debug("Failed to extract response attributes: %s", e)

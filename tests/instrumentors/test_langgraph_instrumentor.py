@@ -63,7 +63,14 @@ class TestLangGraphInstrumentor(unittest.TestCase):
         # Create a mock wrapt module
         mock_wrapt = MagicMock()
 
-        with patch.dict("sys.modules", {"langgraph": mock_langgraph, "langgraph.graph": mock_langgraph.graph, "wrapt": mock_wrapt}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "langgraph": mock_langgraph,
+                "langgraph.graph": mock_langgraph.graph,
+                "wrapt": mock_wrapt,
+            },
+        ):
             instrumentor = LangGraphInstrumentor()
             config = MagicMock()
 
@@ -162,7 +169,7 @@ class TestLangGraphInstrumentor(unittest.TestCase):
             input_state = {
                 "messages": ["message1", "message2"],
                 "query": "What is LangGraph?",
-                "custom_key": "custom_value"
+                "custom_key": "custom_value",
             }
             args = (input_state,)
             kwargs = {}
@@ -187,11 +194,8 @@ class TestLangGraphInstrumentor(unittest.TestCase):
             # Input with config
             input_state = {"messages": []}
             config = {
-                "configurable": {
-                    "thread_id": "thread_123",
-                    "checkpoint_id": "checkpoint_456"
-                },
-                "recursion_limit": 25
+                "configurable": {"thread_id": "thread_123", "checkpoint_id": "checkpoint_456"},
+                "recursion_limit": 25,
             }
             args = (input_state,)
             kwargs = {"config": config}
@@ -212,7 +216,7 @@ class TestLangGraphInstrumentor(unittest.TestCase):
             result = {
                 "messages": ["msg1", "msg2", "msg3"],
                 "answer": "This is the answer",
-                "output": "Final output"
+                "output": "Final output",
             }
 
             attrs = instrumentor._extract_response_attributes(result)

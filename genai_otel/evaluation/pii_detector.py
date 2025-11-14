@@ -71,9 +71,7 @@ class PIIDetector:
             self._presidio_available = True
             logger.info("Presidio PII detection initialized successfully")
         except ImportError as e:
-            logger.warning(
-                "Presidio not available, PII detection will be limited: %s", e
-            )
+            logger.warning("Presidio not available, PII detection will be limited: %s", e)
             logger.info(
                 "Install with: pip install presidio-analyzer presidio-anonymizer spacy && python -m spacy download en_core_web_lg"
             )
@@ -225,9 +223,7 @@ class PIIDetector:
                         "text": match.group(),
                     }
                 )
-                entity_counts["EMAIL_ADDRESS"] = (
-                    entity_counts.get("EMAIL_ADDRESS", 0) + 1
-                )
+                entity_counts["EMAIL_ADDRESS"] = entity_counts.get("EMAIL_ADDRESS", 0) + 1
 
         # Phone pattern (US)
         if PIIEntityType.PHONE_NUMBER in self.config.entity_types:
@@ -242,9 +238,7 @@ class PIIDetector:
                         "text": match.group(),
                     }
                 )
-                entity_counts["PHONE_NUMBER"] = (
-                    entity_counts.get("PHONE_NUMBER", 0) + 1
-                )
+                entity_counts["PHONE_NUMBER"] = entity_counts.get("PHONE_NUMBER", 0) + 1
 
         # Credit card pattern
         if PIIEntityType.CREDIT_CARD in self.config.entity_types:
@@ -315,9 +309,7 @@ class PIIDetector:
             blocked=blocked,
         )
 
-    def analyze_batch(
-        self, texts: List[str], language: str = "en"
-    ) -> List[PIIDetectionResult]:
+    def analyze_batch(self, texts: List[str], language: str = "en") -> List[PIIDetectionResult]:
         """Analyze multiple texts for PII.
 
         Args:
@@ -348,9 +340,7 @@ class PIIDetector:
         entity_type_counts: Dict[str, int] = {}
         for result in results:
             for entity_type, count in result.entity_counts.items():
-                entity_type_counts[entity_type] = (
-                    entity_type_counts.get(entity_type, 0) + count
-                )
+                entity_type_counts[entity_type] = entity_type_counts.get(entity_type, 0) + count
 
         # Calculate average score
         scores = [r.score for r in results if r.has_pii]

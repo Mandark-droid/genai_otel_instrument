@@ -64,9 +64,7 @@ class PydanticAIInstrumentor(BaseInstrumentor):
             # Instrument Agent.run_sync (explicit synchronous execution)
             if hasattr(Agent, "run_sync"):
                 original_run_sync = Agent.run_sync
-                Agent.run_sync = wrapt.FunctionWrapper(
-                    original_run_sync, self._wrap_agent_run_sync
-                )
+                Agent.run_sync = wrapt.FunctionWrapper(original_run_sync, self._wrap_agent_run_sync)
 
             # Instrument Agent.run_stream (streaming execution)
             if hasattr(Agent, "run_stream"):

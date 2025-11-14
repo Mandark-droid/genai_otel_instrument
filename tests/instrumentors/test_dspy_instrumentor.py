@@ -539,9 +539,7 @@ class TestDSPyInstrumentor(unittest.TestCase):
             mock_wrapped = MagicMock(return_value="result")
 
             # Call wrap
-            result = instrumentor._wrap_chain_of_thought_forward(
-                mock_wrapped, mock_cot, (), {}
-            )
+            result = instrumentor._wrap_chain_of_thought_forward(mock_wrapped, mock_cot, (), {})
 
             # Assert span wrapper was called
             mock_wrapper.assert_called_once()
@@ -594,9 +592,7 @@ class TestDSPyInstrumentor(unittest.TestCase):
             mock_wrapped = MagicMock(return_value="result")
 
             # Call wrap
-            result = instrumentor._wrap_optimizer_compile(
-                mock_wrapped, mock_optimizer, (), {}
-            )
+            result = instrumentor._wrap_optimizer_compile(mock_wrapped, mock_optimizer, (), {})
 
             # Assert span wrapper was called
             mock_wrapper.assert_called_once()

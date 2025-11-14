@@ -63,10 +63,7 @@ class LangGraphInstrumentor(BaseInstrumentor):
 
                     return compiled_graph
 
-                StateGraph.compile = wrapt.FunctionWrapper(
-                    original_compile,
-                    wrapped_compile
-                )
+                StateGraph.compile = wrapt.FunctionWrapper(original_compile, wrapped_compile)
 
                 self._instrumented = True
                 logger.info("LangGraph instrumentation enabled")
@@ -92,7 +89,7 @@ class LangGraphInstrumentor(BaseInstrumentor):
                 original_invoke,
                 lambda w, i, a, kw: self._wrap_graph_invoke(
                     w, i, a, kw, state_graph, is_async=False
-                )
+                ),
             )
 
         # Instrument stream method (synchronous streaming)
@@ -102,7 +99,7 @@ class LangGraphInstrumentor(BaseInstrumentor):
                 original_stream,
                 lambda w, i, a, kw: self._wrap_graph_stream(
                     w, i, a, kw, state_graph, is_async=False
-                )
+                ),
             )
 
         # Instrument ainvoke method (asynchronous execution)
@@ -112,7 +109,7 @@ class LangGraphInstrumentor(BaseInstrumentor):
                 original_ainvoke,
                 lambda w, i, a, kw: self._wrap_graph_invoke(
                     w, i, a, kw, state_graph, is_async=True
-                )
+                ),
             )
 
         # Instrument astream method (asynchronous streaming)
@@ -122,7 +119,7 @@ class LangGraphInstrumentor(BaseInstrumentor):
                 original_astream,
                 lambda w, i, a, kw: self._wrap_graph_stream(
                     w, i, a, kw, state_graph, is_async=True
-                )
+                ),
             )
 
     def _wrap_graph_invoke(self, wrapped, instance, args, kwargs, state_graph, is_async):
