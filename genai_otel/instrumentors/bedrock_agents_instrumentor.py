@@ -39,7 +39,9 @@ class BedrockAgentsInstrumentor(BaseInstrumentor):
             session = boto3.session.Session()
             if "bedrock-agent-runtime" in session.get_available_services():
                 self._bedrock_agents_available = True
-                logger.debug("AWS Bedrock Agents runtime detected and available for instrumentation")
+                logger.debug(
+                    "AWS Bedrock Agents runtime detected and available for instrumentation"
+                )
             else:
                 logger.debug("AWS Bedrock Agents runtime service not available")
                 self._bedrock_agents_available = False
@@ -69,7 +71,10 @@ class BedrockAgentsInstrumentor(BaseInstrumentor):
             # Wrap the _make_request method
             def wrapped_make_request(self, operation_model, request_dict, *args, **kwargs):
                 # Only instrument bedrock-agent-runtime operations
-                if hasattr(self, "_service_model") and self._service_model.service_name == "bedrock-agent-runtime":
+                if (
+                    hasattr(self, "_service_model")
+                    and self._service_model.service_name == "bedrock-agent-runtime"
+                ):
                     operation_name = operation_model.name
 
                     # Instrument invoke_agent operation
@@ -79,7 +84,9 @@ class BedrockAgentsInstrumentor(BaseInstrumentor):
                             extract_attributes=lambda inst, args, kwargs: self._instrumentor._extract_invoke_agent_attributes(
                                 request_dict
                             ),
-                        )(original_make_request)(self, operation_model, request_dict, *args, **kwargs)
+                        )(original_make_request)(
+                            self, operation_model, request_dict, *args, **kwargs
+                        )
 
                     # Instrument retrieve operation
                     elif operation_name == "Retrieve":
@@ -88,7 +95,9 @@ class BedrockAgentsInstrumentor(BaseInstrumentor):
                             extract_attributes=lambda inst, args, kwargs: self._instrumentor._extract_retrieve_attributes(
                                 request_dict
                             ),
-                        )(original_make_request)(self, operation_model, request_dict, *args, **kwargs)
+                        )(original_make_request)(
+                            self, operation_model, request_dict, *args, **kwargs
+                        )
 
                     # Instrument retrieve_and_generate operation
                     elif operation_name == "RetrieveAndGenerate":
@@ -97,7 +106,9 @@ class BedrockAgentsInstrumentor(BaseInstrumentor):
                             extract_attributes=lambda inst, args, kwargs: self._instrumentor._extract_retrieve_and_generate_attributes(
                                 request_dict
                             ),
-                        )(original_make_request)(self, operation_model, request_dict, *args, **kwargs)
+                        )(original_make_request)(
+                            self, operation_model, request_dict, *args, **kwargs
+                        )
 
                 # Call original for non-bedrock-agent-runtime operations
                 return original_make_request(self, operation_model, request_dict, *args, **kwargs)

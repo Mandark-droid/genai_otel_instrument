@@ -234,14 +234,16 @@ def setup_auto_instrumentation(config: OTelConfig):
             logger.warning(f"Failed to add cost enrichment processor: {e}", exc_info=True)
 
     # Add evaluation and safety span processor (v0.2.0)
-    if any([
-        config.enable_pii_detection,
-        config.enable_toxicity_detection,
-        config.enable_bias_detection,
-        config.enable_prompt_injection_detection,
-        config.enable_restricted_topics,
-        config.enable_hallucination_detection,
-    ]):
+    if any(
+        [
+            config.enable_pii_detection,
+            config.enable_toxicity_detection,
+            config.enable_bias_detection,
+            config.enable_prompt_injection_detection,
+            config.enable_restricted_topics,
+            config.enable_hallucination_detection,
+        ]
+    ):
         try:
             # Build PII config from OTelConfig
             pii_config = None

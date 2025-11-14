@@ -26,9 +26,7 @@ class TestToxicityConfig:
 
     def test_perspective_api_requires_key(self):
         """Test Perspective API requires API key."""
-        with pytest.raises(
-            ValueError, match="perspective_api_key is required"
-        ):
+        with pytest.raises(ValueError, match="perspective_api_key is required"):
             ToxicityConfig(use_perspective_api=True, perspective_api_key=None)
 
     def test_invalid_threshold_raises_error(self):
@@ -399,9 +397,7 @@ class TestToxicityDetector:
         """Test fallback from Perspective API to Detoxify on error."""
         # Mock Perspective API to fail
         mock_perspective = Mock()
-        mock_perspective.comments().analyze().execute.side_effect = Exception(
-            "API error"
-        )
+        mock_perspective.comments().analyze().execute.side_effect = Exception("API error")
         mock_discovery.build.return_value = mock_perspective
 
         # Mock Detoxify to succeed

@@ -116,7 +116,12 @@ class BiasDetector:
                 r"\b(?:real|normal|natural)\s+(?:man|woman|gender)\b",
                 r"\b(?:he-she|it|tranny)\b",
             ],
-            "keywords": ["homophobic", "transphobic", "lgbtq discrimination", "sexual orientation bias"],
+            "keywords": [
+                "homophobic",
+                "transphobic",
+                "lgbtq discrimination",
+                "sexual orientation bias",
+            ],
         },
         "political": {
             "patterns": [
@@ -288,9 +293,7 @@ class BiasDetector:
         avg_scores: Dict[str, float] = {}
         for bias_type in self.config.bias_types:
             scores = [
-                r.bias_scores.get(bias_type, 0.0)
-                for r in results
-                if r.bias_scores.get(bias_type)
+                r.bias_scores.get(bias_type, 0.0) for r in results if r.bias_scores.get(bias_type)
             ]
             avg_scores[bias_type] = sum(scores) / len(scores) if scores else 0.0
 
@@ -298,9 +301,7 @@ class BiasDetector:
         max_scores: Dict[str, float] = {}
         for bias_type in self.config.bias_types:
             scores = [
-                r.bias_scores.get(bias_type, 0.0)
-                for r in results
-                if r.bias_scores.get(bias_type)
+                r.bias_scores.get(bias_type, 0.0) for r in results if r.bias_scores.get(bias_type)
             ]
             max_scores[bias_type] = max(scores, default=0.0)
 
@@ -311,9 +312,9 @@ class BiasDetector:
             "bias_type_counts": bias_type_counts,
             "average_scores": avg_scores,
             "max_scores": max_scores,
-            "most_common_bias": max(bias_type_counts.items(), key=lambda x: x[1])[0]
-            if bias_type_counts
-            else None,
+            "most_common_bias": (
+                max(bias_type_counts.items(), key=lambda x: x[1])[0] if bias_type_counts else None
+            ),
         }
 
     def get_sensitive_attributes(self) -> Set[str]:

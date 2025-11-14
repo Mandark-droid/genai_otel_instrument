@@ -346,9 +346,7 @@ class TestAutoGenInstrumentor(unittest.TestCase):
             args = ()
             kwargs = {}
 
-            attrs = instrumentor._extract_group_chat_manager_attributes(
-                mock_manager, args, kwargs
-            )
+            attrs = instrumentor._extract_group_chat_manager_attributes(mock_manager, args, kwargs)
 
             # Assert
             self.assertEqual(attrs["gen_ai.system"], "autogen")
@@ -411,7 +409,9 @@ class TestAutoGenInstrumentor(unittest.TestCase):
             self.assertEqual(attrs["autogen.conversation.last_message"], "Final response")
             self.assertEqual(attrs["autogen.conversation.last_role"], "assistant")
             self.assertEqual(attrs["autogen.conversation.last_speaker"], "assistant_agent")
-            self.assertEqual(attrs["autogen.conversation.summary"], "Conversation completed successfully")
+            self.assertEqual(
+                attrs["autogen.conversation.summary"], "Conversation completed successfully"
+            )
 
     def test_extract_response_attributes_with_cost(self):
         """Test extraction of response attributes with cost."""
