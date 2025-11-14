@@ -56,19 +56,18 @@ class BiasDetector:
     BIAS_PATTERNS = {
         "gender": {
             "patterns": [
-                r"\b(women|woman|female|girl|she|her)\s+(are|is|always|never|can't|cannot|shouldn't)\s+\w+",
-                r"\b(men|man|male|boy|he|him)\s+(are|is|always|never|can't|cannot|shouldn't)\s+\w+",
+                r"\b(women|woman|female|girls?|she|her)\s+(?:are|is|always|never|can't|cannot|shouldn't)\b",
+                r"\b(men|man|male|boys?|he|him)\s+(?:are|is|always|never|can't|cannot|shouldn't)\b",
                 r"\bfor\s+(his|her)\s+gender\b",
                 r"\b(manly|womanly|girly|boyish)\s+(?:behavior|traits?|characteristic)",
-                r"\b(?:act|behave|think)\s+like\s+a\s+(?:man|woman|boy|girl)",
+                r"(?:cry|act|behave|think)\s+like\s+(?:a\s+)?(?:man|woman|boys?|girls?)",
                 r"\b(?:real|proper|typical)\s+(?:man|woman|boy|girl)",
             ],
             "keywords": ["sexist", "misogyny", "misandry", "gender stereotype"],
         },
         "race": {
             "patterns": [
-                r"\b(?:all|most|typical)\s+(?:black|white|asian|hispanic|latino|arab)\s+people\b",
-                r"\b(?:black|white|asian|hispanic|latino|arab)\s+people\s+(?:are|tend to|always|never)\b",
+                r"\b(?:all|most|typical)?\s*(?:black|white|asian|hispanic|latino|arab)\s+people\s+(?:are|tend\s+to|always|never)\b",
                 r"\brace\s+(?:card|baiting)\b",
                 r"\b(?:act|sound|look)\s+(?:white|black|asian|hispanic)\b",
             ],
@@ -84,8 +83,7 @@ class BiasDetector:
         },
         "religion": {
             "patterns": [
-                r"\b(?:all|most|typical)\s+(?:muslim|christian|jew|hindu|buddhist|atheist)s?\s+(?:are|believe)\b",
-                r"\b(?:muslim|christian|jew|hindu|buddhist|atheist)s?\s+(?:always|never|tend to)\b",
+                r"\b(?:muslims?|christians?|jews?|hindus?|buddhists?|atheists?)\s+(?:are|always|never|tend\s+to)\b",
                 r"\bsharia\s+law\b",
                 r"\breligious\s+extremis",
             ],
@@ -94,7 +92,8 @@ class BiasDetector:
         "age": {
             "patterns": [
                 r"\b(?:old|elderly|senior)\s+people\s+(?:are|can't|cannot|shouldn't)\b",
-                r"\b(?:young|millennial|gen\s*z|zoomer|boomer)\s+people\s+(?:are|always|never)\b",
+                r"\b(?:millennials?|gen\s*z|zoomers?|boomers?)\s+(?:are|always|never)\b",
+                r"\b(?:young)\s+people\s+(?:are|always|never)\b",
                 r"\btoo\s+(?:old|young)\s+(?:to|for)\b",
                 r"\b(?:act|look)\s+(?:your|their)\s+age\b",
             ],
@@ -111,6 +110,7 @@ class BiasDetector:
         },
         "sexual_orientation": {
             "patterns": [
+                r"\b(?:gay|lesbian|homosexual|bisexual|transgender|lgbt)\s+people\s+(?:are|always|never)\b",
                 r"\b(?:gay|lesbian|homosexual|bisexual|transgender|lgbt)\s+(?:agenda|lifestyle)\b",
                 r"\bchoose\s+to\s+be\s+(?:gay|homosexual|transgender)\b",
                 r"\b(?:real|normal|natural)\s+(?:man|woman|gender)\b",
