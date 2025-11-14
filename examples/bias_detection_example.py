@@ -259,11 +259,11 @@ def example_7_statistics_generation():
     print(f"Biased Texts Count: {stats['biased_texts_count']}")
     print(f"Bias Rate: {stats['bias_rate']:.1%}")
     print(f"\nBias Type Distribution:")
-    for bias_type, count in sorted(stats['bias_type_counts'].items()):
+    for bias_type, count in sorted(stats["bias_type_counts"].items()):
         print(f"  {bias_type}: {count}")
     print(f"\nMost Common Bias: {stats['most_common_bias']}")
     print(f"\nAverage Scores by Type:")
-    for bias_type, score in sorted(stats['average_scores'].items()):
+    for bias_type, score in sorted(stats["average_scores"].items()):
         if score > 0:
             print(f"  {bias_type}: {score:.2f}")
 

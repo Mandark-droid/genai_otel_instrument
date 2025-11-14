@@ -47,6 +47,7 @@ if not api_key:
 print("1. Simple Agent with Tool...")
 print("-" * 80)
 
+
 # Define a custom tool using function_tool decorator
 @function_tool
 def get_weather(city: str) -> str:

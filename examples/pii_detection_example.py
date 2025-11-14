@@ -109,7 +109,9 @@ except Exception as e:
 
 print("\n✓ Check your telemetry backend for:")
 print("  - evaluation.pii.prompt.detected = true")
-print("  - evaluation.pii.prompt.redacted = 'My SSN is ********* and credit card is ****************'")
+print(
+    "  - evaluation.pii.prompt.redacted = 'My SSN is ********* and credit card is ****************'"
+)
 print("  - PII entities are replaced with asterisks in the redacted attribute")
 
 
@@ -284,7 +286,8 @@ print("Example 7: Environment Variable Configuration")
 print("=" * 80)
 
 print("\nYou can also configure PII detection via environment variables:")
-print("""
+print(
+    """
 # Enable PII detection
 export GENAI_ENABLE_PII_DETECTION=true
 
@@ -298,13 +301,16 @@ export GENAI_PII_THRESHOLD=0.8
 export GENAI_PII_GDPR_MODE=true
 export GENAI_PII_HIPAA_MODE=true
 export GENAI_PII_PCI_DSS_MODE=true
-""")
+"""
+)
 
 print("\nThen simply instrument without parameters:")
-print("""
+print(
+    """
 from genai_otel import instrument
 instrument(service_name="my-app")
-""")
+"""
+)
 
 
 # Example 8: Response PII Detection
@@ -373,7 +379,8 @@ print("\n" + "=" * 80)
 print("Summary: PII Detection Features")
 print("=" * 80)
 
-print("""
+print(
+    """
 ✓ Detection Modes:
   - detect: Only detect and report PII
   - redact: Detect and redact PII in telemetry
@@ -417,7 +424,8 @@ print("""
 
 For more information, see:
 https://docs.microsoft.com/presidio
-""")
+"""
+)
 
 print("\n" + "=" * 80)
 print("All examples completed!")

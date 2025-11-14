@@ -30,7 +30,7 @@ print("=" * 80 + "\n")
 
 # Import CrewAI
 try:
-    from crewai import Agent, Crew, Task, Process
+    from crewai import Agent, Crew, Process, Task
 except ImportError:
     print("ERROR: CrewAI not installed. Install with:")
     print("  pip install crewai")

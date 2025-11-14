@@ -169,7 +169,7 @@ def example_react_with_tools():
     def calculate(expression: str) -> str:
         """Calculate mathematical expressions."""
         try:
-            result = eval(expression)
+            result = eval(expression)  # nosec B307 - Example code only
             return f"Result: {result}"
         except:
             return "Invalid expression"
