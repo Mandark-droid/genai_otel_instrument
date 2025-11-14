@@ -297,9 +297,9 @@ class RestrictedTopicsDetector:
             "topic_counts": topic_counts,
             "average_score": avg_score,
             "max_score": max_score,
-            "most_common_topic": max(topic_counts.items(), key=lambda x: x[1])[0]
-            if topic_counts
-            else None,
+            "most_common_topic": (
+                max(topic_counts.items(), key=lambda x: x[1])[0] if topic_counts else None
+            ),
         }
 
     def get_available_topics(self) -> Set[str]:
