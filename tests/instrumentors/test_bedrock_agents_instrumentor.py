@@ -114,12 +114,19 @@ class TestBedrockAgentsInstrumentor(unittest.TestCase):
         mock_boto3.session.Session.return_value = mock_session
 
         mock_botocore = MagicMock()
-        type(mock_botocore.client).BaseClient = property(
+        mock_botocore_client = MagicMock()
+        type(mock_botocore_client).BaseClient = property(
             lambda self: (_ for _ in ()).throw(RuntimeError("Access failed"))
         )
 
         with patch.dict(
-            "sys.modules", {"boto3": mock_boto3, "botocore": mock_botocore, "wrapt": MagicMock()}
+            "sys.modules",
+            {
+                "boto3": mock_boto3,
+                "botocore": mock_botocore,
+                "botocore.client": mock_botocore_client,
+                "wrapt": MagicMock(),
+            },
         ):
             instrumentor = BedrockAgentsInstrumentor()
             config = MagicMock()
@@ -140,12 +147,19 @@ class TestBedrockAgentsInstrumentor(unittest.TestCase):
         mock_boto3.session.Session.return_value = mock_session
 
         mock_botocore = MagicMock()
-        type(mock_botocore.client).BaseClient = property(
+        mock_botocore_client = MagicMock()
+        type(mock_botocore_client).BaseClient = property(
             lambda self: (_ for _ in ()).throw(RuntimeError("Access failed"))
         )
 
         with patch.dict(
-            "sys.modules", {"boto3": mock_boto3, "botocore": mock_botocore, "wrapt": MagicMock()}
+            "sys.modules",
+            {
+                "boto3": mock_boto3,
+                "botocore": mock_botocore,
+                "botocore.client": mock_botocore_client,
+                "wrapt": MagicMock(),
+            },
         ):
             instrumentor = BedrockAgentsInstrumentor()
             config = MagicMock()

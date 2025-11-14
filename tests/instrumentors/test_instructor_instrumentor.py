@@ -314,14 +314,14 @@ class TestInstructorInstrumentor(unittest.TestCase):
         with patch.dict("sys.modules", {"instructor": mock_instructor}):
             instrumentor = InstructorInstrumentor()
 
-            # Create mock result with raw response
+            # Create mock result with raw response (no model_dump)
             mock_choice = MagicMock()
             mock_choice.finish_reason = "stop"
 
             mock_raw_response = MagicMock()
             mock_raw_response.choices = [mock_choice]
 
-            mock_result = MagicMock()
+            mock_result = MagicMock(spec=["_raw_response"])
             mock_result._raw_response = mock_raw_response
 
             finish_reason = instrumentor._extract_finish_reason(mock_result)
