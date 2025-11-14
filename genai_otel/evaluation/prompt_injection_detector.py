@@ -53,8 +53,9 @@ class PromptInjectionDetector:
     INJECTION_PATTERNS = {
         "instruction_override": {
             "patterns": [
-                r"ignore\s+(?:all\s+)?(?:previous|above|the)\s+(?:instructions?|prompts?|directions?|rules?)",
-                r"disregard\s+(?:all\s+)?(?:previous|above|the)\s+(?:instructions?|prompts?|directions?)",
+                r"ignore\s+(?:all\s+)?(?:previous|above|the|your)\s+(?:instructions?|prompts?|directions?|rules?)",
+                r"disregard\s+(?:all\s+)?(?:previous|above|the|your)\s+(?:instructions?|prompts?|directions?)",
+                r"disregard\s+the\s+(?:above|previous)\s+(?:instructions?|prompts?|directions?)",  # "disregard the above instructions"
                 r"forget\s+(?:all\s+)?(?:previous|above|the)\s+(?:instructions?|prompts?|directions?)",
                 r"new\s+instructions?:\s*",
                 r"instead,?\s+(?:you\s+)?(?:will|must|should)\s+",
@@ -78,8 +79,7 @@ class PromptInjectionDetector:
                 r"evil\s+mode",
                 r"opposite\s+mode",
                 r"jailbreak",
-                r"you\s+have\s+no\s+(?:restrictions?|limitations?|ethics?|guidelines?)",
-                r"(?:have|has)\s+no\s+(?:restrictions?|limitations?|ethics?|guidelines?)",
+                r"you\s+(?:now\s+)?have\s+no\s+(?:restrictions?|limitations?|ethics?|guidelines?)",  # More specific: "you have no restrictions"
                 r"without\s+any\s+(?:restrictions?|limitations?|ethics?|guidelines?|filters?)",
                 r"bypass\s+(?:your|the)\s+(?:safety|ethical|content)\s+(?:filters?|guidelines?)",
             ],

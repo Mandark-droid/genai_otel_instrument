@@ -62,8 +62,10 @@ class HallucinationDetector:
             r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b",
         ],
         "specific_numbers": [
-            r"\b\d+(?:,\d{3})*(?:\.\d+)?\s*(?:million|billion|trillion|thousand)\b",
+            r"\$?\d+(?:,\d{3})*(?:\.\d+)?\s*(?:million|billion|trillion|thousand)\b",  # $45.7 billion, 328 million
             r"\b(?:exactly|precisely|approximately)\s+\d+(?:,\d{3})*(?:\.\d+)?\b",
+            r"\b\d{1,3}(?:,\d{3})+\b",  # 1,234 employees
+            r"\b\d+(?:\.\d+)?%",  # 99.9% satisfaction
         ],
         "specific_names": [
             r"\b(?:according\s+to|says|stated|claimed)\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b",
@@ -416,6 +418,26 @@ class HallucinationDetector:
         # Extract key terms from context
         context_lower = context.lower()
         text_lower = text.lower()
+
+        # Check for number contradictions with same subject
+        # Extract subject + number pairs from both texts
+        number_pattern = r"(\w+)\s+(?:is|are|was|were|reached?)\s+(?:exactly|approximately|about)?\s*(\d+(?:,\d{3})*(?:\.\d+)?(?:\s*(?:million|billion|thousand))?)"
+
+        context_numbers = {}
+        text_numbers = {}
+
+        for match in re.finditer(number_pattern, context_lower):
+            subject, number = match.groups()
+            context_numbers[subject] = number.strip()
+
+        for match in re.finditer(number_pattern, text_lower):
+            subject, number = match.groups()
+            text_numbers[subject] = number.strip()
+
+        # Check if same subject has different numbers
+        for subject in context_numbers:
+            if subject in text_numbers and context_numbers[subject] != text_numbers[subject]:
+                return True
 
         # Simple negation detection
         negation_patterns = [
