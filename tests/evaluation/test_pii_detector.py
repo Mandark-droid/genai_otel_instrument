@@ -1,10 +1,11 @@
 """Tests for PII detection functionality."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
-from genai_otel.evaluation.config import PIIConfig, PIIMode, PIIEntityType
-from genai_otel.evaluation.pii_detector import PIIDetector, PIIDetectionResult
+import pytest
+
+from genai_otel.evaluation.config import PIIConfig, PIIEntityType, PIIMode
+from genai_otel.evaluation.pii_detector import PIIDetectionResult, PIIDetector
 
 
 class TestPIIConfig:

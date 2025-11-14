@@ -29,10 +29,10 @@ from .langgraph_instrumentor import LangGraphInstrumentor
 from .llamaindex_instrumentor import LlamaIndexInstrumentor
 from .mistralai_instrumentor import MistralAIInstrumentor
 from .ollama_instrumentor import OllamaInstrumentor
+from .openai_agents_instrumentor import OpenAIAgentsInstrumentor
 
 # Import instrumentors only - they handle their own dependency checking
 from .openai_instrumentor import OpenAIInstrumentor
-from .openai_agents_instrumentor import OpenAIAgentsInstrumentor
 from .pydantic_ai_instrumentor import PydanticAIInstrumentor
 from .replicate_instrumentor import ReplicateInstrumentor
 from .sambanova_instrumentor import SambaNovaInstrumentor

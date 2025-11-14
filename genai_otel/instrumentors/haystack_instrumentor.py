@@ -78,8 +78,8 @@ class HaystackInstrumentor(BaseInstrumentor):
             try:
                 # Instrument Generator components (LLM interaction)
                 from haystack.components.generators import (
-                    OpenAIGenerator,
                     OpenAIChatGenerator,
+                    OpenAIGenerator,
                 )
 
                 if hasattr(OpenAIGenerator, "run"):

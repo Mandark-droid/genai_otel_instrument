@@ -52,8 +52,8 @@ class DSPyInstrumentor(BaseInstrumentor):
         self.config = config
 
         try:
-            import wrapt
             import dspy
+            import wrapt
             from dspy.primitives.module import BaseModule
 
             # Wrap Module.__call__ to trace all module executions

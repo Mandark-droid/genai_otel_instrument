@@ -96,8 +96,8 @@ class GoogleAIInstrumentor(BaseInstrumentor):
 
     def _instrument_new_sdk(self):
         """Instrument the new google-genai unified SDK."""
-        from google import genai
         import wrapt
+        from google import genai
 
         # The new SDK uses a Client-based approach
         # Instrument the Client class initialization to wrap generate_content methods
