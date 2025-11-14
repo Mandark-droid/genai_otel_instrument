@@ -112,13 +112,12 @@ class TestLangGraphInstrumentor(unittest.TestCase):
         """Test that instrument raises exceptions when fail_on_error is True."""
         # Create mock langgraph modules
         mock_langgraph = MagicMock()
-        mock_langgraph_graph = MagicMock()
 
-        # Make hasattr fail to trigger exception
-        def mock_hasattr_side_effect(obj, name):
-            if name == "StateGraph":
-                raise RuntimeError("Test error")
-            return True
+        # Make the StateGraph access raise an exception
+        mock_langgraph_graph = MagicMock()
+        type(mock_langgraph_graph).StateGraph = property(
+            lambda self: (_ for _ in ()).throw(RuntimeError("Test error"))
+        )
 
         with patch.dict(
             "sys.modules",
@@ -128,14 +127,13 @@ class TestLangGraphInstrumentor(unittest.TestCase):
                 "wrapt": MagicMock(),
             },
         ):
-            with patch("builtins.hasattr", side_effect=mock_hasattr_side_effect):
-                instrumentor = LangGraphInstrumentor()
-                config = MagicMock()
-                config.fail_on_error = True
+            instrumentor = LangGraphInstrumentor()
+            config = MagicMock()
+            config.fail_on_error = True
 
-                # Should raise exception
-                with self.assertRaises(RuntimeError):
-                    instrumentor.instrument(config)
+            # Should raise exception
+            with self.assertRaises(RuntimeError):
+                instrumentor.instrument(config)
 
     def test_extract_graph_attributes_basic(self):
         """Test extraction of basic graph attributes."""

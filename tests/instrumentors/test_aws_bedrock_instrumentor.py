@@ -1,3 +1,4 @@
+import builtins
 import json
 import unittest
 from unittest.mock import MagicMock, patch
@@ -52,7 +53,7 @@ class TestAWSBedrockInstrumentor(unittest.TestCase):
     def test_instrument_with_boto3_not_available(self):
         """Test that instrument handles missing boto3 gracefully."""
         # Make boto3 import fail
-        original_import = __builtins__.__import__
+        original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
             if name == "boto3":

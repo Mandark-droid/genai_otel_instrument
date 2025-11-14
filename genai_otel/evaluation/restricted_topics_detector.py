@@ -74,7 +74,8 @@ class RestrictedTopicsDetector:
                 r"is\s+(?:it|this)\s+(?:legal|illegal)\s+(?:to|for|if|\?|or)",  # Added "or" and "?" for "legal or illegal?"
                 r"what\s+(?:are\s+my\s+)?legal\s+(?:rights|options)",
                 r"(?:can|should)\s+I\s+(?:file|take)\s+(?:a\s+)?(?:lawsuit|legal\s+action)",
-                r"(?:need|want|seeking|looking\s+for)\s+legal\s+advice",  # "legal advice needed"
+                r"(?:need|want|seeking|looking\s+for)\s+legal\s+advice",  # "need legal advice"
+                r"legal\s+advice\s+(?:needed|wanted|required)",  # "legal advice needed"
             ],
             "keywords": [],  # Removed broad keywords to avoid false positives
         },

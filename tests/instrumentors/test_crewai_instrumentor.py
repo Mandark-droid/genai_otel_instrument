@@ -152,7 +152,13 @@ class TestCrewAIInstrumentor(unittest.TestCase):
             mock_agent1 = MagicMock()
             mock_agent1.role = "Researcher"
             mock_agent1.goal = "Research AI trends"
-            mock_agent1.tools = [MagicMock(name="search_tool"), MagicMock(name="scrape_tool")]
+
+            # Create mock tools with proper name attributes
+            search_tool = MagicMock()
+            search_tool.name = "search_tool"
+            scrape_tool = MagicMock()
+            scrape_tool.name = "scrape_tool"
+            mock_agent1.tools = [search_tool, scrape_tool]
 
             mock_agent2 = MagicMock()
             mock_agent2.role = "Writer"
