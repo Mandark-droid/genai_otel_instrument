@@ -71,7 +71,7 @@ class BiasDetector:
                 r"\brace\s+(?:card|baiting)\b",
                 r"\b(?:act|sound|look)\s+(?:white|black|asian|hispanic)\b",
             ],
-            "keywords": ["racist", "racial slur", "ethnic slur", "racial stereotype"],
+            "keywords": [],  # Removed broad keywords to avoid false positives
         },
         "ethnicity": {
             "patterns": [
@@ -125,12 +125,12 @@ class BiasDetector:
         },
         "political": {
             "patterns": [
-                r"\b(?:all|most|typical)\s+(?:liberal|conservative|democrat|republican)s?\s+(?:are|believe)\b",
+                r"\b(?:all|most|typical)?\s*(?:liberals?|conservatives?|democrats?|republicans?)\s+(?:are|always|never)\b",
                 r"\b(?:libtard|conservatard|trumptard)\b",
                 r"\b(?:left|right)\s+wing\s+(?:nut|extremist|radical)\b",
                 r"\b(?:fake|biased|lying)\s+(?:media|news)\b",
             ],
-            "keywords": ["political bias", "partisan", "political stereotype"],
+            "keywords": [],  # Removed broad keywords
         },
     }
 
@@ -234,15 +234,25 @@ class BiasDetector:
         matched = []
         text_lower = text.lower()
 
-        # Check regex patterns
+        # Normalize text by removing special characters but keeping spaces
+        # This helps patterns match even with @ # $ etc.
+        normalized_text = re.sub(r"[^\w\s]", " ", text)
+
+        # Check regex patterns on both original and normalized text
         for pattern in patterns:
-            matches = re.finditer(pattern, text, re.IGNORECASE)
+            # Try on original text first
+            matches = list(re.finditer(pattern, text, re.IGNORECASE))
+            if not matches:
+                # Try on normalized text
+                matches = list(re.finditer(pattern, normalized_text, re.IGNORECASE))
             for match in matches:
                 matched.append(match.group())
 
-        # Check keywords
+        # Check keywords - but only as standalone words to avoid false positives
         for keyword in keywords:
-            if keyword in text_lower:
+            # Use word boundary matching to avoid substring matches
+            keyword_pattern = r"\b" + re.escape(keyword) + r"\b"
+            if re.search(keyword_pattern, text_lower):
                 matched.append(keyword)
 
         # Calculate score based on matches

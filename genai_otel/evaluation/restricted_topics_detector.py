@@ -69,13 +69,13 @@ class RestrictedTopicsDetector:
         },
         "legal_advice": {
             "patterns": [
-                r"\b(?:legal|law|lawsuit|sue|attorney|lawyer|court|judge)\b",
-                r"should\s+I\s+(?:sue|file\s+a\s+lawsuit|take\s+legal\s+action)",
-                r"is\s+(?:it|this)\s+(?:legal|illegal|against\s+the\s+law)",
-                r"can\s+I\s+(?:sue|take\s+legal\s+action|file\s+charges)",
-                r"what\s+(?:are\s+my\s+)?(?:legal\s+)?(?:rights|options)",
+                r"should\s+I\s+(?:sue|file\s+a\s+lawsuit|take\s+legal\s+action|hire\s+(?:a|an)\s+(?:lawyer|attorney))",
+                r"(?:can|should)\s+I\s+(?:sue|take\s+legal\s+action|file\s+charges)",
+                r"is\s+(?:it|this)\s+(?:legal|illegal|against\s+the\s+law)\s+(?:to|for|if)",
+                r"what\s+(?:are\s+my\s+)?legal\s+(?:rights|options)",
+                r"(?:can|should)\s+I\s+(?:file|take)\s+(?:a\s+)?(?:lawsuit|legal\s+action)",
             ],
-            "keywords": ["legal advice", "lawsuit", "attorney recommendation"],
+            "keywords": [],  # Removed broad keywords to avoid false positives
         },
         "financial_advice": {
             "patterns": [
