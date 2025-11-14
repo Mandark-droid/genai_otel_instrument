@@ -178,9 +178,7 @@ def example_validation_and_retries():
         """Recipe information with constraints"""
 
         name: str = Field(description="Recipe name")
-        prep_time_minutes: int = Field(
-            description="Preparation time in minutes", gt=0, lt=300
-        )
+        prep_time_minutes: int = Field(description="Preparation time in minutes", gt=0, lt=300)
         servings: int = Field(description="Number of servings", gt=0, lt=20)
         ingredients: List[str] = Field(description="List of ingredients", min_length=2)
 
@@ -383,7 +381,9 @@ def example_multiple_providers():
             ],
         )
 
-        print(f"   Anthropic Result: {result_anthropic.sentiment} ({result_anthropic.confidence:.2f})")
+        print(
+            f"   Anthropic Result: {result_anthropic.sentiment} ({result_anthropic.confidence:.2f})"
+        )
 
     print("\n✓ Multi-provider extraction completed. Check your telemetry backend!")
     print("  - Trace shows provider differentiation")

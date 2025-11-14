@@ -211,7 +211,9 @@ def example_retrieve_and_generate():
     try:
         # Retrieve and Generate - This will be automatically instrumented
         response = client.retrieve_and_generate(
-            input={"text": "Explain the benefits of using AWS Bedrock for generative AI applications."},
+            input={
+                "text": "Explain the benefits of using AWS Bedrock for generative AI applications."
+            },
             sessionId=session_id,
             retrieveAndGenerateConfiguration={
                 "type": "KNOWLEDGE_BASE",
@@ -374,7 +376,9 @@ def main():
         print("    - bedrock.agents.invoke_agent: Agent invocations")
         print("    - bedrock.agents.retrieve: Knowledge base retrieval")
         print("    - bedrock.agents.retrieve_and_generate: RAG operations")
-        print("    - bedrock.runtime.invoke_model: Underlying model calls (from Bedrock instrumentor)")
+        print(
+            "    - bedrock.runtime.invoke_model: Underlying model calls (from Bedrock instrumentor)"
+        )
         print("\n  🏷️  Attributes:")
         print("    - gen_ai.system: 'bedrock_agents'")
         print("    - bedrock.agent.id: Agent identifier")

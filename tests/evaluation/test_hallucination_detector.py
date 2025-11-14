@@ -3,10 +3,7 @@
 import pytest
 
 from genai_otel.evaluation.config import HallucinationConfig
-from genai_otel.evaluation.hallucination_detector import (
-    HallucinationDetector,
-    HallucinationResult,
-)
+from genai_otel.evaluation.hallucination_detector import HallucinationDetector, HallucinationResult
 
 
 class TestHallucinationConfig:
