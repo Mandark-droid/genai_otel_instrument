@@ -164,7 +164,7 @@ class BiasConfig:
     """
 
     enabled: bool = False
-    threshold: float = 0.6
+    threshold: float = 0.5
     bias_types: Set[str] = field(
         default_factory=lambda: {
             "gender",
@@ -204,11 +204,11 @@ class PromptInjectionConfig:
     """
 
     enabled: bool = False
-    threshold: float = 0.8
+    threshold: float = 0.7
     use_ml_model: bool = True
     check_patterns: bool = True
     patterns: Optional[List[str]] = None
-    block_on_detection: bool = True
+    block_on_detection: bool = False
     log_attempts: bool = True
 
     def __post_init__(self):

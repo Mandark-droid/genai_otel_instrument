@@ -58,13 +58,14 @@ class RestrictedTopicsDetector:
     TOPIC_PATTERNS = {
         "medical_advice": {
             "patterns": [
-                r"\b(?:diagnose|diagnosis|treat|treatment|cure|medication|prescription|symptoms?)\b",
-                r"\b(?:doctor|physician|medical|health|disease|illness|condition)\b",
-                r"should\s+I\s+(?:take|use|stop)\s+(?:this\s+)?(?:drug|medicine|medication)",
-                r"is\s+(?:it|this)\s+(?:safe|dangerous)\s+to\s+(?:take|use|consume)",
-                r"what\s+(?:drug|medicine|medication)\s+(?:should|can)\s+I\s+(?:take|use)",
+                r"should\s+I\s+(?:take|use|stop|avoid)\s+\w+",  # "should I take aspirin"
+                r"(?:can|should)\s+I\s+(?:take|use)\s+(?:this|that|\w+)\s+for\s+(?:my|this|a)",  # "can I take aspirin for my headache"
+                r"what\s+(?:drug|medicine|medication|treatment)\s+(?:should|can)\s+I\s+(?:take|use)",
+                r"is\s+(?:it|this|\w+)\s+(?:safe|dangerous|ok|okay)\s+to\s+(?:take|use|consume)",
+                r"(?:can|should)\s+you\s+(?:diagnose|recommend|prescribe)",
+                r"(?:diagnose|treat)\s+my\s+(?:symptoms?|illness|condition|disease)",
             ],
-            "keywords": ["medical advice", "health recommendation", "diagnosis", "prescription"],
+            "keywords": [],  # Remove overly broad keywords
         },
         "legal_advice": {
             "patterns": [

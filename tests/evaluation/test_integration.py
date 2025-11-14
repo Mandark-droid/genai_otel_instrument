@@ -39,24 +39,16 @@ class TestEvaluationSpanProcessorIntegration:
 
     def _create_span(self, name="test-span", attributes=None):
         """Helper to create a span with attributes."""
-        span_context = SpanContext(
-            trace_id=1,
-            span_id=1,
-            is_remote=False,
-            trace_flags=TraceFlags(0x01),
-        )
-        span = Span(
-            name=name,
-            context=span_context,
-            parent=None,
-            sampler=None,
-            trace_config=None,
-            resource=Resource.create({}),
-            attributes=attributes or {},
-            span_processor=Mock(),
-            kind=SpanKind.CLIENT,
-            instrumentation_scope=None,
-        )
+        # Use the tracer to create a proper span
+        span = self.tracer.start_span(name, kind=SpanKind.CLIENT)
+
+        # Set attributes if provided
+        if attributes:
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+        # End the span so it can be processed
+        span.end()
         return span
 
     @patch("genai_otel.evaluation.pii_detector.PIIDetector._check_availability")
@@ -340,6 +332,28 @@ class TestEvaluationSpanProcessorIntegration:
 class TestMetricsIntegration:
     """Test metrics recording in evaluation processor."""
 
+    def setup_method(self):
+        """Set up test fixtures."""
+        # Create a tracer provider
+        resource = Resource.create({"service.name": "test-service"})
+        self.tracer_provider = TracerProvider(resource=resource)
+        trace.set_tracer_provider(self.tracer_provider)
+        self.tracer = self.tracer_provider.get_tracer(__name__)
+
+    def _create_span(self, name="test-span", attributes=None):
+        """Helper to create a span with attributes."""
+        # Use the tracer to create a proper span
+        span = self.tracer.start_span(name, kind=SpanKind.CLIENT)
+
+        # Set attributes if provided
+        if attributes:
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+        # End the span so it can be processed
+        span.end()
+        return span
+
     @patch("genai_otel.evaluation.pii_detector.PIIDetector._check_availability")
     @patch("opentelemetry.metrics.get_meter")
     def test_pii_detection_metrics(self, mock_get_meter, mock_check):
@@ -359,28 +373,7 @@ class TestMetricsIntegration:
         assert mock_meter.create_counter.call_count >= 3  # At least 3 PII metrics
 
         # Create span with PII
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.sdk.trace import Span, TracerProvider
-        from opentelemetry.trace import SpanContext, SpanKind, TraceFlags
-
-        span_context = SpanContext(
-            trace_id=1,
-            span_id=1,
-            is_remote=False,
-            trace_flags=TraceFlags(0x01),
-        )
-        span = Span(
-            name="test-span",
-            context=span_context,
-            parent=None,
-            sampler=None,
-            trace_config=None,
-            resource=Resource.create({}),
-            attributes={"gen_ai.prompt": "Email: test@example.com"},
-            span_processor=Mock(),
-            kind=SpanKind.CLIENT,
-            instrumentation_scope=None,
-        )
+        span = self._create_span(attributes={"gen_ai.prompt": "Email: test@example.com"})
 
         # Process span
         processor.on_end(span)
@@ -402,24 +395,16 @@ class TestToxicityIntegration:
 
     def _create_span(self, name="test-span", attributes=None):
         """Helper to create a span with attributes."""
-        span_context = SpanContext(
-            trace_id=1,
-            span_id=1,
-            is_remote=False,
-            trace_flags=TraceFlags(0x01),
-        )
-        span = Span(
-            name=name,
-            context=span_context,
-            parent=None,
-            sampler=None,
-            trace_config=None,
-            resource=Resource.create({}),
-            attributes=attributes or {},
-            span_processor=Mock(),
-            kind=SpanKind.CLIENT,
-            instrumentation_scope=None,
-        )
+        # Use the tracer to create a proper span
+        span = self.tracer.start_span(name, kind=SpanKind.CLIENT)
+
+        # Set attributes if provided
+        if attributes:
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+        # End the span so it can be processed
+        span.end()
         return span
 
     @patch("genai_otel.evaluation.toxicity_detector.Detoxify")
@@ -690,24 +675,16 @@ class TestBiasIntegration:
 
     def _create_span(self, name="test-span", attributes=None):
         """Helper to create a span with attributes."""
-        span_context = SpanContext(
-            trace_id=1,
-            span_id=1,
-            is_remote=False,
-            trace_flags=TraceFlags(0x01),
-        )
-        span = Span(
-            name=name,
-            context=span_context,
-            parent=None,
-            sampler=None,
-            trace_config=None,
-            resource=Resource.create({}),
-            attributes=attributes or {},
-            span_processor=Mock(),
-            kind=SpanKind.CLIENT,
-            instrumentation_scope=None,
-        )
+        # Use the tracer to create a proper span
+        span = self.tracer.start_span(name, kind=SpanKind.CLIENT)
+
+        # Set attributes if provided
+        if attributes:
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+        # End the span so it can be processed
+        span.end()
         return span
 
     def test_bias_detection_in_prompt(self):
@@ -1016,24 +993,16 @@ class TestPromptInjectionIntegration:
 
     def _create_span(self, name="test-span", attributes=None):
         """Helper to create a span with attributes."""
-        span_context = SpanContext(
-            trace_id=1,
-            span_id=1,
-            is_remote=False,
-            trace_flags=TraceFlags(0x01),
-        )
-        span = Span(
-            name=name,
-            context=span_context,
-            parent=None,
-            sampler=None,
-            trace_config=None,
-            resource=Resource.create({}),
-            attributes=attributes or {},
-            span_processor=Mock(),
-            kind=SpanKind.CLIENT,
-            instrumentation_scope=None,
-        )
+        # Use the tracer to create a proper span
+        span = self.tracer.start_span(name, kind=SpanKind.CLIENT)
+
+        # Set attributes if provided
+        if attributes:
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+        # End the span so it can be processed
+        span.end()
         return span
 
     def test_prompt_injection_detection(self):
@@ -1130,24 +1099,16 @@ class TestRestrictedTopicsIntegration:
 
     def _create_span(self, name="test-span", attributes=None):
         """Helper to create a span with attributes."""
-        span_context = SpanContext(
-            trace_id=1,
-            span_id=1,
-            is_remote=False,
-            trace_flags=TraceFlags(0x01),
-        )
-        span = Span(
-            name=name,
-            context=span_context,
-            parent=None,
-            sampler=None,
-            trace_config=None,
-            resource=Resource.create({}),
-            attributes=attributes or {},
-            span_processor=Mock(),
-            kind=SpanKind.CLIENT,
-            instrumentation_scope=None,
-        )
+        # Use the tracer to create a proper span
+        span = self.tracer.start_span(name, kind=SpanKind.CLIENT)
+
+        # Set attributes if provided
+        if attributes:
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+        # End the span so it can be processed
+        span.end()
         return span
 
     def test_medical_advice_detection(self):
@@ -1240,24 +1201,16 @@ class TestHallucinationIntegration:
 
     def _create_span(self, name="test-span", attributes=None):
         """Helper to create a span with attributes."""
-        span_context = SpanContext(
-            trace_id=1,
-            span_id=1,
-            is_remote=False,
-            trace_flags=TraceFlags(0x01),
-        )
-        span = Span(
-            name=name,
-            context=span_context,
-            parent=None,
-            sampler=None,
-            trace_config=None,
-            resource=Resource.create({}),
-            attributes=attributes or {},
-            span_processor=Mock(),
-            kind=SpanKind.CLIENT,
-            instrumentation_scope=None,
-        )
+        # Use the tracer to create a proper span
+        span = self.tracer.start_span(name, kind=SpanKind.CLIENT)
+
+        # Set attributes if provided
+        if attributes:
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+        # End the span so it can be processed
+        span.end()
         return span
 
     def test_hallucination_detection_uncited_claims(self):
@@ -1349,24 +1302,16 @@ class TestCombinedEvaluationIntegration:
 
     def _create_span(self, name="test-span", attributes=None):
         """Helper to create a span with attributes."""
-        span_context = SpanContext(
-            trace_id=1,
-            span_id=1,
-            is_remote=False,
-            trace_flags=TraceFlags(0x01),
-        )
-        span = Span(
-            name=name,
-            context=span_context,
-            parent=None,
-            sampler=None,
-            trace_config=None,
-            resource=Resource.create({}),
-            attributes=attributes or {},
-            span_processor=Mock(),
-            kind=SpanKind.CLIENT,
-            instrumentation_scope=None,
-        )
+        # Use the tracer to create a proper span
+        span = self.tracer.start_span(name, kind=SpanKind.CLIENT)
+
+        # Set attributes if provided
+        if attributes:
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+        # End the span so it can be processed
+        span.end()
         return span
 
     def test_all_six_evaluation_features(self):

@@ -101,6 +101,8 @@ class HallucinationDetector:
             r"\[(?:\d+|[a-zA-Z]+)\]",  # [1] or [a]
             r"\((?:Source|Ref|Citation):",
             r"https?://\S+",  # URLs
+            r"\([A-Z][a-z]+(?:\s+et\s+al\.)?,\s+\d{4}\)",  # (Smith, 2020) or (Jones et al., 2021)
+            r"¹|²|³|⁴|⁵|⁶|⁷|⁸|⁹",  # Superscript numbers for footnotes
         ],
         "attribution": [
             r"according\s+to",
@@ -108,6 +110,18 @@ class HallucinationDetector:
             r"as\s+(?:per|stated|mentioned)\s+(?:in|by)",
         ],
     }
+
+    # Absolute statement markers
+    ABSOLUTE_WORDS = [
+        "absolutely",
+        "certainly",
+        "definitely",
+        "always",
+        "never",
+        "all",
+        "none",
+        "every",
+    ]
 
     def __init__(self, config: HallucinationConfig):
         """Initialize hallucination detector.
@@ -147,11 +161,11 @@ class HallucinationDetector:
             # Count factual claims
             factual_claims_count = self._count_factual_claims(text)
 
-            # Count hedge words
-            hedge_count = self._count_hedge_words(text)
+            # Count hedge words (only if enabled in config)
+            hedge_count = self._count_hedge_words(text) if self.config.check_hedging else 0
 
-            # Count citations/attributions
-            citation_count = self._count_citations(text)
+            # Count citations/attributions (only if enabled in config)
+            citation_count = self._count_citations(text) if self.config.check_citations else 0
 
             # Calculate hallucination score based on heuristics
             hallucination_score = self._calculate_hallucination_score(
@@ -166,8 +180,19 @@ class HallucinationDetector:
             if hedge_count > 3:
                 indicators.append("high_uncertainty_language")
 
-            if context and self._check_context_contradiction(text, context):
+            # Check for absolute statements without citations
+            if self._has_absolute_statements(text) and citation_count == 0:
+                indicators.append("absolute_statements")
+
+            # Check for internal contradictions within the text
+            if self._check_internal_contradiction(text):
                 indicators.append("context_contradiction")
+                hallucination_score = min(hallucination_score + 0.3, 1.0)
+
+            # Check for contradictions with external context
+            if context and self._check_context_contradiction(text, context):
+                if "context_contradiction" not in indicators:
+                    indicators.append("context_contradiction")
                 hallucination_score = min(hallucination_score + 0.3, 1.0)
 
             has_hallucination = hallucination_score >= self.config.threshold
@@ -308,6 +333,73 @@ class HallucinationDetector:
 
         return min(score, 1.0)
 
+    def _has_absolute_statements(self, text: str) -> bool:
+        """Check if text contains absolute statements.
+
+        Args:
+            text: Text to analyze
+
+        Returns:
+            bool: True if absolute statements found
+        """
+        text_lower = text.lower()
+        for absolute_word in self.ABSOLUTE_WORDS:
+            pattern = r"\b" + re.escape(absolute_word) + r"\b"
+            if re.search(pattern, text_lower):
+                return True
+        return False
+
+    def _check_internal_contradiction(self, text: str) -> bool:
+        """Check if text contradicts itself internally.
+
+        This detects cases where the same subject has different values mentioned.
+        For example: "The population is 300 million. However, the population is 400 million."
+
+        Args:
+            text: Text to check
+
+        Returns:
+            bool: True if potential internal contradiction detected
+        """
+        # Split into sentences
+        sentences = re.split(r"[.!?]+", text)
+        if len(sentences) < 2:
+            return False
+
+        # Look for contradictory numbers for the same subject
+        # Pattern: extract subject + number pairs
+        number_pattern = r"(\w+)\s+(?:is|are|was|were|reached?)\s+(\d+(?:,\d{3})*(?:\.\d+)?(?:\s*(?:million|billion|thousand))?)"
+
+        subject_values = {}
+        for sentence in sentences:
+            matches = re.findall(number_pattern, sentence.lower())
+            for subject, value in matches:
+                if subject in subject_values:
+                    # Same subject mentioned with different value
+                    if subject_values[subject] != value:
+                        return True
+                else:
+                    subject_values[subject] = value
+
+        # Look for contradictory statements with "however", "but", "although"
+        contradiction_markers = [r"\bhowever\b", r"\bbut\b", r"\balthough\b", r"\bactually\b"]
+        has_contradiction_marker = any(
+            re.search(marker, text.lower()) for marker in contradiction_markers
+        )
+
+        if has_contradiction_marker and len(sentences) >= 2:
+            # Check if similar topics discussed with different numbers
+            numbers_in_text = re.findall(
+                r"\d+(?:,\d{3})*(?:\.\d+)?(?:\s*(?:million|billion|thousand))?", text
+            )
+            if len(numbers_in_text) >= 2:
+                # Multiple different numbers with contradiction marker suggests contradiction
+                unique_numbers = set(numbers_in_text)
+                if len(unique_numbers) >= 2:
+                    return True
+
+        return False
+
     def _check_context_contradiction(self, text: str, context: str) -> bool:
         """Check if response contradicts provided context.
 
@@ -402,7 +494,7 @@ class HallucinationDetector:
             "hallucination_count": total_hallucinations,
             "hallucination_rate": total_hallucinations / len(results) if results else 0.0,
             "indicator_counts": indicator_counts,
-            "average_score": avg_score,
+            "average_hallucination_score": avg_score,
             "average_hedge_words": avg_hedge_count,
             "average_citations": avg_citation_count,
             "most_common_indicator": (
