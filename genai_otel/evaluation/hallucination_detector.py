@@ -22,6 +22,7 @@ class HallucinationResult:
         has_hallucination: Whether potential hallucination was detected
         hallucination_score: Overall hallucination risk score (0.0-1.0)
         hallucination_indicators: List of indicators found
+        factual_claim_count: Count of factual claims detected
         unsupported_claims: Claims that appear unsupported
         hedge_words_count: Count of hedge words (indicating uncertainty)
         citation_count: Count of citations found
@@ -32,6 +33,7 @@ class HallucinationResult:
     has_hallucination: bool
     hallucination_score: float = 0.0
     hallucination_indicators: List[str] = field(default_factory=list)
+    factual_claim_count: int = 0
     unsupported_claims: List[str] = field(default_factory=list)
     hedge_words_count: int = 0
     citation_count: int = 0
@@ -174,6 +176,7 @@ class HallucinationDetector:
                 has_hallucination=has_hallucination,
                 hallucination_score=hallucination_score,
                 hallucination_indicators=indicators,
+                factual_claim_count=factual_claims_count,
                 unsupported_claims=unsupported_claims,
                 hedge_words_count=hedge_count,
                 citation_count=citation_count,
