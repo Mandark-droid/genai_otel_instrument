@@ -901,20 +901,24 @@ class EvaluationSpanProcessor(SpanProcessor):
 
             result = self.hallucination_detector.detect(response, context)
             if result.has_hallucination:
-                span.set_attribute("evaluation.hallucination.detected", True)
-                span.set_attribute("evaluation.hallucination.score", result.hallucination_score)
+                span.set_attribute("evaluation.hallucination.response.detected", True)
                 span.set_attribute(
-                    "evaluation.hallucination.indicators", result.hallucination_indicators
+                    "evaluation.hallucination.response.score", result.hallucination_score
                 )
                 span.set_attribute(
-                    "evaluation.hallucination.hedge_words_count", result.hedge_words_count
+                    "evaluation.hallucination.response.indicators", result.hallucination_indicators
                 )
-                span.set_attribute("evaluation.hallucination.citation_count", result.citation_count)
+                span.set_attribute(
+                    "evaluation.hallucination.response.hedge_words_count", result.hedge_words_count
+                )
+                span.set_attribute(
+                    "evaluation.hallucination.response.citation_count", result.citation_count
+                )
 
                 # Add unsupported claims
                 if result.unsupported_claims:
                     span.set_attribute(
-                        "evaluation.hallucination.unsupported_claims",
+                        "evaluation.hallucination.response.unsupported_claims",
                         result.unsupported_claims[:3],  # Limit to first 3
                     )
 
@@ -928,7 +932,7 @@ class EvaluationSpanProcessor(SpanProcessor):
                 for indicator in result.hallucination_indicators:
                     self.hallucination_indicator_counter.add(1, {"indicator": indicator})
             else:
-                span.set_attribute("evaluation.hallucination.detected", False)
+                span.set_attribute("evaluation.hallucination.response.detected", False)
 
         except Exception as e:
             logger.error("Error checking hallucination: %s", e, exc_info=True)
