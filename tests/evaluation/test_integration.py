@@ -47,8 +47,8 @@ class TestEvaluationSpanProcessorIntegration:
             for key, value in attributes.items():
                 span.set_attribute(key, value)
 
-        # End the span so it can be processed
-        span.end()
+        # Don't end the span - let the test handle that
+        # The processor needs to modify attributes before the span is ended
         return span
 
     @patch("genai_otel.evaluation.pii_detector.PIIDetector._check_availability")
@@ -350,8 +350,8 @@ class TestMetricsIntegration:
             for key, value in attributes.items():
                 span.set_attribute(key, value)
 
-        # End the span so it can be processed
-        span.end()
+        # Don't end the span - let the test handle that
+        # The processor needs to modify attributes before the span is ended
         return span
 
     @patch("genai_otel.evaluation.pii_detector.PIIDetector._check_availability")
@@ -403,8 +403,8 @@ class TestToxicityIntegration:
             for key, value in attributes.items():
                 span.set_attribute(key, value)
 
-        # End the span so it can be processed
-        span.end()
+        # Don't end the span - let the test handle that
+        # The processor needs to modify attributes before the span is ended
         return span
 
     @patch("genai_otel.evaluation.toxicity_detector.Detoxify")
@@ -683,8 +683,8 @@ class TestBiasIntegration:
             for key, value in attributes.items():
                 span.set_attribute(key, value)
 
-        # End the span so it can be processed
-        span.end()
+        # Don't end the span - let the test handle that
+        # The processor needs to modify attributes before the span is ended
         return span
 
     def test_bias_detection_in_prompt(self):
@@ -1001,8 +1001,8 @@ class TestPromptInjectionIntegration:
             for key, value in attributes.items():
                 span.set_attribute(key, value)
 
-        # End the span so it can be processed
-        span.end()
+        # Don't end the span - let the test handle that
+        # The processor needs to modify attributes before the span is ended
         return span
 
     def test_prompt_injection_detection(self):
@@ -1107,8 +1107,8 @@ class TestRestrictedTopicsIntegration:
             for key, value in attributes.items():
                 span.set_attribute(key, value)
 
-        # End the span so it can be processed
-        span.end()
+        # Don't end the span - let the test handle that
+        # The processor needs to modify attributes before the span is ended
         return span
 
     def test_medical_advice_detection(self):
@@ -1209,8 +1209,8 @@ class TestHallucinationIntegration:
             for key, value in attributes.items():
                 span.set_attribute(key, value)
 
-        # End the span so it can be processed
-        span.end()
+        # Don't end the span - let the test handle that
+        # The processor needs to modify attributes before the span is ended
         return span
 
     def test_hallucination_detection_uncited_claims(self):
@@ -1310,8 +1310,8 @@ class TestCombinedEvaluationIntegration:
             for key, value in attributes.items():
                 span.set_attribute(key, value)
 
-        # End the span so it can be processed
-        span.end()
+        # Don't end the span - let the test handle that
+        # The processor needs to modify attributes before the span is ended
         return span
 
     def test_all_six_evaluation_features(self):
