@@ -75,9 +75,22 @@ class HallucinationDetector:
 
     # Hedge words indicating uncertainty
     HEDGE_WORDS = [
-        "may", "might", "possibly", "probably", "perhaps", "likely",
-        "could", "would", "should", "seems", "appears", "suggests",
-        "indicates", "potentially", "allegedly", "reportedly",
+        "may",
+        "might",
+        "possibly",
+        "probably",
+        "perhaps",
+        "likely",
+        "could",
+        "would",
+        "should",
+        "seems",
+        "appears",
+        "suggests",
+        "indicates",
+        "potentially",
+        "allegedly",
+        "reportedly",
     ]
 
     # High-confidence markers (lack of these may indicate hallucination)
@@ -110,9 +123,7 @@ class HallucinationDetector:
         """
         return True
 
-    def detect(
-        self, text: str, context: Optional[str] = None
-    ) -> HallucinationResult:
+    def detect(self, text: str, context: Optional[str] = None) -> HallucinationResult:
         """Detect potential hallucinations in text.
 
         Args:
@@ -324,9 +335,7 @@ class HallucinationDetector:
         context_has_negation = any(
             re.search(pattern, context_lower) for pattern in negation_patterns
         )
-        text_has_negation = any(
-            re.search(pattern, text_lower) for pattern in negation_patterns
-        )
+        text_has_negation = any(re.search(pattern, text_lower) for pattern in negation_patterns)
 
         # Very simple contradiction check: if context says "not X" and text says "X"
         # This is a naive approach - consider using NLI models for better accuracy
@@ -377,9 +386,7 @@ class HallucinationDetector:
                 indicator_counts[indicator] = indicator_counts.get(indicator, 0) + 1
 
         # Calculate average scores
-        avg_score = (
-            sum(r.hallucination_score for r in results) / len(results) if results else 0.0
-        )
+        avg_score = sum(r.hallucination_score for r in results) / len(results) if results else 0.0
         avg_hedge_count = (
             sum(r.hedge_words_count for r in results) / len(results) if results else 0.0
         )
@@ -395,7 +402,7 @@ class HallucinationDetector:
             "average_score": avg_score,
             "average_hedge_words": avg_hedge_count,
             "average_citations": avg_citation_count,
-            "most_common_indicator": max(indicator_counts.items(), key=lambda x: x[1])[0]
-            if indicator_counts
-            else None,
+            "most_common_indicator": (
+                max(indicator_counts.items(), key=lambda x: x[1])[0] if indicator_counts else None
+            ),
         }

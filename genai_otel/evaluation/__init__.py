@@ -34,7 +34,7 @@ Requirements:
     ```
 """
 
-from .bias_detector import BiasDetector, BiasDetectionResult
+from .bias_detector import BiasDetectionResult, BiasDetector
 from .config import (
     BiasConfig,
     HallucinationConfig,
@@ -44,11 +44,11 @@ from .config import (
     ToxicityConfig,
 )
 from .hallucination_detector import HallucinationDetector, HallucinationResult
-from .pii_detector import PIIDetector, PIIDetectionResult
+from .pii_detector import PIIDetectionResult, PIIDetector
 from .prompt_injection_detector import PromptInjectionDetector, PromptInjectionResult
 from .restricted_topics_detector import RestrictedTopicsDetector, RestrictedTopicsResult
 from .span_processor import EvaluationSpanProcessor
-from .toxicity_detector import ToxicityDetector, ToxicityDetectionResult
+from .toxicity_detector import ToxicityDetectionResult, ToxicityDetector
 
 __all__ = [
     # Config classes

@@ -73,9 +73,7 @@ class EvaluationSpanProcessor(SpanProcessor):
         self.toxicity_config = toxicity_config or ToxicityConfig()
         self.bias_config = bias_config or BiasConfig()
         self.prompt_injection_config = prompt_injection_config or PromptInjectionConfig()
-        self.restricted_topics_config = (
-            restricted_topics_config or RestrictedTopicsConfig()
-        )
+        self.restricted_topics_config = restricted_topics_config or RestrictedTopicsConfig()
         self.hallucination_config = hallucination_config or HallucinationConfig()
 
         # Initialize detectors
@@ -107,9 +105,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
         self.prompt_injection_detector = None
         if self.prompt_injection_config.enabled:
-            self.prompt_injection_detector = PromptInjectionDetector(
-                self.prompt_injection_config
-            )
+            self.prompt_injection_detector = PromptInjectionDetector(self.prompt_injection_config)
 
         self.restricted_topics_detector = None
         if self.restricted_topics_config.enabled:
@@ -394,9 +390,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
         return None
 
-    def _check_pii(
-        self, span: Span, prompt: Optional[str], response: Optional[str]
-    ) -> None:
+    def _check_pii(self, span: Span, prompt: Optional[str], response: Optional[str]) -> None:
         """Check for PII in prompt and response.
 
         Args:
@@ -413,9 +407,7 @@ class EvaluationSpanProcessor(SpanProcessor):
                 result = self.pii_detector.detect(prompt)
                 if result.has_pii:
                     span.set_attribute("evaluation.pii.prompt.detected", True)
-                    span.set_attribute(
-                        "evaluation.pii.prompt.entity_count", len(result.entities)
-                    )
+                    span.set_attribute("evaluation.pii.prompt.entity_count", len(result.entities))
                     span.set_attribute(
                         "evaluation.pii.prompt.entity_types",
                         list(result.entity_counts.keys()),
@@ -455,9 +447,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # Add redacted text if available
                     if result.redacted_text:
-                        span.set_attribute(
-                            "evaluation.pii.prompt.redacted", result.redacted_text
-                        )
+                        span.set_attribute("evaluation.pii.prompt.redacted", result.redacted_text)
                 else:
                     span.set_attribute("evaluation.pii.prompt.detected", False)
 
@@ -466,9 +456,7 @@ class EvaluationSpanProcessor(SpanProcessor):
                 result = self.pii_detector.detect(response)
                 if result.has_pii:
                     span.set_attribute("evaluation.pii.response.detected", True)
-                    span.set_attribute(
-                        "evaluation.pii.response.entity_count", len(result.entities)
-                    )
+                    span.set_attribute("evaluation.pii.response.entity_count", len(result.entities))
                     span.set_attribute(
                         "evaluation.pii.response.entity_types",
                         list(result.entity_counts.keys()),
@@ -509,9 +497,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # Add redacted text if available
                     if result.redacted_text:
-                        span.set_attribute(
-                            "evaluation.pii.response.redacted", result.redacted_text
-                        )
+                        span.set_attribute("evaluation.pii.response.redacted", result.redacted_text)
                 else:
                     span.set_attribute("evaluation.pii.response.detected", False)
 
@@ -519,9 +505,7 @@ class EvaluationSpanProcessor(SpanProcessor):
             logger.error("Error checking PII: %s", e, exc_info=True)
             span.set_attribute("evaluation.pii.error", str(e))
 
-    def _check_toxicity(
-        self, span: Span, prompt: Optional[str], response: Optional[str]
-    ) -> None:
+    def _check_toxicity(self, span: Span, prompt: Optional[str], response: Optional[str]) -> None:
         """Check for toxicity in prompt and response.
 
         Args:
@@ -538,9 +522,7 @@ class EvaluationSpanProcessor(SpanProcessor):
                 result = self.toxicity_detector.detect(prompt)
                 if result.is_toxic:
                     span.set_attribute("evaluation.toxicity.prompt.detected", True)
-                    span.set_attribute(
-                        "evaluation.toxicity.prompt.max_score", result.max_score
-                    )
+                    span.set_attribute("evaluation.toxicity.prompt.max_score", result.max_score)
                     span.set_attribute(
                         "evaluation.toxicity.prompt.categories",
                         result.toxic_categories,
@@ -548,17 +530,11 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # Add individual category scores
                     for category, score in result.scores.items():
-                        span.set_attribute(
-                            f"evaluation.toxicity.prompt.{category}_score", score
-                        )
+                        span.set_attribute(f"evaluation.toxicity.prompt.{category}_score", score)
 
                     # Record metrics
-                    self.toxicity_detection_counter.add(
-                        1, {"location": "prompt"}
-                    )
-                    self.toxicity_score_histogram.record(
-                        result.max_score, {"location": "prompt"}
-                    )
+                    self.toxicity_detection_counter.add(1, {"location": "prompt"})
+                    self.toxicity_score_histogram.record(result.max_score, {"location": "prompt"})
 
                     # Record category metrics
                     for category in result.toxic_categories:
@@ -584,9 +560,7 @@ class EvaluationSpanProcessor(SpanProcessor):
                 result = self.toxicity_detector.detect(response)
                 if result.is_toxic:
                     span.set_attribute("evaluation.toxicity.response.detected", True)
-                    span.set_attribute(
-                        "evaluation.toxicity.response.max_score", result.max_score
-                    )
+                    span.set_attribute("evaluation.toxicity.response.max_score", result.max_score)
                     span.set_attribute(
                         "evaluation.toxicity.response.categories",
                         result.toxic_categories,
@@ -594,17 +568,11 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # Add individual category scores
                     for category, score in result.scores.items():
-                        span.set_attribute(
-                            f"evaluation.toxicity.response.{category}_score", score
-                        )
+                        span.set_attribute(f"evaluation.toxicity.response.{category}_score", score)
 
                     # Record metrics
-                    self.toxicity_detection_counter.add(
-                        1, {"location": "response"}
-                    )
-                    self.toxicity_score_histogram.record(
-                        result.max_score, {"location": "response"}
-                    )
+                    self.toxicity_detection_counter.add(1, {"location": "response"})
+                    self.toxicity_score_histogram.record(result.max_score, {"location": "response"})
 
                     # Record category metrics
                     for category in result.toxic_categories:
@@ -629,9 +597,7 @@ class EvaluationSpanProcessor(SpanProcessor):
             logger.error("Error checking toxicity: %s", e, exc_info=True)
             span.set_attribute("evaluation.toxicity.error", str(e))
 
-    def _check_bias(
-        self, span: Span, prompt: Optional[str], response: Optional[str]
-    ) -> None:
+    def _check_bias(self, span: Span, prompt: Optional[str], response: Optional[str]) -> None:
         """Check for bias in prompt and response.
 
         Args:
@@ -648,9 +614,7 @@ class EvaluationSpanProcessor(SpanProcessor):
                 result = self.bias_detector.detect(prompt)
                 if result.has_bias:
                     span.set_attribute("evaluation.bias.prompt.detected", True)
-                    span.set_attribute(
-                        "evaluation.bias.prompt.max_score", result.max_score
-                    )
+                    span.set_attribute("evaluation.bias.prompt.max_score", result.max_score)
                     span.set_attribute(
                         "evaluation.bias.prompt.detected_biases",
                         result.detected_biases,
@@ -659,9 +623,7 @@ class EvaluationSpanProcessor(SpanProcessor):
                     # Add individual bias type scores
                     for bias_type, score in result.bias_scores.items():
                         if score > 0:
-                            span.set_attribute(
-                                f"evaluation.bias.prompt.{bias_type}_score", score
-                            )
+                            span.set_attribute(f"evaluation.bias.prompt.{bias_type}_score", score)
 
                     # Add patterns matched
                     for bias_type, patterns in result.patterns_matched.items():
@@ -672,9 +634,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # Record metrics
                     self.bias_detection_counter.add(1, {"location": "prompt"})
-                    self.bias_score_histogram.record(
-                        result.max_score, {"location": "prompt"}
-                    )
+                    self.bias_score_histogram.record(result.max_score, {"location": "prompt"})
 
                     # Record bias type metrics
                     for bias_type in result.detected_biases:
@@ -700,9 +660,7 @@ class EvaluationSpanProcessor(SpanProcessor):
                 result = self.bias_detector.detect(response)
                 if result.has_bias:
                     span.set_attribute("evaluation.bias.response.detected", True)
-                    span.set_attribute(
-                        "evaluation.bias.response.max_score", result.max_score
-                    )
+                    span.set_attribute("evaluation.bias.response.max_score", result.max_score)
                     span.set_attribute(
                         "evaluation.bias.response.detected_biases",
                         result.detected_biases,
@@ -711,9 +669,7 @@ class EvaluationSpanProcessor(SpanProcessor):
                     # Add individual bias type scores
                     for bias_type, score in result.bias_scores.items():
                         if score > 0:
-                            span.set_attribute(
-                                f"evaluation.bias.response.{bias_type}_score", score
-                            )
+                            span.set_attribute(f"evaluation.bias.response.{bias_type}_score", score)
 
                     # Add patterns matched
                     for bias_type, patterns in result.patterns_matched.items():
@@ -724,9 +680,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # Record metrics
                     self.bias_detection_counter.add(1, {"location": "response"})
-                    self.bias_score_histogram.record(
-                        result.max_score, {"location": "response"}
-                    )
+                    self.bias_score_histogram.record(result.max_score, {"location": "response"})
 
                     # Record bias type metrics
                     for bias_type in result.detected_biases:
@@ -765,12 +719,8 @@ class EvaluationSpanProcessor(SpanProcessor):
             result = self.prompt_injection_detector.detect(prompt)
             if result.is_injection:
                 span.set_attribute("evaluation.prompt_injection.detected", True)
-                span.set_attribute(
-                    "evaluation.prompt_injection.score", result.injection_score
-                )
-                span.set_attribute(
-                    "evaluation.prompt_injection.types", result.injection_types
-                )
+                span.set_attribute("evaluation.prompt_injection.score", result.injection_score)
+                span.set_attribute("evaluation.prompt_injection.types", result.injection_types)
 
                 # Add patterns matched
                 for inj_type, patterns in result.patterns_matched.items():
@@ -787,9 +737,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                 # Record injection type metrics
                 for inj_type in result.injection_types:
-                    self.prompt_injection_type_counter.add(
-                        1, {"injection_type": inj_type}
-                    )
+                    self.prompt_injection_type_counter.add(1, {"injection_type": inj_type})
 
                 # If blocking, set error status
                 if result.blocked:
@@ -954,18 +902,14 @@ class EvaluationSpanProcessor(SpanProcessor):
             result = self.hallucination_detector.detect(response, context)
             if result.has_hallucination:
                 span.set_attribute("evaluation.hallucination.detected", True)
-                span.set_attribute(
-                    "evaluation.hallucination.score", result.hallucination_score
-                )
+                span.set_attribute("evaluation.hallucination.score", result.hallucination_score)
                 span.set_attribute(
                     "evaluation.hallucination.indicators", result.hallucination_indicators
                 )
                 span.set_attribute(
                     "evaluation.hallucination.hedge_words_count", result.hedge_words_count
                 )
-                span.set_attribute(
-                    "evaluation.hallucination.citation_count", result.citation_count
-                )
+                span.set_attribute("evaluation.hallucination.citation_count", result.citation_count)
 
                 # Add unsupported claims
                 if result.unsupported_claims:
@@ -982,9 +926,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                 # Record indicator metrics
                 for indicator in result.hallucination_indicators:
-                    self.hallucination_indicator_counter.add(
-                        1, {"indicator": indicator}
-                    )
+                    self.hallucination_indicator_counter.add(1, {"indicator": indicator})
             else:
                 span.set_attribute("evaluation.hallucination.detected", False)
 

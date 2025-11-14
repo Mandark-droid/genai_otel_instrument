@@ -241,9 +241,7 @@ class PromptInjectionDetector:
                 injection_type_counts[inj_type] = injection_type_counts.get(inj_type, 0) + 1
 
         # Calculate average scores
-        avg_score = (
-            sum(r.injection_score for r in results) / len(results) if results else 0.0
-        )
+        avg_score = sum(r.injection_score for r in results) / len(results) if results else 0.0
 
         # Calculate max score
         max_score = max((r.injection_score for r in results), default=0.0)
@@ -255,7 +253,9 @@ class PromptInjectionDetector:
             "injection_type_counts": injection_type_counts,
             "average_score": avg_score,
             "max_score": max_score,
-            "most_common_injection": max(injection_type_counts.items(), key=lambda x: x[1])[0]
-            if injection_type_counts
-            else None,
+            "most_common_injection": (
+                max(injection_type_counts.items(), key=lambda x: x[1])[0]
+                if injection_type_counts
+                else None
+            ),
         }
