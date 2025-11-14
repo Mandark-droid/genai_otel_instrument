@@ -53,9 +53,9 @@ class PromptInjectionDetector:
     INJECTION_PATTERNS = {
         "instruction_override": {
             "patterns": [
-                r"ignore\s+(?:previous|above|all|the)\s+(?:instructions?|prompts?|directions?|rules?)",
-                r"disregard\s+(?:previous|above|all|the)\s+(?:instructions?|prompts?|directions?)",
-                r"forget\s+(?:previous|above|all|the)\s+(?:instructions?|prompts?|directions?)",
+                r"ignore\s+(?:all\s+)?(?:previous|above|the)\s+(?:instructions?|prompts?|directions?|rules?)",
+                r"disregard\s+(?:all\s+)?(?:previous|above|the)\s+(?:instructions?|prompts?|directions?)",
+                r"forget\s+(?:all\s+)?(?:previous|above|the)\s+(?:instructions?|prompts?|directions?)",
                 r"new\s+instructions?:\s*",
                 r"instead,?\s+(?:you\s+)?(?:will|must|should)\s+",
                 r"override\s+(?:your|the)\s+(?:instructions?|programming|rules)",
@@ -64,10 +64,11 @@ class PromptInjectionDetector:
         "role_playing": {
             "patterns": [
                 r"(?:pretend|act|behave)\s+(?:like|as\s+if)\s+you\s+(?:are|were)",
-                r"you\s+are\s+now\s+(?:a|an)\s+\w+",
+                r"(?:pretend|act|behave)\s+(?:you\s+)?(?:are|were)",
+                r"you\s+are\s+now\s+(?:a|an)\s+[\w\s]+",
                 r"from\s+now\s+on,?\s+you\s+(?:are|will\s+be)",
                 r"roleplay\s+as",
-                r"imagine\s+you\s+are\s+(?:a|an)\s+\w+\s+(?:who|that)",
+                r"imagine\s+you\s+are\s+(?:a|an)\s+\w+",
             ],
         },
         "jailbreak": {
@@ -78,6 +79,7 @@ class PromptInjectionDetector:
                 r"opposite\s+mode",
                 r"jailbreak",
                 r"you\s+have\s+no\s+(?:restrictions?|limitations?|ethics?|guidelines?)",
+                r"(?:have|has)\s+no\s+(?:restrictions?|limitations?|ethics?|guidelines?)",
                 r"without\s+any\s+(?:restrictions?|limitations?|ethics?|guidelines?|filters?)",
                 r"bypass\s+(?:your|the)\s+(?:safety|ethical|content)\s+(?:filters?|guidelines?)",
             ],
@@ -93,7 +95,7 @@ class PromptInjectionDetector:
         },
         "system_extraction": {
             "patterns": [
-                r"(?:show|reveal|display|print|output)\s+(?:your|the)\s+(?:system\s+)?(?:prompt|instructions?)",
+                r"(?:show|reveal|display|print|output)\s+(?:me\s+)?(?:your|the)\s+(?:system\s+)?(?:prompt|instructions?)",
                 r"what\s+(?:are|were)\s+your\s+(?:original\s+)?instructions?",
                 r"repeat\s+(?:your|the)\s+(?:system\s+)?(?:prompt|instructions?)",
                 r"tell\s+me\s+your\s+(?:system\s+)?(?:prompt|instructions?)",
