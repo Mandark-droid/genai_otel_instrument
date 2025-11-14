@@ -137,7 +137,7 @@ class CrewAIInstrumentor(BaseInstrumentor):
                 for agent in instance.agents:
                     if hasattr(agent, "tools") and agent.tools:
                         for tool in agent.tools:
-                            tool_name = getattr(tool, "name", type(tool).__name__)
+                            tool_name = str(getattr(tool, "name", type(tool).__name__))
                             if tool_name and tool_name not in all_tools:
                                 all_tools.append(tool_name)
 

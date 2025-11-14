@@ -110,8 +110,9 @@ class TestLangGraphInstrumentor(unittest.TestCase):
     @patch("genai_otel.instrumentors.langgraph_instrumentor.logger")
     def test_instrument_exception_with_fail_on_error_true(self, mock_logger):
         """Test that instrument raises exceptions when fail_on_error is True."""
-        # Create mock langgraph module
+        # Create mock langgraph modules
         mock_langgraph = MagicMock()
+        mock_langgraph_graph = MagicMock()
 
         # Make hasattr fail to trigger exception
         def mock_hasattr_side_effect(obj, name):
@@ -119,7 +120,14 @@ class TestLangGraphInstrumentor(unittest.TestCase):
                 raise RuntimeError("Test error")
             return True
 
-        with patch.dict("sys.modules", {"langgraph": mock_langgraph, "wrapt": MagicMock()}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "langgraph": mock_langgraph,
+                "langgraph.graph": mock_langgraph_graph,
+                "wrapt": MagicMock(),
+            },
+        ):
             with patch("builtins.hasattr", side_effect=mock_hasattr_side_effect):
                 instrumentor = LangGraphInstrumentor()
                 config = MagicMock()
@@ -234,8 +242,11 @@ class TestLangGraphInstrumentor(unittest.TestCase):
         with patch.dict("sys.modules", {"langgraph": MagicMock()}):
             instrumentor = LangGraphInstrumentor()
 
-            # Create mock result with metadata
-            result = {"result": "test"}
+            # Create mock result with metadata using a class that acts like a dict
+            class ResultWithMetadata(dict):
+                pass
+
+            result = ResultWithMetadata({"result": "test"})
             result.__metadata__ = {"step": 5}
 
             attrs = instrumentor._extract_response_attributes(result)

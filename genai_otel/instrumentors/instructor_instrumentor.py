@@ -369,8 +369,11 @@ class InstructorInstrumentor(BaseInstrumentor):
                 except Exception:
                     pass
 
-            # Check if validation was successful
-            attrs["instructor.validation.success"] = True
+                # Validation successful if we got a Pydantic model
+                attrs["instructor.validation.success"] = True
+            else:
+                # No Pydantic model means validation failed
+                attrs["instructor.validation.success"] = False
 
         except Exception as e:
             logger.debug("Failed to extract create_with_completion response attributes: %s", e)
