@@ -53,10 +53,9 @@ class PromptInjectionDetector:
     INJECTION_PATTERNS = {
         "instruction_override": {
             "patterns": [
-                r"ignore\s+(?:all\s+)?(?:previous|above|the|your)\s+(?:instructions?|prompts?|directions?|rules?)",
-                r"disregard\s+(?:all\s+)?(?:previous|above|the|your)\s+(?:instructions?|prompts?|directions?)",
-                r"disregard\s+the\s+(?:above|previous)\s+(?:instructions?|prompts?|directions?)",  # "disregard the above instructions"
-                r"forget\s+(?:all\s+)?(?:previous|above|the)\s+(?:instructions?|prompts?|directions?)",
+                r"ignore\s+(?:all\s+)?(?:(?:previous|above|the|your)\s+)?(?:instructions?|prompts?|directions?|rules?)",
+                r"disregard\s+(?:all\s+)?(?:(?:previous|above|the|your)\s+)?(?:instructions?|prompts?|directions?)",
+                r"forget\s+(?:all\s+)?(?:(?:previous|above|the)\s+)?(?:instructions?|prompts?|directions?)",
                 r"new\s+instructions?:\s*",
                 r"instead,?\s+(?:you\s+)?(?:will|must|should)\s+",
                 r"override\s+(?:your|the)\s+(?:instructions?|programming|rules)",
@@ -64,7 +63,7 @@ class PromptInjectionDetector:
         },
         "role_playing": {
             "patterns": [
-                r"(?:pretend|act|behave)\s+(?:like|as\s+if)\s+you\s+(?:are|were)",
+                r"(?:pretend|act|behave)\s+(?:like|as\s+if)\s+you\s+(?:are|were|have|can|could|must|should)",
                 r"(?:pretend|act|behave)\s+(?:you\s+)?(?:are|were)",
                 r"you\s+are\s+now\s+(?:a|an)\s+[\w\s]+",
                 r"from\s+now\s+on,?\s+you\s+(?:are|will\s+be)",

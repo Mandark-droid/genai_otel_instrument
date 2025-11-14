@@ -70,8 +70,11 @@ class BiasDetector:
                 r"\b(?:all|most|typical)?\s*(?:black|white|asian|hispanic|latino|arab)\s+people\s+(?:are|tend\s+to|always|never)\b",
                 r"\brace\s+(?:card|baiting)\b",
                 r"\b(?:act|sound|look)\s+(?:white|black|asian|hispanic)\b",
+                r"\b(?:being|that's|stop\s+being|don't\s+be)\s+racist\b",  # Pattern for "racist" usage
             ],
-            "keywords": [],  # Removed broad keywords to avoid false positives
+            "keywords": [
+                "racial slur"
+            ],  # Removed "racist" keyword to avoid false political matches
         },
         "ethnicity": {
             "patterns": [
@@ -125,7 +128,8 @@ class BiasDetector:
         },
         "political": {
             "patterns": [
-                r"\b(?:all|most|typical)?\s*(?:liberals?|conservatives?|democrats?|republicans?)\s+(?:are|always|never)\b",
+                r"\b(?:liberals?|conservatives?|democrats?|republicans?)\s+(?:are|were)\s+(?:all\s+)?(?:\w+)",  # "Conservatives are all racists"
+                r"\b(?:all|most|typical)\s+(?:liberals?|conservatives?|democrats?|republicans?)\s+(?:are|always|never)\b",
                 r"\b(?:libtard|conservatard|trumptard)\b",
                 r"\b(?:left|right)\s+wing\s+(?:nut|extremist|radical)\b",
                 r"\b(?:fake|biased|lying)\s+(?:media|news)\b",
@@ -234,14 +238,24 @@ class BiasDetector:
         matched = []
         text_lower = text.lower()
 
-        # Normalize text by removing special characters but keeping spaces
-        # This helps patterns match even with @ # $ etc.
-        normalized_text = re.sub(r"[^\w\s]", " ", text)
+        # Handle leetspeak/character substitutions to detect obfuscated bias
+        # @ -> a, $ -> s, 3 -> e, 1 -> i, 0 -> o
+        deobfuscated_text = text
+        substitutions = {"@": "a", "$": "s", "3": "e", "1": "i", "0": "o"}
+        for char, replacement in substitutions.items():
+            deobfuscated_text = deobfuscated_text.replace(char, replacement)
 
-        # Check regex patterns on both original and normalized text
+        # Normalize text by removing remaining special characters but keeping spaces
+        # This helps patterns match even with # etc.
+        normalized_text = re.sub(r"[^\w\s]", " ", deobfuscated_text)
+
+        # Check regex patterns on original, deobfuscated, and normalized text
         for pattern in patterns:
             # Try on original text first
             matches = list(re.finditer(pattern, text, re.IGNORECASE))
+            if not matches:
+                # Try on deobfuscated text
+                matches = list(re.finditer(pattern, deobfuscated_text, re.IGNORECASE))
             if not matches:
                 # Try on normalized text
                 matches = list(re.finditer(pattern, normalized_text, re.IGNORECASE))
