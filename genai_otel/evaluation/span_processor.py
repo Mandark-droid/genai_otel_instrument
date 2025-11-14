@@ -900,19 +900,25 @@ class EvaluationSpanProcessor(SpanProcessor):
                         break
 
             result = self.hallucination_detector.detect(response, context)
+
+            # Always set basic attributes
+            span.set_attribute(
+                "evaluation.hallucination.response.detected", result.has_hallucination
+            )
+            span.set_attribute(
+                "evaluation.hallucination.response.score", result.hallucination_score
+            )
+            span.set_attribute("evaluation.hallucination.response.citations", result.citation_count)
+            span.set_attribute(
+                "evaluation.hallucination.response.hedge_words", result.hedge_words_count
+            )
+            span.set_attribute(
+                "evaluation.hallucination.response.claims", result.factual_claim_count
+            )
+
             if result.has_hallucination:
-                span.set_attribute("evaluation.hallucination.response.detected", True)
-                span.set_attribute(
-                    "evaluation.hallucination.response.score", result.hallucination_score
-                )
                 span.set_attribute(
                     "evaluation.hallucination.response.indicators", result.hallucination_indicators
-                )
-                span.set_attribute(
-                    "evaluation.hallucination.response.hedge_words_count", result.hedge_words_count
-                )
-                span.set_attribute(
-                    "evaluation.hallucination.response.citation_count", result.citation_count
                 )
 
                 # Add unsupported claims
@@ -931,8 +937,6 @@ class EvaluationSpanProcessor(SpanProcessor):
                 # Record indicator metrics
                 for indicator in result.hallucination_indicators:
                     self.hallucination_indicator_counter.add(1, {"indicator": indicator})
-            else:
-                span.set_attribute("evaluation.hallucination.response.detected", False)
 
         except Exception as e:
             logger.error("Error checking hallucination: %s", e, exc_info=True)
