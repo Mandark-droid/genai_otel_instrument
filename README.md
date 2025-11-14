@@ -841,15 +841,15 @@ genai_otel.instrument(
 - OpenTelemetry SDK 1.20.0+
 - Backward compatible with existing dashboards
 
-### 2026 Roadmap - LLM Observability Leadership
+### 2026-2027 Roadmap
 
-Based on industry trends and competitive analysis of OpenLIT, OpenLLMetry, Galileo, and OpenInference, our 2026 roadmap focuses on becoming the most comprehensive open-source LLM observability platform.
+Our roadmap focuses on comprehensive LLM observability, from RAG evaluation to enterprise governance.
 
 ---
 
 ### v0.3.0 - RAG & Retrieval Observability (Q1-Q2 2026)
 
-**🎯 Goal:** Best-in-class RAG application monitoring and optimization
+**🎯 Goal:** Complete monitoring and optimization for RAG applications
 
 **RAG Evaluation Metrics**
 - **Retrieval Quality Metrics**
@@ -878,11 +878,6 @@ Based on industry trends and competitive analysis of OpenLIT, OpenLLMetry, Galil
 - Semantic drift detection (embedding space changes over time)
 - Vector DB integration: Pinecone, Weaviate, Qdrant, Milvus, ChromaDB
 - Cache hit rates and efficiency
-
-**Competitive Gap Addressed:**
-- ✅ Galileo's RAG evaluation capabilities
-- ✅ OpenInference's retrieval spans
-- ✅ Advanced semantic search monitoring
 
 ---
 
@@ -915,11 +910,6 @@ Based on industry trends and competitive analysis of OpenLIT, OpenLLMetry, Galil
 - Success rate tracking
 - User satisfaction correlation
 - Conversion metrics by prompt
-
-**Competitive Gap Addressed:**
-- ✅ LangSmith's prompt versioning
-- ✅ Galileo's prompt optimization
-- ✅ OpenLIT's prompt management
 
 ---
 
@@ -955,11 +945,6 @@ Based on industry trends and competitive analysis of OpenLIT, OpenLLMetry, Galil
 - Feedback-based model comparison
 - Root cause analysis for negative feedback
 
-**Competitive Gap Addressed:**
-- ✅ Galileo's feedback loops
-- ✅ LangSmith's dataset management
-- ✅ OpenLLMetry's human-in-the-loop
-
 ---
 
 ### v0.6.0 - Advanced Agent Observability (Q4 2026)
@@ -991,11 +976,6 @@ Based on industry trends and competitive analysis of OpenLIT, OpenLLMetry, Galil
 - Tool latency and cost
 - Tool chain optimization
 - Error propagation analysis
-
-**Competitive Gap Addressed:**
-- ✅ Enhanced multi-agent beyond OpenAI Agents SDK
-- ✅ Complex workflow monitoring
-- ✅ Agent performance optimization
 
 ---
 
@@ -1031,11 +1011,6 @@ Based on industry trends and competitive analysis of OpenLIT, OpenLLMetry, Galil
 - JSON schema validation
 - Regex pattern matching
 - Custom business rule evaluators
-
-**Competitive Gap Addressed:**
-- ✅ Extensibility beyond built-in evaluators
-- ✅ Community-driven evaluation ecosystem
-- ✅ Domain-specific needs
 
 ---
 
@@ -1073,11 +1048,6 @@ Based on industry trends and competitive analysis of OpenLIT, OpenLLMetry, Galil
   - Logical consistency checking
   - Multi-hop reasoning evaluation
 
-**Competitive Gap Addressed:**
-- ✅ Multi-modal beyond text
-- ✅ Specialized model type support
-- ✅ Future-proofing for new modalities
-
 ---
 
 ### v0.9.0 - Production Debugging & Optimization (Q3 2027)
@@ -1114,11 +1084,6 @@ Based on industry trends and competitive analysis of OpenLIT, OpenLLMetry, Galil
   - Parallel execution opportunities
   - Streaming optimization
   - Model selection recommendations
-
-**Competitive Gap Addressed:**
-- ✅ Advanced debugging capabilities
-- ✅ Production optimization tools
-- ✅ Developer experience improvements
 
 ---
 
@@ -1160,44 +1125,6 @@ Based on industry trends and competitive analysis of OpenLIT, OpenLLMetry, Galil
 - Error budget management
 - Incident management integration
 - On-call scheduling integration
-
-**Competitive Gap Addressed:**
-- ✅ Enterprise-grade features
-- ✅ Compliance automation
-- ✅ Production reliability tools
-
----
-
-## Competitive Analysis Summary
-
-### **vs OpenLIT**
-- ✅ **Advantage:** Zero-code instrumentation, broader framework support
-- 🎯 **Catching up:** Prompt management (planned v0.4.0)
-- 🎯 **Catching up:** Advanced GPU metrics (planned enhancement)
-
-### **vs OpenLLMetry (Traceloop)**
-- ✅ **Advantage:** More comprehensive evaluation features (6 vs 2)
-- ✅ **Advantage:** Better safety guardrails
-- 🎯 **Catching up:** Feedback loops (planned v0.5.0)
-
-### **vs Galileo**
-- ✅ **Advantage:** Open-source and self-hosted
-- ✅ **Advantage:** OpenTelemetry native (vendor-neutral)
-- 🎯 **Catching up:** RAG evaluation (planned v0.3.0)
-- 🎯 **Catching up:** Prompt optimization (planned v0.4.0)
-
-### **vs OpenInference (Arize)**
-- ✅ **Advantage:** More LLM provider integrations
-- ✅ **Advantage:** Richer evaluation features
-- 🎯 **Catching up:** Advanced RAG tracing (planned v0.3.0)
-- 🎯 **Catching up:** Embeddings monitoring (planned v0.3.0)
-
-### **Key Differentiators**
-1. **Truly Open Source** - AGPL-3.0, community-driven
-2. **Zero-Code Setup** - Easiest instrumentation in the market
-3. **OpenTelemetry Native** - Vendor-neutral, standards-based
-4. **Comprehensive Safety** - 6 evaluation features (most in open-source)
-5. **Production-Ready** - Built for scale from day one
 
 ---
 
