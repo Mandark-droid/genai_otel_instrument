@@ -58,6 +58,8 @@ class BiasDetector:
             "patterns": [
                 r"\b(women|woman|female|girls?|she|her)\s+(?:are|is|always|never|can't|cannot|shouldn't)\b",
                 r"\b(men|man|male|boys?|he|him)\s+(?:are|is|always|never|can't|cannot|shouldn't)\b",
+                r"\b(women|woman|female|girls?),?\s+(?:they're?|she's)\s+(?:always|never|too|so)\b",  # "women, they're always"
+                r"\b(men|man|male|boys?),?\s+(?:they're?|he's)\s+(?:always|never|too|so)\b",
                 r"\bfor\s+(his|her)\s+gender\b",
                 r"\b(manly|womanly|girly|boyish)\s+(?:behavior|traits?|characteristic)",
                 r"(?:cry|act|behave|think)\s+like\s+(?:a\s+)?(?:man|woman|boys?|girls?)",

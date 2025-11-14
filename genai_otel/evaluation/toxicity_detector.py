@@ -13,6 +13,17 @@ from .config import ToxicityConfig
 
 logger = logging.getLogger(__name__)
 
+# Try to import optional dependencies at module level for testability
+try:
+    from detoxify import Detoxify
+except ImportError:
+    Detoxify = None
+
+try:
+    from googleapiclient import discovery
+except ImportError:
+    discovery = None
+
 
 @dataclass
 class ToxicityDetectionResult:
@@ -65,7 +76,8 @@ class ToxicityDetector:
         # Check Perspective API
         if self.config.use_perspective_api and self.config.perspective_api_key:
             try:
-                from googleapiclient import discovery
+                if discovery is None:
+                    raise ImportError("googleapiclient not installed")
 
                 self._perspective_client = discovery.build(
                     "commentanalyzer",
@@ -89,7 +101,8 @@ class ToxicityDetector:
         # Check Detoxify
         if self.config.use_local_model:
             try:
-                from detoxify import Detoxify
+                if Detoxify is None:
+                    raise ImportError("detoxify not installed")
 
                 # Load the model (using "original" model by default)
                 self._detoxify_model = Detoxify("original")

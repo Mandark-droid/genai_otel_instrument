@@ -80,6 +80,7 @@ class RestrictedTopicsDetector:
         "financial_advice": {
             "patterns": [
                 r"should\s+I\s+(?:invest|buy|sell|trade)\s+(?:in\s+)?(?:stocks?|crypto|bitcoin|forex)",
+                r"(?:you|we)\s+should\s+(?:definitely|absolutely)?\s*(?:buy|sell|invest\s+in|trade)\s+(?:these\s+)?(?:stocks?|crypto|bitcoin)",  # "you should buy these stocks"
                 r"(?:best|good|top)\s+(?:stocks?|investments?|crypto)\s+to\s+(?:buy|invest|purchase)",
                 r"(?:what|which)\s+(?:stocks?|crypto|investments?)\s+should\s+(?:I|we)\s+(?:buy|invest\s+in)",
                 r"(?:should|can)\s+(?:I|we)\s+(?:invest\s+in|buy|sell|trade)",
