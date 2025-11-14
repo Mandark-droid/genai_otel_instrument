@@ -71,7 +71,7 @@ class RestrictedTopicsDetector:
             "patterns": [
                 r"should\s+I\s+(?:sue|file\s+a\s+lawsuit|take\s+legal\s+action|hire\s+(?:a|an)\s+(?:lawyer|attorney))",
                 r"(?:can|should)\s+I\s+(?:sue|take\s+legal\s+action|file\s+charges)",
-                r"is\s+(?:it|this)\s+(?:legal|illegal|against\s+the\s+law)\s+(?:to|for|if)",
+                r"is\s+(?:it|this)\s+(?:legal|illegal)\s+(?:to|for|if|\?|or)",  # Added "or" and "?" for "legal or illegal?"
                 r"what\s+(?:are\s+my\s+)?legal\s+(?:rights|options)",
                 r"(?:can|should)\s+I\s+(?:file|take)\s+(?:a\s+)?(?:lawsuit|legal\s+action)",
             ],
@@ -79,13 +79,13 @@ class RestrictedTopicsDetector:
         },
         "financial_advice": {
             "patterns": [
-                r"\b(?:invest|investment|stock|trading|cryptocurrency|forex)\b",
-                r"should\s+I\s+(?:invest|buy|sell|trade)\s+(?:in\s+)?(?:stocks?|crypto|bitcoin)",
-                r"(?:best|good)\s+(?:stocks?|investments?|crypto)\s+to\s+(?:buy|invest)",
-                r"financial\s+advice",
-                r"(?:will|should)\s+(?:I|we)\s+(?:buy|sell|invest)\s+(?:in|at)",
+                r"should\s+I\s+(?:invest|buy|sell|trade)\s+(?:in\s+)?(?:stocks?|crypto|bitcoin|forex)",
+                r"(?:best|good|top)\s+(?:stocks?|investments?|crypto)\s+to\s+(?:buy|invest|purchase)",
+                r"(?:what|which)\s+(?:stocks?|crypto|investments?)\s+should\s+(?:I|we)\s+(?:buy|invest\s+in)",
+                r"(?:should|can)\s+(?:I|we)\s+(?:invest\s+in|buy|sell|trade)",
+                r"financial\s+advice\s+(?:on|for|about)",
             ],
-            "keywords": ["financial advice", "investment recommendation", "trading advice"],
+            "keywords": [],  # Removed broad keywords to avoid false positives
         },
         "violence": {
             "patterns": [
