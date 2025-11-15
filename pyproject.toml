@@ -102,8 +102,17 @@ sambanova = ["sambanova>=1.0.0"]
 
 # LLM Frameworks
 langchain = ["langchain>=0.1.0"]
+langgraph = ["langgraph>=0.1.0"]
 llamaindex = ["llama-index>=0.9.0"]
 huggingface = ["transformers>=4.30.0"]
+crewai = ["crewai>=0.1.0"]
+autogen = ["pyautogen>=0.2.0"]
+haystack = ["haystack-ai>=2.0.0"]
+dspy = ["dspy-ai>=2.0.0"]
+guardrails = ["guardrails-ai>=0.4.0"]
+instructor = ["instructor>=1.0.0"]
+pydantic-ai = ["pydantic-ai>=0.0.1"]
+vertexai = ["google-cloud-aiplatform>=1.0.0"]
 
 # Database instrumentations
 databases = [
@@ -150,9 +159,18 @@ all-providers = [
     "replicate>=0.15.0",
     "sambanova>=1.0.0",
     "langchain>=0.1.0",
+    "langgraph>=0.1.0",
     "llama-index>=0.9.0",
     "transformers>=4.30.0",
     "litellm>=1.0.0",
+    "crewai>=0.1.0",
+    "pyautogen>=0.2.0",
+    "haystack-ai>=2.0.0",
+    "dspy-ai>=2.0.0",
+    "guardrails-ai>=0.4.0",
+    "instructor>=1.0.0",
+    "pydantic-ai>=0.0.1",
+    "google-cloud-aiplatform>=1.0.0",
 ]
 
 # All MCP tools
@@ -187,9 +205,18 @@ all = [
     "replicate>=0.15.0",
     "sambanova>=1.0.0",
     "langchain>=0.1.0",
+    "langgraph>=0.1.0",
     "llama-index>=0.9.0",
     "transformers>=4.30.0",
     "nvidia-ml-py>=11.495.46",
+    "crewai>=0.1.0",
+    "pyautogen>=0.2.0",
+    "haystack-ai>=2.0.0",
+    "dspy-ai>=2.0.0",
+    "guardrails-ai>=0.4.0",
+    "instructor>=1.0.0",
+    "pydantic-ai>=0.0.1",
+    "google-cloud-aiplatform>=1.0.0",
     "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
     "opentelemetry-instrumentation-redis>=0.41b0",
     "opentelemetry-instrumentation-pymongo>=0.41b0",
