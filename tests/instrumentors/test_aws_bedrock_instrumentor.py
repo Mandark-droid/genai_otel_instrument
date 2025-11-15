@@ -1,3 +1,4 @@
+import builtins
 import json
 import unittest
 from unittest.mock import MagicMock, patch
@@ -51,8 +52,15 @@ class TestAWSBedrockInstrumentor(unittest.TestCase):
 
     def test_instrument_with_boto3_not_available(self):
         """Test that instrument handles missing boto3 gracefully."""
-        # Make import fail
-        with patch("builtins.__import__", side_effect=ImportError("No module named 'boto3'")):
+        # Make boto3 import fail
+        original_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "boto3":
+                raise ImportError("No module named 'boto3'")
+            return original_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=mock_import):
             instrumentor = AWSBedrockInstrumentor()
             config = OTelConfig()
 
