@@ -1,7 +1,7 @@
 # TraceVerde
 
 <div align="center">
-  <img src=".github/images/Logo.jpg" alt="TraceVerde - GenAI OpenTelemetry Instrumentation Logo" width="400"/>
+  <img src="https://raw.githubusercontent.com/Mandark-droid/genai_otel_instrument/main/.github/images/Logo.jpg" alt="TraceVerde - GenAI OpenTelemetry Instrumentation Logo" width="400"/>
 </div>
 
 <br/>
@@ -29,7 +29,7 @@
 ---
 
 <div align="center">
-  <img src=".github/images/Landing_Page.jpg" alt="GenAI OpenTelemetry Instrumentation Overview" width="800"/>
+  <img src="https://raw.githubusercontent.com/Mandark-droid/genai_otel_instrument/main/.github/images/Landing_Page.jpg" alt="GenAI OpenTelemetry Instrumentation Overview" width="800"/>
 </div>
 
 ---
@@ -148,35 +148,35 @@ See the instrumentation in action across different LLM providers and observabili
 Full trace capture for OpenAI API calls with token usage, costs, and latency metrics.
 
 <div align="center">
-  <img src=".github/images/Screenshots/Traces_OpenAI.png" alt="OpenAI Traces" width="900"/>
+  <img src="https://raw.githubusercontent.com/Mandark-droid/genai_otel_instrument/main/.github/images/Screenshots/Traces_OpenAI.png" alt="OpenAI Traces" width="900"/>
 </div>
 
 ### Ollama (Local LLM) Instrumentation
 Zero-code instrumentation for local models running on Ollama with comprehensive observability.
 
 <div align="center">
-  <img src=".github/images/Screenshots/Traces_Ollama.png" alt="Ollama Traces" width="900"/>
+  <img src="https://raw.githubusercontent.com/Mandark-droid/genai_otel_instrument/main/.github/images/Screenshots/Traces_Ollama.png" alt="Ollama Traces" width="900"/>
 </div>
 
 ### HuggingFace Transformers
 Direct instrumentation of HuggingFace Transformers with automatic token counting and cost estimation.
 
 <div align="center">
-  <img src=".github/images/Screenshots/Trace_HuggingFace_Transformer_Models.png" alt="HuggingFace Transformer Traces" width="900"/>
+  <img src="https://raw.githubusercontent.com/Mandark-droid/genai_otel_instrument/main/.github/images/Screenshots/Trace_HuggingFace_Transformer_Models.png" alt="HuggingFace Transformer Traces" width="900"/>
 </div>
 
 ### SmolAgents Framework
 Complete agent workflow tracing with tool calls, iterations, and cost breakdown.
 
 <div align="center">
-  <img src=".github/images/Screenshots/Traces_SmolAgent_with_tool_calls.png" alt="SmolAgent Traces with Tool Calls" width="900"/>
+  <img src="https://raw.githubusercontent.com/Mandark-droid/genai_otel_instrument/main/.github/images/Screenshots/Traces_SmolAgent_with_tool_calls.png" alt="SmolAgent Traces with Tool Calls" width="900"/>
 </div>
 
 ### GPU Metrics Collection
 Real-time GPU utilization, memory, temperature, and power consumption metrics.
 
 <div align="center">
-  <img src=".github/images/Screenshots/GPU_Metrics.png" alt="GPU Metrics Dashboard" width="900"/>
+  <img src="https://raw.githubusercontent.com/Mandark-droid/genai_otel_instrument/main/.github/images/Screenshots/GPU_Metrics.png" alt="GPU Metrics Dashboard" width="900"/>
 </div>
 
 ### Additional Screenshots
