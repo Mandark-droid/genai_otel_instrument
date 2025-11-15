@@ -40,10 +40,14 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 
 🚀 **Zero-Code Instrumentation** - Just install and set env vars
 🤖 **17+ LLM Providers** - OpenAI, Anthropic, Google, AWS, Azure, SambaNova, Hyperbolic, and more
+🤝 **Multi-Agent Frameworks** - CrewAI, LangGraph, OpenAI Agents SDK, AutoGen, Pydantic AI for agent orchestration
 🔧 **MCP Tool Support** - Auto-instrument databases, APIs, caches, vector DBs
 💰 **Cost Tracking** - Automatic cost calculation for both streaming and non-streaming requests
 ⚡ **Streaming Support** - Full observability for streaming responses with TTFT/TBT metrics and cost tracking
 🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature, power, and electricity cost tracking
+🛡️ **PII Detection** (NEW) - Automatic PII detection with GDPR/HIPAA/PCI-DSS compliance modes
+☢️ **Toxicity Detection** (NEW) - Detect harmful content with Perspective API and Detoxify
+⚖️ **Bias Detection** (NEW) - Identify demographic and other biases in prompts and responses
 📊 **Complete Observability** - Traces, metrics, and rich span attributes
 ➕ **Service Instance ID & Environment** - Identify your services and environments
 ⏱️ **Configurable Exporter Timeout** - Set timeout for OTLP exporter
@@ -97,8 +101,20 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 - **Special Configuration**: Hyperbolic (requires OTLP gRPC exporter - see `examples/hyperbolic_example.py`)
 
 ### Frameworks
-- LangChain (chains, agents, tools)
-- LlamaIndex (query engines, indices)
+- **LangChain** (chains, agents, tools)
+- **LlamaIndex** (query engines, indices)
+- **Haystack** (modular NLP pipelines with RAG support)
+- **DSPy** (Stanford NLP declarative LM programming with automatic optimization)
+- **Instructor** (Pydantic-based structured output extraction with validation and retries)
+- **Guardrails AI** (input/output validation guards with on-fail policies: reask, fix, filter, refrain)
+
+### Multi-Agent Frameworks (NEW)
+- **OpenAI Agents SDK** (agent orchestration with handoffs, sessions, guardrails)
+- **CrewAI** (role-based multi-agent collaboration with crews and tasks)
+- **LangGraph** (stateful workflows with graph-based orchestration)
+- **AutoGen** (Microsoft multi-agent conversations with group chats)
+- **Pydantic AI** (type-safe agents with Pydantic validation and multi-provider support)
+- **AWS Bedrock Agents** (managed agent runtime with knowledge bases and RAG)
 
 ### MCP Tools (Model Context Protocol)
 - **Databases**: PostgreSQL, MySQL, MongoDB, SQLAlchemy
@@ -635,61 +651,86 @@ genai-otel-instrument/
 
 ## Roadmap
 
-### Next Release (v0.2.0) - Q1 2026
+### v0.2.0 Release (In Progress) - Q1 2026
 
-We're planning significant enhancements for the next major release, focusing on evaluation metrics and safety guardrails alongside completing OpenTelemetry semantic convention compliance.
+We're implementing significant enhancements for this release, focusing on evaluation metrics and safety guardrails alongside completing OpenTelemetry semantic convention compliance.
 
-#### 🎯 Evaluation & Monitoring
-
-**LLM Output Quality Metrics**
-- **Bias Detection** - Automatically detect and measure bias in LLM responses
-  - Gender, racial, political, and cultural bias detection
-  - Bias score metrics with configurable thresholds
-  - Integration with fairness libraries (e.g., Fairlearn, AIF360)
+**✅ Completed Features:**
+- **PII Detection** - Automatic detection and handling of personally identifiable information with Microsoft Presidio
+  - Three modes: detect, redact, or block
+  - GDPR, HIPAA, and PCI-DSS compliance modes
+  - 15+ entity types (email, phone, SSN, credit cards, IP addresses, etc.)
+  - Span attributes and metrics for PII detections
+  - Example: `examples/pii_detection_example.py`
 
 - **Toxicity Detection** - Monitor and alert on toxic or harmful content
-  - Perspective API integration for toxicity scoring
-  - Custom toxicity models support
-  - Real-time toxicity metrics and alerts
-  - Configurable severity levels
+  - Dual detection methods: Perspective API (cloud) and Detoxify (local)
+  - Six toxicity categories: toxicity, severe_toxicity, identity_attack, insult, profanity, threat
+  - Automatic fallback from Perspective API to Detoxify
+  - Configurable threshold and blocking mode
+  - Batch processing support
+  - Span attributes and metrics for toxicity detections
+  - Example: `examples/toxicity_detection_example.py`
+
+- **Bias Detection** - Identify demographic and other biases in prompts and responses
+  - 8 bias types: gender, race, ethnicity, religion, age, disability, sexual_orientation, political
+  - Pattern-based detection (always available, no external dependencies)
+  - Optional ML-based detection with Fairlearn
+  - Configurable threshold and blocking mode
+  - Batch processing and statistics generation
+  - Span attributes and metrics for bias detections
+  - Example: `examples/bias_detection_example.py`
+
+- **Prompt Injection Detection** - Protect against prompt manipulation attacks
+  - 6 injection types: instruction_override, role_playing, jailbreak, context_switching, system_extraction, encoding_obfuscation
+  - Pattern-based detection (always available)
+  - Configurable threshold and blocking mode
+  - Automatic security blocking for high-risk prompts
+  - Span attributes and metrics for injection attempts
+  - Example: `examples/comprehensive_evaluation_example.py`
+
+- **Restricted Topics Detection** - Monitor and block sensitive topics
+  - 9 topic categories: medical_advice, legal_advice, financial_advice, violence, self_harm, illegal_activities, adult_content, personal_information, political_manipulation
+  - Pattern-based topic classification
+  - Configurable topic blacklists
+  - Industry-specific content filters
+  - Span attributes and metrics for topic violations
+  - Example: `examples/comprehensive_evaluation_example.py`
 
 - **Hallucination Detection** - Track factual accuracy and groundedness
-  - Fact-checking against provided context
-  - Citation validation for RAG applications
-  - Confidence scoring for generated claims
-  - Hallucination rate metrics by model and use case
+  - Factual claim extraction and validation
+  - Hedge word detection for uncertainty
+  - Citation and attribution tracking
+  - Context contradiction detection
+  - Unsupported claims identification
+  - Span attributes and metrics for hallucination risks
+  - Example: `examples/comprehensive_evaluation_example.py`
 
 **Implementation:**
 ```python
 import genai_otel
 
-# Enable evaluation metrics
+# Enable all 6 evaluation features
 genai_otel.instrument(
-    enable_bias_detection=True,
+    # Detection & Safety
+    enable_pii_detection=True,
     enable_toxicity_detection=True,
+    enable_bias_detection=True,
+    enable_prompt_injection_detection=True,
+    enable_restricted_topics=True,
     enable_hallucination_detection=True,
 
     # Configure thresholds
-    bias_threshold=0.7,
-    toxicity_threshold=0.5,
-    hallucination_threshold=0.8
+    pii_threshold=0.8,
+    toxicity_threshold=0.7,
+    bias_threshold=0.5,
+    prompt_injection_threshold=0.7,
+    restricted_topics_threshold=0.5,
+    hallucination_threshold=0.6,
 )
 ```
 
-**Metrics Added:**
-- `gen_ai.eval.bias_score` - Bias detection scores (histogram)
-- `gen_ai.eval.toxicity_score` - Toxicity scores (histogram)
-- `gen_ai.eval.hallucination_score` - Hallucination probability (histogram)
-- `gen_ai.eval.violations` - Count of threshold violations by type
-
-#### 🛡️ Safety Guardrails
-
-**Input/Output Filtering**
-- **Prompt Injection Detection** - Protect against prompt injection attacks
-  - Pattern-based detection (jailbreaking attempts)
-  - ML-based classifier for sophisticated attacks
-  - Real-time blocking with configurable policies
-  - Attack attempt metrics and logging
+**All Features Completed! ✅**
 
 - **Restricted Topics** - Block sensitive or inappropriate topics
   - Configurable topic blacklists (legal, medical, financial advice)
@@ -697,43 +738,96 @@ genai_otel.instrument(
   - Topic detection with confidence scoring
   - Custom topic definition support
 
-- **Sensitive Information Protection** - Prevent PII leakage
-  - PII detection (emails, phone numbers, SSN, credit cards)
-  - Automatic redaction or blocking
-  - Compliance mode (GDPR, HIPAA, PCI-DSS)
-  - Data leak prevention metrics
+- **Sensitive Information Protection** - ✅ COMPLETED - Prevent PII leakage
+  - ✅ PII detection (emails, phone numbers, SSN, credit cards, IPs, and more)
+  - ✅ Automatic redaction or blocking modes
+  - ✅ Compliance modes (GDPR, HIPAA, PCI-DSS)
+  - ✅ Data leak prevention metrics
+  - ✅ Microsoft Presidio integration with regex fallback
 
 **Implementation:**
 ```python
 import genai_otel
 
-# Configure guardrails
+# Configure guardrails (PII Detection is LIVE!)
 genai_otel.instrument(
+    # PII Detection (✅ AVAILABLE NOW)
+    enable_pii_detection=True,
+    pii_mode="redact",  # "detect", "redact", or "block"
+    pii_threshold=0.7,
+    pii_gdpr_mode=True,  # Enable GDPR compliance
+    pii_hipaa_mode=True,  # Enable HIPAA compliance
+    pii_pci_dss_mode=True,  # Enable PCI-DSS compliance
+
+    # Coming Soon:
     enable_prompt_injection_detection=True,
     enable_restricted_topics=True,
-    enable_sensitive_info_detection=True,
-
-    # Custom configuration
     restricted_topics=["medical_advice", "legal_advice", "financial_advice"],
-    pii_detection_mode="block",  # or "redact", "warn"
-
-    # Callbacks for custom handling
-    on_guardrail_violation=my_violation_handler
 )
 ```
 
 **Metrics Added:**
-- `gen_ai.guardrail.prompt_injection_detected` - Injection attempts blocked
-- `gen_ai.guardrail.restricted_topic_blocked` - Restricted topic violations
-- `gen_ai.guardrail.pii_detected` - PII detection events
-- `gen_ai.guardrail.violations` - Total guardrail violations by type
+- ✅ `genai.evaluation.pii.detections` - PII detection events (by location and mode)
+- ✅ `genai.evaluation.pii.entities` - PII entities detected by type
+- ✅ `genai.evaluation.pii.blocked` - Requests/responses blocked due to PII
+- ✅ `genai.evaluation.toxicity.detections` - Toxicity detection events
+- ✅ `genai.evaluation.toxicity.categories` - Toxicity by category
+- ✅ `genai.evaluation.toxicity.blocked` - Blocked due to toxicity
+- ✅ `genai.evaluation.toxicity.score` - Toxicity score distribution (histogram)
+- ✅ `genai.evaluation.bias.detections` - Bias detection events (by location)
+- ✅ `genai.evaluation.bias.types` - Bias detections by type
+- ✅ `genai.evaluation.bias.blocked` - Requests/responses blocked due to bias
+- ✅ `genai.evaluation.bias.score` - Bias score distribution (histogram)
+- ✅ `genai.evaluation.prompt_injection.detections` - Injection attempts detected
+- ✅ `genai.evaluation.prompt_injection.types` - Injection attempts by type
+- ✅ `genai.evaluation.prompt_injection.blocked` - Blocked due to injection
+- ✅ `genai.evaluation.prompt_injection.score` - Injection score distribution (histogram)
+- ✅ `genai.evaluation.restricted_topics.detections` - Restricted topics detected
+- ✅ `genai.evaluation.restricted_topics.types` - Detections by topic
+- ✅ `genai.evaluation.restricted_topics.blocked` - Blocked due to restricted topics
+- ✅ `genai.evaluation.restricted_topics.score` - Topic score distribution (histogram)
+- ✅ `genai.evaluation.hallucination.detections` - Hallucination risks detected
+- ✅ `genai.evaluation.hallucination.indicators` - Detections by indicator type
+- ✅ `genai.evaluation.hallucination.score` - Hallucination score distribution (histogram)
 
 **Span Attributes:**
-- `gen_ai.guardrail.violation_type` - Type of violation detected
-- `gen_ai.guardrail.violation_severity` - Severity level (low, medium, high, critical)
-- `gen_ai.guardrail.blocked` - Whether request was blocked (boolean)
-- `gen_ai.eval.bias_categories` - Detected bias types (array)
-- `gen_ai.eval.toxicity_categories` - Toxicity categories (array)
+- ✅ `evaluation.pii.prompt.detected` - PII detected in prompt (boolean)
+- ✅ `evaluation.pii.response.detected` - PII detected in response (boolean)
+- ✅ `evaluation.pii.*.entity_count` - Number of PII entities found
+- ✅ `evaluation.pii.*.entity_types` - Types of PII detected (array)
+- ✅ `evaluation.pii.*.score` - Detection confidence score
+- ✅ `evaluation.pii.*.redacted` - Redacted text (in redact mode)
+- ✅ `evaluation.pii.*.blocked` - Whether blocked due to PII (boolean)
+- ✅ `evaluation.toxicity.prompt.detected` - Toxicity in prompt (boolean)
+- ✅ `evaluation.toxicity.response.detected` - Toxicity in response (boolean)
+- ✅ `evaluation.toxicity.*.max_score` - Maximum toxicity score
+- ✅ `evaluation.toxicity.*.categories` - Toxic categories detected (array)
+- ✅ `evaluation.toxicity.*.<category>_score` - Individual category scores
+- ✅ `evaluation.toxicity.*.blocked` - Whether blocked due to toxicity
+- ✅ `evaluation.bias.prompt.detected` - Bias detected in prompt (boolean)
+- ✅ `evaluation.bias.response.detected` - Bias detected in response (boolean)
+- ✅ `evaluation.bias.*.max_score` - Maximum bias score
+- ✅ `evaluation.bias.*.detected_biases` - Bias types detected (array)
+- ✅ `evaluation.bias.*.<bias_type>_score` - Individual bias type scores
+- ✅ `evaluation.bias.*.<bias_type>_patterns` - Matched patterns for each bias type
+- ✅ `evaluation.bias.*.blocked` - Whether blocked due to bias
+- ✅ `evaluation.prompt_injection.detected` - Injection attempt detected (boolean)
+- ✅ `evaluation.prompt_injection.score` - Injection risk score
+- ✅ `evaluation.prompt_injection.types` - Injection types detected (array)
+- ✅ `evaluation.prompt_injection.*_patterns` - Matched patterns by injection type
+- ✅ `evaluation.prompt_injection.blocked` - Whether blocked due to injection
+- ✅ `evaluation.restricted_topics.prompt.detected` - Restricted topic in prompt (boolean)
+- ✅ `evaluation.restricted_topics.response.detected` - Restricted topic in response (boolean)
+- ✅ `evaluation.restricted_topics.*.max_score` - Maximum topic score
+- ✅ `evaluation.restricted_topics.*.topics` - Detected topics (array)
+- ✅ `evaluation.restricted_topics.*.<topic>_score` - Individual topic scores
+- ✅ `evaluation.restricted_topics.*.blocked` - Whether blocked due to topic
+- ✅ `evaluation.hallucination.detected` - Hallucination risk detected (boolean)
+- ✅ `evaluation.hallucination.score` - Hallucination risk score
+- ✅ `evaluation.hallucination.indicators` - Indicators found (array)
+- ✅ `evaluation.hallucination.hedge_words_count` - Count of uncertainty markers
+- ✅ `evaluation.hallucination.citation_count` - Count of citations found
+- ✅ `evaluation.hallucination.unsupported_claims` - List of unsupported claims (limited)
 
 #### 🔄 Migration Support
 
@@ -747,28 +841,321 @@ genai_otel.instrument(
 - OpenTelemetry SDK 1.20.0+
 - Backward compatible with existing dashboards
 
-### Future Releases
+### 2026-2027 Roadmap
 
-**v0.3.0 - Advanced Analytics**
-- Custom metric aggregations
-- Cost optimization recommendations
-- Automated performance regression detection
-- A/B testing support for prompts
+Our roadmap focuses on comprehensive LLM observability, from RAG evaluation to enterprise governance.
 
-**v0.4.0 - Enterprise Features**
-- Multi-tenancy support
-- Role-based access control for telemetry
-- Advanced compliance reporting
+---
+
+### v0.3.0 - RAG & Retrieval Observability (Q1-Q2 2026)
+
+**🎯 Goal:** Complete monitoring and optimization for RAG applications
+
+**RAG Evaluation Metrics**
+- **Retrieval Quality Metrics**
+  - Context relevance scoring (how relevant are retrieved documents)
+  - Retrieval precision & recall (did we get the right documents)
+  - MRR (Mean Reciprocal Rank) for ranked results
+  - NDCG (Normalized Discounted Cumulative Gain)
+  - Semantic similarity between query and retrieved chunks
+
+- **Answer Groundedness Metrics**
+  - Citation accuracy (claims backed by sources)
+  - Hallucination vs grounded statements ratio
+  - Answer-context alignment scoring
+  - Faithfulness metrics (answer faithful to context)
+
+- **RAG Pipeline Tracing**
+  - Query understanding and rewriting traces
+  - Retrieval step instrumentation (vector DB queries)
+  - Re-ranking step metrics
+  - Context compression tracking
+  - Generation step with attribution
+
+**Vector Database Monitoring**
+- Embedding quality metrics (cosine similarity distributions)
+- Index performance (latency, throughput)
+- Semantic drift detection (embedding space changes over time)
+- Vector DB integration: Pinecone, Weaviate, Qdrant, Milvus, ChromaDB
+- Cache hit rates and efficiency
+
+---
+
+### v0.4.0 - Prompt Engineering & Optimization (Q2-Q3 2026)
+
+**🎯 Goal:** Production-grade prompt lifecycle management
+
+**Prompt Management**
+- **Versioning & Registry**
+  - Prompt version control with Git-like semantics
+  - Centralized prompt registry
+  - Rollback capabilities
+  - Change history and diff tracking
+
+- **A/B Testing Framework**
+  - Multi-variant prompt testing
+  - Automatic traffic splitting
+  - Statistical significance testing
+  - Winner selection algorithms
+
+- **Optimization Engine**
+  - Automatic prompt optimization suggestions
+  - Few-shot example selection
+  - Chain-of-thought template optimization
+  - Token usage optimization recommendations
+
+**Prompt Analytics**
+- Performance by prompt template
+- Cost per prompt version
+- Success rate tracking
+- User satisfaction correlation
+- Conversion metrics by prompt
+
+---
+
+### v0.5.0 - Human Feedback & Active Learning (Q3 2026)
+
+**🎯 Goal:** Close the loop with human feedback integration
+
+**Feedback Collection**
+- **Multi-Channel Feedback**
+  - Thumbs up/down collection
+  - Star ratings (1-5 scale)
+  - Free-text feedback
+  - Issue categorization
+  - Custom feedback schemas
+
+- **Feedback API & SDKs**
+  - REST API for feedback submission
+  - JavaScript/Python SDKs
+  - React components for UI
+  - Slack/Discord integrations
+
+**Active Learning Pipeline**
+- Feedback → Dataset → Fine-tuning workflow
+- Automatic dataset curation from feedback
+- Export to fine-tuning formats (JSONL, Parquet)
+- Integration with training platforms
+- RLHF (Reinforcement Learning from Human Feedback) support
+
+**Analytics & Insights**
+- Feedback trends and patterns
+- Issue clustering and categorization
+- User satisfaction scores (CSAT, NPS)
+- Feedback-based model comparison
+- Root cause analysis for negative feedback
+
+---
+
+### v0.6.0 - Advanced Agent Observability (Q4 2026)
+
+**🎯 Goal:** Deep visibility into complex multi-agent systems
+
+**Multi-Agent Tracing**
+- **Agent Workflow Visualization**
+  - Agent collaboration graphs
+  - Communication pattern analysis
+  - Handoff tracking and optimization
+  - Deadlock and bottleneck detection
+
+- **Agent Performance Metrics**
+  - Per-agent success rates
+  - Agent utilization and load balancing
+  - Task completion times
+  - Agent-to-agent latency
+
+- **Advanced Agent Patterns**
+  - Hierarchical agent systems
+  - Swarm intelligence monitoring
+  - Autonomous agent chains
+  - Agent memory and state tracking
+
+**Tool & Function Calling**
+- Tool invocation traces
+- Tool success/failure rates
+- Tool latency and cost
+- Tool chain optimization
+- Error propagation analysis
+
+---
+
+### v0.7.0 - Custom Evaluators & Extensibility (Q1 2027)
+
+**🎯 Goal:** Flexible evaluation framework for any use case
+
+**Custom Evaluator Framework**
+- **SDK for Custom Metrics**
+  - Python decorator-based evaluators
+  - Async evaluation support
+  - Batch evaluation APIs
+  - Streaming evaluation
+
+- **Evaluator Marketplace**
+  - Community-contributed evaluators
+  - Domain-specific evaluators (medical, legal, finance)
+  - Language-specific evaluators
+  - Industry benchmark evaluators
+
+**Evaluation Orchestration**
+- Parallel evaluation execution
+- Conditional evaluation chains
+- Evaluation result caching
+- Scheduled batch evaluations
+- Integration with CI/CD pipelines
+
+**Pre-built Evaluator Library**
+- Answer correctness (exact match, F1, BLEU, ROUGE)
+- Semantic similarity (embeddings-based)
+- Code execution evaluators
+- SQL query validation
+- JSON schema validation
+- Regex pattern matching
+- Custom business rule evaluators
+
+---
+
+### v0.8.0 - Multi-Modal & Advanced Models (Q2 2027)
+
+**🎯 Goal:** Support for next-generation AI capabilities
+
+**Multi-Modal Observability**
+- **Vision Models (GPT-4V, Claude 3, Gemini Vision)**
+  - Image input/output tracking
+  - Image quality metrics
+  - OCR accuracy monitoring
+  - Visual question answering evaluation
+
+- **Audio Models (Whisper, ElevenLabs, etc.)**
+  - Audio transcription accuracy
+  - Speech synthesis quality
+  - Audio processing latency
+  - WER (Word Error Rate) tracking
+
+- **Video Models**
+  - Video understanding metrics
+  - Frame-by-frame analysis
+  - Video generation monitoring
+
+**Advanced Model Types**
+- **Code Generation Models (Codex, CodeLlama)**
+  - Code syntax validation
+  - Execution success rates
+  - Security vulnerability detection
+  - Code quality metrics
+
+- **Reasoning Models (o1, o3)**
+  - Reasoning step tracking
+  - Logical consistency checking
+  - Multi-hop reasoning evaluation
+
+---
+
+### v0.9.0 - Production Debugging & Optimization (Q3 2027)
+
+**🎯 Goal:** Powerful tools for production issue resolution
+
+**Trace Replay & Debugging**
+- **Replay Capabilities**
+  - Request replay from traces
+  - Environment reconstruction
+  - Deterministic replay for debugging
+  - Step-by-step execution debugging
+
+- **Issue Reproduction**
+  - One-click issue reproduction
+  - Local environment setup from trace
+  - Integration with IDEs (VS Code, PyCharm)
+
+**Performance Optimization**
+- **Caching Layer Monitoring**
+  - Semantic caching effectiveness
+  - Cache hit/miss ratios
+  - Cache invalidation patterns
+  - LRU/LFU cache optimization
+
+- **Token Optimization**
+  - Automatic prompt compression suggestions
+  - Redundancy detection
+  - Context pruning recommendations
+  - Cost vs quality trade-offs
+
+- **Latency Optimization**
+  - Bottleneck identification
+  - Parallel execution opportunities
+  - Streaming optimization
+  - Model selection recommendations
+
+---
+
+### v1.0.0 - Enterprise & Governance (Q4 2027)
+
+**🎯 Goal:** Enterprise-ready platform with compliance and governance
+
+**Enterprise Features**
+- **Multi-Tenancy**
+  - Tenant isolation
+  - Resource quotas and limits
+  - Tenant-specific configurations
+  - Cross-tenant analytics (with permissions)
+
+- **Access Control**
+  - Role-based access control (RBAC)
+  - Attribute-based access control (ABAC)
+  - API key management
+  - SSO/SAML integration
+  - Audit logging
+
+**Compliance & Governance**
+- **Audit & Compliance**
+  - Complete audit trails
+  - Compliance reporting (SOC 2, GDPR, HIPAA)
+  - Data retention policies
+  - Right to deletion (GDPR Article 17)
+  - Data lineage tracking
+
+- **Policy Enforcement**
+  - Custom policy rules
+  - Automated policy violations
+  - Remediation workflows
+  - Compliance dashboards
+
+**SLA & Reliability**
 - SLA monitoring and alerting
+- Uptime tracking
+- Error budget management
+- Incident management integration
+- On-call scheduling integration
 
-**Community Feedback**
+---
 
-We welcome feedback on our roadmap! Please:
-- Open issues for feature requests
-- Join discussions on prioritization
-- Share your use cases and requirements
+## Community & Contributions
 
-See [Contributing.md](Contributing.md) for how to get involved.
+We're building the future of LLM observability together! 🚀
+
+**How to Influence the Roadmap:**
+- 🌟 Star us on GitHub to show support
+- 💬 Join discussions on feature prioritization
+- 🐛 Report bugs and request features via Issues
+- 🔧 Contribute code via Pull Requests
+- 📖 Improve documentation and examples
+- 🎤 Share your use cases and feedback
+
+**Priority is determined by:**
+1. Community feedback and votes (👍 reactions on issues)
+2. Industry trends and adoption
+3. Integration partnerships
+4. Security and compliance requirements
+5. Developer experience improvements
+
+See [Contributing.md](Contributing.md) for detailed contribution guidelines.
+
+**Join our Community:**
+- GitHub Discussions: [Share ideas and questions]
+- Discord: [Coming soon - Real-time chat]
+- Twitter/X: [@genai_otel]
+- Blog: [Technical deep-dives and updates]
+
+---
 
 ## License
 

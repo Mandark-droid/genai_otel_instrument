@@ -6,6 +6,307 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **PII Detection and Safety Features (v0.2.0 Phase 1)**
+  - Automatic PII detection with Microsoft Presidio integration
+  - Three operation modes: detect (monitor only), redact (mask PII), block (prevent requests/responses)
+  - GDPR compliance mode with EU-specific entity types (IBAN, UK NHS, NRP)
+  - HIPAA compliance mode for healthcare data (medical licenses, PHI, dates)
+  - PCI-DSS compliance mode for payment card data (credit cards, bank accounts)
+  - 15+ PII entity types detected: email, phone, SSN, credit card, IP address, passport, etc.
+  - Configurable confidence threshold (0.0-1.0) for detection sensitivity
+  - Regex fallback patterns when Presidio library not available
+  - OpenTelemetry span attributes for PII detection events:
+    - `evaluation.pii.prompt.detected` - PII found in prompts
+    - `evaluation.pii.response.detected` - PII found in responses
+    - `evaluation.pii.*.entity_count` - Number of entities detected
+    - `evaluation.pii.*.entity_types` - Array of detected entity types
+    - `evaluation.pii.*.score` - Detection confidence score
+    - `evaluation.pii.*.redacted` - Redacted text in redact mode
+    - `evaluation.pii.*.blocked` - Whether request was blocked
+  - OpenTelemetry metrics for monitoring:
+    - `genai.evaluation.pii.detections` - Counter by location and mode
+    - `genai.evaluation.pii.entities` - Counter by entity type
+    - `genai.evaluation.pii.blocked` - Counter for blocked requests
+  - Environment variable configuration:
+    - `GENAI_ENABLE_PII_DETECTION` - Enable/disable PII detection
+    - `GENAI_PII_MODE` - Set mode (detect/redact/block)
+    - `GENAI_PII_THRESHOLD` - Confidence threshold
+    - `GENAI_PII_GDPR_MODE` - Enable GDPR compliance
+    - `GENAI_PII_HIPAA_MODE` - Enable HIPAA compliance
+    - `GENAI_PII_PCI_DSS_MODE` - Enable PCI-DSS compliance
+  - Implementation: `genai_otel/evaluation/` module
+    - `config.py` - Configuration dataclasses for all evaluation features
+    - `pii_detector.py` - PIIDetector with Presidio integration
+    - `span_processor.py` - EvaluationSpanProcessor for span enrichment
+  - Tests: `tests/evaluation/` (40+ test cases)
+    - `test_pii_detector.py` - Unit tests for PII detection
+    - `test_integration.py` - Integration tests with span processor
+  - Example: `examples/pii_detection_example.py` (9 comprehensive scenarios)
+  - Dependencies (optional): `pip install presidio-analyzer presidio-anonymizer spacy`
+
+- **Toxicity Detection (v0.2.0 Phase 1)**
+  - Automatic toxicity detection for harmful content in prompts and responses
+  - Dual detection methods:
+    - Google Perspective API integration (cloud-based, production-grade)
+    - Detoxify local ML model (offline, privacy-friendly)
+    - Automatic fallback from Perspective API to Detoxify on errors
+  - Six toxicity categories detected:
+    - `toxicity`: General toxic language
+    - `severe_toxicity`: Extremely harmful content
+    - `identity_attack`: Discrimination and hate speech
+    - `insult`: Insulting or demeaning language
+    - `profanity`: Swearing and obscene content
+    - `threat`: Threatening or violent language
+  - Configurable threshold (0.0-1.0) for detection sensitivity
+  - Blocking mode to prevent toxic content processing
+  - Batch processing support for efficient analysis
+  - OpenTelemetry span attributes for toxicity detection:
+    - `evaluation.toxicity.prompt.detected` - Toxicity in prompts
+    - `evaluation.toxicity.response.detected` - Toxicity in responses
+    - `evaluation.toxicity.*.max_score` - Maximum toxicity score
+    - `evaluation.toxicity.*.categories` - List of toxic categories detected
+    - `evaluation.toxicity.*.<category>_score` - Individual category scores
+    - `evaluation.toxicity.*.blocked` - Whether content was blocked
+  - OpenTelemetry metrics for monitoring:
+    - `genai.evaluation.toxicity.detections` - Detection events counter
+    - `genai.evaluation.toxicity.categories` - Category-specific counter
+    - `genai.evaluation.toxicity.blocked` - Blocked requests counter
+    - `genai.evaluation.toxicity.score` - Score distribution histogram
+  - Environment variable configuration:
+    - `GENAI_ENABLE_TOXICITY_DETECTION` - Enable/disable toxicity detection
+    - `GENAI_TOXICITY_THRESHOLD` - Detection threshold (0.0-1.0)
+    - `GENAI_TOXICITY_USE_PERSPECTIVE_API` - Use Perspective API
+    - `GENAI_TOXICITY_PERSPECTIVE_API_KEY` - API key for Perspective
+    - `GENAI_TOXICITY_BLOCK_ON_DETECTION` - Block toxic content
+  - Implementation: `genai_otel/evaluation/` module
+    - `toxicity_detector.py` - ToxicityDetector with dual detection methods
+    - `span_processor.py` - Extended with toxicity detection
+    - `config.py` - ToxicityConfig dataclass
+  - Tests: `tests/evaluation/` (35+ test cases)
+    - `test_toxicity_detector.py` - Unit tests for ToxicityDetector
+    - `test_integration.py` - Integration tests with span processor
+  - Example: `examples/toxicity_detection_example.py` (8 comprehensive scenarios)
+  - Dependencies (optional):
+    - Detoxify: `pip install detoxify`
+    - Perspective API: `pip install google-api-python-client`
+
+- **Bias Detection (v0.2.0 Phase 2)**
+  - Automatic bias detection for demographic and other biases in prompts and responses
+  - Pattern-based detection (always available, no external dependencies)
+  - Eight bias types monitored:
+    - `gender`: Gender stereotypes and discrimination
+    - `race`: Racial bias and discrimination
+    - `ethnicity`: Ethnic stereotypes and xenophobia
+    - `religion`: Religious bias and discrimination
+    - `age`: Age-based stereotypes (ageism)
+    - `disability`: Disability bias and ableism
+    - `sexual_orientation`: LGBTQ+ discrimination and bias
+    - `political`: Political bias and partisan stereotyping
+  - Comprehensive pattern matching with 50+ regex patterns and keywords
+  - Score calculation based on pattern matches (0.0-1.0)
+  - Configurable threshold for detection sensitivity
+  - Blocking mode to prevent biased content processing
+  - Batch processing support for analyzing multiple texts
+  - Statistics generation for bias analysis and reporting
+  - Optional ML-based detection with Fairlearn integration
+  - Sensitive attributes configuration for custom monitoring
+  - OpenTelemetry span attributes for bias detection:
+    - `evaluation.bias.prompt.detected` - Bias in prompts
+    - `evaluation.bias.response.detected` - Bias in responses
+    - `evaluation.bias.*.max_score` - Maximum bias score
+    - `evaluation.bias.*.detected_biases` - Array of detected bias types
+    - `evaluation.bias.*.<bias_type>_score` - Individual bias type scores
+    - `evaluation.bias.*.<bias_type>_patterns` - Matched patterns per type
+    - `evaluation.bias.*.blocked` - Whether content was blocked
+  - OpenTelemetry metrics for monitoring:
+    - `genai.evaluation.bias.detections` - Detection events counter by location
+    - `genai.evaluation.bias.types` - Detections by bias type
+    - `genai.evaluation.bias.blocked` - Blocked requests counter
+    - `genai.evaluation.bias.score` - Score distribution histogram
+  - Environment variable configuration:
+    - `GENAI_ENABLE_BIAS_DETECTION` - Enable/disable bias detection
+    - `GENAI_BIAS_THRESHOLD` - Detection threshold (0.0-1.0, default 0.5)
+    - `GENAI_BIAS_BLOCK_ON_DETECTION` - Block biased content
+    - `GENAI_BIAS_TYPES` - Comma-separated list of bias types to monitor
+    - `GENAI_BIAS_USE_FAIRLEARN` - Enable ML-based detection with Fairlearn
+  - Implementation: `genai_otel/evaluation/` module
+    - `bias_detector.py` - BiasDetector with pattern and ML-based detection
+    - `span_processor.py` - Extended with bias detection support
+    - `config.py` - BiasConfig dataclass
+  - Tests: `tests/evaluation/` (56+ test cases)
+    - `test_bias_detector.py` - Unit tests for BiasDetector (40+ test cases)
+    - `test_integration.py` - Integration tests with span processor (16 test cases)
+  - Example: `examples/bias_detection_example.py` (12 comprehensive scenarios)
+  - Dependencies (optional):
+    - Fairlearn: `pip install fairlearn scikit-learn` (for ML-based detection)
+
+- **Prompt Injection Detection (v0.2.0 Phase 3)**
+  - Automatic prompt injection detection protecting against manipulation attacks
+  - 6 injection types: instruction_override, role_playing, jailbreak, context_switching, system_extraction, encoding_obfuscation
+  - Pattern-based detection (always available, no dependencies)
+  - Configurable threshold and blocking mode
+  - Span attributes: `evaluation.prompt_injection.*` for all detection results
+  - Metrics: 4 metrics (detections, types, blocked, score histogram)
+  - Implementation: `prompt_injection_detector.py` (250+ lines)
+  - Example: `examples/comprehensive_evaluation_example.py`
+
+- **Restricted Topics Detection (v0.2.0 Phase 3)**
+  - Topic classification for 9 sensitive categories (medical/legal/financial advice, violence, self-harm, etc.)
+  - Configurable topic blacklists
+  - Pattern and keyword-based detection
+  - Span attributes: `evaluation.restricted_topics.*` for topic detection
+  - Metrics: 4 metrics (detections, types, blocked, score histogram)
+  - Implementation: `restricted_topics_detector.py` (300+ lines)
+  - Example: `examples/comprehensive_evaluation_example.py`
+
+- **Hallucination Detection (v0.2.0 Phase 3)**
+  - Heuristic-based factual accuracy validation
+  - Factual claim extraction, hedge word detection, citation tracking
+  - Context contradiction detection
+  - Span attributes: `evaluation.hallucination.*` for risk indicators
+  - Metrics: 3 metrics (detections, indicators, score histogram)
+  - Implementation: `hallucination_detector.py` (380+ lines)
+  - Example: `examples/comprehensive_evaluation_example.py`
+
+- **Multi-Agent & AI Framework Instrumentation (Phase 1-4)**
+  - Comprehensive instrumentation for 11 AI frameworks with 13 implementations total
+  - Zero-code setup with automatic tracing and cost tracking
+  - Production-ready with 185+ test cases and 47 example scenarios
+  - New frameworks: DSPy, Instructor, Guardrails AI
+
+- **OpenAI Agents SDK Instrumentation**
+  - Full OpenTelemetry instrumentation for OpenAI's production Agents SDK
+  - Automatic tracing with `gen_ai.system="agents"` attribute
+  - Agent orchestration with handoffs, sessions, and guardrails tracking
+  - Implementation: `genai_otel/instrumentors/openai_agents_instrumentor.py`
+  - Tests: `tests/instrumentors/test_openai_agents_instrumentor.py` (11 test cases)
+  - Example: `examples/openai_agents_example.py` (4 scenarios)
+
+- **CrewAI Multi-Agent Framework Instrumentation**
+  - Full OpenTelemetry instrumentation for CrewAI framework
+  - Automatic tracing with `gen_ai.system="crewai"` attribute
+  - Role-based agent collaboration with crews and tasks tracking
+  - Sequential and hierarchical process types supported
+  - Implementation: `genai_otel/instrumentors/crewai_instrumentor.py`
+  - Tests: `tests/instrumentors/test_crewai_instrumentor.py` (13 test cases)
+  - Example: `examples/crewai_example.py` (3 scenarios)
+
+- **LangGraph Stateful Workflow Instrumentation**
+  - Full OpenTelemetry instrumentation for LangGraph framework
+  - Automatic tracing with `gen_ai.system="langgraph"` attribute
+  - Graph-based orchestration with nodes, edges, and state tracking
+  - Support for sync/async execution and streaming
+  - Checkpoint and state management tracking
+  - Implementation: `genai_otel/instrumentors/langgraph_instrumentor.py`
+  - Tests: `tests/instrumentors/test_langgraph_instrumentor.py` (12 test cases)
+  - Example: `examples/langgraph_example.py` (3 scenarios)
+
+- **AutoGen Multi-Agent Conversation Instrumentation**
+  - Full OpenTelemetry instrumentation for Microsoft AutoGen framework
+  - Automatic tracing with `gen_ai.system="autogen"` attribute
+  - Multi-agent conversations with group chat orchestration
+  - Speaker selection and manager coordination tracking
+  - Support for both `autogen` and `pyautogen` package names
+  - Implementation: `genai_otel/instrumentors/autogen_instrumentor.py`
+  - Tests: `tests/instrumentors/test_autogen_instrumentor.py` (20 test cases)
+  - Example: `examples/autogen_example.py` (4 scenarios)
+
+- **Pydantic AI Type-Safe Agent Instrumentation**
+  - Full OpenTelemetry instrumentation for Pydantic AI framework
+  - Automatic tracing with `gen_ai.system="pydantic_ai"` attribute
+  - Type-safe agents with Pydantic validation tracking
+  - Multi-provider support (OpenAI, Anthropic, Gemini, etc.)
+  - Structured outputs with Pydantic models
+  - Tools/functions tracking with count and names
+  - Support for sync, async, and streaming execution
+  - Implementation: `genai_otel/instrumentors/pydantic_ai_instrumentor.py`
+  - Tests: `tests/instrumentors/test_pydantic_ai_instrumentor.py` (24 test cases)
+  - Example: `examples/pydantic_ai_example.py` (7 scenarios)
+
+- **Haystack NLP Pipeline Instrumentation**
+  - Full OpenTelemetry instrumentation for Haystack framework
+  - Automatic tracing with `gen_ai.system="haystack"` attribute
+  - Modular pipeline architecture with component tracking
+  - RAG (Retrieval-Augmented Generation) workflow support
+  - Generator, ChatGenerator, and Retriever component instrumentation
+  - Pipeline graph structure tracking (nodes, edges, connections)
+  - Custom metadata and configuration capture
+  - Implementation: `genai_otel/instrumentors/haystack_instrumentor.py`
+  - Tests: `tests/instrumentors/test_haystack_instrumentor.py` (23 test cases)
+  - Example: `examples/haystack_example.py` (5 scenarios)
+
+- **AWS Bedrock Agents Instrumentation**
+  - Full OpenTelemetry instrumentation for AWS Bedrock Agents
+  - Automatic tracing with `gen_ai.system="bedrock_agents"` attribute
+  - Managed agent runtime with session tracking
+  - Knowledge base retrieval and RAG operations
+  - InvokeAgent, Retrieve, and RetrieveAndGenerate operation support
+  - Session state and conversation tracking
+  - Integration via boto3 BaseClient instrumentation
+  - Implementation: `genai_otel/instrumentors/bedrock_agents_instrumentor.py`
+  - Tests: `tests/instrumentors/test_bedrock_agents_instrumentor.py` (20 test cases)
+  - Example: `examples/bedrock_agents_example.py` (4 scenarios)
+
+- **DSPy Framework Instrumentation**
+  - Full OpenTelemetry instrumentation for Stanford NLP's DSPy framework
+  - Automatic tracing with `gen_ai.system="dspy"` attribute
+  - Declarative language model programming with automatic optimization
+  - Module execution tracking (Module.__call__, Predict, ChainOfThought, ReAct)
+  - Optimizer/Teleprompter operations (COPRO, MIPROv2, BootstrapFewShot)
+  - Signature and field tracking (input/output fields, rationales)
+  - Tool usage and trajectory tracking for ReAct
+  - Implementation: `genai_otel/instrumentors/dspy_instrumentor.py`
+  - Tests: `tests/instrumentors/test_dspy_instrumentor.py` (25 test cases)
+  - Example: `examples/dspy_example.py` (6 scenarios)
+
+- **Instructor Framework Instrumentation**
+  - Full OpenTelemetry instrumentation for Instructor (8K+ GitHub stars)
+  - Automatic tracing with `gen_ai.system="instructor"` attribute
+  - Pydantic-based structured output extraction with validation
+  - Multi-provider support (OpenAI, Anthropic, Google, Ollama, etc.)
+  - Automatic retry on validation failure tracking
+  - Streaming partial results (Partial models)
+  - Response model schema capture (fields, field count, types)
+  - Implementation: `genai_otel/instrumentors/instructor_instrumentor.py`
+  - Tests: `tests/instrumentors/test_instructor_instrumentor.py` (22 test cases)
+  - Example: `examples/instructor_example.py` (6 scenarios)
+
+- **Guardrails AI Framework Instrumentation**
+  - Full OpenTelemetry instrumentation for Guardrails AI validation framework
+  - Automatic tracing with `gen_ai.system="guardrails"` attribute
+  - Input/output validation guards with risk detection
+  - Validator tracking (names, on-fail actions, pass/fail status)
+  - On-fail policies: reask, fix, filter, refrain, noop, exception, fix_reask
+  - ValidationOutcome tracking (validation_passed, reasks count, errors)
+  - Guard operations: __call__, validate, parse, use
+  - Implementation: `genai_otel/instrumentors/guardrails_ai_instrumentor.py`
+  - Tests: `tests/instrumentors/test_guardrails_ai_instrumentor.py` (8 test cases)
+
+### Improved
+
+- **Google GenAI SDK - Dual SDK Support**
+  - Enhanced existing instrumentor to support BOTH legacy and new SDKs
+  - Automatic SDK detection: tries new `google-genai` first, falls back to legacy `google-generativeai`
+  - Deprecation warnings for legacy SDK users (support ends Nov 30, 2025)
+  - Migration guidance in examples
+  - Updated tests with dual SDK coverage (24 test cases)
+  - Example: `examples/google_genai_example.py` with both SDK demonstrations
+
+### Documentation
+
+- **Framework Research Documentation**
+  - Created `FRAMEWORK_RESEARCH.md` with comprehensive analysis of 9 AI frameworks
+  - Tiered prioritization (Tier 1-3) based on popularity and complexity
+  - Implementation estimates and recommended attributes
+  - Full research report with API analysis and instrumentation strategies
+
+- **README Updates**
+  - Added "Multi-Agent Frameworks" section highlighting 6 new frameworks
+  - Updated feature list with framework count
+  - Comprehensive framework descriptions and capabilities
+
 ## [0.1.23] - 2025-11-13
 
 ### Added
