@@ -132,6 +132,37 @@ class OTelConfig:
         default_factory=lambda: int(os.getenv("GENAI_GPU_COLLECTION_INTERVAL", "5"))
     )  # seconds - how often to collect GPU metrics and CO2 emissions
 
+    # Codecarbon integration settings for more accurate CO2 tracking
+    # When enable_co2_tracking is True, codecarbon provides automatic region-based
+    # carbon intensity lookup instead of using the manual carbon_intensity value
+    co2_country_iso_code: Optional[str] = field(
+        default_factory=lambda: os.getenv("GENAI_CO2_COUNTRY_ISO_CODE")
+    )  # 3-letter ISO code (e.g., "USA", "GBR", "DEU", "FRA")
+
+    co2_region: Optional[str] = field(
+        default_factory=lambda: os.getenv("GENAI_CO2_REGION")
+    )  # Region/state within country (e.g., "california", "texas")
+
+    co2_cloud_provider: Optional[str] = field(
+        default_factory=lambda: os.getenv("GENAI_CO2_CLOUD_PROVIDER")
+    )  # Cloud provider name (e.g., "aws", "gcp", "azure")
+
+    co2_cloud_region: Optional[str] = field(
+        default_factory=lambda: os.getenv("GENAI_CO2_CLOUD_REGION")
+    )  # Cloud region (e.g., "us-east-1", "europe-west1")
+
+    co2_offline_mode: bool = field(
+        default_factory=lambda: os.getenv("GENAI_CO2_OFFLINE_MODE", "true").lower() == "true"
+    )  # Run codecarbon in offline mode (no API calls) - defaults to True for privacy
+
+    co2_tracking_mode: str = field(
+        default_factory=lambda: os.getenv("GENAI_CO2_TRACKING_MODE", "machine")
+    )  # "machine" (all processes) or "process" (current process only)
+
+    co2_use_manual: bool = field(
+        default_factory=lambda: os.getenv("GENAI_CO2_USE_MANUAL", "false").lower() == "true"
+    )  # Force manual CO2 calculation using carbon_intensity even when codecarbon is installed
+
     # OpenTelemetry semantic convention stability opt-in
     # Supports "gen_ai" for new conventions, "gen_ai/dup" for dual emission
     semconv_stability_opt_in: str = field(
