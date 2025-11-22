@@ -3,6 +3,11 @@
 This module provides the `GPUMetricsCollector` class, which periodically collects
 GPU utilization, memory usage, and temperature, and exports these as OpenTelemetry
 metrics. It relies on the `nvidia-ml-py` library for interacting with NVIDIA GPUs.
+
+CO2 emissions tracking is provided via codecarbon integration, which offers:
+- Automatic region-based carbon intensity lookup
+- Cloud provider carbon intensity data
+- More accurate emission factors based on location
 """
 
 import logging
@@ -25,15 +30,28 @@ except ImportError:
     NVML_AVAILABLE = False
     logger.debug("nvidia-ml-py not available, GPU metrics will be disabled")
 
+# Try to import codecarbon for CO2 emissions tracking
+try:
+    from codecarbon import EmissionsTracker, OfflineEmissionsTracker
+
+    CODECARBON_AVAILABLE = True
+except ImportError:
+    CODECARBON_AVAILABLE = False
+    EmissionsTracker = None  # type: ignore
+    OfflineEmissionsTracker = None  # type: ignore
+    logger.debug("codecarbon not available, will use manual CO2 calculation")
+
 
 class GPUMetricsCollector:
-    """Collects and reports GPU metrics using nvidia-ml-py."""
+    """Collects and reports GPU metrics using nvidia-ml-py and codecarbon for CO2 tracking."""
 
     def __init__(self, meter: Meter, config: OTelConfig, interval: int = 10):
         """Initializes the GPUMetricsCollector.
 
         Args:
             meter (Meter): The OpenTelemetry meter to use for recording metrics.
+            config (OTelConfig): Configuration for the collector.
+            interval (int): Collection interval in seconds.
         """
         self.meter = meter
         self.running = False
@@ -48,6 +66,11 @@ class GPUMetricsCollector:
         self.config = config
         self.interval = interval  # seconds
         self.gpu_available = False
+
+        # Codecarbon emissions tracker
+        self._emissions_tracker: Optional["EmissionsTracker"] = None
+        self._last_emissions_kg: float = 0.0
+        self._use_codecarbon: bool = False
 
         self.device_count = 0
         self.nvml = None
@@ -64,15 +87,19 @@ class GPUMetricsCollector:
         self.cumulative_energy_wh = [0.0] * self.device_count  # Per GPU, in Wh
         self.last_timestamp = [time.time()] * self.device_count
         self.co2_counter = meter.create_counter(
-            "gen_ai.co2.emissions",  # Fixed metric name
+            "gen_ai.co2.emissions",
             description="Cumulative CO2 equivalent emissions in grams",
             unit="gCO2e",
         )
         self.power_cost_counter = meter.create_counter(
-            "gen_ai.power.cost",  # New metric name
+            "gen_ai.power.cost",
             description="Cumulative electricity cost in USD based on GPU power consumption",
             unit="USD",
         )
+
+        # Initialize codecarbon if available and CO2 tracking is enabled
+        self._init_codecarbon()
+
         if not NVML_AVAILABLE:
             logger.warning(
                 "GPU metrics collection not available - nvidia-ml-py not installed. "
@@ -125,6 +152,92 @@ class GPUMetricsCollector:
         except Exception as e:
             logger.debug("Failed to get GPU name: %s", e)
             return f"GPU_{index}"
+
+    def _init_codecarbon(self):
+        """Initialize codecarbon EmissionsTracker if available and CO2 tracking is enabled."""
+        if not self.config.enable_co2_tracking:
+            logger.debug("CO2 tracking disabled, skipping codecarbon initialization")
+            return
+
+        # Check if user wants to force manual calculation
+        if self.config.co2_use_manual:
+            logger.info(
+                "Using manual CO2 calculation (GENAI_CO2_USE_MANUAL=true) with "
+                "carbon_intensity=%s gCO2e/kWh",
+                self.config.carbon_intensity,
+            )
+            return
+
+        if not CODECARBON_AVAILABLE:
+            logger.info(
+                "codecarbon not installed, using manual CO2 calculation with "
+                "carbon_intensity=%s gCO2e/kWh. Install codecarbon for automatic "
+                "region-based carbon intensity: pip install genai-otel-instrument[co2]",
+                self.config.carbon_intensity,
+            )
+            return
+
+        try:
+            # Build codecarbon configuration from OTelConfig
+            tracker_kwargs = {
+                "project_name": self.config.service_name,
+                "measure_power_secs": self.config.gpu_collection_interval,
+                "save_to_file": False,  # We report via OpenTelemetry, not CSV
+                "save_to_api": False,  # Don't send to codecarbon API
+                "logging_logger": logger,  # Use our logger
+                "log_level": "warning",  # Reduce codecarbon's logging noise
+            }
+
+            # Tracking mode: "machine" (all processes) or "process" (current only)
+            tracker_kwargs["tracking_mode"] = self.config.co2_tracking_mode
+
+            # Determine country code for offline mode
+            country_code = self.config.co2_country_iso_code
+            if self.config.co2_offline_mode and not country_code:
+                # Default to USA if not specified in offline mode
+                country_code = "USA"
+                logger.debug(
+                    "No country ISO code specified for offline mode, defaulting to USA. "
+                    "Set GENAI_CO2_COUNTRY_ISO_CODE for accurate carbon intensity."
+                )
+
+            # Use OfflineEmissionsTracker for offline mode, EmissionsTracker otherwise
+            if self.config.co2_offline_mode:
+                # OfflineEmissionsTracker requires country_iso_code
+                tracker_kwargs["country_iso_code"] = country_code
+
+                # Optional region within country (e.g., "california")
+                if self.config.co2_region:
+                    tracker_kwargs["region"] = self.config.co2_region
+
+                # Cloud provider configuration for more accurate carbon intensity
+                if self.config.co2_cloud_provider:
+                    tracker_kwargs["cloud_provider"] = self.config.co2_cloud_provider
+                if self.config.co2_cloud_region:
+                    tracker_kwargs["cloud_region"] = self.config.co2_cloud_region
+
+                self._emissions_tracker = OfflineEmissionsTracker(**tracker_kwargs)
+            else:
+                # Online mode - EmissionsTracker can auto-detect location
+                if self.config.co2_cloud_provider:
+                    tracker_kwargs["cloud_provider"] = self.config.co2_cloud_provider
+                if self.config.co2_cloud_region:
+                    tracker_kwargs["cloud_region"] = self.config.co2_cloud_region
+
+                self._emissions_tracker = EmissionsTracker(**tracker_kwargs)
+
+            self._use_codecarbon = True
+            logger.info(
+                "Codecarbon initialized for CO2 tracking (offline=%s, country=%s, region=%s)",
+                self.config.co2_offline_mode,
+                country_code or "auto-detect",
+                self.config.co2_region or "auto-detect",
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to initialize codecarbon, falling back to manual CO2 calculation: %s", e
+            )
+            self._use_codecarbon = False
 
     def _observe_gpu_utilization(self, options):
         """Observable callback for GPU utilization."""
@@ -271,6 +384,16 @@ class GPUMetricsCollector:
         if not self.gpu_available:
             return
 
+        # Start codecarbon emissions tracker if available and configured
+        if self._use_codecarbon and self._emissions_tracker:
+            try:
+                self._emissions_tracker.start()
+                self._last_emissions_kg = 0.0
+                logger.info("Codecarbon emissions tracker started")
+            except Exception as e:
+                logger.warning("Failed to start codecarbon tracker: %s", e)
+                self._use_codecarbon = False
+
         logger.info("Starting GPU metrics collection (CO2 tracking)")
         # Only start CO2 collection thread - ObservableGauges are auto-collected
         self._thread = threading.Thread(target=self._collect_loop, daemon=True)
@@ -279,6 +402,11 @@ class GPUMetricsCollector:
     def _collect_loop(self):
         while not self._stop_event.wait(self.interval):
             current_time = time.time()
+
+            # Collect CO2 emissions from codecarbon if available
+            if self.config.enable_co2_tracking:
+                self._collect_codecarbon_emissions()
+
             for i in range(self.device_count):
                 try:
                     handle = self.nvml.nvmlDeviceGetHandleByIndex(i)
@@ -289,8 +417,9 @@ class GPUMetricsCollector:
                     )  # Wh (power in kW * hours = kWh, but track in Wh for precision)
                     self.cumulative_energy_wh[i] += delta_energy_wh
 
-                    # Calculate and record CO2 emissions if enabled
-                    if self.config.enable_co2_tracking:
+                    # Calculate and record CO2 emissions using manual calculation
+                    # (only if codecarbon is not available/enabled)
+                    if self.config.enable_co2_tracking and not self._use_codecarbon:
                         delta_co2_g = (
                             delta_energy_wh / 1000.0
                         ) * self.config.carbon_intensity  # gCO2e
@@ -306,7 +435,46 @@ class GPUMetricsCollector:
 
                     self.last_timestamp[i] = current_time
                 except Exception as e:
-                    logger.error(f"Error collecting GPU {i} metrics: {e}")
+                    logger.error("Error collecting GPU %d metrics: %s", i, e)
+
+    def _collect_codecarbon_emissions(self):
+        """Collect CO2 emissions from codecarbon and report to OpenTelemetry."""
+        if not self._use_codecarbon or not self._emissions_tracker:
+            return
+
+        try:
+            # Flush codecarbon to get current emissions without stopping
+            # This updates the internal state and allows us to read current emissions
+            self._emissions_tracker.flush()
+
+            # Get current total emissions from codecarbon (in kg CO2e)
+            # The emissions property returns the total accumulated emissions
+            current_emissions_kg = self._emissions_tracker._total_emissions.total  # kg CO2e
+
+            # Calculate delta since last collection
+            delta_emissions_kg = current_emissions_kg - self._last_emissions_kg
+
+            if delta_emissions_kg > 0:
+                # Convert kg to grams and record
+                delta_emissions_g = delta_emissions_kg * 1000.0
+                self.co2_counter.add(
+                    delta_emissions_g,
+                    {
+                        "source": "codecarbon",
+                        "country": self.config.co2_country_iso_code or "auto",
+                        "region": self.config.co2_region or "auto",
+                    },
+                )
+                logger.debug(
+                    "Recorded %.4f gCO2e emissions from codecarbon (total: %.4f kg)",
+                    delta_emissions_g,
+                    current_emissions_kg,
+                )
+
+            self._last_emissions_kg = current_emissions_kg
+
+        except Exception as e:
+            logger.debug("Error collecting codecarbon emissions: %s", e)
 
     def stop(self):
         """Stops the GPU metrics collection thread."""
@@ -315,6 +483,30 @@ class GPUMetricsCollector:
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=5)
             logger.info("GPU CO2 metrics collection thread stopped.")
+
+        # Stop codecarbon emissions tracker and get final emissions
+        if self._use_codecarbon and self._emissions_tracker:
+            try:
+                final_emissions_kg = self._emissions_tracker.stop()
+                if final_emissions_kg is not None:
+                    # Record any remaining emissions not yet reported
+                    delta_emissions_kg = final_emissions_kg - self._last_emissions_kg
+                    if delta_emissions_kg > 0:
+                        delta_emissions_g = delta_emissions_kg * 1000.0
+                        self.co2_counter.add(
+                            delta_emissions_g,
+                            {
+                                "source": "codecarbon",
+                                "country": self.config.co2_country_iso_code or "auto",
+                                "region": self.config.co2_region or "auto",
+                            },
+                        )
+                    logger.info(
+                        "Codecarbon emissions tracker stopped. Total emissions: %.4f kg CO2e",
+                        final_emissions_kg,
+                    )
+            except Exception as e:
+                logger.debug("Error stopping codecarbon tracker: %s", e)
 
         # ObservableGauges will automatically stop when MeterProvider is shutdown
         if self.gpu_available and NVML_AVAILABLE:
