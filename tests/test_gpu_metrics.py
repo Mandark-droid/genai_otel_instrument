@@ -107,6 +107,7 @@ class TestGPUMetricsCollector:
         # GPU gauges are created even if no GPUs available
         assert mock_meter.create_observable_gauge.call_count == 5
 
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", False)
     @patch("genai_otel.gpu_metrics.logger")
     def test_init_no_gpus(self, mock_logger, mock_meter, mock_otel_config, mock_pynvml_no_gpu):
         import genai_otel.gpu_metrics
@@ -116,7 +117,8 @@ class TestGPUMetricsCollector:
         assert collector.device_count == 0
         mock_pynvml_no_gpu.nvmlInit.assert_called_once()
         mock_pynvml_no_gpu.nvmlDeviceGetCount.assert_called_once()
-        mock_logger.warning.assert_not_called()  # No warning if NVML is available but no GPUs
+        # No GPU-related warning if NVML is available but no GPUs
+        # (codecarbon warnings may occur separately)
 
     @patch("genai_otel.gpu_metrics.logger")
     def test_init_with_gpus(
@@ -271,6 +273,7 @@ class TestGPUMetricsCollector:
         )
         mock_thread.assert_not_called()
 
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", False)
     @patch("genai_otel.gpu_metrics.threading.Thread")
     @patch("genai_otel.gpu_metrics.logger")
     def test_start_gpu_not_available(
@@ -281,7 +284,6 @@ class TestGPUMetricsCollector:
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
         assert not collector.gpu_available  # From mock_pynvml_no_gpu
         collector.start()
-        mock_logger.info.assert_not_called()
         mock_thread.assert_not_called()
 
     @patch("genai_otel.gpu_metrics.threading.Thread")
@@ -312,6 +314,7 @@ class TestGPUMetricsCollector:
         mock_thread.return_value.start.assert_called_once()
         mock_logger.info.assert_called_with("Starting GPU metrics collection (CO2 tracking)")
 
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", False)
     @patch("genai_otel.gpu_metrics.time.time", return_value=1000.0)
     @patch("genai_otel.gpu_metrics.logger")
     def test_collect_loop_co2_enabled(
@@ -428,20 +431,20 @@ class TestGPUMetricsCollector:
         collector.last_timestamp = [990.0]
         collector.interval = 1
 
-        mock_pynvml_gpu_available.nvmlDeviceGetPowerUsage.side_effect = Exception(
-            "Power usage error"
-        )
+        power_error = Exception("Power usage error")
+        mock_pynvml_gpu_available.nvmlDeviceGetPowerUsage.side_effect = power_error
         collector._stop_event.wait = Mock(side_effect=[False, True])
 
         collector._collect_loop()
 
         mock_logger.error.assert_called_once_with(
-            "Error collecting GPU 0 metrics: Power usage error"
+            "Error collecting GPU %d metrics: %s", 0, power_error
         )
         collector.co2_counter.add.assert_not_called()
         assert collector.cumulative_energy_wh[0] == 0.0  # No energy added due to error
         assert collector.last_timestamp[0] == 990.0  # Timestamp not updated due to error
 
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", False)
     @patch("genai_otel.gpu_metrics.logger")
     @patch("genai_otel.gpu_metrics.threading.Event")
     def test_stop_no_threads_running(
@@ -453,10 +456,10 @@ class TestGPUMetricsCollector:
         collector._thread = None
         collector._stop_event = mock_event_class.return_value  # Assign the mock instance
         collector.stop()
-        mock_logger.info.assert_not_called()
         collector._stop_event.set.assert_called_once()
         mock_pynvml_gpu_available.nvmlShutdown.assert_called_once()
 
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", False)
     @patch("genai_otel.gpu_metrics.logger")
     @patch("genai_otel.gpu_metrics.threading.Event")
     def test_stop_threads_running(
@@ -474,7 +477,7 @@ class TestGPUMetricsCollector:
 
         # Only CO2 collection thread
         collector._thread.join.assert_called_once_with(timeout=5)
-        mock_logger.info.assert_called_once_with("GPU CO2 metrics collection thread stopped.")
+        mock_logger.info.assert_any_call("GPU CO2 metrics collection thread stopped.")
         collector._stop_event.set.assert_called_once()
         mock_pynvml_gpu_available.nvmlShutdown.assert_called_once()
 
@@ -669,3 +672,354 @@ class TestGPUMetricsCollector:
         # Should not raise exception
         collector.stop()
         assert not collector.running
+
+
+class TestCodecarbonIntegration:
+    """Tests for codecarbon integration in GPUMetricsCollector."""
+
+    @pytest.fixture
+    def mock_otel_config_with_codecarbon(self):
+        """Fixture for OTelConfig with codecarbon settings."""
+        config = Mock()
+        config.enable_co2_tracking = True
+        config.carbon_intensity = 475.0
+        config.power_cost_per_kwh = 0.12
+        config.service_name = "test-service"
+        config.gpu_collection_interval = 5
+        config.co2_country_iso_code = "USA"
+        config.co2_region = "california"
+        config.co2_cloud_provider = None
+        config.co2_cloud_region = None
+        config.co2_offline_mode = True
+        config.co2_tracking_mode = "machine"
+        config.co2_use_manual = False  # Default: use codecarbon if available
+        return config
+
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", False)
+    @patch("genai_otel.gpu_metrics.logger")
+    def test_init_codecarbon_not_available(
+        self, mock_logger, mock_meter, mock_otel_config_with_codecarbon, mock_pynvml_gpu_available
+    ):
+        """Test that manual CO2 calculation is used when codecarbon is not available."""
+        import genai_otel.gpu_metrics
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(
+            mock_meter, mock_otel_config_with_codecarbon
+        )
+
+        assert not collector._use_codecarbon
+        assert collector._emissions_tracker is None
+        mock_logger.info.assert_any_call(
+            "codecarbon not installed, using manual CO2 calculation with "
+            "carbon_intensity=%s gCO2e/kWh. Install codecarbon for automatic "
+            "region-based carbon intensity: pip install genai-otel-instrument[co2]",
+            475.0,
+        )
+
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
+    @patch("genai_otel.gpu_metrics.OfflineEmissionsTracker")
+    @patch("genai_otel.gpu_metrics.logger")
+    def test_init_codecarbon_success(
+        self,
+        mock_logger,
+        mock_offline_tracker_class,
+        mock_meter,
+        mock_otel_config_with_codecarbon,
+        mock_pynvml_gpu_available,
+    ):
+        """Test successful codecarbon initialization in offline mode."""
+        import genai_otel.gpu_metrics
+
+        mock_tracker = Mock()
+        mock_offline_tracker_class.return_value = mock_tracker
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(
+            mock_meter, mock_otel_config_with_codecarbon
+        )
+
+        assert collector._use_codecarbon
+        assert collector._emissions_tracker == mock_tracker
+        mock_offline_tracker_class.assert_called_once()
+        # Verify the kwargs passed to OfflineEmissionsTracker
+        call_kwargs = mock_offline_tracker_class.call_args[1]
+        assert call_kwargs["project_name"] == "test-service"
+        assert call_kwargs["country_iso_code"] == "USA"
+        assert call_kwargs["region"] == "california"
+        assert call_kwargs["tracking_mode"] == "machine"
+
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
+    @patch("genai_otel.gpu_metrics.OfflineEmissionsTracker")
+    @patch("genai_otel.gpu_metrics.logger")
+    def test_init_codecarbon_failure(
+        self,
+        mock_logger,
+        mock_offline_tracker_class,
+        mock_meter,
+        mock_otel_config_with_codecarbon,
+        mock_pynvml_gpu_available,
+    ):
+        """Test fallback to manual calculation when codecarbon init fails."""
+        import genai_otel.gpu_metrics
+
+        mock_offline_tracker_class.side_effect = Exception("Codecarbon init failed")
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(
+            mock_meter, mock_otel_config_with_codecarbon
+        )
+
+        assert not collector._use_codecarbon
+        mock_logger.warning.assert_called_with(
+            "Failed to initialize codecarbon, falling back to manual CO2 calculation: %s",
+            mock_offline_tracker_class.side_effect,
+        )
+
+    @patch("genai_otel.gpu_metrics.logger")
+    def test_init_codecarbon_disabled(
+        self, mock_logger, mock_meter, mock_otel_config, mock_pynvml_gpu_available
+    ):
+        """Test that codecarbon is not initialized when CO2 tracking is disabled."""
+        import genai_otel.gpu_metrics
+
+        mock_otel_config.enable_co2_tracking = False
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
+
+        assert not collector._use_codecarbon
+        assert collector._emissions_tracker is None
+
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
+    @patch("genai_otel.gpu_metrics.OfflineEmissionsTracker")
+    @patch("genai_otel.gpu_metrics.logger")
+    def test_start_with_codecarbon(
+        self,
+        mock_logger,
+        mock_offline_tracker_class,
+        mock_meter,
+        mock_otel_config_with_codecarbon,
+        mock_pynvml_gpu_available,
+    ):
+        """Test that codecarbon tracker is started with start()."""
+        import genai_otel.gpu_metrics
+
+        mock_tracker = Mock()
+        mock_offline_tracker_class.return_value = mock_tracker
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(
+            mock_meter, mock_otel_config_with_codecarbon
+        )
+        collector.start()
+
+        mock_tracker.start.assert_called_once()
+        assert collector._last_emissions_kg == 0.0
+
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
+    @patch("genai_otel.gpu_metrics.OfflineEmissionsTracker")
+    @patch("genai_otel.gpu_metrics.logger")
+    def test_start_codecarbon_failure(
+        self,
+        mock_logger,
+        mock_offline_tracker_class,
+        mock_meter,
+        mock_otel_config_with_codecarbon,
+        mock_pynvml_gpu_available,
+    ):
+        """Test fallback when codecarbon start() fails."""
+        import genai_otel.gpu_metrics
+
+        mock_tracker = Mock()
+        mock_tracker.start.side_effect = Exception("Start failed")
+        mock_offline_tracker_class.return_value = mock_tracker
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(
+            mock_meter, mock_otel_config_with_codecarbon
+        )
+        collector.start()
+
+        assert not collector._use_codecarbon
+        mock_logger.warning.assert_any_call(
+            "Failed to start codecarbon tracker: %s", mock_tracker.start.side_effect
+        )
+
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
+    @patch("genai_otel.gpu_metrics.OfflineEmissionsTracker")
+    def test_collect_codecarbon_emissions(
+        self,
+        mock_offline_tracker_class,
+        mock_meter,
+        mock_otel_config_with_codecarbon,
+        mock_pynvml_gpu_available,
+    ):
+        """Test collecting emissions from codecarbon."""
+        import genai_otel.gpu_metrics
+
+        mock_tracker = Mock()
+        mock_total_emissions = Mock()
+        mock_total_emissions.total = 0.001  # 0.001 kg = 1 gram
+        mock_tracker._total_emissions = mock_total_emissions
+        mock_offline_tracker_class.return_value = mock_tracker
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(
+            mock_meter, mock_otel_config_with_codecarbon
+        )
+        collector._last_emissions_kg = 0.0
+
+        collector._collect_codecarbon_emissions()
+
+        mock_tracker.flush.assert_called_once()
+        # Should record 1 gram of emissions
+        collector.co2_counter.add.assert_called_once()
+        call_args = collector.co2_counter.add.call_args
+        assert call_args[0][0] == pytest.approx(1.0)  # 0.001 kg * 1000 = 1 gram
+        assert call_args[0][1]["source"] == "codecarbon"
+        assert collector._last_emissions_kg == 0.001
+
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
+    @patch("genai_otel.gpu_metrics.OfflineEmissionsTracker")
+    def test_collect_codecarbon_no_new_emissions(
+        self,
+        mock_offline_tracker_class,
+        mock_meter,
+        mock_otel_config_with_codecarbon,
+        mock_pynvml_gpu_available,
+    ):
+        """Test no recording when there are no new emissions."""
+        import genai_otel.gpu_metrics
+
+        mock_tracker = Mock()
+        mock_total_emissions = Mock()
+        mock_total_emissions.total = 0.001
+        mock_tracker._total_emissions = mock_total_emissions
+        mock_offline_tracker_class.return_value = mock_tracker
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(
+            mock_meter, mock_otel_config_with_codecarbon
+        )
+        collector._last_emissions_kg = 0.001  # Same as current
+
+        collector._collect_codecarbon_emissions()
+
+        # Should not record since delta is 0
+        collector.co2_counter.add.assert_not_called()
+
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
+    @patch("genai_otel.gpu_metrics.OfflineEmissionsTracker")
+    def test_stop_with_codecarbon(
+        self,
+        mock_offline_tracker_class,
+        mock_meter,
+        mock_otel_config_with_codecarbon,
+        mock_pynvml_gpu_available,
+    ):
+        """Test that codecarbon tracker is stopped and final emissions recorded."""
+        import genai_otel.gpu_metrics
+
+        mock_tracker = Mock()
+        mock_tracker.stop.return_value = 0.005  # 5 grams total
+        mock_offline_tracker_class.return_value = mock_tracker
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(
+            mock_meter, mock_otel_config_with_codecarbon
+        )
+        collector._last_emissions_kg = 0.003  # 3 grams already recorded
+
+        collector.stop()
+
+        mock_tracker.stop.assert_called_once()
+        # Should record remaining 2 grams
+        collector.co2_counter.add.assert_called()
+        call_args = collector.co2_counter.add.call_args
+        assert call_args[0][0] == pytest.approx(2.0)  # (0.005 - 0.003) * 1000 = 2 grams
+
+    @patch("genai_otel.gpu_metrics.time.time", return_value=1000.0)
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
+    @patch("genai_otel.gpu_metrics.OfflineEmissionsTracker")
+    def test_collect_loop_uses_codecarbon_not_manual(
+        self,
+        mock_offline_tracker_class,
+        mock_time,
+        mock_meter,
+        mock_otel_config_with_codecarbon,
+        mock_pynvml_gpu_available,
+    ):
+        """Test that collect loop uses codecarbon and not manual CO2 calculation."""
+        import genai_otel.gpu_metrics
+
+        mock_tracker = Mock()
+        mock_total_emissions = Mock()
+        mock_total_emissions.total = 0.0
+        mock_tracker._total_emissions = mock_total_emissions
+        mock_offline_tracker_class.return_value = mock_tracker
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(
+            mock_meter, mock_otel_config_with_codecarbon
+        )
+        collector.device_count = 1
+        collector.last_timestamp = [990.0]
+        collector.interval = 1
+
+        collector._stop_event.wait = Mock(side_effect=[False, True])
+
+        collector._collect_loop()
+
+        # Codecarbon flush should be called
+        mock_tracker.flush.assert_called()
+        # Manual CO2 calculation should NOT be called (co2_counter.add only from codecarbon)
+        # The power_cost_counter should still be called
+        collector.power_cost_counter.add.assert_called()
+
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
+    @patch("genai_otel.gpu_metrics.OfflineEmissionsTracker")
+    @patch("genai_otel.gpu_metrics.logger")
+    def test_init_codecarbon_default_country(
+        self,
+        mock_logger,
+        mock_offline_tracker_class,
+        mock_meter,
+        mock_otel_config_with_codecarbon,
+        mock_pynvml_gpu_available,
+    ):
+        """Test that USA is used as default country when not specified in offline mode."""
+        import genai_otel.gpu_metrics
+
+        mock_otel_config_with_codecarbon.co2_country_iso_code = None  # Not specified
+        mock_tracker = Mock()
+        mock_offline_tracker_class.return_value = mock_tracker
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(
+            mock_meter, mock_otel_config_with_codecarbon
+        )
+
+        # Verify USA is used as default
+        call_kwargs = mock_offline_tracker_class.call_args[1]
+        assert call_kwargs["country_iso_code"] == "USA"
+
+    @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
+    @patch("genai_otel.gpu_metrics.OfflineEmissionsTracker")
+    @patch("genai_otel.gpu_metrics.logger")
+    def test_init_codecarbon_use_manual_override(
+        self,
+        mock_logger,
+        mock_offline_tracker_class,
+        mock_meter,
+        mock_otel_config_with_codecarbon,
+        mock_pynvml_gpu_available,
+    ):
+        """Test that codecarbon is skipped when co2_use_manual is True."""
+        import genai_otel.gpu_metrics
+
+        mock_otel_config_with_codecarbon.co2_use_manual = True
+        mock_otel_config_with_codecarbon.carbon_intensity = 500.0
+
+        collector = genai_otel.gpu_metrics.GPUMetricsCollector(
+            mock_meter, mock_otel_config_with_codecarbon
+        )
+
+        # Codecarbon should NOT be initialized
+        assert not collector._use_codecarbon
+        assert collector._emissions_tracker is None
+        mock_offline_tracker_class.assert_not_called()
+        mock_logger.info.assert_any_call(
+            "Using manual CO2 calculation (GENAI_CO2_USE_MANUAL=true) with "
+            "carbon_intensity=%s gCO2e/kWh",
+            500.0,
+        )

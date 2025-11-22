@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Codecarbon Integration for CO2 Emissions Tracking**
+  - Integrated codecarbon library for accurate region-based carbon intensity calculations
+  - Uses `OfflineEmissionsTracker` for offline mode (no API calls) or `EmissionsTracker` for online mode
+  - Automatic region detection using country ISO codes, cloud providers, and regions
+  - Fallback to manual calculation when codecarbon is not installed
+  - New environment variables for codecarbon configuration:
+    - `GENAI_CO2_COUNTRY_ISO_CODE` - 3-letter ISO country code (e.g., "USA", "GBR", "DEU")
+    - `GENAI_CO2_REGION` - Region/state within country (e.g., "california", "texas")
+    - `GENAI_CO2_CLOUD_PROVIDER` - Cloud provider name (e.g., "aws", "gcp", "azure")
+    - `GENAI_CO2_CLOUD_REGION` - Cloud region (e.g., "us-east-1", "europe-west1")
+    - `GENAI_CO2_OFFLINE_MODE` - Run codecarbon in offline mode (default: true)
+    - `GENAI_CO2_TRACKING_MODE` - "machine" (all processes) or "process" (current only)
+    - `GENAI_CO2_USE_MANUAL` - Force manual CO2 calculation using `GENAI_CARBON_INTENSITY`
+  - CO2 tracking options:
+    - **Automatic (codecarbon)**: Uses region-based carbon intensity data for accurate emissions
+    - **Manual**: Uses `GENAI_CARBON_INTENSITY` value (gCO2e/kWh) for calculation
+    - Set `GENAI_CO2_USE_MANUAL=true` to force manual calculation even when codecarbon is installed
+  - Implementation in `genai_otel/gpu_metrics.py` and `genai_otel/config.py`
+  - Added comprehensive tests for codecarbon integration (13 new test cases)
+  - Install codecarbon with: `pip install genai-otel-instrument[co2]`
+
 - **PII Detection and Safety Features (v0.2.0 Phase 1)**
   - Automatic PII detection with Microsoft Presidio integration
   - Three operation modes: detect (monitor only), redact (mask PII), block (prevent requests/responses)

@@ -1,0 +1,95 @@
+........................................................................ [  7%]
+.......................................................s................ [ 15%]
+........................................................................ [ 23%]
+........................................................................ [ 31%]
+........................................................................ [ 39%]
+........................................................................ [ 47%]
+........................................................................ [ 54%]
+........................................................................ [ 62%]
+........................................................................ [ 70%]
+........................................................................ [ 78%]
+........................................................................ [ 86%]
+........................................................................ [ 94%]
+.....................................................                    [100%]
+============================== warnings summary ===============================
+tests/instrumentors/test_langchain_instrumentor.py::TestLangChainInstrumentor::test_wrapped_agent_call
+tests/instrumentors/test_langchain_instrumentor.py::TestLangChainInstrumentor::test_wrapped_agent_call_with_unknown_agent
+tests/instrumentors/test_langchain_instrumentor.py::TestLangChainInstrumentor::test_wrapped_chain_call
+  H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\transformers\utils\generic.py:31: UserWarning: The NumPy module was reloaded (imported a second time). This can in some cases result in small but subtle issues and is discouraged.
+    import numpy as np
+
+tests/test_metrics.py::test_basic_instrumentation
+  H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pydantic\_internal\_config.py:323: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.11/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.12.6-final-0 _______________
+
+Name                                                       Stmts   Miss  Cover
+------------------------------------------------------------------------------
+genai_otel\__init__.py                                        30      0   100%
+genai_otel\__version__.py                                     13      0   100%
+genai_otel\auto_instrument.py                                190     42    78%
+genai_otel\cli.py                                             41      6    85%
+genai_otel\config.py                                          83      0   100%
+genai_otel\cost_calculator.py                                194     28    86%
+genai_otel\cost_enriching_exporter.py                         60      0   100%
+genai_otel\cost_enrichment_processor.py                       48      1    98%
+genai_otel\evaluation\__init__.py                              9      0   100%
+genai_otel\evaluation\bias_detector.py                       105     12    89%
+genai_otel\evaluation\config.py                              104      4    96%
+genai_otel\evaluation\hallucination_detector.py              174     15    91%
+genai_otel\evaluation\pii_detector.py                        128     36    72%
+genai_otel\evaluation\prompt_injection_detector.py            68      3    96%
+genai_otel\evaluation\restricted_topics_detector.py           79      6    92%
+genai_otel\evaluation\span_processor.py                      355     52    85%
+genai_otel\evaluation\toxicity_detector.py                   161     34    79%
+genai_otel\exceptions.py                                       4      0   100%
+genai_otel\gpu_metrics.py                                    189     17    91%
+genai_otel\instrumentors\__init__.py                          29      0   100%
+genai_otel\instrumentors\anthropic_instrumentor.py            62      3    95%
+genai_otel\instrumentors\anyscale_instrumentor.py             12      2    83%
+genai_otel\instrumentors\autogen_instrumentor.py             169     12    93%
+genai_otel\instrumentors\aws_bedrock_instrumentor.py          60      0   100%
+genai_otel\instrumentors\azure_openai_instrumentor.py         40      0   100%
+genai_otel\instrumentors\base.py                             454    103    77%
+genai_otel\instrumentors\bedrock_agents_instrumentor.py      180     19    89%
+genai_otel\instrumentors\cohere_instrumentor.py               69     14    80%
+genai_otel\instrumentors\crewai_instrumentor.py              166     22    87%
+genai_otel\instrumentors\dspy_instrumentor.py                267     38    86%
+genai_otel\instrumentors\google_ai_instrumentor.py           136      7    95%
+genai_otel\instrumentors\groq_instrumentor.py                 54      3    94%
+genai_otel\instrumentors\guardrails_ai_instrumentor.py       203    103    49%
+genai_otel\instrumentors\haystack_instrumentor.py            240     38    84%
+genai_otel\instrumentors\huggingface_instrumentor.py         207     82    60%
+genai_otel\instrumentors\hyperbolic_instrumentor.py          110     36    67%
+genai_otel\instrumentors\instructor_instrumentor.py          161     21    87%
+genai_otel\instrumentors\langchain_instrumentor.py           192     40    79%
+genai_otel\instrumentors\langgraph_instrumentor.py           143     33    77%
+genai_otel\instrumentors\llamaindex_instrumentor.py           20      0   100%
+genai_otel\instrumentors\mistralai_instrumentor.py           180    128    29%
+genai_otel\instrumentors\ollama_instrumentor.py               91      5    95%
+genai_otel\instrumentors\ollama_server_metrics_poller.py     157     25    84%
+genai_otel\instrumentors\openai_agents_instrumentor.py       140     21    85%
+genai_otel\instrumentors\openai_instrumentor.py              125     10    92%
+genai_otel\instrumentors\pydantic_ai_instrumentor.py         184     36    80%
+genai_otel\instrumentors\replicate_instrumentor.py            30      4    87%
+genai_otel\instrumentors\sambanova_instrumentor.py            91     14    85%
+genai_otel\instrumentors\togetherai_instrumentor.py           66     27    59%
+genai_otel\instrumentors\vertexai_instrumentor.py             47      7    85%
+genai_otel\logging_config.py                                  23      0   100%
+genai_otel\mcp_instrumentors\__init__.py                       4      0   100%
+genai_otel\mcp_instrumentors\api_instrumentor.py              60      2    97%
+genai_otel\mcp_instrumentors\base.py                          44      6    86%
+genai_otel\mcp_instrumentors\database_instrumentor.py        186     50    73%
+genai_otel\mcp_instrumentors\kafka_instrumentor.py            15      0   100%
+genai_otel\mcp_instrumentors\manager.py                       94      4    96%
+genai_otel\mcp_instrumentors\redis_instrumentor.py            15      0   100%
+genai_otel\mcp_instrumentors\vector_db_instrumentor.py       169      3    98%
+genai_otel\metrics.py                                         26      0   100%
+genai_otel\server_metrics.py                                  65      0   100%
+------------------------------------------------------------------------------
+TOTAL                                                       6821   1174    83%
+Coverage HTML written to dir htmlcov
+916 passed, 1 skipped, 4 warnings in 59.13s

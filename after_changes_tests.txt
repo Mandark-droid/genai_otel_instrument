@@ -1,0 +1,416 @@
+........................................................................ [  7%]
+.......................................................s................ [ 15%]
+........................................................................ [ 23%]
+........................................................................ [ 31%]
+........................................................................ [ 38%]
+........................................................................ [ 46%]
+........................................................................ [ 54%]
+........................................................................ [ 62%]
+........................................................................ [ 69%]
+........................................................................ [ 77%]
+........................................................................ [ 85%]
+........................................................................ [ 93%]
+.......................................Windows fatal exception: stack overflow
+
+Thread 0x0001f6ac (most recent call first):
+  File "C:\Python312\Lib\subprocess.py", line 1599 in _readerthread
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023b88 (most recent call first):
+  File "C:\Python312\Lib\subprocess.py", line 1599 in _readerthread
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x0001a044 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023d00 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023674 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\gpu_metrics.py", line 394 in _collect_loop
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x0002036c (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "C:\Python312\Lib\threading.py", line 1431 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00021720 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "C:\Python312\Lib\threading.py", line 1431 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00022840 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "C:\Python312\Lib\threading.py", line 1431 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00022418 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "C:\Python312\Lib\threading.py", line 1431 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00020b18 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023260 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023708 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\gpu_metrics.py", line 394 in _collect_loop
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00022298 (most recent call first):
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\urllib3\util\connection.py", line 73 in create_connection
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\urllib3\connection.py", line 198 in _new_conn
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\urllib3\connection.py", line 325 in connect
+  File "C:\Python312\Lib\http\client.py", line 1035 in send
+  File "C:\Python312\Lib\http\client.py", line 1091 in _send_output
+  File "C:\Python312\Lib\http\client.py", line 1331 in endheaders
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\urllib3\connection.py", line 494 in request
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\urllib3\connectionpool.py", line 493 in _make_request
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\urllib3\connectionpool.py", line 787 in urlopen
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\requests\adapters.py", line 644 in send
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\requests\sessions.py", line 703 in send
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\requests\sessions.py", line 589 in request
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\requests\api.py", line 59 in request
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\requests\api.py", line 73 in get
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\instrumentors\ollama_server_metrics_poller.py", line 217 in _collect_metrics
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\instrumentors\ollama_server_metrics_poller.py", line 206 in _poll_loop
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x0002328c (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00021250 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Current thread 0x00023be8 (most recent call first):
+  File "C:\Python312\Lib\unittest\mock.py", line 767 in __setattr__
+  File "C:\Python312\Lib\unittest\mock.py", line 594 in __set_side_effect
+  File "C:\Python312\Lib\unittest\mock.py", line 770 in __setattr__
+  File "C:\Python312\Lib\unittest\mock.py", line 1124 in __init__
+  File "C:\Python312\Lib\unittest\mock.py", line 1058 in _get_child_mock
+  File "C:\Python312\Lib\unittest\mock.py", line 678 in __getattr__
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pynvml.py", line 3062 in nvmlDeviceGetName
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pynvml.py", line 2751 in wrapper
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\gpu_metrics.py", line 148 in _get_device_name
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\gpu_metrics.py", line 422 in _collect_loop
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00004b48 (most recent call first):
+  File "C:\Python312\Lib\unittest\mock.py", line 667 in __getattr__
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pynvml.py", line 3062 in nvmlDeviceGetName
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pynvml.py", line 2751 in wrapper
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\gpu_metrics.py", line 148 in _get_device_name
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\gpu_metrics.py", line 422 in _collect_loop
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023560 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023ad8 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x0001d4a0 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023404 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023cc4 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x000220e0 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00003c44 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00009218 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00017b54 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x0001ec80 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023524 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023e44 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00010d0c (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x0001ff68 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x000221f8 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x0000b280 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x0000c4e0 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x000156fc (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x000226f8 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x000239e0 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x0001a070 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x000211a4 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00014a2c (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\metrics\_internal\export\__init__.py", line 522 in _ticker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023194 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\opentelemetry\sdk\_shared_internal\__init__.py", line 159 in worker
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x00023f70 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 359 in wait
+  File "C:\Python312\Lib\threading.py", line 655 in wait
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\instrumentors\ollama_server_metrics_poller.py", line 211 in _poll_loop
+  File "C:\Python312\Lib\threading.py", line 1012 in run
+  File "C:\Python312\Lib\threading.py", line 1075 in _bootstrap_inner
+  File "C:\Python312\Lib\threading.py", line 1032 in _bootstrap
+
+Thread 0x0001a214 (most recent call first):
+  File "C:\Python312\Lib\threading.py", line 1169 in _wait_for_tstate_lock
+  File "C:\Python312\Lib\threading.py", line 1149 in join
+  File "C:\Python312\Lib\subprocess.py", line 1628 in _communicate
+  File "C:\Python312\Lib\subprocess.py", line 1209 in communicate
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\cpuinfo\cpuinfo.py", line 2742 in get_cpu_info_json
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\cpuinfo\cpuinfo.py", line 2759 in get_cpu_info
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\codecarbon\core\util.py", line 77 in detect_cpu_model
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\codecarbon\core\cpu.py", line 488 in _main
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\codecarbon\core\cpu.py", line 389 in __init__
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\codecarbon\core\resource_tracker.py", line 39 in set_CPU_tracking
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\codecarbon\core\resource_tracker.py", line 214 in set_CPU_GPU_ram_tracking
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\codecarbon\emissions_tracker.py", line 324 in __init__
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\codecarbon\emissions_tracker.py", line 971 in __init__
+  File "C:\Python312\Lib\contextlib.py", line 81 in inner
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\gpu_metrics.py", line 210 in _init_codecarbon
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\gpu_metrics.py", line 101 in __init__
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\auto_instrument.py", line 558 in setup_auto_instrumentation
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\genai_otel\__init__.py", line 85 in instrument
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\tests\test_metrics.py", line 73 in test_instrumentation_with_environment
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\python.py", line 157 in pytest_pyfunc_call
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\python.py", line 1671 in runtest
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\runner.py", line 178 in pytest_runtest_call
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\runner.py", line 246 in <lambda>
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\runner.py", line 344 in from_call
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\runner.py", line 245 in call_and_report
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\runner.py", line 136 in runtestprotocol
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\runner.py", line 117 in pytest_runtest_protocol
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\main.py", line 367 in pytest_runtestloop
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\main.py", line 343 in _main
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\main.py", line 289 in wrap_session
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\main.py", line 336 in pytest_cmdline_main
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\config\__init__.py", line 175 in main
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Lib\site-packages\_pytest\config\__init__.py", line 201 in console_main
+  File "H:\C_Documents\Documents\LLM-Code\llm_engineering\Projects\genai_otel_instrument\venv\Scripts\pytest.exe\__main__.py", line 6 in <module>
+  File "<frozen runpy>", line 88 in _run_code
+  File "<frozen runpy>", line 198 in _run_module_as_main

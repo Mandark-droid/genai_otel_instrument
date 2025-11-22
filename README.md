@@ -285,8 +285,13 @@ Every LLM call, database query, API request, and vector search is traced with fu
 - `gen_ai.usage.cost.cache_write` - Cache write cost (Anthropic)
 - `gen_ai.client.errors` - Error counts by operation and type
 - `gen_ai.gpu.*` - GPU utilization, memory, temperature, power (ObservableGauges)
-- `gen_ai.co2.emissions` - CO2 emissions tracking (opt-in via `GENAI_ENABLE_CO2_TRACKING`)
+- `gen_ai.co2.emissions` - CO2 emissions tracking with codecarbon integration (opt-in via `GENAI_ENABLE_CO2_TRACKING`)
 - `gen_ai.power.cost` - Cumulative electricity cost in USD based on GPU power consumption (configurable via `GENAI_POWER_COST_PER_KWH`)
+
+**CO2 Tracking Options:**
+- **Automatic (codecarbon)**: Uses region-based carbon intensity data for accurate emissions calculation
+- **Manual**: Uses `GENAI_CARBON_INTENSITY` value (gCO2e/kWh) for calculation
+- Set `GENAI_CO2_USE_MANUAL=true` to force manual calculation even when codecarbon is installed
 - `gen_ai.server.ttft` - Time to First Token for streaming responses (histogram, 1ms-10s buckets)
 - `gen_ai.server.tbt` - Time Between Tokens for streaming responses (histogram, 10ms-2.5s buckets)
 
