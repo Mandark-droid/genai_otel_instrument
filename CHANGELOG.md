@@ -71,6 +71,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - All prices in USD per 1K tokens (prompt/completion)
     - Includes latest 2025 model releases through December
 
+- **Embedding, Image, and Audio Models: Comprehensive Expansion - 114 New Models**
+  - **Embedding Models** (47 new models):
+    - Google embeddings: gemini-embedding-001, text-embedding-004/005
+    - Cohere embeddings: embed-v4.0, embed-english-v3, embed-multilingual-v3
+    - Cohere rerankers: rerank-v3.5, rerank-english-v3.0, rerank-multilingual-v3.0
+    - Mistral embeddings: codestral-embed, codestral-embed-2505, mistral-embed
+    - Amazon Titan: titan-embed-image-v1 (multimodal embedding)
+    - Together.AI and Fireworks.AI embedding pricing tiers
+    - Voyage rerankers: rerank-2, rerank-2-lite
+    - Jina reranker: jina-reranker-v2-base-multilingual
+    - Doubao (ByteDance) embedding models
+    - NVIDIA reranker models
+    - Total embeddings: **81 models** (was 34, +138% increase)
+  - **Image Generation Models** (14 new models):
+    - Google Imagen: imagen-3.0, imagen-4.0 variants (fast, standard, ultra)
+    - Amazon Titan: titan-image-generator-v2
+    - Recraft: recraftv2, recraftv3
+    - FLUX models: FLUX-1.1-pro, FLUX.1-Kontext-pro
+    - DALL-E 3 quality variants: standard and HD for various sizes
+    - Total image models: **28 models** (was 14, +100% increase)
+  - **Audio/Speech Models** (53 new models):
+    - Deepgram models (33 models):
+      * Nova 2 and 3 series - specialized for different use cases
+      * Base and Enhanced tiers for various domains (finance, medical, meeting, phonecall, etc.)
+      * Whisper variants (tiny, small, medium, large, base)
+    - OpenAI audio models:
+      * gpt-4o-audio-preview variants (2024-10-01, 2024-12-17, 2025-06-03)
+      * gpt-4o-mini-audio-preview models
+      * gpt-4o-transcribe and gpt-4o-mini-transcribe
+      * gpt-4o-mini-tts (text-to-speech)
+    - ElevenLabs: scribe_v1, scribe_v1_experimental
+    - AssemblyAI: best, nano
+    - Gemini TTS: gemini-2.5-flash-preview-tts, gemini-2.5-pro-preview-tts
+    - Whisper-1: OpenAI's original transcription model
+    - Total audio models: **64 models** (was 11, +482% increase)
+  - **Pricing Structure**:
+    - Embeddings: Per 1K tokens (input cost)
+    - Images: Per image generation (varies by quality/size)
+    - Audio: Per minute for STT, per 1K characters for TTS
+  - **Implementation**:
+    - Database: `genai_otel/llm_pricing.json`
+    - Total non-chat additions: 114 models
+    - All pricing sourced from official provider documentation and LiteLLM database
+
 - **Ollama Instrumentor: Missing Response Attributes**
   - Added `_extract_response_attributes()` method to extract response model, finish reason, and content length
   - Added `_extract_finish_reason()` method to extract completion status from `done_reason` field
