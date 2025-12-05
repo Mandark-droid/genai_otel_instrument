@@ -8,6 +8,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Ollama Instrumentor: Missing Response Attributes**
+  - Added `_extract_response_attributes()` method to extract response model, finish reason, and content length
+  - Added `_extract_finish_reason()` method to extract completion status from `done_reason` field
+  - Fixes missing `gen_ai.response.model`, `gen_ai.response.finish_reason`, and cost tracking fields in Ollama traces
+  - Handles both dict and object response formats for compatibility
+  - Supports both `generate()` and `chat()` response structures
+  - Enables proper cost calculation for Ollama models (previously failed due to missing response model)
+  - Implementation: `genai_otel/instrumentors/ollama_instrumentor.py` (lines 199-276)
+  - Tests: `tests/instrumentors/test_ollama_instrumentor.py` (6 new test functions)
+
+- **CrewAI Instrumentor: Automatic Context Propagation**
+  - **Zero-code context propagation** for complete trace continuity across threads and async execution
+  - Automatic ThreadPoolExecutor patching for context propagation to worker threads
+  - Enhanced instrumentation with three span types:
+    - `crewai.crew.execution` - Top-level crew execution
+    - `crewai.task.execution` - Individual task execution
+    - `crewai.agent.execution` - Agent task execution
+  - Automatic instrumentation of Task and Agent methods:
+    - `Task.execute_sync()` - Synchronous task execution
+    - `Task.execute_async()` - Asynchronous task execution
+    - `Agent.execute_task()` - Agent task execution
+  - Rich attribute extraction for better observability:
+    - **Task attributes**: description, expected_output, assigned agent role, task ID
+    - **Agent attributes**: role, goal, backstory, LLM model
+    - **Crew attributes**: process type, agent count, task count, tools, inputs
+  - Static `_propagate_context()` decorator for function-level context wrapping
+  - Thread-safe context attachment/detachment using OpenTelemetry context API
+  - Graceful degradation if methods don't exist (future-proof for CrewAI updates)
+  - **Benefits for users**:
+    - ✅ No manual context management code required
+    - ✅ Complete parent-child span relationships across all execution
+    - ✅ Works with FastAPI, Flask, and other async frameworks
+    - ✅ Compatible with CrewAI's internal threading model
+  - Implementation: `genai_otel/instrumentors/crewai_instrumentor.py` (+216 lines)
+  - Example usage - before: manual `run_in_thread_with_context()` wrapper needed
+  - Example usage - after: just call `crew.kickoff()` normally, context propagates automatically!
+
 - **Codecarbon Integration for CO2 Emissions Tracking**
   - Integrated codecarbon library for accurate region-based carbon intensity calculations
   - Uses `OfflineEmissionsTracker` for offline mode (no API calls) or `EmissionsTracker` for online mode

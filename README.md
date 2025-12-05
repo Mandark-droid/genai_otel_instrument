@@ -111,6 +111,11 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 ### Multi-Agent Frameworks (NEW)
 - **OpenAI Agents SDK** (agent orchestration with handoffs, sessions, guardrails)
 - **CrewAI** (role-based multi-agent collaboration with crews and tasks)
+  - ✨ **Zero-code context propagation** - Automatic trace continuity across threads/async
+  - 🔗 **Complete span hierarchy** - Crew → Agent → Task → LLM calls
+  - 🎯 **Rich attributes** - Task descriptions, agent roles, goals, LLM models
+  - 🧵 **ThreadPoolExecutor patching** - Automatic context propagation to worker threads
+  - 📊 **Three span types** - `crewai.crew.execution`, `crewai.task.execution`, `crewai.agent.execution`
 - **LangGraph** (stateful workflows with graph-based orchestration)
 - **AutoGen** (Microsoft multi-agent conversations with group chats)
 - **Pydantic AI** (type-safe agents with Pydantic validation and multi-provider support)
@@ -471,6 +476,168 @@ response = client.chat.completions.create(
 - Debug session-specific issues
 - Calculate per-user costs and quotas
 - Build user-specific dashboards
+
+### CrewAI Multi-Agent Orchestration (Zero-Code Context Propagation)
+
+Get complete observability for CrewAI multi-agent applications with **automatic context propagation** across threads and async execution—no manual context management required!
+
+**Key Features:**
+- ✨ **Zero-code setup** - Just instrument and go, no wrapper functions needed
+- 🔗 **Complete trace hierarchy** - Crew → Agent → Task → LLM calls automatically linked
+- 🧵 **Automatic ThreadPoolExecutor patching** - Context propagates to worker threads
+- 📊 **Three span types** with rich attributes:
+  - `crewai.crew.execution` - Crew-level attributes (process type, agent/task counts, tools, inputs)
+  - `crewai.task.execution` - Task attributes (description, expected output, assigned agent)
+  - `crewai.agent.execution` - Agent attributes (role, goal, backstory, LLM model)
+
+**Setup (One-time):**
+
+```python
+from genai_otel import setup_auto_instrumentation, OTelConfig
+
+# Setup BEFORE importing CrewAI
+otel_config = OTelConfig(
+    service_name="my-crewai-app",
+    endpoint="http://localhost:4318",
+    enabled_instrumentors=["crewai", "openai", "ollama"],  # Enable CrewAI + LLM providers
+    enable_cost_tracking=True,
+)
+setup_auto_instrumentation(otel_config)
+
+# Now import and use CrewAI normally
+from crewai import Crew, Agent, Task
+```
+
+**Usage (Zero Code Changes):**
+
+```python
+# Define your agents
+researcher = Agent(
+    role="Senior Researcher",
+    goal="Research and analyze topics thoroughly",
+    backstory="Expert researcher with 10 years experience",
+    llm="gpt-4"  # Or "ollama:llama2", etc.
+)
+
+writer = Agent(
+    role="Technical Writer",
+    goal="Create clear, comprehensive documentation",
+    backstory="Professional technical writer",
+    llm="ollama:llama2"
+)
+
+# Define your tasks
+research_task = Task(
+    description="Research OpenTelemetry best practices",
+    expected_output="Comprehensive research report",
+    agent=researcher
+)
+
+writing_task = Task(
+    description="Write a blog post based on research",
+    expected_output="Well-structured blog post",
+    agent=writer
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process="sequential"
+)
+
+# Just call kickoff() normally - context propagates automatically!
+result = crew.kickoff()
+# ✅ Complete traces with proper parent-child relationships
+# ✅ All LLM calls (GPT-4, Ollama) are linked to tasks and agents
+# ✅ Cost tracking works automatically
+```
+
+**FastAPI Integration (Like Your TraceVerde App):**
+
+```python
+from fastapi import FastAPI
+import asyncio
+
+# Setup instrumentation FIRST
+setup_auto_instrumentation(OTelConfig(...))
+
+# Then import CrewAI
+from crewai import Crew
+
+app = FastAPI()
+crew = Crew(...)
+
+@app.post("/analyze")
+async def analyze(query: str):
+    # No manual context management needed!
+    result = await asyncio.to_thread(crew.kickoff, inputs={"query": query})
+    return {"result": result}
+    # ✅ HTTP request → Crew → Agents → Tasks → LLM calls all properly traced
+```
+
+**What You Get in Traces:**
+
+```json
+{
+  "spans": [
+    {
+      "name": "crewai.crew.execution",
+      "attributes": {
+        "crewai.process.type": "sequential",
+        "crewai.agent_count": 2,
+        "crewai.task_count": 2,
+        "crewai.agent.roles": ["Senior Researcher", "Technical Writer"],
+        "crewai.tools": ["search", "scrape", "write_file"]
+      }
+    },
+    {
+      "name": "crewai.agent.execution",
+      "parent": "crewai.crew.execution",
+      "attributes": {
+        "crewai.agent.role": "Senior Researcher",
+        "crewai.agent.goal": "Research and analyze topics thoroughly",
+        "crewai.agent.llm_model": "gpt-4"
+      }
+    },
+    {
+      "name": "crewai.task.execution",
+      "parent": "crewai.agent.execution",
+      "attributes": {
+        "crewai.task.description": "Research OpenTelemetry best practices",
+        "crewai.task.agent_role": "Senior Researcher"
+      }
+    },
+    {
+      "name": "openai.chat.completion",
+      "parent": "crewai.task.execution",
+      "attributes": {
+        "gen_ai.request.model": "gpt-4",
+        "gen_ai.response.model": "gpt-4",
+        "gen_ai.usage.prompt_tokens": 1250,
+        "gen_ai.usage.completion_tokens": 850,
+        "gen_ai.usage.cost.total": 0.0325
+      }
+    }
+  ]
+}
+```
+
+**Before vs After:**
+
+| Aspect | Before (Manual) | After (Zero-Code) |
+|--------|-----------------|-------------------|
+| **Code Changes** | `run_in_thread_with_context()` wrapper | None - just setup |
+| **Trace Continuity** | Manual propagation | Automatic |
+| **FastAPI Integration** | Custom middleware | Works automatically |
+| **Maintenance** | Update on CrewAI changes | Self-healing |
+
+**Technical Details:**
+- Instruments `Crew.kickoff()`, `Task.execute_sync()`, `Task.execute_async()`, `Agent.execute_task()`
+- Patches `concurrent.futures.ThreadPoolExecutor.submit()` for automatic context propagation
+- Thread-safe using OpenTelemetry's context API
+- Works with CrewAI's internal threading model
+- Compatible with all async frameworks (FastAPI, Flask, etc.)
 
 ### RAG and Embedding Attributes
 
