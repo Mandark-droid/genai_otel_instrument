@@ -477,3 +477,113 @@ def test_instrument_poller_start_failure_with_fail_on_error():
                 # Should raise exception
                 with pytest.raises(Exception, match="Poller failed"):
                     instrumentor.instrument(mock_config)
+
+
+def test_extract_response_attributes_dict(instrumentor):
+    """Test response attributes extraction from dict response"""
+    # Test with complete response
+    result_dict = {
+        "model": "llama2",
+        "response": "This is a test response",
+        "done_reason": "stop",
+        "prompt_eval_count": 10,
+        "eval_count": 20,
+    }
+    attrs = instrumentor._extract_response_attributes(result_dict)
+    assert attrs["gen_ai.response.model"] == "llama2"
+    assert attrs["gen_ai.response.finish_reason"] == "stop"
+    assert attrs["gen_ai.response.length"] == len("This is a test response")
+
+    # Test with chat response (message format)
+    chat_result = {
+        "model": "llama2",
+        "message": {"role": "assistant", "content": "Chat response"},
+        "done_reason": "stop",
+    }
+    attrs = instrumentor._extract_response_attributes(chat_result)
+    assert attrs["gen_ai.response.model"] == "llama2"
+    assert attrs["gen_ai.response.finish_reason"] == "stop"
+    assert attrs["gen_ai.response.length"] == len("Chat response")
+
+    # Test with missing optional fields
+    minimal_result = {"model": "llama2"}
+    attrs = instrumentor._extract_response_attributes(minimal_result)
+    assert attrs["gen_ai.response.model"] == "llama2"
+    assert "gen_ai.response.finish_reason" not in attrs
+    assert "gen_ai.response.length" not in attrs
+
+    # Test with empty dict
+    attrs = instrumentor._extract_response_attributes({})
+    assert attrs == {}
+
+
+def test_extract_response_attributes_object(instrumentor):
+    """Test response attributes extraction from object response"""
+
+    class MockResponse:
+        def __init__(self):
+            self.model = "llama2"
+            self.response = "Test response"
+            self.done_reason = "stop"
+            self.prompt_eval_count = 10
+            self.eval_count = 20
+
+    attrs = instrumentor._extract_response_attributes(MockResponse())
+    assert attrs["gen_ai.response.model"] == "llama2"
+    assert attrs["gen_ai.response.finish_reason"] == "stop"
+    assert attrs["gen_ai.response.length"] == len("Test response")
+
+    # Test with chat message format
+    class MockChatResponse:
+        def __init__(self):
+            self.model = "llama2"
+            self.done_reason = "stop"
+
+            class Message:
+                content = "Chat content"
+
+            self.message = Message()
+
+    attrs = instrumentor._extract_response_attributes(MockChatResponse())
+    assert attrs["gen_ai.response.model"] == "llama2"
+    assert attrs["gen_ai.response.finish_reason"] == "stop"
+    assert attrs["gen_ai.response.length"] == len("Chat content")
+
+
+def test_extract_finish_reason_dict(instrumentor):
+    """Test finish reason extraction from dict response"""
+    # With done_reason
+    result = {"done_reason": "stop", "model": "llama2"}
+    assert instrumentor._extract_finish_reason(result) == "stop"
+
+    # With length reason
+    result = {"done_reason": "length", "model": "llama2"}
+    assert instrumentor._extract_finish_reason(result) == "length"
+
+    # Without done_reason
+    result = {"model": "llama2"}
+    assert instrumentor._extract_finish_reason(result) is None
+
+    # Empty dict
+    assert instrumentor._extract_finish_reason({}) is None
+
+
+def test_extract_finish_reason_object(instrumentor):
+    """Test finish reason extraction from object response"""
+
+    class MockResponse:
+        def __init__(self, done_reason=None):
+            self.model = "llama2"
+            self.done_reason = done_reason
+
+    # With done_reason
+    assert instrumentor._extract_finish_reason(MockResponse("stop")) == "stop"
+    assert instrumentor._extract_finish_reason(MockResponse("length")) == "length"
+
+    # Without done_reason (None)
+    assert instrumentor._extract_finish_reason(MockResponse(None)) is None
+
+
+def test_extract_finish_reason_none(instrumentor):
+    """Test finish reason extraction with None input"""
+    assert instrumentor._extract_finish_reason(None) is None
