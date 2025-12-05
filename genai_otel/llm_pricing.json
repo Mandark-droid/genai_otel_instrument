@@ -1206,6 +1206,61 @@
       "promptPrice": 0.0004,
       "completionPrice": 0.002
     },
+    "mistral-large-3": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Mistral Large 3 (Dec 2025) - 675B total, 41B active params, 80% cheaper than GPT-4"
+    },
+    "mistral-large-3-2025": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Mistral Large 3 - Apache 2.0 license, 256K context window"
+    },
+    "ministral-3-14b": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0006,
+      "note": "Ministral 3 14B - dense model, offline capable"
+    },
+    "ministral-3-14b-instruct": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0006,
+      "note": "Ministral 3 14B Instruct - instruction-tuned variant"
+    },
+    "ministral-3-14b-reasoning": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0006,
+      "note": "Ministral 3 14B Reasoning - enhanced reasoning capabilities"
+    },
+    "ministral-3-8b": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00045,
+      "note": "Ministral 3 8B - compact dense model"
+    },
+    "ministral-3-8b-instruct": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00045,
+      "note": "Ministral 3 8B Instruct - instruction-tuned"
+    },
+    "ministral-3-8b-reasoning": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00045,
+      "note": "Ministral 3 8B Reasoning - reasoning-focused"
+    },
+    "ministral-3-3b": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Ministral 3 3B - smallest variant, edge devices"
+    },
+    "ministral-3-3b-instruct": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Ministral 3 3B Instruct - instruction-tuned"
+    },
+    "ministral-3-3b-reasoning": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Ministral 3 3B Reasoning - reasoning capabilities"
+    },
     "magistral-small": {
       "promptPrice": 0.001,
       "completionPrice": 0.003
@@ -1334,6 +1389,36 @@
       "promptPrice": 0.0008,
       "completionPrice": 0.002,
       "note": "V3.2 experimental release"
+    },
+    "deepseek-v3.2": {
+      "promptPrice": 0.00028,
+      "completionPrice": 0.00042,
+      "note": "DeepSeek V3.2 (Dec 2025) - official release, cache miss: $0.28/$0.42"
+    },
+    "deepseek-ai/DeepSeek-V3.2": {
+      "promptPrice": 0.00028,
+      "completionPrice": 0.00042,
+      "note": "DeepSeek V3.2 - 50% cost reduction from V3.1-Terminus, cache hit pricing"
+    },
+    "deepseekmath-v2": {
+      "promptPrice": 0.00028,
+      "completionPrice": 0.00042,
+      "note": "DeepSeekMath V2 (Nov 2025) - based on V3.2-Exp-Base, math specialist"
+    },
+    "deepseek-ai/DeepSeekMath-V2": {
+      "promptPrice": 0.00028,
+      "completionPrice": 0.00042,
+      "note": "DeepSeekMath V2 - advanced mathematical reasoning"
+    },
+    "deepseek-ai/DeepSeekMath-V2-7B": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0003,
+      "note": "DeepSeekMath V2 7B - compact math model"
+    },
+    "deepseek-ai/DeepSeekMath-V2-70B": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0006,
+      "note": "DeepSeekMath V2 70B - large-scale math model"
     },
     "deepseek-ai/DeepSeek-V3.1-Terminus": {
       "promptPrice": 0.0006,

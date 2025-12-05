@@ -25,13 +25,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Qwen2.5-Max - improved reasoning and coding capabilities
     - Qwen Turbo - fast inference, cost-effective
     - Qwen2.5 Turbo - optimized for speed and cost
-  - **Mistral Models** (4 new models):
+  - **Mistral Models** (15 new models):
+    - Mistral Large 3 - 675B total, 41B active, 80% cheaper than GPT-4 ($0.0005/$0.0015)
+    - Ministral 3 series (9 models):
+      * 14B variants: base, instruct, reasoning ($0.0002/$0.0006)
+      * 8B variants: base, instruct, reasoning ($0.00015/$0.00045)
+      * 3B variants: base, instruct, reasoning ($0.0001/$0.0003)
     - Pixtral Large - premier multimodal model with vision ($0.008/$0.024)
     - Pixtral Large 2411 - November 2024 version
     - Mistral Large 2.1 - frontier-class model
     - Mistral Small 2501 - alias for Mistral Small 3.0
-  - Implementation: `genai_otel/llm_pricing.json` (+60 lines)
-  - Total model coverage: 360+ models across 20+ providers
+  - **DeepSeek Models** (6 new models):
+    - DeepSeek V3.2 - official release with 50% cost reduction ($0.00028/$0.00042 cache hit)
+    - DeepSeekMath V2 - mathematical reasoning specialist (Nov 2025)
+    - DeepSeekMath V2-7B - compact 7B math model ($0.0002/$0.0003)
+    - DeepSeekMath V2-70B - large-scale 70B math model ($0.0004/$0.0006)
+  - Implementation: `genai_otel/llm_pricing.json` (+87 lines)
+  - Total model coverage: 390+ models across 20+ providers
   - All prices in USD per 1K tokens (prompt/completion)
   - Includes notes for tiered pricing, batch discounts, and experimental models
 
