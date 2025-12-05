@@ -8,6 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **LLM Pricing Database: Latest Models from Gemini, Qwen, and Mistral**
+  - **Gemini Models** (8 new models):
+    - Gemini 3 Pro Preview - latest flagship model ($0.002/$0.012 per 1K tokens)
+    - Gemini 2.5 Computer Use Preview - specialized for computer interaction
+    - Gemini Robotics-ER 1.5 Preview - robotics applications
+    - Gemini 2.0 Flash Thinking Experimental - free during experimental phase
+    - Gemini 2.0 Flash Thinking Exp 1219 - December 2024 version
+    - Gemini Exp 1206 - experimental model, free access
+    - Gemini 2.0 Flash Experimental - free during experimental phase
+  - **Qwen Models** (8 new models):
+    - Qwen3 Max 2025-09-23 - latest snapshot version
+    - Qwen Plus 2025-12-01 - supports thinking mode, 1M context
+    - Qwen Plus 2025-07-28 - Qwen3 with 81K token thinking mode
+    - Qwen Max 2025-01-25 (Qwen2.5-Max) - 131K context, 50% batch discount
+    - Qwen2.5-Max - improved reasoning and coding capabilities
+    - Qwen Turbo - fast inference, cost-effective
+    - Qwen2.5 Turbo - optimized for speed and cost
+  - **Mistral Models** (4 new models):
+    - Pixtral Large - premier multimodal model with vision ($0.008/$0.024)
+    - Pixtral Large 2411 - November 2024 version
+    - Mistral Large 2.1 - frontier-class model
+    - Mistral Small 2501 - alias for Mistral Small 3.0
+  - Implementation: `genai_otel/llm_pricing.json` (+60 lines)
+  - Total model coverage: 360+ models across 20+ providers
+  - All prices in USD per 1K tokens (prompt/completion)
+  - Includes notes for tiered pricing, batch discounts, and experimental models
+
 - **Ollama Instrumentor: Missing Response Attributes**
   - Added `_extract_response_attributes()` method to extract response model, finish reason, and content length
   - Added `_extract_finish_reason()` method to extract completion status from `done_reason` field
