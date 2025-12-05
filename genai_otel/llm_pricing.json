@@ -551,6 +551,46 @@
       "promptPrice": 0.00125,
       "completionPrice": 0.01
     },
+    "gemini-3-pro-preview": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.012,
+      "note": "Gemini 3 Pro Preview - ≤200k tokens. >200k: $0.004/$0.018"
+    },
+    "gemini-3-pro": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.012,
+      "note": "Gemini 3 Pro - ≤200k tokens. >200k: $0.004/$0.018"
+    },
+    "gemini-2.5-computer-use-preview": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "Gemini 2.5 Computer Use Preview - ≤200k tokens. >200k: $0.0025/$0.015"
+    },
+    "gemini-robotics-er-1.5-preview": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0025,
+      "note": "Gemini Robotics-ER 1.5 Preview - specialized for robotics applications"
+    },
+    "gemini-2.0-flash-thinking-exp": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Gemini 2.0 Flash Thinking Experimental - free during experimental phase"
+    },
+    "gemini-2.0-flash-thinking-exp-1219": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Gemini 2.0 Flash Thinking Experimental (Dec 19 version) - free during experimental phase"
+    },
+    "gemini-exp-1206": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Gemini Experimental 1206 - free during experimental phase"
+    },
+    "gemini-2.0-flash-exp": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Gemini 2.0 Flash Experimental - free during experimental phase"
+    },
     "gemini-2-5-flash-image": {
       "promptPrice": 0.0003,
       "completionPrice": 0.03
@@ -734,6 +774,41 @@
     "qwen-qwen3-max": {
       "promptPrice": 0.0012,
       "completionPrice": 0.006
+    },
+    "qwen3-max-2025-09-23": {
+      "promptPrice": 0.00084,
+      "completionPrice": 0.00336,
+      "note": "Qwen3 Max snapshot (Sept 2025) - Tiered: ¥0.006-0.015/1K tokens input, ¥0.024-0.06/1K output"
+    },
+    "qwen-plus-2025-12-01": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0025,
+      "note": "Qwen Plus (Dec 2025) - supports thinking mode, 1M context"
+    },
+    "qwen-plus-2025-07-28": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0025,
+      "note": "Qwen3 Plus (July 2025) - thinking mode with 81,920 token max"
+    },
+    "qwen-max-2025-01-25": {
+      "promptPrice": 0.00164,
+      "completionPrice": 0.00657,
+      "note": "Qwen2.5-Max (Jan 2025) - 131K context, 50% batch discount available"
+    },
+    "qwen2.5-max": {
+      "promptPrice": 0.00164,
+      "completionPrice": 0.00657,
+      "note": "Qwen2.5-Max - 131K context, improved reasoning and coding"
+    },
+    "qwen-turbo": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0006,
+      "note": "Qwen Turbo - fast inference, cost-effective"
+    },
+    "qwen2.5-turbo": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0006,
+      "note": "Qwen2.5 Turbo - optimized for speed and cost"
     },
     "codellama/CodeLlama-34b-Instruct-hf": {
       "promptPrice": 0.0008,
@@ -1146,6 +1221,26 @@
     "codestral-2501": {
       "promptPrice": 0.001,
       "completionPrice": 0.003
+    },
+    "mistral-small-2501": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "Mistral Small 3.0 (25.01) - alias for mistral-small-3.1"
+    },
+    "mistral-large-2.1": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.024,
+      "note": "Mistral Large 2.1 (Nov 2024) - frontier-class model"
+    },
+    "pixtral-large": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.024,
+      "note": "Pixtral Large (Nov 2024) - multimodal model with vision capabilities"
+    },
+    "pixtral-large-2411": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.024,
+      "note": "Pixtral Large v24.11 - premier multimodal model"
     },
     "lfm-7b": {
       "promptPrice": 0.0003,
