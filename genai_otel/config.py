@@ -163,6 +163,10 @@ class OTelConfig:
         default_factory=lambda: os.getenv("GENAI_CO2_USE_MANUAL", "false").lower() == "true"
     )  # Force manual CO2 calculation using carbon_intensity even when codecarbon is installed
 
+    codecarbon_log_level: str = field(
+        default_factory=lambda: os.getenv("GENAI_CODECARBON_LOG_LEVEL", "error")
+    )  # Codecarbon log level: debug, info, warning, error (default: error to suppress warnings)
+
     # OpenTelemetry semantic convention stability opt-in
     # Supports "gen_ai" for new conventions, "gen_ai/dup" for dual emission
     semconv_stability_opt_in: str = field(
