@@ -147,6 +147,11 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
 
+      # CO2 Tracking Configuration
+      - GENAI_CO2_COUNTRY_ISO_CODE=IND  # India
+      # Optional: Specify region within India for more accurate carbon intensity
+      # - GENAI_CO2_REGION=maharashtra
+
       # Logging
       - GENAI_OTEL_LOG_LEVEL=INFO
       - GENAI_FAIL_ON_ERROR=false
