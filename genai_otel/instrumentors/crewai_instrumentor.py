@@ -2,11 +2,17 @@
 
 This instrumentor automatically traces crew execution, agents, tasks, and
 collaborative workflows using the CrewAI multi-agent framework.
+
+Includes automatic context propagation for threading/async execution to ensure
+complete trace continuity without requiring manual context management.
 """
 
+import functools
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
+
+from opentelemetry import context
 
 from ..config import OTelConfig
 from .base import BaseInstrumentor
@@ -34,8 +40,43 @@ class CrewAIInstrumentor(BaseInstrumentor):
             logger.debug("CrewAI library not installed, instrumentation will be skipped")
             self._crewai_available = False
 
+    @staticmethod
+    def _propagate_context(func: Callable) -> Callable:
+        """Decorator to propagate OpenTelemetry context across threads/async.
+
+        This ensures that spans created in child threads maintain their parent
+        relationship with the main execution span, providing complete trace continuity.
+
+        Args:
+            func: The function to wrap with context propagation.
+
+        Returns:
+            Callable: Wrapped function that propagates context.
+        """
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # Capture the current context
+            ctx = context.get_current()
+
+            # Attach the context before executing
+            token = context.attach(ctx)
+            try:
+                return func(*args, **kwargs)
+            finally:
+                # Detach context after execution
+                context.detach(token)
+
+        return wrapper
+
     def instrument(self, config: OTelConfig):
         """Instrument CrewAI framework if available.
+
+        Instruments:
+        - Crew.kickoff() - Main execution entry point
+        - Task.execute_sync() - Individual task execution with context propagation
+        - Agent.execute_task() - Agent task execution with context propagation
+        - concurrent.futures.ThreadPoolExecutor - Automatic context propagation
 
         Args:
             config (OTelConfig): The OpenTelemetry configuration object.
@@ -57,14 +98,80 @@ class CrewAIInstrumentor(BaseInstrumentor):
                     crewai.Crew.kickoff = wrapt.FunctionWrapper(
                         original_kickoff, self._wrap_crew_kickoff
                     )
+                    logger.debug("Instrumented Crew.kickoff()")
 
-                self._instrumented = True
-                logger.info("CrewAI instrumentation enabled")
+            # Instrument Task execution methods with context propagation
+            if hasattr(crewai, "Task"):
+                # Instrument execute_sync (synchronous task execution)
+                if hasattr(crewai.Task, "execute_sync"):
+                    original_execute_sync = crewai.Task.execute_sync
+                    crewai.Task.execute_sync = wrapt.FunctionWrapper(
+                        original_execute_sync, self._wrap_task_execute
+                    )
+                    logger.debug("Instrumented Task.execute_sync() with context propagation")
+
+                # Instrument execute_async if it exists
+                if hasattr(crewai.Task, "execute_async"):
+                    original_execute_async = crewai.Task.execute_async
+                    crewai.Task.execute_async = wrapt.FunctionWrapper(
+                        original_execute_async, self._wrap_task_execute
+                    )
+                    logger.debug("Instrumented Task.execute_async() with context propagation")
+
+            # Instrument Agent execution if available
+            if hasattr(crewai, "Agent"):
+                if hasattr(crewai.Agent, "execute_task"):
+                    original_agent_execute = crewai.Agent.execute_task
+                    crewai.Agent.execute_task = wrapt.FunctionWrapper(
+                        original_agent_execute, self._wrap_agent_execute
+                    )
+                    logger.debug("Instrumented Agent.execute_task() with context propagation")
+
+            # Patch ThreadPoolExecutor.submit to propagate context automatically
+            # This ensures any threaded execution by CrewAI maintains trace context
+            self._patch_thread_pool_executor()
+
+            self._instrumented = True
+            logger.info("CrewAI instrumentation enabled with automatic context propagation")
 
         except Exception as e:
             logger.error("Failed to instrument CrewAI: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
+
+    def _patch_thread_pool_executor(self):
+        """Patch ThreadPoolExecutor to automatically propagate OpenTelemetry context.
+
+        This ensures that any code using ThreadPoolExecutor (including CrewAI internally)
+        will automatically propagate trace context to worker threads.
+        """
+        try:
+            from concurrent.futures import ThreadPoolExecutor
+
+            original_submit = ThreadPoolExecutor.submit
+
+            def context_propagating_submit(self, fn, /, *args, **kwargs):
+                """Submit with automatic context propagation."""
+                # Capture current context
+                ctx = context.get_current()
+
+                # Wrap the function to propagate context
+                def wrapper():
+                    token = context.attach(ctx)
+                    try:
+                        return fn(*args, **kwargs)
+                    finally:
+                        context.detach(token)
+
+                # Submit the wrapped function
+                return original_submit(self, wrapper)
+
+            ThreadPoolExecutor.submit = context_propagating_submit
+            logger.debug("Patched ThreadPoolExecutor.submit() for automatic context propagation")
+
+        except Exception as e:
+            logger.debug(f"Could not patch ThreadPoolExecutor: {e}")
+            # Not critical - continue with other instrumentation
 
     def _wrap_crew_kickoff(self, wrapped, instance, args, kwargs):
         """Wrap Crew.kickoff() method with span.
@@ -79,6 +186,112 @@ class CrewAIInstrumentor(BaseInstrumentor):
             span_name="crewai.crew.execution",
             extract_attributes=self._extract_crew_attributes,
         )(wrapped)(instance, *args, **kwargs)
+
+    def _wrap_task_execute(self, wrapped, instance, args, kwargs):
+        """Wrap Task execution methods with span and context propagation.
+
+        Args:
+            wrapped: The original method.
+            instance: The Task instance.
+            args: Positional arguments.
+            kwargs: Keyword arguments.
+        """
+        # Apply context propagation wrapper
+        context_wrapped = self._propagate_context(wrapped)
+
+        return self.create_span_wrapper(
+            span_name="crewai.task.execution",
+            extract_attributes=self._extract_task_attributes,
+        )(context_wrapped)(instance, *args, **kwargs)
+
+    def _wrap_agent_execute(self, wrapped, instance, args, kwargs):
+        """Wrap Agent.execute_task() method with span and context propagation.
+
+        Args:
+            wrapped: The original method.
+            instance: The Agent instance.
+            args: Positional arguments.
+            kwargs: Keyword arguments.
+        """
+        # Apply context propagation wrapper
+        context_wrapped = self._propagate_context(wrapped)
+
+        return self.create_span_wrapper(
+            span_name="crewai.agent.execution",
+            extract_attributes=self._extract_agent_attributes,
+        )(context_wrapped)(instance, *args, **kwargs)
+
+    def _extract_task_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
+        """Extract attributes from Task execution.
+
+        Args:
+            instance: The Task instance.
+            args: Positional arguments.
+            kwargs: Keyword arguments.
+
+        Returns:
+            Dict[str, Any]: Dictionary of attributes to set on the span.
+        """
+        attrs = {}
+
+        try:
+            # Extract task description
+            if hasattr(instance, "description"):
+                attrs["crewai.task.description"] = str(instance.description)[:200]
+
+            # Extract task expected_output
+            if hasattr(instance, "expected_output"):
+                attrs["crewai.task.expected_output"] = str(instance.expected_output)[:200]
+
+            # Extract assigned agent role if available
+            if hasattr(instance, "agent") and hasattr(instance.agent, "role"):
+                attrs["crewai.task.agent_role"] = str(instance.agent.role)
+
+            # Extract task ID if available
+            if hasattr(instance, "id"):
+                attrs["crewai.task.id"] = str(instance.id)
+
+        except Exception as e:
+            logger.debug("Failed to extract task attributes: %s", e)
+
+        return attrs
+
+    def _extract_agent_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
+        """Extract attributes from Agent execution.
+
+        Args:
+            instance: The Agent instance.
+            args: Positional arguments.
+            kwargs: Keyword arguments.
+
+        Returns:
+            Dict[str, Any]: Dictionary of attributes to set on the span.
+        """
+        attrs = {}
+
+        try:
+            # Extract agent role
+            if hasattr(instance, "role"):
+                attrs["crewai.agent.role"] = str(instance.role)
+
+            # Extract agent goal
+            if hasattr(instance, "goal"):
+                attrs["crewai.agent.goal"] = str(instance.goal)[:200]
+
+            # Extract agent backstory
+            if hasattr(instance, "backstory"):
+                attrs["crewai.agent.backstory"] = str(instance.backstory)[:200]
+
+            # Extract LLM model if available
+            if hasattr(instance, "llm") and hasattr(instance.llm, "model_name"):
+                attrs["crewai.agent.llm_model"] = instance.llm.model_name
+            elif hasattr(instance, "llm") and hasattr(instance.llm, "model"):
+                attrs["crewai.agent.llm_model"] = instance.llm.model
+
+        except Exception as e:
+            logger.debug("Failed to extract agent attributes: %s", e)
+
+        return attrs
 
     def _extract_crew_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Crew.kickoff() call.

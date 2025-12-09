@@ -65,7 +65,57 @@
       "promptPrice": 4e-05,
       "completionPrice": 4e-05,
       "note": "Multimodal embedding - text, image, video, audio"
-    }
+    },
+    "amazon.titan-embed-image-v1": 0.0007999999999999999,
+    "azure_ai/Cohere-embed-v3-english": 9.999999999999999e-05,
+    "azure_ai/Cohere-embed-v3-multilingual": 9.999999999999999e-05,
+    "azure_ai/cohere-rerank-v3-english": 0.0,
+    "azure_ai/cohere-rerank-v3-multilingual": 0.0,
+    "azure_ai/cohere-rerank-v3.5": 0.0,
+    "azure_ai/embed-v-4-0": 0.00011999999999999999,
+    "cohere.embed-english-v3": 9.999999999999999e-05,
+    "cohere.embed-multilingual-v3": 9.999999999999999e-05,
+    "cohere.embed-v4:0": 0.00011999999999999999,
+    "cohere.rerank-v3-5:0": 0.0,
+    "cohere/embed-v4.0": 0.00011999999999999999,
+    "doubao-embedding": 0.0,
+    "doubao-embedding-large": 0.0,
+    "doubao-embedding-large-text-240915": 0.0,
+    "doubao-embedding-large-text-250515": 0.0,
+    "doubao-embedding-text-240715": 0.0,
+    "fireworks-ai-embedding-150m-to-350m": 1.6000000000000003e-05,
+    "fireworks-ai-embedding-up-to-150m": 8.000000000000001e-06,
+    "gemini-embedding-001": 0.00015,
+    "gemini/gemini-embedding-001": 0.00015,
+    "jina-reranker-v2-base-multilingual": {
+      "promptPrice": 1.8e-05,
+      "completionPrice": 1.8e-05
+    },
+    "mistral/codestral-embed": 0.00015,
+    "mistral/codestral-embed-2505": 0.00015,
+    "mistral/mistral-embed": 9.999999999999999e-05,
+    "multimodalembedding": 0.0007999999999999999,
+    "multimodalembedding@001": 0.0007999999999999999,
+    "nvidia_nim/nvidia/llama-3_2-nv-rerankqa-1b-v2": 0.0,
+    "nvidia_nim/nvidia/nv-rerankqa-mistral-4b-v3": 0.0,
+    "rerank-english-v2.0": 0.0,
+    "rerank-english-v3.0": 0.0,
+    "rerank-multilingual-v2.0": 0.0,
+    "rerank-multilingual-v3.0": 0.0,
+    "rerank-v3.5": 0.0,
+    "text-embedding-004": 9.999999999999999e-05,
+    "text-embedding-005": 9.999999999999999e-05,
+    "text-embedding-ada-002-v2": 9.999999999999999e-05,
+    "text-embedding-large-exp-03-07": 9.999999999999999e-05,
+    "text-embedding-preview-0409": 6.2499999999999995e-06,
+    "text-multilingual-embedding-002": 9.999999999999999e-05,
+    "text-multilingual-embedding-preview-0409": 6.2499999999999995e-06,
+    "textembedding-gecko-multilingual": 9.999999999999999e-05,
+    "textembedding-gecko-multilingual@001": 9.999999999999999e-05,
+    "together-ai-embedding-151m-to-350m": 1.6000000000000003e-05,
+    "together-ai-embedding-up-to-150m": 8.000000000000001e-06,
+    "voyage/rerank-2": 4.9999999999999996e-05,
+    "voyage/rerank-2-lite": 2e-05
   },
   "images": {
     "dall-e-3": {
@@ -159,6 +209,28 @@
       "standard": {
         "per_image": 0.07
       }
+    },
+    "amazon.titan-image-generator-v2": {
+      "note": "Pricing varies by provider"
+    },
+    "azure_ai/FLUX-1.1-pro": 0.04,
+    "azure_ai/FLUX.1-Kontext-pro": 0.04,
+    "gemini/imagen-3.0-fast-generate-001": 0.02,
+    "gemini/imagen-3.0-generate-001": 0.04,
+    "gemini/imagen-3.0-generate-002": 0.04,
+    "gemini/imagen-4.0-fast-generate-001": 0.02,
+    "gemini/imagen-4.0-generate-001": 0.04,
+    "gemini/imagen-4.0-ultra-generate-001": 0.06,
+    "recraft/recraftv2": 0.022,
+    "recraft/recraftv3": 0.04,
+    "standard/1024-x-1024/dall-e-3": {
+      "note": "Pricing varies by provider"
+    },
+    "standard/1024-x-1792/dall-e-3": {
+      "note": "Pricing varies by provider"
+    },
+    "standard/1792-x-1024/dall-e-3": {
+      "note": "Pricing varies by provider"
     }
   },
   "audio": {
@@ -172,7 +244,60 @@
     "eleven_english_sts_v2": 0.24,
     "eleven_multilingual_sts_v2": 0.24,
     "best": 0.00010277777,
-    "nano": 3.333333e-05
+    "nano": 3.333333e-05,
+    "assemblyai/best": 0.0019998,
+    "assemblyai/nano": 0.0061668,
+    "deepgram/base": 0.0124998,
+    "deepgram/base-conversationalai": 0.0124998,
+    "deepgram/base-finance": 0.0124998,
+    "deepgram/base-general": 0.0124998,
+    "deepgram/base-meeting": 0.0124998,
+    "deepgram/base-phonecall": 0.0124998,
+    "deepgram/base-video": 0.0124998,
+    "deepgram/base-voicemail": 0.0124998,
+    "deepgram/enhanced": 0.014500200000000001,
+    "deepgram/enhanced-finance": 0.014500200000000001,
+    "deepgram/enhanced-general": 0.014500200000000001,
+    "deepgram/enhanced-meeting": 0.014500200000000001,
+    "deepgram/enhanced-phonecall": 0.014500200000000001,
+    "deepgram/nova": 0.0043002,
+    "deepgram/nova-2": 0.0043002,
+    "deepgram/nova-2-atc": 0.0043002,
+    "deepgram/nova-2-automotive": 0.0043002,
+    "deepgram/nova-2-conversationalai": 0.0043002,
+    "deepgram/nova-2-drivethru": 0.0043002,
+    "deepgram/nova-2-finance": 0.0043002,
+    "deepgram/nova-2-general": 0.0043002,
+    "deepgram/nova-2-meeting": 0.0043002,
+    "deepgram/nova-2-phonecall": 0.0043002,
+    "deepgram/nova-2-video": 0.0043002,
+    "deepgram/nova-2-voicemail": 0.0043002,
+    "deepgram/nova-3": 0.0043002,
+    "deepgram/nova-3-general": 0.0043002,
+    "deepgram/nova-3-medical": 0.0052001999999999994,
+    "deepgram/nova-general": 0.0043002,
+    "deepgram/nova-phonecall": 0.0043002,
+    "deepgram/whisper": 0.006,
+    "deepgram/whisper-base": 0.006,
+    "deepgram/whisper-large": 0.006,
+    "deepgram/whisper-medium": 0.006,
+    "deepgram/whisper-small": 0.006,
+    "deepgram/whisper-tiny": 0.006,
+    "elevenlabs/scribe_v1": 0.0036659999999999996,
+    "elevenlabs/scribe_v1_experimental": 0.0036659999999999996,
+    "gemini-2.5-pro-preview-tts": 0.00125,
+    "gemini/gemini-2.5-flash-preview-tts": 0.00015,
+    "gemini/gemini-2.5-pro-preview-tts": 0.00125,
+    "gpt-4o-audio-preview": 0.0025,
+    "gpt-4o-audio-preview-2024-10-01": 0.0025,
+    "gpt-4o-audio-preview-2024-12-17": 0.0025,
+    "gpt-4o-audio-preview-2025-06-03": 0.0025,
+    "gpt-4o-mini-audio-preview": 0.00015,
+    "gpt-4o-mini-audio-preview-2024-12-17": 0.00015,
+    "gpt-4o-mini-transcribe": 0.00125,
+    "gpt-4o-mini-tts": 0.0025,
+    "gpt-4o-transcribe": 0.0025,
+    "whisper-1": 0.006
   },
   "chat": {
     "gpt-4.1-nano-2025-04-14": {
@@ -551,6 +676,46 @@
       "promptPrice": 0.00125,
       "completionPrice": 0.01
     },
+    "gemini-3-pro-preview": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.012,
+      "note": "Gemini 3 Pro Preview - \u2264200k tokens. >200k: $0.004/$0.018"
+    },
+    "gemini-3-pro": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.012,
+      "note": "Gemini 3 Pro - \u2264200k tokens. >200k: $0.004/$0.018"
+    },
+    "gemini-2.5-computer-use-preview": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "Gemini 2.5 Computer Use Preview - \u2264200k tokens. >200k: $0.0025/$0.015"
+    },
+    "gemini-robotics-er-1.5-preview": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0025,
+      "note": "Gemini Robotics-ER 1.5 Preview - specialized for robotics applications"
+    },
+    "gemini-2.0-flash-thinking-exp": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Gemini 2.0 Flash Thinking Experimental - free during experimental phase"
+    },
+    "gemini-2.0-flash-thinking-exp-1219": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Gemini 2.0 Flash Thinking Experimental (Dec 19 version) - free during experimental phase"
+    },
+    "gemini-exp-1206": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Gemini Experimental 1206 - free during experimental phase"
+    },
+    "gemini-2.0-flash-exp": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Gemini 2.0 Flash Experimental - free during experimental phase"
+    },
     "gemini-2-5-flash-image": {
       "promptPrice": 0.0003,
       "completionPrice": 0.03
@@ -734,6 +899,41 @@
     "qwen-qwen3-max": {
       "promptPrice": 0.0012,
       "completionPrice": 0.006
+    },
+    "qwen3-max-2025-09-23": {
+      "promptPrice": 0.00084,
+      "completionPrice": 0.00336,
+      "note": "Qwen3 Max snapshot (Sept 2025) - Tiered: \u00a50.006-0.015/1K tokens input, \u00a50.024-0.06/1K output"
+    },
+    "qwen-plus-2025-12-01": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0025,
+      "note": "Qwen Plus (Dec 2025) - supports thinking mode, 1M context"
+    },
+    "qwen-plus-2025-07-28": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0025,
+      "note": "Qwen3 Plus (July 2025) - thinking mode with 81,920 token max"
+    },
+    "qwen-max-2025-01-25": {
+      "promptPrice": 0.00164,
+      "completionPrice": 0.00657,
+      "note": "Qwen2.5-Max (Jan 2025) - 131K context, 50% batch discount available"
+    },
+    "qwen2.5-max": {
+      "promptPrice": 0.00164,
+      "completionPrice": 0.00657,
+      "note": "Qwen2.5-Max - 131K context, improved reasoning and coding"
+    },
+    "qwen-turbo": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0006,
+      "note": "Qwen Turbo - fast inference, cost-effective"
+    },
+    "qwen2.5-turbo": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0006,
+      "note": "Qwen2.5 Turbo - optimized for speed and cost"
     },
     "codellama/CodeLlama-34b-Instruct-hf": {
       "promptPrice": 0.0008,
@@ -1131,6 +1331,61 @@
       "promptPrice": 0.0004,
       "completionPrice": 0.002
     },
+    "mistral-large-3": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Mistral Large 3 (Dec 2025) - 675B total, 41B active params, 80% cheaper than GPT-4"
+    },
+    "mistral-large-3-2025": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Mistral Large 3 - Apache 2.0 license, 256K context window"
+    },
+    "ministral-3-14b": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0006,
+      "note": "Ministral 3 14B - dense model, offline capable"
+    },
+    "ministral-3-14b-instruct": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0006,
+      "note": "Ministral 3 14B Instruct - instruction-tuned variant"
+    },
+    "ministral-3-14b-reasoning": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0006,
+      "note": "Ministral 3 14B Reasoning - enhanced reasoning capabilities"
+    },
+    "ministral-3-8b": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00045,
+      "note": "Ministral 3 8B - compact dense model"
+    },
+    "ministral-3-8b-instruct": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00045,
+      "note": "Ministral 3 8B Instruct - instruction-tuned"
+    },
+    "ministral-3-8b-reasoning": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00045,
+      "note": "Ministral 3 8B Reasoning - reasoning-focused"
+    },
+    "ministral-3-3b": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Ministral 3 3B - smallest variant, edge devices"
+    },
+    "ministral-3-3b-instruct": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Ministral 3 3B Instruct - instruction-tuned"
+    },
+    "ministral-3-3b-reasoning": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Ministral 3 3B Reasoning - reasoning capabilities"
+    },
     "magistral-small": {
       "promptPrice": 0.001,
       "completionPrice": 0.003
@@ -1146,6 +1401,26 @@
     "codestral-2501": {
       "promptPrice": 0.001,
       "completionPrice": 0.003
+    },
+    "mistral-small-2501": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "Mistral Small 3.0 (25.01) - alias for mistral-small-3.1"
+    },
+    "mistral-large-2.1": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.024,
+      "note": "Mistral Large 2.1 (Nov 2024) - frontier-class model"
+    },
+    "pixtral-large": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.024,
+      "note": "Pixtral Large (Nov 2024) - multimodal model with vision capabilities"
+    },
+    "pixtral-large-2411": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.024,
+      "note": "Pixtral Large v24.11 - premier multimodal model"
     },
     "lfm-7b": {
       "promptPrice": 0.0003,
@@ -1239,6 +1514,56 @@
       "promptPrice": 0.0008,
       "completionPrice": 0.002,
       "note": "V3.2 experimental release"
+    },
+    "deepseek-v3.2": {
+      "promptPrice": 0.00028,
+      "completionPrice": 0.00042,
+      "note": "DeepSeek V3.2 (Dec 2025) - official release, cache miss: $0.28/$0.42"
+    },
+    "deepseek-ai/DeepSeek-V3.2": {
+      "promptPrice": 0.00028,
+      "completionPrice": 0.00042,
+      "note": "DeepSeek V3.2 - 50% cost reduction from V3.1-Terminus, cache hit pricing"
+    },
+    "deepseek-ai/DeepSeek-V3.2-Speciale": {
+      "promptPrice": 0.00028,
+      "completionPrice": 0.00042,
+      "note": "DeepSeek V3.2 Speciale (Dec 2025) - optimized for complex reasoning, AIME 2025 96.0% accuracy, available via API until Dec 15 2025"
+    },
+    "deepseek-v3.2-speciale": {
+      "promptPrice": 0.00028,
+      "completionPrice": 0.00042,
+      "note": "DeepSeek V3.2 Speciale - same pricing as V3.2, specialized for mathematical reasoning"
+    },
+    "deepseek-ai/DeepSeek-Prover-V2-7B": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0003,
+      "note": "DeepSeek Prover V2 7B (Apr 2025) - formal theorem proving in Lean 4, 32K context, open-source"
+    },
+    "deepseek-ai/DeepSeek-Prover-V2-671B": {
+      "promptPrice": 0.0007,
+      "completionPrice": 0.0025,
+      "note": "DeepSeek Prover V2 671B (Apr 2025) - large-scale formal theorem proving, logic and mathematics specialist"
+    },
+    "deepseekmath-v2": {
+      "promptPrice": 0.00028,
+      "completionPrice": 0.00042,
+      "note": "DeepSeekMath V2 (Nov 2025) - based on V3.2-Exp-Base, math specialist"
+    },
+    "deepseek-ai/DeepSeekMath-V2": {
+      "promptPrice": 0.00028,
+      "completionPrice": 0.00042,
+      "note": "DeepSeekMath V2 - advanced mathematical reasoning"
+    },
+    "deepseek-ai/DeepSeekMath-V2-7B": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0003,
+      "note": "DeepSeekMath V2 7B - compact math model"
+    },
+    "deepseek-ai/DeepSeekMath-V2-70B": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0006,
+      "note": "DeepSeekMath V2 70B - large-scale math model"
     },
     "deepseek-ai/DeepSeek-V3.1-Terminus": {
       "promptPrice": 0.0006,
@@ -1619,6 +1944,1351 @@
       "promptPrice": 0.002,
       "completionPrice": 0.006,
       "note": "Ollama variant of mistralai/Mistral-Large-Instruct-2407"
+    },
+    "chatgpt-4o-latest": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "claude-3-5-haiku-latest": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-3-5-sonnet-latest": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-3-7-sonnet-20250219": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-3-7-sonnet-latest": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-3-opus-latest": {
+      "promptPrice": 0.015000000000000001,
+      "completionPrice": 0.075,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-4-opus-20250514": {
+      "promptPrice": 0.015000000000000001,
+      "completionPrice": 0.075,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-4-sonnet-20250514": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-haiku-4-5-20251001": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-opus-4-1-20250805": {
+      "promptPrice": 0.015000000000000001,
+      "completionPrice": 0.075,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-opus-4-20250514": {
+      "promptPrice": 0.015000000000000001,
+      "completionPrice": 0.075,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-opus-4-5": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-opus-4-5-20251101": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-sonnet-4-20250514": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: anthropic"
+    },
+    "codex-mini-latest": {
+      "promptPrice": 0.0015,
+      "completionPrice": 0.006,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "command-a-03-2025": {
+      "promptPrice": 0.0025,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: cohere_chat"
+    },
+    "command-r-08-2024": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "note": "From LiteLLM - provider: cohere_chat"
+    },
+    "command-r-plus-08-2024": {
+      "promptPrice": 0.0025,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: cohere_chat"
+    },
+    "command-r7b-12-2024": {
+      "promptPrice": 0.00015,
+      "completionPrice": 3.75e-05,
+      "note": "From LiteLLM - provider: cohere_chat"
+    },
+    "dashscope/qwen-coder": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0015,
+      "note": "From LiteLLM - provider: dashscope"
+    },
+    "dashscope/qwen-max": {
+      "promptPrice": 0.0015999999999999999,
+      "completionPrice": 0.0063999999999999994,
+      "note": "From LiteLLM - provider: dashscope"
+    },
+    "dashscope/qwen-plus": {
+      "promptPrice": 0.00039999999999999996,
+      "completionPrice": 0.0012,
+      "note": "From LiteLLM - provider: dashscope"
+    },
+    "dashscope/qwen-plus-2025-01-25": {
+      "promptPrice": 0.00039999999999999996,
+      "completionPrice": 0.0012,
+      "note": "From LiteLLM - provider: dashscope"
+    },
+    "dashscope/qwen-plus-2025-04-28": {
+      "promptPrice": 0.00039999999999999996,
+      "completionPrice": 0.0012,
+      "note": "From LiteLLM - provider: dashscope"
+    },
+    "dashscope/qwen-plus-2025-07-14": {
+      "promptPrice": 0.00039999999999999996,
+      "completionPrice": 0.0012,
+      "note": "From LiteLLM - provider: dashscope"
+    },
+    "dashscope/qwen-turbo": {
+      "promptPrice": 4.9999999999999996e-05,
+      "completionPrice": 0.00019999999999999998,
+      "note": "From LiteLLM - provider: dashscope"
+    },
+    "dashscope/qwen-turbo-2024-11-01": {
+      "promptPrice": 4.9999999999999996e-05,
+      "completionPrice": 0.00019999999999999998,
+      "note": "From LiteLLM - provider: dashscope"
+    },
+    "dashscope/qwen-turbo-2025-04-28": {
+      "promptPrice": 4.9999999999999996e-05,
+      "completionPrice": 0.00019999999999999998,
+      "note": "From LiteLLM - provider: dashscope"
+    },
+    "dashscope/qwen-turbo-latest": {
+      "promptPrice": 4.9999999999999996e-05,
+      "completionPrice": 0.00019999999999999998,
+      "note": "From LiteLLM - provider: dashscope"
+    },
+    "dashscope/qwq-plus": {
+      "promptPrice": 0.0007999999999999999,
+      "completionPrice": 0.0024,
+      "note": "From LiteLLM - provider: dashscope"
+    },
+    "deepseek/deepseek-chat": {
+      "promptPrice": 0.00027,
+      "completionPrice": 0.0011,
+      "note": "From LiteLLM - provider: deepseek"
+    },
+    "deepseek/deepseek-coder": {
+      "promptPrice": 0.00014000000000000001,
+      "completionPrice": 0.00028000000000000003,
+      "note": "From LiteLLM - provider: deepseek"
+    },
+    "deepseek/deepseek-r1": {
+      "promptPrice": 0.00055,
+      "completionPrice": 0.00219,
+      "note": "From LiteLLM - provider: deepseek"
+    },
+    "deepseek/deepseek-reasoner": {
+      "promptPrice": 0.00055,
+      "completionPrice": 0.00219,
+      "note": "From LiteLLM - provider: deepseek"
+    },
+    "deepseek/deepseek-v3": {
+      "promptPrice": 0.00027,
+      "completionPrice": 0.0011,
+      "note": "From LiteLLM - provider: deepseek"
+    },
+    "deepseek/deepseek-v3.2": {
+      "promptPrice": 0.00028000000000000003,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: deepseek"
+    },
+    "fireworks-ai-4.1b-to-16b": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.00019999999999999998,
+      "note": "From LiteLLM - provider: fireworks_ai"
+    },
+    "fireworks-ai-56b-to-176b": {
+      "promptPrice": 0.0012,
+      "completionPrice": 0.0012,
+      "note": "From LiteLLM - provider: fireworks_ai"
+    },
+    "fireworks-ai-above-16b": {
+      "promptPrice": 0.0009,
+      "completionPrice": 0.0009,
+      "note": "From LiteLLM - provider: fireworks_ai"
+    },
+    "fireworks-ai-moe-up-to-56b": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0005,
+      "note": "From LiteLLM - provider: fireworks_ai"
+    },
+    "fireworks-ai-up-to-4b": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.00019999999999999998,
+      "note": "From LiteLLM - provider: fireworks_ai"
+    },
+    "gemini-1.0-pro-vision": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "From LiteLLM - provider: vertex_ai-vision-models"
+    },
+    "gemini-1.0-ultra": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-1.0-ultra-001": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-1.5-flash-001": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-1.5-flash-002": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-1.5-flash-exp-0827": {
+      "promptPrice": 4.688000000000001e-06,
+      "completionPrice": 4.6875e-06,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-1.5-pro-001": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-1.5-pro-002": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-1.5-pro-preview-0215": {
+      "promptPrice": 7.8125e-05,
+      "completionPrice": 0.0003125,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.0-flash-001": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.0-flash-lite-001": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.0-flash-live-preview-04-09": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.0-pro-exp-02-05": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.5-flash-lite-preview-06-17": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.5-flash-lite-preview-09-2025": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.5-flash-preview-04-17": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.5-flash-preview-05-20": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0025,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.5-flash-preview-09-2025": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0025,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.5-pro-exp-03-25": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.5-pro-preview-03-25": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.5-pro-preview-05-06": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-2.5-pro-preview-06-05": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-live-2.5-flash-preview-native-audio-09-2025": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-pro": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "From LiteLLM - provider: vertex_ai-language-models"
+    },
+    "gemini-pro-vision": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "From LiteLLM - provider: vertex_ai-vision-models"
+    },
+    "gemini/gemini-1.5-flash": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-1.5-flash-001": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-1.5-flash-002": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-1.5-flash-latest": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-1.5-pro": {
+      "promptPrice": 0.0035,
+      "completionPrice": 0.010499999999999999,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-1.5-pro-001": {
+      "promptPrice": 0.0035,
+      "completionPrice": 0.010499999999999999,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-1.5-pro-002": {
+      "promptPrice": 0.0035,
+      "completionPrice": 0.010499999999999999,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-1.5-pro-exp-0801": {
+      "promptPrice": 0.0035,
+      "completionPrice": 0.010499999999999999,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-1.5-pro-latest": {
+      "promptPrice": 0.0035,
+      "completionPrice": 0.00105,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.0-flash": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.0-flash-001": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.0-flash-lite": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.0-flash-lite-preview-02-05": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.0-flash-live-001": {
+      "promptPrice": 0.00035,
+      "completionPrice": 0.0015,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.5-flash": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0025,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.5-flash-lite": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.5-flash-lite-preview-06-17": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.5-flash-lite-preview-09-2025": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.5-flash-preview-04-17": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.5-flash-preview-05-20": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0025,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.5-flash-preview-09-2025": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0025,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.5-pro": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.5-pro-preview-03-25": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.5-pro-preview-05-06": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-2.5-pro-preview-06-05": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-3-pro-preview": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.012,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-flash-latest": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0025,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-flash-lite-latest": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-gemma-2-27b-it": {
+      "promptPrice": 0.00035,
+      "completionPrice": 0.00105,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-gemma-2-9b-it": {
+      "promptPrice": 0.00035,
+      "completionPrice": 0.00105,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-live-2.5-flash-preview-native-audio-09-2025": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-pro": {
+      "promptPrice": 0.00035,
+      "completionPrice": 0.00105,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gemini/gemini-pro-vision": {
+      "promptPrice": 0.00035,
+      "completionPrice": 0.00105,
+      "note": "From LiteLLM - provider: gemini"
+    },
+    "gpt-3.5-turbo-0301": {
+      "promptPrice": 0.0015,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-3.5-turbo-0613": {
+      "promptPrice": 0.0015,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-3.5-turbo-1106": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-3.5-turbo-16k": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.004,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-3.5-turbo-16k-0613": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.004,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-3.5-turbo-instruct": {
+      "promptPrice": 0.0015,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: text-completion-openai"
+    },
+    "gpt-3.5-turbo-instruct-0914": {
+      "promptPrice": 0.0015,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: text-completion-openai"
+    },
+    "gpt-4-0314": {
+      "promptPrice": 0.030000000000000002,
+      "completionPrice": 0.060000000000000005,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-4-0613": {
+      "promptPrice": 0.030000000000000002,
+      "completionPrice": 0.060000000000000005,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-4-32k-0314": {
+      "promptPrice": 0.060000000000000005,
+      "completionPrice": 0.12000000000000001,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-4-32k-0613": {
+      "promptPrice": 0.060000000000000005,
+      "completionPrice": 0.12000000000000001,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-4-turbo-2024-04-09": {
+      "promptPrice": 0.01,
+      "completionPrice": 0.030000000000000002,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-4-turbo-preview": {
+      "promptPrice": 0.01,
+      "completionPrice": 0.030000000000000002,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-4.5-preview": {
+      "promptPrice": 0.075,
+      "completionPrice": 0.15,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-4.5-preview-2025-02-27": {
+      "promptPrice": 0.075,
+      "completionPrice": 0.15,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-4o-2024-11-20": {
+      "promptPrice": 0.0025,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-5-chat": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-5-codex": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-5-mini-2025-08-07": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-5-nano-2025-08-07": {
+      "promptPrice": 4.9999999999999996e-05,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-5-pro": {
+      "promptPrice": 0.015000000000000001,
+      "completionPrice": 0.12000000000000001,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-5-pro-2025-10-06": {
+      "promptPrice": 0.015000000000000001,
+      "completionPrice": 0.12000000000000001,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-5.1": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-5.1-2025-11-13": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-5.1-codex": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-5.1-codex-mini": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-realtime": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.016,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-realtime-2025-08-28": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.016,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "gpt-realtime-mini": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0024,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "j2-light": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.003,
+      "note": "From LiteLLM - provider: ai21"
+    },
+    "j2-mid": {
+      "promptPrice": 0.01,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: ai21"
+    },
+    "j2-ultra": {
+      "promptPrice": 0.015000000000000001,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: ai21"
+    },
+    "jamba-1.5": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: ai21"
+    },
+    "jamba-1.5-large@001": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.008,
+      "note": "From LiteLLM - provider: ai21"
+    },
+    "jamba-1.5-mini@001": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: ai21"
+    },
+    "jamba-large-1.6": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.008,
+      "note": "From LiteLLM - provider: ai21"
+    },
+    "jamba-large-1.7": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.008,
+      "note": "From LiteLLM - provider: ai21"
+    },
+    "jamba-mini-1.6": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: ai21"
+    },
+    "jamba-mini-1.7": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.00039999999999999996,
+      "note": "From LiteLLM - provider: ai21"
+    },
+    "luminous-base": {
+      "promptPrice": 0.030000000000000002,
+      "completionPrice": 0.033,
+      "note": "From LiteLLM - provider: aleph_alpha"
+    },
+    "luminous-base-control": {
+      "promptPrice": 0.0375,
+      "completionPrice": 0.04125,
+      "note": "From LiteLLM - provider: aleph_alpha"
+    },
+    "luminous-extended": {
+      "promptPrice": 0.045000000000000005,
+      "completionPrice": 0.049499999999999995,
+      "note": "From LiteLLM - provider: aleph_alpha"
+    },
+    "luminous-extended-control": {
+      "promptPrice": 0.05625,
+      "completionPrice": 0.061875,
+      "note": "From LiteLLM - provider: aleph_alpha"
+    },
+    "luminous-supreme": {
+      "promptPrice": 0.175,
+      "completionPrice": 0.19249999999999998,
+      "note": "From LiteLLM - provider: aleph_alpha"
+    },
+    "luminous-supreme-control": {
+      "promptPrice": 0.21875,
+      "completionPrice": 0.240625,
+      "note": "From LiteLLM - provider: aleph_alpha"
+    },
+    "mistral/codestral-2405": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/codestral-latest": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/codestral-mamba-latest": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.00025,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/devstral-medium-2507": {
+      "promptPrice": 0.00039999999999999996,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/devstral-small-2505": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/devstral-small-2507": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/magistral-medium-2506": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/magistral-medium-2509": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/magistral-medium-latest": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/magistral-small-2506": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/magistral-small-latest": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/mistral-large-2402": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.012,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/mistral-large-2407": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.009000000000000001,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/mistral-large-2411": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/mistral-large-latest": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/mistral-medium": {
+      "promptPrice": 0.0027,
+      "completionPrice": 0.0081,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/mistral-medium-2312": {
+      "promptPrice": 0.0027,
+      "completionPrice": 0.0081,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/mistral-medium-2505": {
+      "promptPrice": 0.00039999999999999996,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/mistral-medium-latest": {
+      "promptPrice": 0.00039999999999999996,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/mistral-small": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/mistral-small-latest": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/mistral-tiny": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.00025,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/open-codestral-mamba": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.00025,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/open-mistral-7b": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.00025,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/open-mistral-nemo": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/open-mistral-nemo-2407": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/open-mixtral-8x22b": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/open-mixtral-8x7b": {
+      "promptPrice": 0.0007,
+      "completionPrice": 0.0007,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/pixtral-12b-2409": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00015,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/pixtral-large-2411": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "mistral/pixtral-large-latest": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "From LiteLLM - provider: mistral"
+    },
+    "moonshot/kimi-k2-0711-preview": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0025,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/kimi-k2-0905-preview": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0025,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/kimi-k2-thinking": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0025,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/kimi-k2-thinking-turbo": {
+      "promptPrice": 0.00115,
+      "completionPrice": 0.008,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/kimi-k2-turbo-preview": {
+      "promptPrice": 0.00115,
+      "completionPrice": 0.008,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/kimi-latest": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/kimi-latest-128k": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/kimi-latest-32k": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/kimi-latest-8k": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/kimi-thinking-preview": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0025,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/moonshot-v1-128k": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/moonshot-v1-128k-0430": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/moonshot-v1-128k-vision-preview": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/moonshot-v1-32k": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/moonshot-v1-32k-0430": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/moonshot-v1-32k-vision-preview": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/moonshot-v1-8k": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/moonshot-v1-8k-0430": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/moonshot-v1-8k-vision-preview": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.002,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "moonshot/moonshot-v1-auto": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.005,
+      "note": "From LiteLLM - provider: moonshot"
+    },
+    "morph/morph-v3-fast": {
+      "promptPrice": 0.0007999999999999999,
+      "completionPrice": 0.0012,
+      "note": "From LiteLLM - provider: morph"
+    },
+    "morph/morph-v3-large": {
+      "promptPrice": 0.0009,
+      "completionPrice": 0.0019,
+      "note": "From LiteLLM - provider: morph"
+    },
+    "o1": {
+      "promptPrice": 0.015000000000000001,
+      "completionPrice": 0.060000000000000005,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "o1-2024-12-17": {
+      "promptPrice": 0.015000000000000001,
+      "completionPrice": 0.060000000000000005,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "o1-pro": {
+      "promptPrice": 0.15,
+      "completionPrice": 0.6,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "o1-pro-2025-03-19": {
+      "promptPrice": 0.15,
+      "completionPrice": 0.6,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "o3": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.008,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "o3-2025-04-16": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.008,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "o3-mini": {
+      "promptPrice": 0.0011,
+      "completionPrice": 0.0044,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "o3-mini-2025-01-31": {
+      "promptPrice": 0.0011,
+      "completionPrice": 0.0044,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "o3-pro": {
+      "promptPrice": 0.02,
+      "completionPrice": 0.08,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "o3-pro-2025-06-10": {
+      "promptPrice": 0.02,
+      "completionPrice": 0.08,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "o4-mini": {
+      "promptPrice": 0.0011,
+      "completionPrice": 0.0044,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "o4-mini-2025-04-16": {
+      "promptPrice": 0.0011,
+      "completionPrice": 0.0044,
+      "note": "From LiteLLM - provider: openai"
+    },
+    "openai.gpt-oss-120b-1:0": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "note": "From LiteLLM - provider: bedrock_converse"
+    },
+    "openai.gpt-oss-20b-1:0": {
+      "promptPrice": 7.000000000000001e-05,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: bedrock_converse"
+    },
+    "together-ai-21.1b-41b": {
+      "promptPrice": 0.0007999999999999999,
+      "completionPrice": 0.0007999999999999999,
+      "note": "From LiteLLM - provider: together_ai"
+    },
+    "together-ai-4.1b-8b": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.00019999999999999998,
+      "note": "From LiteLLM - provider: together_ai"
+    },
+    "together-ai-41.1b-80b": {
+      "promptPrice": 0.0009,
+      "completionPrice": 0.0009,
+      "note": "From LiteLLM - provider: together_ai"
+    },
+    "together-ai-8.1b-21b": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0003,
+      "note": "From LiteLLM - provider: together_ai"
+    },
+    "together-ai-81.1b-110b": {
+      "promptPrice": 0.0018,
+      "completionPrice": 0.0018,
+      "note": "From LiteLLM - provider: together_ai"
+    },
+    "together-ai-up-to-4b": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 9.999999999999999e-05,
+      "note": "From LiteLLM - provider: together_ai"
+    },
+    "v0/v0-1.0-md": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: v0"
+    },
+    "v0/v0-1.5-lg": {
+      "promptPrice": 0.015000000000000001,
+      "completionPrice": 0.075,
+      "note": "From LiteLLM - provider: v0"
+    },
+    "v0/v0-1.5-md": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: v0"
+    },
+    "voyage/voyage-2": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-3": {
+      "promptPrice": 5.9999999999999995e-05,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-3-large": {
+      "promptPrice": 0.00017999999999999998,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-3-lite": {
+      "promptPrice": 2e-05,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-3.5": {
+      "promptPrice": 5.9999999999999995e-05,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-3.5-lite": {
+      "promptPrice": 2e-05,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-context-3": {
+      "promptPrice": 0.00017999999999999998,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-finance-2": {
+      "promptPrice": 0.00011999999999999999,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-large-2": {
+      "promptPrice": 0.00011999999999999999,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-law-2": {
+      "promptPrice": 0.00011999999999999999,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-lite-01": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-lite-02-instruct": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "voyage/voyage-multimodal-3": {
+      "promptPrice": 0.00011999999999999999,
+      "completionPrice": 0.0,
+      "note": "From LiteLLM - provider: voyage"
+    },
+    "xai/grok-2": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-2-1212": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-2-latest": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-2-vision": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-2-vision-1212": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-2-vision-latest": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-3": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-3-beta": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-3-fast-beta": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-3-fast-latest": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-3-latest": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-3-mini": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0005,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-3-mini-beta": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0005,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-3-mini-fast": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.004,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-3-mini-fast-beta": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.004,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-3-mini-fast-latest": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.004,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-3-mini-latest": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0005,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-4": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-4-0709": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-4-1-fast": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.0005,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-4-1-fast-non-reasoning": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.0005,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-4-1-fast-non-reasoning-latest": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.0005,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-4-1-fast-reasoning": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.0005,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-4-1-fast-reasoning-latest": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.0005,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-4-fast-non-reasoning": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.0005,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-4-fast-reasoning": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.0005,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-4-latest": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-beta": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "xai/grok-vision-beta": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.015000000000000001,
+      "note": "From LiteLLM - provider: xai"
+    },
+    "zai/glm-4-32b-0414-128k": {
+      "promptPrice": 9.999999999999999e-05,
+      "completionPrice": 9.999999999999999e-05,
+      "note": "From LiteLLM - provider: zai"
+    },
+    "zai/glm-4.5": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0022,
+      "note": "From LiteLLM - provider: zai"
+    },
+    "zai/glm-4.5-air": {
+      "promptPrice": 0.00019999999999999998,
+      "completionPrice": 0.0011,
+      "note": "From LiteLLM - provider: zai"
+    },
+    "zai/glm-4.5-airx": {
+      "promptPrice": 0.0011,
+      "completionPrice": 0.0045000000000000005,
+      "note": "From LiteLLM - provider: zai"
+    },
+    "zai/glm-4.5-x": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.0089,
+      "note": "From LiteLLM - provider: zai"
+    },
+    "zai/glm-4.5v": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0018,
+      "note": "From LiteLLM - provider: zai"
+    },
+    "zai/glm-4.6": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0022,
+      "note": "From LiteLLM - provider: zai"
     }
   },
   "speech_to_text": {

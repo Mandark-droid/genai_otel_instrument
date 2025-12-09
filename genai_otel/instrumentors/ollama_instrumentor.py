@@ -195,3 +195,82 @@ class OllamaInstrumentor(BaseInstrumentor):
         except Exception as e:
             logger.debug("Failed to extract usage from Ollama response: %s", e)
             return None
+
+    def _extract_response_attributes(self, result) -> Dict[str, Any]:
+        """Extract response attributes from Ollama response.
+
+        Args:
+            result: The API response object or dictionary.
+
+        Returns:
+            Dict[str, Any]: Dictionary of response attributes.
+        """
+        attrs = {}
+
+        try:
+            # Handle both dict and object responses
+            if isinstance(result, dict):
+                # Response model (actual model used)
+                if "model" in result:
+                    attrs["gen_ai.response.model"] = result["model"]
+
+                # Done reason (equivalent to finish_reason)
+                if "done_reason" in result:
+                    attrs["gen_ai.response.finish_reason"] = result["done_reason"]
+
+                # Response content length (for observability)
+                if "response" in result:
+                    response_text = result["response"]
+                    if isinstance(response_text, str):
+                        attrs["gen_ai.response.length"] = len(response_text)
+                elif "message" in result:
+                    # For chat responses
+                    message = result["message"]
+                    if isinstance(message, dict) and "content" in message:
+                        content = message["content"]
+                        if isinstance(content, str):
+                            attrs["gen_ai.response.length"] = len(content)
+
+            elif hasattr(result, "model"):
+                # Object-like response
+                if hasattr(result, "model"):
+                    attrs["gen_ai.response.model"] = result.model
+
+                if hasattr(result, "done_reason"):
+                    attrs["gen_ai.response.finish_reason"] = result.done_reason
+
+                # Response content length
+                if hasattr(result, "response"):
+                    response_text = result.response
+                    if isinstance(response_text, str):
+                        attrs["gen_ai.response.length"] = len(response_text)
+                elif hasattr(result, "message"):
+                    message = result.message
+                    if hasattr(message, "content"):
+                        content = message.content
+                        if isinstance(content, str):
+                            attrs["gen_ai.response.length"] = len(content)
+
+        except Exception as e:
+            logger.debug("Failed to extract response attributes from Ollama response: %s", e)
+
+        return attrs
+
+    def _extract_finish_reason(self, result) -> Optional[str]:
+        """Extract finish reason from Ollama response.
+
+        Args:
+            result: The Ollama API response object or dictionary.
+
+        Returns:
+            Optional[str]: The finish reason string or None if not available.
+        """
+        try:
+            # Handle both dict and object responses
+            if isinstance(result, dict):
+                return result.get("done_reason")
+            elif hasattr(result, "done_reason"):
+                return result.done_reason
+        except Exception as e:
+            logger.debug("Failed to extract finish_reason from Ollama response: %s", e)
+        return None
