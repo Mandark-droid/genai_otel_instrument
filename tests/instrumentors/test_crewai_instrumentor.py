@@ -45,16 +45,30 @@ class TestCrewAIInstrumentor(unittest.TestCase):
 
     @patch("genai_otel.instrumentors.crewai_instrumentor.logger")
     def test_instrument_with_crewai_available(self, mock_logger):
-        """Test that instrument wraps Crew.kickoff when available."""
+        """Test that instrument wraps Crew.kickoff, Task, and Agent methods when available."""
 
         # Create a real Crew class
         class MockCrew:
             def kickoff(self, inputs=None):
                 return "crew_result"
 
+        # Create mock Task and Agent classes
+        class MockTask:
+            def execute_sync(self):
+                return "task_result"
+
+            def execute_async(self):
+                return "task_result"
+
+        class MockAgent:
+            def execute_task(self):
+                return "agent_result"
+
         # Create mock crewai module
         mock_crewai = MagicMock()
         mock_crewai.Crew = MockCrew
+        mock_crewai.Task = MockTask
+        mock_crewai.Agent = MockAgent
 
         # Create a mock wrapt module
         mock_wrapt = MagicMock()
@@ -69,9 +83,11 @@ class TestCrewAIInstrumentor(unittest.TestCase):
             # Assert
             self.assertEqual(instrumentor.config, config)
             self.assertTrue(instrumentor._instrumented)
-            mock_logger.info.assert_called_with("CrewAI instrumentation enabled")
-            # Verify FunctionWrapper was called to wrap kickoff
-            mock_wrapt.FunctionWrapper.assert_called_once()
+            mock_logger.info.assert_called_with(
+                "CrewAI instrumentation enabled with automatic context propagation"
+            )
+            # Verify FunctionWrapper was called to wrap all methods (kickoff, execute_sync, execute_async, execute_task)
+            self.assertEqual(mock_wrapt.FunctionWrapper.call_count, 4)
 
     @patch("genai_otel.instrumentors.crewai_instrumentor.logger")
     def test_instrument_exception_with_fail_on_error_false(self, mock_logger):
