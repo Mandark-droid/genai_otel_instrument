@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.25] - 2025-12-09
+
+### Fixed
+
+- **Codecarbon CO2 Tracking: Task API Integration**
+  - Fixed codecarbon emissions tracking by migrating from private API (_total_emissions.total) to public Task API
+  - Uses stop_task/start_task cycle for continuous monitoring without accessing internals
+  - Resolves compatibility issues with codecarbon 3.0.7+ where internal APIs changed
+  - Properly handles task lifecycle in start() and stop() methods
+  - Added enhanced logging with detailed energy breakdown
+
+- **Codecarbon Additional Metrics**
+  - New metric: `gen_ai.energy.consumed` - Energy consumption by component (CPU/GPU/RAM) in kWh
+  - New metric: `gen_ai.co2.emissions_rate` - CO2 emissions rate in gCO2e/s
+  - Records energy breakdown from codecarbon's EmissionsData object
+  - Tracks emissions by country and region from codecarbon's location detection
+
 ### Added
 
 - **LLM Pricing Database: Comprehensive Update - 293 New Models**
