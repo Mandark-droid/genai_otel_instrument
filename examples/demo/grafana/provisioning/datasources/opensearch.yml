@@ -4,7 +4,7 @@ datasources:
   - name: OpenSearch
     type: opensearch
     access: proxy
-    url: http://192.168.13.107:9200
+    url: http://opensearch:9200
     isDefault: false
     editable: false
     basicAuth: true
