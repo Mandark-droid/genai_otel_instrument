@@ -93,8 +93,18 @@ class GPUMetricsCollector:
         )
         self.power_cost_counter = meter.create_counter(
             "gen_ai.power.cost",
-            description="Cumulative electricity cost in USD based on GPU power consumption",
+            description="Cumulative electricity cost in USD based on power consumption",
             unit="USD",
+        )
+        self.energy_counter = meter.create_counter(
+            "gen_ai.energy.consumed",
+            description="Cumulative energy consumed by component (CPU/GPU/RAM)",
+            unit="kWh",
+        )
+        self.emissions_rate_gauge = meter.create_histogram(
+            "gen_ai.co2.emissions_rate",
+            description="CO2 emissions rate (rate of emissions per second)",
+            unit="gCO2e/s",
         )
 
         # Initialize codecarbon if available and CO2 tracking is enabled
@@ -388,8 +398,10 @@ class GPUMetricsCollector:
         if self._use_codecarbon and self._emissions_tracker:
             try:
                 self._emissions_tracker.start()
+                # Start a continuous task for periodic emissions collection
+                self._emissions_tracker.start_task("gpu_monitoring")
                 self._last_emissions_kg = 0.0
-                logger.info("Codecarbon emissions tracker started")
+                logger.info("Codecarbon emissions tracker started with continuous task monitoring")
             except Exception as e:
                 logger.warning("Failed to start codecarbon tracker: %s", e)
                 self._use_codecarbon = False
@@ -443,35 +455,74 @@ class GPUMetricsCollector:
             return
 
         try:
-            # Flush codecarbon to get current emissions without stopping
-            # This updates the internal state and allows us to read current emissions
-            self._emissions_tracker.flush()
+            # Stop the current task and get emissions data
+            # This returns an EmissionsData object with detailed metrics
+            emissions_data = self._emissions_tracker.stop_task("gpu_monitoring")
 
-            # Get current total emissions from codecarbon (in kg CO2e)
-            # The emissions property returns the total accumulated emissions
-            current_emissions_kg = self._emissions_tracker._total_emissions.total  # kg CO2e
+            # Immediately restart the task for continuous monitoring
+            self._emissions_tracker.start_task("gpu_monitoring")
 
-            # Calculate delta since last collection
-            delta_emissions_kg = current_emissions_kg - self._last_emissions_kg
+            if emissions_data:
+                # Extract emissions in kg CO2e from the task data
+                task_emissions_kg = emissions_data.emissions  # kg CO2e
 
-            if delta_emissions_kg > 0:
                 # Convert kg to grams and record
-                delta_emissions_g = delta_emissions_kg * 1000.0
+                task_emissions_g = task_emissions_kg * 1000.0
+
+                # Record total emissions
                 self.co2_counter.add(
-                    delta_emissions_g,
+                    task_emissions_g,
                     {
                         "source": "codecarbon",
-                        "country": self.config.co2_country_iso_code or "auto",
-                        "region": self.config.co2_region or "auto",
+                        "country": emissions_data.country_iso_code or "unknown",
+                        "region": emissions_data.region or "unknown",
                     },
                 )
-                logger.debug(
-                    "Recorded %.4f gCO2e emissions from codecarbon (total: %.4f kg)",
-                    delta_emissions_g,
-                    current_emissions_kg,
-                )
 
-            self._last_emissions_kg = current_emissions_kg
+                # Record emissions rate (gCO2e/s)
+                if hasattr(emissions_data, "emissions_rate") and emissions_data.emissions_rate:
+                    # emissions_rate is in kg/s, convert to g/s
+                    rate_g_per_s = emissions_data.emissions_rate * 1000.0
+                    self.emissions_rate_gauge.record(
+                        rate_g_per_s,
+                        {
+                            "source": "codecarbon",
+                            "country": emissions_data.country_iso_code or "unknown",
+                        },
+                    )
+
+                # Record energy consumption breakdown (kWh)
+                if hasattr(emissions_data, "cpu_energy") and emissions_data.cpu_energy:
+                    self.energy_counter.add(
+                        emissions_data.cpu_energy,  # Already in kWh
+                        {"component": "cpu", "source": "codecarbon"},
+                    )
+                if hasattr(emissions_data, "gpu_energy") and emissions_data.gpu_energy:
+                    self.energy_counter.add(
+                        emissions_data.gpu_energy,  # Already in kWh
+                        {"component": "gpu", "source": "codecarbon"},
+                    )
+                if hasattr(emissions_data, "ram_energy") and emissions_data.ram_energy:
+                    self.energy_counter.add(
+                        emissions_data.ram_energy,  # Already in kWh
+                        {"component": "ram", "source": "codecarbon"},
+                    )
+
+                # Update cumulative total
+                self._last_emissions_kg += task_emissions_kg
+
+                logger.debug(
+                    "Recorded %.4f gCO2e emissions from codecarbon task "
+                    "(duration: %.2fs, rate: %.4f gCO2e/s, "
+                    "energy: CPU=%.6f GPU=%.6f RAM=%.6f kWh, total: %.4f kg)",
+                    task_emissions_g,
+                    emissions_data.duration if hasattr(emissions_data, "duration") else 0,
+                    rate_g_per_s if hasattr(emissions_data, "emissions_rate") else 0,
+                    emissions_data.cpu_energy if hasattr(emissions_data, "cpu_energy") else 0,
+                    emissions_data.gpu_energy if hasattr(emissions_data, "gpu_energy") else 0,
+                    emissions_data.ram_energy if hasattr(emissions_data, "ram_energy") else 0,
+                    self._last_emissions_kg,
+                )
 
         except Exception as e:
             logger.debug("Error collecting codecarbon emissions: %s", e)
@@ -487,20 +538,26 @@ class GPUMetricsCollector:
         # Stop codecarbon emissions tracker and get final emissions
         if self._use_codecarbon and self._emissions_tracker:
             try:
-                final_emissions_kg = self._emissions_tracker.stop()
-                if final_emissions_kg is not None:
-                    # Record any remaining emissions not yet reported
-                    delta_emissions_kg = final_emissions_kg - self._last_emissions_kg
-                    if delta_emissions_kg > 0:
-                        delta_emissions_g = delta_emissions_kg * 1000.0
+                # Stop the ongoing task first to get any remaining emissions
+                try:
+                    final_task_emissions = self._emissions_tracker.stop_task("gpu_monitoring")
+                    if final_task_emissions and final_task_emissions.emissions > 0:
+                        task_emissions_g = final_task_emissions.emissions * 1000.0
                         self.co2_counter.add(
-                            delta_emissions_g,
+                            task_emissions_g,
                             {
                                 "source": "codecarbon",
-                                "country": self.config.co2_country_iso_code or "auto",
-                                "region": self.config.co2_region or "auto",
+                                "country": final_task_emissions.country_iso_code or "unknown",
+                                "region": final_task_emissions.region or "unknown",
                             },
                         )
+                        self._last_emissions_kg += final_task_emissions.emissions
+                except Exception as task_error:
+                    logger.debug("No active task to stop: %s", task_error)
+
+                # Then stop the tracker
+                final_emissions_kg = self._emissions_tracker.stop()
+                if final_emissions_kg is not None:
                     logger.info(
                         "Codecarbon emissions tracker stopped. Total emissions: %.4f kg CO2e",
                         final_emissions_kg,
