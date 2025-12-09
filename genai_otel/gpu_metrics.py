@@ -203,6 +203,25 @@ class GPUMetricsCollector:
             return
 
         try:
+            # Suppress codecarbon's verbose logging before initialization
+            # This prevents warnings about CPU tracking mode, multiple instances, etc.
+            import logging as stdlib_logging
+
+            # Map log level string to logging constants
+            log_level_map = {
+                "debug": stdlib_logging.DEBUG,
+                "info": stdlib_logging.INFO,
+                "warning": stdlib_logging.WARNING,
+                "error": stdlib_logging.ERROR,
+                "critical": stdlib_logging.CRITICAL,
+            }
+            codecarbon_log_level = log_level_map.get(
+                self.config.codecarbon_log_level.lower(), stdlib_logging.ERROR
+            )
+
+            codecarbon_logger = stdlib_logging.getLogger("codecarbon")
+            codecarbon_logger.setLevel(codecarbon_log_level)
+
             # Build codecarbon configuration from OTelConfig
             tracker_kwargs = {
                 "project_name": self.config.service_name,
@@ -210,7 +229,7 @@ class GPUMetricsCollector:
                 "save_to_file": False,  # We report via OpenTelemetry, not CSV
                 "save_to_api": False,  # Don't send to codecarbon API
                 "logging_logger": logger,  # Use our logger
-                "log_level": "warning",  # Reduce codecarbon's logging noise
+                "log_level": self.config.codecarbon_log_level.lower(),  # Use configured log level
             }
 
             # Tracking mode: "machine" (all processes) or "process" (current only)
