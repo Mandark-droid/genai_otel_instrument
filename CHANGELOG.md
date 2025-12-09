@@ -8,6 +8,150 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **LLM Pricing Database: Comprehensive Update - 293 New Models**
+  - **DeepSeek Models** (10 new models):
+    - DeepSeek V3.2 - official release with 50% cost reduction ($0.00028/$0.00042 cache hit)
+    - DeepSeek V3.2-Speciale - optimized for complex reasoning, AIME 2025 96.0% accuracy
+    - DeepSeek-Prover-V2-7B - formal theorem proving in Lean 4 ($0.0002/$0.0003)
+    - DeepSeek-Prover-V2-671B - large-scale theorem proving ($0.0007/$0.0025)
+    - DeepSeekMath V2 series - mathematical reasoning specialists
+    - deepseek/ prefix variants for API compatibility
+  - **xAI Grok Models** (29 new models):
+    - Grok 4 - latest flagship model ($0.003/$0.015)
+    - Grok 4.1 Fast - near-frontier capability ($0.0002/$0.0005)
+    - Grok 3 and Grok 3 Mini - various performance tiers
+    - Complete xai/ prefix variants for all Grok 2, 3, 4 models
+  - **Zhipu AI GLM Models** (7 new models):
+    - GLM-4.5 - 355B params, 32B active ($0.0006/$0.0022)
+    - GLM-4.5-Air - 106B params, 12B active ($0.0002/$0.0011)
+    - GLM-4.6 - latest version with improved performance
+    - zai/ prefix variants for all GLM-4.5/4.6 models
+  - **OpenAI Models** (42 new models):
+    - o1-2024-12-17 - latest reasoning model ($0.015/$0.06)
+    - o3-mini, o3-pro, o4-mini - next-gen reasoning models
+    - GPT-5 series - gpt-5-chat, gpt-5-codex, gpt-5-mini, gpt-5-nano
+    - GPT-5.1 series - latest versions with improved capabilities
+    - Historical versions: gpt-3.5-turbo variants, gpt-4 32k models
+  - **Anthropic Claude Models** (13 new models):
+    - Claude 4 Sonnet 20250514 - latest Claude 4 Sonnet ($0.003/$0.015)
+    - Claude Opus 4.5 and 4.5-20251101 - highest capability tier ($0.005/$0.025)
+    - Claude 3.7 Sonnet variants - extended context versions
+    - Latest aliases: claude-3-5-sonnet-latest, claude-3-opus-latest
+  - **Google Gemini Models** (58 new models):
+    - Gemini 2.5 Flash and Pro - latest generation models
+    - Gemini 2.0 Flash variants - optimized for speed
+    - Gemini 3 Pro Preview - upcoming flagship model ($0.002/$0.012)
+    - Complete gemini/ prefix variants for all models
+    - Experimental and preview versions with free access
+  - **Mistral Models** (66 new models):
+    - Mistral Large 3 - 675B total, 41B active ($0.0005/$0.0015)
+    - Ministral 3 series (9 models) - compact high-performance variants
+    - Codestral, Devstral, Magistral series - specialized models
+    - Complete mistral/ prefix variants for all models
+  - **Qwen Models** (10 new models):
+    - Qwen3 Max, Qwen Plus variants via dashscope/ prefix
+    - QwQ-Plus - thinking mode support
+    - Qwen Turbo - cost-effective fast inference
+  - **Cohere Command Models** (4 new models):
+    - Command-A-03-2025 - latest flagship model
+    - Command-R and Command-R-Plus 08-2024 variants
+    - Command-R7B-12-2024 - compact efficient model
+  - **AI21 Jamba Models** (7 new models):
+    - Jamba 1.5, 1.6, 1.7 series - hybrid SSM-Transformer architecture
+    - Large and Mini variants for different scale needs
+  - **Additional Providers** (62 new models):
+    - Moonshot Kimi models - Chinese market leaders with thinking mode
+    - Together.AI and Fireworks.AI pricing tiers
+    - Luminous models from Aleph Alpha
+    - Morph and v0 specialized models
+  - **Implementation Summary**:
+    - Total additions: 293 new models (24 DeepSeek additions + 269 from comprehensive LiteLLM comparison)
+    - Total model coverage: **649 chat completion models** across 25+ providers
+    - Database: `genai_otel/llm_pricing.json`
+    - All prices in USD per 1K tokens (prompt/completion)
+    - Includes latest 2025 model releases through December
+
+- **Embedding, Image, and Audio Models: Comprehensive Expansion - 114 New Models**
+  - **Embedding Models** (47 new models):
+    - Google embeddings: gemini-embedding-001, text-embedding-004/005
+    - Cohere embeddings: embed-v4.0, embed-english-v3, embed-multilingual-v3
+    - Cohere rerankers: rerank-v3.5, rerank-english-v3.0, rerank-multilingual-v3.0
+    - Mistral embeddings: codestral-embed, codestral-embed-2505, mistral-embed
+    - Amazon Titan: titan-embed-image-v1 (multimodal embedding)
+    - Together.AI and Fireworks.AI embedding pricing tiers
+    - Voyage rerankers: rerank-2, rerank-2-lite
+    - Jina reranker: jina-reranker-v2-base-multilingual
+    - Doubao (ByteDance) embedding models
+    - NVIDIA reranker models
+    - Total embeddings: **81 models** (was 34, +138% increase)
+  - **Image Generation Models** (14 new models):
+    - Google Imagen: imagen-3.0, imagen-4.0 variants (fast, standard, ultra)
+    - Amazon Titan: titan-image-generator-v2
+    - Recraft: recraftv2, recraftv3
+    - FLUX models: FLUX-1.1-pro, FLUX.1-Kontext-pro
+    - DALL-E 3 quality variants: standard and HD for various sizes
+    - Total image models: **28 models** (was 14, +100% increase)
+  - **Audio/Speech Models** (53 new models):
+    - Deepgram models (33 models):
+      * Nova 2 and 3 series - specialized for different use cases
+      * Base and Enhanced tiers for various domains (finance, medical, meeting, phonecall, etc.)
+      * Whisper variants (tiny, small, medium, large, base)
+    - OpenAI audio models:
+      * gpt-4o-audio-preview variants (2024-10-01, 2024-12-17, 2025-06-03)
+      * gpt-4o-mini-audio-preview models
+      * gpt-4o-transcribe and gpt-4o-mini-transcribe
+      * gpt-4o-mini-tts (text-to-speech)
+    - ElevenLabs: scribe_v1, scribe_v1_experimental
+    - AssemblyAI: best, nano
+    - Gemini TTS: gemini-2.5-flash-preview-tts, gemini-2.5-pro-preview-tts
+    - Whisper-1: OpenAI's original transcription model
+    - Total audio models: **64 models** (was 11, +482% increase)
+  - **Pricing Structure**:
+    - Embeddings: Per 1K tokens (input cost)
+    - Images: Per image generation (varies by quality/size)
+    - Audio: Per minute for STT, per 1K characters for TTS
+  - **Implementation**:
+    - Database: `genai_otel/llm_pricing.json`
+    - Total non-chat additions: 114 models
+    - All pricing sourced from official provider documentation and LiteLLM database
+
+- **Ollama Instrumentor: Missing Response Attributes**
+  - Added `_extract_response_attributes()` method to extract response model, finish reason, and content length
+  - Added `_extract_finish_reason()` method to extract completion status from `done_reason` field
+  - Fixes missing `gen_ai.response.model`, `gen_ai.response.finish_reason`, and cost tracking fields in Ollama traces
+  - Handles both dict and object response formats for compatibility
+  - Supports both `generate()` and `chat()` response structures
+  - Enables proper cost calculation for Ollama models (previously failed due to missing response model)
+  - Implementation: `genai_otel/instrumentors/ollama_instrumentor.py` (lines 199-276)
+  - Tests: `tests/instrumentors/test_ollama_instrumentor.py` (6 new test functions)
+
+- **CrewAI Instrumentor: Automatic Context Propagation**
+  - **Zero-code context propagation** for complete trace continuity across threads and async execution
+  - Automatic ThreadPoolExecutor patching for context propagation to worker threads
+  - Enhanced instrumentation with three span types:
+    - `crewai.crew.execution` - Top-level crew execution
+    - `crewai.task.execution` - Individual task execution
+    - `crewai.agent.execution` - Agent task execution
+  - Automatic instrumentation of Task and Agent methods:
+    - `Task.execute_sync()` - Synchronous task execution
+    - `Task.execute_async()` - Asynchronous task execution
+    - `Agent.execute_task()` - Agent task execution
+  - Rich attribute extraction for better observability:
+    - **Task attributes**: description, expected_output, assigned agent role, task ID
+    - **Agent attributes**: role, goal, backstory, LLM model
+    - **Crew attributes**: process type, agent count, task count, tools, inputs
+  - Static `_propagate_context()` decorator for function-level context wrapping
+  - Thread-safe context attachment/detachment using OpenTelemetry context API
+  - Graceful degradation if methods don't exist (future-proof for CrewAI updates)
+  - **Benefits for users**:
+    - ✅ No manual context management code required
+    - ✅ Complete parent-child span relationships across all execution
+    - ✅ Works with FastAPI, Flask, and other async frameworks
+    - ✅ Compatible with CrewAI's internal threading model
+  - Implementation: `genai_otel/instrumentors/crewai_instrumentor.py` (+216 lines)
+  - Example usage - before: manual `run_in_thread_with_context()` wrapper needed
+  - Example usage - after: just call `crew.kickoff()` normally, context propagates automatically!
+
 - **Codecarbon Integration for CO2 Emissions Tracking**
   - Integrated codecarbon library for accurate region-based carbon intensity calculations
   - Uses `OfflineEmissionsTracker` for offline mode (no API calls) or `EmissionsTracker` for online mode
