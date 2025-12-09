@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.26] - 2025-12-09
+
+### Added
+
+- **Comprehensive Codecarbon Metrics Exposure**
+  - Exposes ALL codecarbon EmissionsData fields as OpenTelemetry metrics
+  - New metric: `gen_ai.power.consumption` - Power consumption by component (CPU/GPU/RAM) in Watts
+  - New metric: `gen_ai.energy.total` - Total energy consumed (sum of CPU+GPU+RAM) in kWh
+  - New metric: `gen_ai.codecarbon.task.duration` - Duration of monitoring tasks in seconds
+  - Enhanced all codecarbon metrics with complete hardware and system metadata attributes:
+    - Hardware: os, python_version, cpu_count, cpu_model, gpu_count, gpu_model
+    - Cloud infrastructure: on_cloud, cloud_provider, cloud_region
+    - Location: country, region
+  - Implements full codecarbon output specification from https://mlco2.github.io/codecarbon/output.html
+
+### Fixed
+
+- **Codecarbon Verbose Logging Suppression**
+  - Suppressed codecarbon's informational warnings by default (CPU tracking mode, multiple instances, etc.)
+  - Added `GENAI_CODECARBON_LOG_LEVEL` environment variable (default: "error")
+  - Users can re-enable warnings by setting `GENAI_CODECARBON_LOG_LEVEL=warning`
+  - Eliminates console noise while preserving ability to enable diagnostics when needed
+
 ## [0.1.25] - 2025-12-09
 
 ### Fixed
