@@ -101,10 +101,25 @@ class GPUMetricsCollector:
             description="Cumulative energy consumed by component (CPU/GPU/RAM)",
             unit="kWh",
         )
+        self.total_energy_counter = meter.create_counter(
+            "gen_ai.energy.total",
+            description="Total cumulative energy consumed (sum of CPU+GPU+RAM)",
+            unit="kWh",
+        )
         self.emissions_rate_gauge = meter.create_histogram(
             "gen_ai.co2.emissions_rate",
             description="CO2 emissions rate (rate of emissions per second)",
             unit="gCO2e/s",
+        )
+        self.power_gauge = meter.create_histogram(
+            "gen_ai.power.consumption",
+            description="Power consumption by component (CPU/GPU/RAM)",
+            unit="W",
+        )
+        self.task_duration_histogram = meter.create_histogram(
+            "gen_ai.codecarbon.task.duration",
+            description="Duration of codecarbon monitoring tasks",
+            unit="s",
         )
 
         # Initialize codecarbon if available and CO2 tracking is enabled
@@ -491,22 +506,82 @@ class GPUMetricsCollector:
                         },
                     )
 
+                # Common attributes for all metrics including hardware/system metadata
+                base_attrs = {
+                    "source": "codecarbon",
+                    "country": emissions_data.country_iso_code or "unknown",
+                    "region": emissions_data.region or "unknown",
+                }
+
+                # Add hardware and system metadata as attributes
+                if hasattr(emissions_data, "os") and emissions_data.os:
+                    base_attrs["os"] = emissions_data.os
+                if hasattr(emissions_data, "python_version") and emissions_data.python_version:
+                    base_attrs["python_version"] = emissions_data.python_version
+                if hasattr(emissions_data, "cpu_count") and emissions_data.cpu_count:
+                    base_attrs["cpu_count"] = str(emissions_data.cpu_count)
+                if hasattr(emissions_data, "cpu_model") and emissions_data.cpu_model:
+                    # Truncate CPU model to avoid attribute size limits
+                    base_attrs["cpu_model"] = str(emissions_data.cpu_model)[:100]
+                if hasattr(emissions_data, "gpu_count") and emissions_data.gpu_count:
+                    base_attrs["gpu_count"] = str(emissions_data.gpu_count)
+                if hasattr(emissions_data, "gpu_model") and emissions_data.gpu_model:
+                    # Truncate GPU model to avoid attribute size limits
+                    base_attrs["gpu_model"] = str(emissions_data.gpu_model)[:100]
+                if hasattr(emissions_data, "on_cloud") and emissions_data.on_cloud:
+                    base_attrs["on_cloud"] = emissions_data.on_cloud
+                if hasattr(emissions_data, "cloud_provider") and emissions_data.cloud_provider:
+                    base_attrs["cloud_provider"] = emissions_data.cloud_provider
+                if hasattr(emissions_data, "cloud_region") and emissions_data.cloud_region:
+                    base_attrs["cloud_region"] = emissions_data.cloud_region
+
+                # Record duration
+                if hasattr(emissions_data, "duration") and emissions_data.duration:
+                    self.task_duration_histogram.record(emissions_data.duration, base_attrs)
+
+                # Record power consumption (W)
+                if hasattr(emissions_data, "cpu_power") and emissions_data.cpu_power:
+                    self.power_gauge.record(
+                        emissions_data.cpu_power,
+                        {**base_attrs, "component": "cpu"},
+                    )
+                if hasattr(emissions_data, "gpu_power") and emissions_data.gpu_power:
+                    self.power_gauge.record(
+                        emissions_data.gpu_power,
+                        {**base_attrs, "component": "gpu"},
+                    )
+                if hasattr(emissions_data, "ram_power") and emissions_data.ram_power:
+                    self.power_gauge.record(
+                        emissions_data.ram_power,
+                        {**base_attrs, "component": "ram"},
+                    )
+
                 # Record energy consumption breakdown (kWh)
+                total_energy = 0.0
                 if hasattr(emissions_data, "cpu_energy") and emissions_data.cpu_energy:
                     self.energy_counter.add(
                         emissions_data.cpu_energy,  # Already in kWh
-                        {"component": "cpu", "source": "codecarbon"},
+                        {**base_attrs, "component": "cpu"},
                     )
+                    total_energy += emissions_data.cpu_energy
                 if hasattr(emissions_data, "gpu_energy") and emissions_data.gpu_energy:
                     self.energy_counter.add(
                         emissions_data.gpu_energy,  # Already in kWh
-                        {"component": "gpu", "source": "codecarbon"},
+                        {**base_attrs, "component": "gpu"},
                     )
+                    total_energy += emissions_data.gpu_energy
                 if hasattr(emissions_data, "ram_energy") and emissions_data.ram_energy:
                     self.energy_counter.add(
                         emissions_data.ram_energy,  # Already in kWh
-                        {"component": "ram", "source": "codecarbon"},
+                        {**base_attrs, "component": "ram"},
                     )
+                    total_energy += emissions_data.ram_energy
+
+                # Record total energy consumed (can also use energy_consumed from emissions_data)
+                if hasattr(emissions_data, "energy_consumed") and emissions_data.energy_consumed:
+                    self.total_energy_counter.add(emissions_data.energy_consumed, base_attrs)
+                elif total_energy > 0:
+                    self.total_energy_counter.add(total_energy, base_attrs)
 
                 # Update cumulative total
                 self._last_emissions_kg += task_emissions_kg
@@ -514,13 +589,19 @@ class GPUMetricsCollector:
                 logger.debug(
                     "Recorded %.4f gCO2e emissions from codecarbon task "
                     "(duration: %.2fs, rate: %.4f gCO2e/s, "
-                    "energy: CPU=%.6f GPU=%.6f RAM=%.6f kWh, total: %.4f kg)",
+                    "power: CPU=%.2fW GPU=%.2fW RAM=%.2fW, "
+                    "energy: CPU=%.6f GPU=%.6f RAM=%.6f total=%.6f kWh, "
+                    "cumulative: %.4f kg)",
                     task_emissions_g,
                     emissions_data.duration if hasattr(emissions_data, "duration") else 0,
                     rate_g_per_s if hasattr(emissions_data, "emissions_rate") else 0,
+                    emissions_data.cpu_power if hasattr(emissions_data, "cpu_power") else 0,
+                    emissions_data.gpu_power if hasattr(emissions_data, "gpu_power") else 0,
+                    emissions_data.ram_power if hasattr(emissions_data, "ram_power") else 0,
                     emissions_data.cpu_energy if hasattr(emissions_data, "cpu_energy") else 0,
                     emissions_data.gpu_energy if hasattr(emissions_data, "gpu_energy") else 0,
                     emissions_data.ram_energy if hasattr(emissions_data, "ram_energy") else 0,
+                    total_energy,
                     self._last_emissions_kg,
                 )
 
