@@ -37,6 +37,8 @@ google-cloud-aiplatform>=1.0.0
 
 # GPU
 nvidia-ml-py>=11.495.46
+amdsmi>=7.0.0
+codecarbon>=2.3.0
 
 # HTTP
 opentelemetry-instrumentation-requests>=0.41b0

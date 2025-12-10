@@ -44,7 +44,7 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 🔧 **MCP Tool Support** - Auto-instrument databases, APIs, caches, vector DBs
 💰 **Cost Tracking** - Automatic cost calculation for both streaming and non-streaming requests
 ⚡ **Streaming Support** - Full observability for streaming responses with TTFT/TBT metrics and cost tracking
-🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature, power, and electricity cost tracking
+🎮 **GPU Metrics** - Real-time GPU monitoring for NVIDIA and AMD GPUs (utilization, memory, temperature, power, CO2, electricity cost)
 🛡️ **PII Detection** (NEW) - Automatic PII detection with GDPR/HIPAA/PCI-DSS compliance modes
 ☢️ **Toxicity Detection** (NEW) - Detect harmful content with Perspective API and Detoxify
 ⚖️ **Bias Detection** (NEW) - Identify demographic and other biases in prompts and responses
@@ -178,7 +178,7 @@ Complete agent workflow tracing with tool calls, iterations, and cost breakdown.
 </div>
 
 ### GPU Metrics Collection
-Real-time GPU utilization, memory, temperature, and power consumption metrics.
+Real-time GPU monitoring for NVIDIA and AMD GPUs: utilization, memory, temperature, power, CO2 emissions, and electricity costs.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/Mandark-droid/genai_otel_instrument/main/.github/images/Screenshots/GPU_Metrics.png" alt="GPU Metrics Dashboard" width="900"/>
@@ -289,7 +289,7 @@ Every LLM call, database query, API request, and vector search is traced with fu
 - `gen_ai.usage.cost.cache_read` - Cache read cost (Anthropic)
 - `gen_ai.usage.cost.cache_write` - Cache write cost (Anthropic)
 - `gen_ai.client.errors` - Error counts by operation and type
-- `gen_ai.gpu.*` - GPU utilization, memory, temperature, power (ObservableGauges)
+- `gen_ai.gpu.*` - GPU utilization, memory, temperature, power for NVIDIA and AMD GPUs (ObservableGauges with `gpu_vendor` attribute)
 - `gen_ai.co2.emissions` - CO2 emissions tracking with codecarbon integration (opt-in via `GENAI_ENABLE_CO2_TRACKING`)
 - `gen_ai.power.cost` - Cumulative electricity cost in USD based on GPU power consumption (configurable via `GENAI_POWER_COST_PER_KWH`)
 
@@ -409,6 +409,80 @@ genai_otel.instrument(
 A `sample.env` file has been generated in the project root directory. This file contains commented-out examples of all supported environment variables, along with their default values or expected formats. You can copy this file to `.env` and uncomment/modify the variables to configure the instrumentation for your specific needs.
 
 ## Advanced Features
+
+### AMD GPU Monitoring
+
+TraceVerde supports AMD GPU monitoring via the `amdsmi` Python library, providing the same comprehensive metrics as NVIDIA GPUs.
+
+**Requirements:**
+- Python package: `amdsmi>=7.0.0`
+- AMD GPU with ROCm drivers installed
+- Linux (primary support), Windows (experimental)
+
+**Installation:**
+```bash
+# AMD GPUs only
+pip install genai-otel-instrument[amd-gpu]
+
+# Both NVIDIA and AMD GPUs
+pip install genai-otel-instrument[all-gpu]
+
+# Verify AMD GPU detection
+python -c "import amdsmi; amdsmi.amdsmi_init(); print(f'AMD GPUs detected: {len(amdsmi.amdsmi_get_processor_handles())}')"
+```
+
+**Configuration:**
+```python
+import genai_otel
+
+# Enable GPU metrics (auto-detects both NVIDIA and AMD)
+genai_otel.instrument(
+    enable_gpu_metrics=True,
+    gpu_collection_interval=5,  # seconds
+    enable_co2_tracking=True,   # Optional: CO2 emissions
+)
+```
+
+**Metrics Collected:**
+- `gen_ai.gpu.utilization` - GPU core utilization percentage
+- `gen_ai.gpu.memory.used` - VRAM usage in MiB
+- `gen_ai.gpu.memory.total` - Total VRAM capacity in MiB
+- `gen_ai.gpu.temperature` - GPU temperature in Celsius
+- `gen_ai.gpu.power` - Power consumption in Watts
+- `gen_ai.co2.emissions` - CO2 emissions in grams (requires codecarbon)
+- `gen_ai.power.cost` - Electricity cost in USD
+
+**Metric Attributes:**
+- `gpu_id` - Device index (e.g., "0", "1")
+- `gpu_vendor` - Vendor name ("nvidia" or "amd")
+- `gpu_name` - Device name (e.g., "AMD Radeon RX 7900 XTX")
+
+**Multi-Vendor Support:**
+
+TraceVerde automatically detects and monitors both NVIDIA and AMD GPUs simultaneously:
+
+```python
+# Works on systems with:
+# - Only NVIDIA GPUs
+# - Only AMD GPUs
+# - Both NVIDIA and AMD GPUs
+# - No GPUs (gracefully disabled)
+
+import genai_otel
+genai_otel.instrument(enable_gpu_metrics=True)
+
+# All GPUs are monitored with gpu_vendor attribute
+# Example metrics:
+# gen_ai.gpu.utilization{gpu_id="0", gpu_vendor="nvidia", gpu_name="NVIDIA GeForce RTX 3080"} = 75
+# gen_ai.gpu.utilization{gpu_id="0", gpu_vendor="amd", gpu_name="AMD Radeon RX 7900 XTX"} = 82
+```
+
+**Troubleshooting:**
+
+If AMD GPUs are not detected:
+1. Verify amdsmi is installed: `pip list | grep amdsmi`
+2. Check ROCm drivers: `rocm-smi` or `amd-smi version`
+3. Check logs: Look for "Initialized AMD GPU monitoring" or "amdsmi not available"
 
 ### Session and User Tracking
 

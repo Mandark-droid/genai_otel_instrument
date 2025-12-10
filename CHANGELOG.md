@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **AMD GPU Monitoring Support**
+  - Added support for monitoring AMD GPUs via `amdsmi` Python library
+  - Multi-vendor GPU support: can monitor NVIDIA and AMD GPUs simultaneously
+  - All AMD GPU metrics match NVIDIA metrics: utilization, memory (used/total), temperature, power
+  - CO2 emissions and power cost tracking for AMD GPUs
+  - Graceful fallback when AMD GPU hardware or amdsmi not available
+  - New module: `genai_otel.gpu_metrics_amd.AMDGPUCollector`
+  - Added `gpu_vendor` attribute to all GPU metrics ("nvidia" or "amd")
+  - New optional dependencies:
+    - `amd-gpu`: Install AMD GPU monitoring only (`pip install genai-otel-instrument[amd-gpu]`)
+    - `all-gpu`: Install both NVIDIA and AMD GPU monitoring (`pip install genai-otel-instrument[all-gpu]`)
+
+### Changed
+
+- Refactored `GPUMetricsCollector` to support multiple GPU vendors
+- GPU metrics now include `gpu_vendor` attribute for vendor identification
+- Enhanced logging to distinguish between NVIDIA and AMD GPU operations
+
 ## [0.1.26] - 2025-12-09
 
 ### Added
