@@ -239,6 +239,49 @@ else
 fi
 echo ""
 
+# Test Multi-Provider Evaluation Examples
+echo -e "${BLUE}=== Multi-Provider Evaluation Examples ===${NC}"
+
+# Anthropic evaluation examples
+if [ -d "examples/anthropic" ]; then
+    for example in examples/anthropic/*_detection_example.py; do
+        if [ -f "$example" ]; then
+            run_example "$example"
+        fi
+    done
+fi
+
+# Ollama evaluation examples
+if [ -d "examples/ollama" ]; then
+    for example in examples/ollama/*_detection_example.py; do
+        if [ -f "$example" ]; then
+            run_example "$example"
+        fi
+    done
+fi
+
+# HuggingFace evaluation examples
+if [ -d "examples/huggingface" ]; then
+    for example in examples/huggingface/*_example.py; do
+        if [ -f "$example" ]; then
+            # Skip non-evaluation examples
+            if [[ "$example" =~ (pii|toxicity|bias|prompt_injection|hallucination)_example\.py$ ]]; then
+                run_example "$example"
+            fi
+        fi
+    done
+fi
+
+# Mistral AI evaluation examples
+if [ -d "examples/mistralai" ]; then
+    for example in examples/mistralai/*_detection_example.py; do
+        if [ -f "$example" ]; then
+            run_example "$example"
+        fi
+    done
+fi
+echo ""
+
 # Print Summary
 if [ "$DRY_RUN" = true ]; then
     echo ""
