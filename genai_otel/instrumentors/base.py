@@ -104,6 +104,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     # Evaluation detectors (set by EvaluationSpanProcessor)
     _pii_detector = None
     _toxicity_detector = None
+    _bias_detector = None
     _evaluation_lock = threading.Lock()
 
     def __init__(self):
@@ -646,7 +647,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             )
 
     def _run_evaluation_checks(self, span, args, kwargs, result):
-        """Run PII and toxicity evaluation checks before ending the span.
+        """Run PII, toxicity, and bias evaluation checks before ending the span.
 
         This method extracts prompt and response from span attributes and runs
         evaluation detectors if they are configured. Attributes are added to the
@@ -658,7 +659,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             kwargs: Original function keyword arguments
             result: The LLM response object
         """
-        if not BaseInstrumentor._pii_detector and not BaseInstrumentor._toxicity_detector:
+        if (
+            not BaseInstrumentor._pii_detector
+            and not BaseInstrumentor._toxicity_detector
+            and not BaseInstrumentor._bias_detector
+        ):
             return  # No detectors configured
 
         try:
@@ -752,6 +757,43 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         span.set_attribute("evaluation.toxicity.prompt.detected", False)
                 except Exception as e:
                     logger.warning(f"Toxicity detection failed: {e}", exc_info=True)
+
+            # Run bias detection
+            if BaseInstrumentor._bias_detector and prompt:
+                try:
+                    logger.info(f"Running bias detection on prompt: {prompt[:50]}...")
+                    bias_result = BaseInstrumentor._bias_detector.detect(prompt)
+                    logger.info(
+                        f"Bias detection result: has_bias={bias_result.has_bias}, max_score={bias_result.max_score}, detected_biases={bias_result.detected_biases}"
+                    )
+                    if bias_result.has_bias:
+                        span.set_attribute("evaluation.bias.prompt.detected", True)
+                        span.set_attribute(
+                            "evaluation.bias.prompt.max_score", bias_result.max_score
+                        )
+                        span.set_attribute(
+                            "evaluation.bias.prompt.detected_biases",
+                            bias_result.detected_biases,
+                        )
+
+                        # Add individual bias type scores
+                        for bias_type, score in bias_result.bias_scores.items():
+                            if score > 0:
+                                span.set_attribute(
+                                    f"evaluation.bias.prompt.{bias_type}_score", score
+                                )
+
+                        # Add patterns matched (limit to first 5 per type)
+                        for bias_type, patterns in bias_result.patterns_matched.items():
+                            if patterns:
+                                span.set_attribute(
+                                    f"evaluation.bias.prompt.{bias_type}_patterns",
+                                    patterns[:5],
+                                )
+                    else:
+                        span.set_attribute("evaluation.bias.prompt.detected", False)
+                except Exception as e:
+                    logger.warning(f"Bias detection failed: {e}", exc_info=True)
 
         except Exception as e:
             logger.warning(f"Evaluation checks failed: {e}", exc_info=True)
