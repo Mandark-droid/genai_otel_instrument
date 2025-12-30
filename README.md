@@ -892,13 +892,13 @@ genai_otel.instrument(
     enable_restricted_topics=True,
     enable_hallucination_detection=True,
 
-    # Configure thresholds
-    pii_threshold=0.8,
+    # Configure thresholds (defaults shown - adjust based on your needs)
+    pii_threshold=0.5,  # Presidio scores: 0.5-0.7 for valid PII
     toxicity_threshold=0.7,
-    bias_threshold=0.5,
-    prompt_injection_threshold=0.7,
+    bias_threshold=0.4,  # Pattern matching scores: 0.3-0.5 for clear bias
+    prompt_injection_threshold=0.5,  # Injection patterns score: 0.5-0.7
     restricted_topics_threshold=0.5,
-    hallucination_threshold=0.6,
+    hallucination_threshold=0.7,
 )
 ```
 
@@ -926,7 +926,7 @@ genai_otel.instrument(
     # PII Detection (✅ AVAILABLE NOW)
     enable_pii_detection=True,
     pii_mode="redact",  # "detect", "redact", or "block"
-    pii_threshold=0.7,
+    pii_threshold=0.5,  # Default: 0.5 (Presidio typical scores: 0.5-0.7)
     pii_gdpr_mode=True,  # Enable GDPR compliance
     pii_hipaa_mode=True,  # Enable HIPAA compliance
     pii_pci_dss_mode=True,  # Enable PCI-DSS compliance

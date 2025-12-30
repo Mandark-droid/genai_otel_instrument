@@ -102,19 +102,19 @@ Choose your threshold based on use case:
 STRICT MODE (0.2-0.3):
   Use case: Hiring, HR, public communications
   Trade-off: May flag false positives, requires manual review
-  Example: "Looking for young, energetic team members" → FLAGGED
+  Example: "Looking for young, energetic team members" -> FLAGGED
 
 MODERATE MODE (0.4-0.5):
   Use case: General content moderation, customer service
   Trade-off: Balanced - catches most bias without too many false positives
-  Example: "Men are better at math" → FLAGGED
-           "We value diverse perspectives" → NOT FLAGGED
+  Example: "Men are better at math" -> FLAGGED
+           "We value diverse perspectives" -> NOT FLAGGED
 
 PERMISSIVE MODE (0.6-0.7):
   Use case: Internal tools, research, academic contexts
   Trade-off: Only flags obvious bias, may miss subtle cases
-  Example: "All women are emotional" → FLAGGED
-           "Women tend to be more emotional" → NOT FLAGGED
+  Example: "All women are emotional" -> FLAGGED
+           "Women tend to be more emotional" -> NOT FLAGGED
 
 How to Configure:
 

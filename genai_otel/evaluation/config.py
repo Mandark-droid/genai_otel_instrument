@@ -70,7 +70,7 @@ class PIIConfig:
         }
     )
     redaction_char: str = "*"
-    threshold: float = 0.7
+    threshold: float = 0.5
     gdpr_mode: bool = False
     hipaa_mode: bool = False
     pci_dss_mode: bool = False
@@ -164,7 +164,7 @@ class BiasConfig:
     """
 
     enabled: bool = False
-    threshold: float = 0.5
+    threshold: float = 0.4
     bias_types: Set[str] = field(
         default_factory=lambda: {
             "gender",
@@ -204,7 +204,7 @@ class PromptInjectionConfig:
     """
 
     enabled: bool = False
-    threshold: float = 0.7
+    threshold: float = 0.5
     use_ml_model: bool = True
     check_patterns: bool = True
     patterns: Optional[List[str]] = None
