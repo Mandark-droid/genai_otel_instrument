@@ -1,8 +1,8 @@
-"""Module for collecting GPU metrics using nvidia-ml-py and reporting them via OpenTelemetry.
+"""Module for collecting GPU metrics using nvidia-ml-py and amdsmi, reporting them via OpenTelemetry.
 
 This module provides the `GPUMetricsCollector` class, which periodically collects
 GPU utilization, memory usage, and temperature, and exports these as OpenTelemetry
-metrics. It relies on the `nvidia-ml-py` library for interacting with NVIDIA GPUs.
+metrics. It supports both NVIDIA GPUs (via nvidia-ml-py) and AMD GPUs (via amdsmi).
 
 CO2 emissions tracking is provided via codecarbon integration, which offers:
 - Automatic region-based carbon intensity lookup
@@ -28,7 +28,15 @@ try:
     NVML_AVAILABLE = True
 except ImportError:
     NVML_AVAILABLE = False
-    logger.debug("nvidia-ml-py not available, GPU metrics will be disabled")
+    logger.debug("nvidia-ml-py not available, NVIDIA GPU metrics will be disabled")
+
+# Try to import AMD GPU collector
+try:
+    from genai_otel.gpu_metrics_amd import AMDSMI_AVAILABLE, AMDGPUCollector
+except ImportError:
+    AMDSMI_AVAILABLE = False
+    AMDGPUCollector = None
+    logger.debug("AMD GPU collector not available")
 
 # Try to import codecarbon for CO2 emissions tracking
 try:
@@ -43,7 +51,7 @@ except ImportError:
 
 
 class GPUMetricsCollector:
-    """Collects and reports GPU metrics using nvidia-ml-py and codecarbon for CO2 tracking."""
+    """Collects and reports GPU metrics using nvidia-ml-py/amdsmi and codecarbon for CO2 tracking."""
 
     def __init__(self, meter: Meter, config: OTelConfig, interval: int = 10):
         """Initializes the GPUMetricsCollector.
@@ -67,22 +75,45 @@ class GPUMetricsCollector:
         self.interval = interval  # seconds
         self.gpu_available = False
 
+        # Multi-vendor GPU support
+        self.amd_collector: Optional["AMDGPUCollector"] = None
+        self.nvidia_device_count = 0
+        self.amd_device_count = 0
+
         # Codecarbon emissions tracker
         self._emissions_tracker: Optional["EmissionsTracker"] = None
         self._last_emissions_kg: float = 0.0
         self._use_codecarbon: bool = False
 
+        # Initialize NVIDIA GPUs
         self.device_count = 0
         self.nvml = None
         if NVML_AVAILABLE:
             try:
                 pynvml.nvmlInit()
-                self.device_count = pynvml.nvmlDeviceGetCount()
-                if self.device_count > 0:
+                self.nvidia_device_count = pynvml.nvmlDeviceGetCount()
+                self.device_count = self.nvidia_device_count  # For backward compatibility
+                if self.nvidia_device_count > 0:
                     self.gpu_available = True
+                    logger.info(
+                        f"Initialized NVIDIA GPU monitoring with {self.nvidia_device_count} device(s)"
+                    )
                 self.nvml = pynvml
             except Exception as e:
                 logger.error("Failed to initialize NVML to get device count: %s", e)
+
+        # Initialize AMD GPUs
+        if AMDSMI_AVAILABLE and AMDGPUCollector is not None:
+            try:
+                self.amd_collector = AMDGPUCollector(meter, config)
+                if self.amd_collector.available:
+                    self.amd_device_count = self.amd_collector.device_count
+                    self.gpu_available = True
+                else:
+                    self.amd_collector = None
+            except Exception as e:
+                logger.error("Failed to initialize AMD GPU collector: %s", e)
+                self.amd_collector = None
 
         self.cumulative_energy_wh = [0.0] * self.device_count  # Per GPU, in Wh
         self.last_timestamp = [time.time()] * self.device_count
@@ -125,45 +156,73 @@ class GPUMetricsCollector:
         # Initialize codecarbon if available and CO2 tracking is enabled
         self._init_codecarbon()
 
-        if not NVML_AVAILABLE:
+        if not NVML_AVAILABLE and not (AMDSMI_AVAILABLE and self.amd_collector):
             logger.warning(
-                "GPU metrics collection not available - nvidia-ml-py not installed. "
-                "Install with: pip install genai-otel-instrument[gpu]"
+                "GPU metrics collection not available - neither nvidia-ml-py nor amdsmi installed. "
+                "Install with: pip install genai-otel-instrument[all-gpu]"
             )
             return
 
         try:
+            # Collect callbacks from available GPU vendors
+            utilization_callbacks = []
+            memory_callbacks = []
+            memory_total_callbacks = []
+            temperature_callbacks = []
+            power_callbacks = []
+
+            # Add NVIDIA callbacks if available
+            if NVML_AVAILABLE and self.nvidia_device_count > 0:
+                utilization_callbacks.append(self._observe_gpu_utilization)
+                memory_callbacks.append(self._observe_gpu_memory)
+                memory_total_callbacks.append(self._observe_gpu_memory_total)
+                temperature_callbacks.append(self._observe_gpu_temperature)
+                power_callbacks.append(self._observe_gpu_power)
+
+            # Add AMD callbacks if available
+            if self.amd_collector and self.amd_collector.available:
+                utilization_callbacks.append(self.amd_collector._observe_gpu_utilization)
+                memory_callbacks.append(self.amd_collector._observe_gpu_memory)
+                memory_total_callbacks.append(self.amd_collector._observe_gpu_memory_total)
+                temperature_callbacks.append(self.amd_collector._observe_gpu_temperature)
+                power_callbacks.append(self.amd_collector._observe_gpu_power)
+
             # Use ObservableGauge for all GPU metrics (not Counter!)
-            self.gpu_utilization_gauge = self.meter.create_observable_gauge(
-                "gen_ai.gpu.utilization",  # Fixed metric name
-                callbacks=[self._observe_gpu_utilization],
-                description="GPU utilization percentage",
-                unit="%",
-            )
-            self.gpu_memory_used_gauge = self.meter.create_observable_gauge(
-                "gen_ai.gpu.memory.used",  # Fixed metric name
-                callbacks=[self._observe_gpu_memory],
-                description="GPU memory used in MiB",
-                unit="MiB",
-            )
-            self.gpu_memory_total_gauge = self.meter.create_observable_gauge(
-                "gen_ai.gpu.memory.total",  # Fixed metric name
-                callbacks=[self._observe_gpu_memory_total],
-                description="Total GPU memory capacity in MiB",
-                unit="MiB",
-            )
-            self.gpu_temperature_gauge = self.meter.create_observable_gauge(
-                "gen_ai.gpu.temperature",  # Fixed metric name
-                callbacks=[self._observe_gpu_temperature],
-                description="GPU temperature in Celsius",
-                unit="Cel",
-            )
-            self.gpu_power_gauge = self.meter.create_observable_gauge(
-                "gen_ai.gpu.power",  # Fixed metric name
-                callbacks=[self._observe_gpu_power],
-                description="GPU power consumption in Watts",
-                unit="W",
-            )
+            if utilization_callbacks:
+                self.gpu_utilization_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.utilization",  # Fixed metric name
+                    callbacks=utilization_callbacks,
+                    description="GPU utilization percentage",
+                    unit="%",
+                )
+            if memory_callbacks:
+                self.gpu_memory_used_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.memory.used",  # Fixed metric name
+                    callbacks=memory_callbacks,
+                    description="GPU memory used in MiB",
+                    unit="MiB",
+                )
+            if memory_total_callbacks:
+                self.gpu_memory_total_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.memory.total",  # Fixed metric name
+                    callbacks=memory_total_callbacks,
+                    description="Total GPU memory capacity in MiB",
+                    unit="MiB",
+                )
+            if temperature_callbacks:
+                self.gpu_temperature_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.temperature",  # Fixed metric name
+                    callbacks=temperature_callbacks,
+                    description="GPU temperature in Celsius",
+                    unit="Cel",
+                )
+            if power_callbacks:
+                self.gpu_power_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.power",  # Fixed metric name
+                    callbacks=power_callbacks,
+                    description="GPU power consumption in Watts",
+                    unit="W",
+                )
         except Exception as e:
             logger.error("Failed to create GPU metrics instruments: %s", e, exc_info=True)
 
@@ -421,8 +480,8 @@ class GPUMetricsCollector:
         ObservableGauges are automatically collected by the MeterProvider,
         so we only need to start the CO2 collection thread.
         """
-        if not NVML_AVAILABLE:
-            logger.warning("Cannot start GPU metrics collection - nvidia-ml-py not available")
+        if not NVML_AVAILABLE and not (AMDSMI_AVAILABLE and self.amd_collector):
+            logger.warning("Cannot start GPU metrics collection - no GPU libraries available")
             return
 
         if not self.gpu_available:
