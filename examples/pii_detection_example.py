@@ -84,7 +84,7 @@ from genai_otel import instrument
 # Re-instrument with redaction mode
 instrument(
     service_name="pii-redaction-example",
-    endpoint="http://localhost:4318",
+    # endpoint="http://localhost:4318",
     enable_pii_detection=True,
     pii_mode="redact",  # Detect and redact
     pii_threshold=0.7,
