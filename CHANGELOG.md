@@ -8,33 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.28] - 2025-12-30
 
-### Fixed
-
-- **Critical: Missing Block-on-Detection Parameters**
-  - Fixed critical bug where `*_block_on_detection` parameters were NOT exposed in `OTelConfig`
-  - ALL blocking mode examples were silently failing with TypeError
-  - Added missing parameters: `toxicity_block_on_detection`, `bias_block_on_detection`, `prompt_injection_block_on_detection`, `restricted_topics_block_on_detection`
-  - Wired parameters through to detector configs in `auto_instrument.py`
-  - Blocking mode now fully functional for all evaluation types
-
-- **Evaluation Detection Thresholds**
-  - Lowered PII detection threshold from 0.7 to 0.5 (Presidio scores 0.5-0.7 for valid PII)
-  - Lowered Bias detection threshold from 0.5 to 0.4 (pattern matching scores 0.3-0.5)
-  - Lowered Prompt Injection threshold from 0.7 to 0.5 (injection patterns score 0.5-0.7)
-  - Updated environment variable defaults in `config.py`
-  - Updated documentation in `sample.env` and `README.md`
-
-- **PII Blocking Example Content**
-  - Updated `examples/pii_detection/blocking_mode.py` to use reliably detectable PII
-  - Changed from undetectable passport number to email + phone number
-  - Now properly triggers blocked metrics in Prometheus
-
-- **Unicode Encoding Error**
-  - Fixed Unicode arrow character in `bias_detection/custom_threshold.py`
-  - Changed `→` to `->` for Windows console compatibility
-  - Test now passes (was failing validation)
-
 ### Added
+
+- **AMD GPU Monitoring Support**
+  - Added `AMDGPUCollector` class for AMD GPU metrics via `amdsmi` library
+  - Multi-vendor GPU architecture supporting both NVIDIA and AMD GPUs simultaneously
+  - New installation extras:
+    - `pip install genai-otel-instrument[amd-gpu]` - AMD GPU support only
+    - `pip install genai-otel-instrument[all-gpu]` - Both NVIDIA and AMD GPU support
+  - AMD GPU metrics collected:
+    - GPU utilization (gfx_activity)
+    - Memory usage (VRAM in MiB)
+    - Total memory capacity
+    - Temperature (junction temperature)
+    - Power consumption (average power in Watts)
+  - Unified observable callbacks combine metrics from both GPU vendors
+  - Graceful fallback when only one vendor's GPUs are present
+
+- **Moonshot AI Kimi Models Pricing**
+  - Added pricing for 10 Moonshot AI Kimi models:
+    - Kimi-K2-Instruct (flagship 1T parameters MoE)
+    - Kimi-K2-Base
+    - Kimi-K2-Thinking (reasoning model with thinking)
+    - Kimi-Dev-72B (73B parameters)
+    - Kimi-Linear-48B-A3B-Instruct & Base (MoE with 3B active, Kimi Delta Attention)
+    - Kimi-VL-A3B-Instruct, Thinking, and Thinking-2506 (vision-language models, 16B parameters)
 
 - **New Blocking Mode Examples**
   - `examples/prompt_injection/blocking_mode.py` - Demonstrates jailbreak and system override blocking
@@ -61,8 +59,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Now tests Anthropic, Ollama, HuggingFace, and Mistral examples
   - Validates 40+ examples across all evaluation types and providers
 
+### Fixed
+
+- **Critical: Missing Block-on-Detection Parameters**
+  - Fixed critical bug where `*_block_on_detection` parameters were NOT exposed in `OTelConfig`
+  - ALL blocking mode examples were silently failing with TypeError
+  - Added missing parameters: `toxicity_block_on_detection`, `bias_block_on_detection`, `prompt_injection_block_on_detection`, `restricted_topics_block_on_detection`
+  - Wired parameters through to detector configs in `auto_instrument.py`
+  - Blocking mode now fully functional for all evaluation types
+
+- **Evaluation Detection Thresholds**
+  - Lowered PII detection threshold from 0.7 to 0.5 (Presidio scores 0.5-0.7 for valid PII)
+  - Lowered Bias detection threshold from 0.5 to 0.4 (pattern matching scores 0.3-0.5)
+  - Lowered Prompt Injection threshold from 0.7 to 0.5 (injection patterns score 0.5-0.7)
+  - Updated environment variable defaults in `config.py`
+  - Updated documentation in `sample.env` and `README.md`
+
+- **Evaluation Test Thresholds**
+  - Updated test expectations to match current config defaults
+  - PII detection threshold test: 0.7 → 0.5
+  - Bias detection threshold test: 0.5 → 0.4
+  - Prompt injection threshold test: 0.7 → 0.5
+  - Fixes test failures that were blocking PyPI publish
+
+- **GPU Metrics Tests**
+  - Updated tests to handle multi-vendor GPU architecture
+  - Fixed mock fixtures to support 4 counters (CO2, power cost, energy consumed, total energy)
+  - Updated warning messages for AMD+NVIDIA support
+  - Tests now properly handle both NVIDIA and AMD GPU scenarios
+
+- **PII Blocking Example Content**
+  - Updated `examples/pii_detection/blocking_mode.py` to use reliably detectable PII
+  - Changed from undetectable passport number to email + phone number
+  - Now properly triggers blocked metrics in Prometheus
+
+- **Unicode Encoding Error**
+  - Fixed Unicode arrow character in `bias_detection/custom_threshold.py`
+  - Changed `→` to `->` for Windows console compatibility
+  - Test now passes (was failing validation)
+
 ### Changed
 
+- Updated `gpu_metrics.py` docstring to reflect multi-vendor support
+- Warning messages now mention both nvidia-ml-py and amdsmi libraries
+- Installation instructions updated to recommend `[all-gpu]` extra for full GPU support
 - Updated default thresholds in `genai_otel/evaluation/config.py`
 - Updated default environment variables in `genai_otel/config.py`
 - Enhanced validation script with multi-provider support
