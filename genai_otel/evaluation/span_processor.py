@@ -271,7 +271,7 @@ class EvaluationSpanProcessor(SpanProcessor):
             from genai_otel.instrumentors.base import BaseInstrumentor
 
             logger.info(
-                f"Attempting to register detectors: pii_detector={self.pii_detector is not None}, toxicity_detector={self.toxicity_detector is not None}"
+                f"Attempting to register detectors: pii_detector={self.pii_detector is not None}, toxicity_detector={self.toxicity_detector is not None}, bias_detector={self.bias_detector is not None}"
             )
             with BaseInstrumentor._evaluation_lock:
                 if self.pii_detector:
@@ -284,6 +284,11 @@ class EvaluationSpanProcessor(SpanProcessor):
                     logger.info("Registered Toxicity detector with BaseInstrumentor")
                 else:
                     logger.warning("Toxicity detector is None, not registering")
+                if self.bias_detector:
+                    BaseInstrumentor._bias_detector = self.bias_detector
+                    logger.info("Registered Bias detector with BaseInstrumentor")
+                else:
+                    logger.warning("Bias detector is None, not registering")
         except Exception as e:
             logger.warning(
                 f"Failed to register detectors with BaseInstrumentor: {e}", exc_info=True
@@ -339,23 +344,23 @@ class EvaluationSpanProcessor(SpanProcessor):
 
             # Run toxicity detection
             if self.toxicity_config.enabled and self.toxicity_detector:
-                self._check_toxicity(span, prompt, response)
+                self._check_toxicity(span, prompt, response, safe_set_attribute)
 
             # Run bias detection
             if self.bias_config.enabled and self.bias_detector:
-                self._check_bias(span, prompt, response)
+                self._check_bias(span, prompt, response, safe_set_attribute)
 
             # Run prompt injection detection (prompts only)
             if self.prompt_injection_config.enabled and self.prompt_injection_detector:
-                self._check_prompt_injection(span, prompt)
+                self._check_prompt_injection(span, prompt, safe_set_attribute)
 
             # Run restricted topics detection
             if self.restricted_topics_config.enabled and self.restricted_topics_detector:
-                self._check_restricted_topics(span, prompt, response)
+                self._check_restricted_topics(span, prompt, response, safe_set_attribute)
 
             # Run hallucination detection (responses only)
             if self.hallucination_config.enabled and self.hallucination_detector:
-                self._check_hallucination(span, prompt, response, attributes)
+                self._check_hallucination(span, prompt, response, attributes, safe_set_attribute)
 
         except Exception as e:
             logger.error("Error in evaluation span processor: %s", e, exc_info=True)
@@ -590,13 +595,16 @@ class EvaluationSpanProcessor(SpanProcessor):
             logger.error("Error checking PII: %s", e, exc_info=True)
             safe_set_attribute("evaluation.pii.error", str(e))
 
-    def _check_toxicity(self, span: Span, prompt: Optional[str], response: Optional[str]) -> None:
+    def _check_toxicity(
+        self, span: Span, prompt: Optional[str], response: Optional[str], safe_set_attribute
+    ) -> None:
         """Check for toxicity in prompt and response.
 
         Args:
             span: The span to add toxicity attributes to
             prompt: Prompt text (optional)
             response: Response text (optional)
+            safe_set_attribute: Function to safely set attributes on ReadableSpan
         """
         if not self.toxicity_detector:
             return
@@ -606,16 +614,16 @@ class EvaluationSpanProcessor(SpanProcessor):
             if prompt:
                 result = self.toxicity_detector.detect(prompt)
                 if result.is_toxic:
-                    span.set_attribute("evaluation.toxicity.prompt.detected", True)
-                    span.set_attribute("evaluation.toxicity.prompt.max_score", result.max_score)
-                    span.set_attribute(
+                    safe_set_attribute("evaluation.toxicity.prompt.detected", True)
+                    safe_set_attribute("evaluation.toxicity.prompt.max_score", result.max_score)
+                    safe_set_attribute(
                         "evaluation.toxicity.prompt.categories",
                         result.toxic_categories,
                     )
 
                     # Add individual category scores
                     for category, score in result.scores.items():
-                        span.set_attribute(f"evaluation.toxicity.prompt.{category}_score", score)
+                        safe_set_attribute(f"evaluation.toxicity.prompt.{category}_score", score)
 
                     # Record metrics
                     self.toxicity_detection_counter.add(1, {"location": "prompt"})
@@ -629,31 +637,34 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # If blocking, set error status
                     if result.blocked:
-                        span.set_status(
-                            Status(
-                                StatusCode.ERROR,
-                                "Request blocked due to toxic content",
+                        try:
+                            span.set_status(
+                                Status(
+                                    StatusCode.ERROR,
+                                    "Request blocked due to toxic content",
+                                )
                             )
-                        )
-                        span.set_attribute("evaluation.toxicity.prompt.blocked", True)
+                        except AttributeError:
+                            pass  # ReadableSpan doesn't support set_status
+                        safe_set_attribute("evaluation.toxicity.prompt.blocked", True)
                         self.toxicity_blocked_counter.add(1, {"location": "prompt"})
                 else:
-                    span.set_attribute("evaluation.toxicity.prompt.detected", False)
+                    safe_set_attribute("evaluation.toxicity.prompt.detected", False)
 
             # Check response for toxicity
             if response:
                 result = self.toxicity_detector.detect(response)
                 if result.is_toxic:
-                    span.set_attribute("evaluation.toxicity.response.detected", True)
-                    span.set_attribute("evaluation.toxicity.response.max_score", result.max_score)
-                    span.set_attribute(
+                    safe_set_attribute("evaluation.toxicity.response.detected", True)
+                    safe_set_attribute("evaluation.toxicity.response.max_score", result.max_score)
+                    safe_set_attribute(
                         "evaluation.toxicity.response.categories",
                         result.toxic_categories,
                     )
 
                     # Add individual category scores
                     for category, score in result.scores.items():
-                        span.set_attribute(f"evaluation.toxicity.response.{category}_score", score)
+                        safe_set_attribute(f"evaluation.toxicity.response.{category}_score", score)
 
                     # Record metrics
                     self.toxicity_detection_counter.add(1, {"location": "response"})
@@ -667,28 +678,34 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # If blocking, set error status
                     if result.blocked:
-                        span.set_status(
-                            Status(
-                                StatusCode.ERROR,
-                                "Response blocked due to toxic content",
+                        try:
+                            span.set_status(
+                                Status(
+                                    StatusCode.ERROR,
+                                    "Response blocked due to toxic content",
+                                )
                             )
-                        )
-                        span.set_attribute("evaluation.toxicity.response.blocked", True)
+                        except AttributeError:
+                            pass  # ReadableSpan doesn't support set_status
+                        safe_set_attribute("evaluation.toxicity.response.blocked", True)
                         self.toxicity_blocked_counter.add(1, {"location": "response"})
                 else:
-                    span.set_attribute("evaluation.toxicity.response.detected", False)
+                    safe_set_attribute("evaluation.toxicity.response.detected", False)
 
         except Exception as e:
             logger.error("Error checking toxicity: %s", e, exc_info=True)
-            span.set_attribute("evaluation.toxicity.error", str(e))
+            safe_set_attribute("evaluation.toxicity.error", str(e))
 
-    def _check_bias(self, span: Span, prompt: Optional[str], response: Optional[str]) -> None:
+    def _check_bias(
+        self, span: Span, prompt: Optional[str], response: Optional[str], safe_set_attribute
+    ) -> None:
         """Check for bias in prompt and response.
 
         Args:
             span: The span to add bias attributes to
             prompt: Prompt text (optional)
             response: Response text (optional)
+            safe_set_attribute: Function to safely set attributes on ReadableSpan
         """
         if not self.bias_detector:
             return
@@ -698,9 +715,9 @@ class EvaluationSpanProcessor(SpanProcessor):
             if prompt:
                 result = self.bias_detector.detect(prompt)
                 if result.has_bias:
-                    span.set_attribute("evaluation.bias.prompt.detected", True)
-                    span.set_attribute("evaluation.bias.prompt.max_score", result.max_score)
-                    span.set_attribute(
+                    safe_set_attribute("evaluation.bias.prompt.detected", True)
+                    safe_set_attribute("evaluation.bias.prompt.max_score", result.max_score)
+                    safe_set_attribute(
                         "evaluation.bias.prompt.detected_biases",
                         result.detected_biases,
                     )
@@ -708,11 +725,11 @@ class EvaluationSpanProcessor(SpanProcessor):
                     # Add individual bias type scores
                     for bias_type, score in result.bias_scores.items():
                         if score > 0:
-                            span.set_attribute(f"evaluation.bias.prompt.{bias_type}_score", score)
+                            safe_set_attribute(f"evaluation.bias.prompt.{bias_type}_score", score)
 
                     # Add patterns matched
                     for bias_type, patterns in result.patterns_matched.items():
-                        span.set_attribute(
+                        safe_set_attribute(
                             f"evaluation.bias.prompt.{bias_type}_patterns",
                             patterns[:5],  # Limit to first 5 patterns
                         )
@@ -729,24 +746,27 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # If blocking mode and threshold exceeded, set error status
                     if self.bias_config.block_on_detection and result.has_bias:
-                        span.set_status(
-                            Status(
-                                StatusCode.ERROR,
-                                "Request blocked due to bias detection",
+                        try:
+                            span.set_status(
+                                Status(
+                                    StatusCode.ERROR,
+                                    "Request blocked due to bias detection",
+                                )
                             )
-                        )
-                        span.set_attribute("evaluation.bias.prompt.blocked", True)
+                        except AttributeError:
+                            pass  # ReadableSpan doesn't support set_status
+                        safe_set_attribute("evaluation.bias.prompt.blocked", True)
                         self.bias_blocked_counter.add(1, {"location": "prompt"})
                 else:
-                    span.set_attribute("evaluation.bias.prompt.detected", False)
+                    safe_set_attribute("evaluation.bias.prompt.detected", False)
 
             # Check response for bias
             if response:
                 result = self.bias_detector.detect(response)
                 if result.has_bias:
-                    span.set_attribute("evaluation.bias.response.detected", True)
-                    span.set_attribute("evaluation.bias.response.max_score", result.max_score)
-                    span.set_attribute(
+                    safe_set_attribute("evaluation.bias.response.detected", True)
+                    safe_set_attribute("evaluation.bias.response.max_score", result.max_score)
+                    safe_set_attribute(
                         "evaluation.bias.response.detected_biases",
                         result.detected_biases,
                     )
@@ -754,11 +774,11 @@ class EvaluationSpanProcessor(SpanProcessor):
                     # Add individual bias type scores
                     for bias_type, score in result.bias_scores.items():
                         if score > 0:
-                            span.set_attribute(f"evaluation.bias.response.{bias_type}_score", score)
+                            safe_set_attribute(f"evaluation.bias.response.{bias_type}_score", score)
 
                     # Add patterns matched
                     for bias_type, patterns in result.patterns_matched.items():
-                        span.set_attribute(
+                        safe_set_attribute(
                             f"evaluation.bias.response.{bias_type}_patterns",
                             patterns[:5],  # Limit to first 5 patterns
                         )
@@ -775,27 +795,33 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # If blocking mode and threshold exceeded, set error status
                     if self.bias_config.block_on_detection and result.has_bias:
-                        span.set_status(
-                            Status(
-                                StatusCode.ERROR,
-                                "Response blocked due to bias detection",
+                        try:
+                            span.set_status(
+                                Status(
+                                    StatusCode.ERROR,
+                                    "Response blocked due to bias detection",
+                                )
                             )
-                        )
-                        span.set_attribute("evaluation.bias.response.blocked", True)
+                        except AttributeError:
+                            pass  # ReadableSpan doesn't support set_status
+                        safe_set_attribute("evaluation.bias.response.blocked", True)
                         self.bias_blocked_counter.add(1, {"location": "response"})
                 else:
-                    span.set_attribute("evaluation.bias.response.detected", False)
+                    safe_set_attribute("evaluation.bias.response.detected", False)
 
         except Exception as e:
             logger.error("Error checking bias: %s", e, exc_info=True)
-            span.set_attribute("evaluation.bias.error", str(e))
+            safe_set_attribute("evaluation.bias.error", str(e))
 
-    def _check_prompt_injection(self, span: Span, prompt: Optional[str]) -> None:
+    def _check_prompt_injection(
+        self, span: Span, prompt: Optional[str], safe_set_attribute
+    ) -> None:
         """Check for prompt injection attempts in prompt.
 
         Args:
             span: The span to add prompt injection attributes to
             prompt: Prompt text (optional)
+            safe_set_attribute: Function to safely set attributes on ReadableSpan
         """
         if not self.prompt_injection_detector or not prompt:
             return
@@ -803,13 +829,13 @@ class EvaluationSpanProcessor(SpanProcessor):
         try:
             result = self.prompt_injection_detector.detect(prompt)
             if result.is_injection:
-                span.set_attribute("evaluation.prompt_injection.detected", True)
-                span.set_attribute("evaluation.prompt_injection.score", result.injection_score)
-                span.set_attribute("evaluation.prompt_injection.types", result.injection_types)
+                safe_set_attribute("evaluation.prompt_injection.detected", True)
+                safe_set_attribute("evaluation.prompt_injection.score", result.injection_score)
+                safe_set_attribute("evaluation.prompt_injection.types", result.injection_types)
 
                 # Add patterns matched
                 for inj_type, patterns in result.patterns_matched.items():
-                    span.set_attribute(
+                    safe_set_attribute(
                         f"evaluation.prompt_injection.{inj_type}_patterns",
                         patterns[:5],  # Limit to first 5 patterns
                     )
@@ -826,23 +852,26 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                 # If blocking, set error status
                 if result.blocked:
-                    span.set_status(
-                        Status(
-                            StatusCode.ERROR,
-                            "Request blocked due to prompt injection attempt",
+                    try:
+                        span.set_status(
+                            Status(
+                                StatusCode.ERROR,
+                                "Request blocked due to prompt injection attempt",
+                            )
                         )
-                    )
-                    span.set_attribute("evaluation.prompt_injection.blocked", True)
+                    except AttributeError:
+                        pass  # ReadableSpan doesn't support set_status
+                    safe_set_attribute("evaluation.prompt_injection.blocked", True)
                     self.prompt_injection_blocked_counter.add(1, {})
             else:
-                span.set_attribute("evaluation.prompt_injection.detected", False)
+                safe_set_attribute("evaluation.prompt_injection.detected", False)
 
         except Exception as e:
             logger.error("Error checking prompt injection: %s", e, exc_info=True)
-            span.set_attribute("evaluation.prompt_injection.error", str(e))
+            safe_set_attribute("evaluation.prompt_injection.error", str(e))
 
     def _check_restricted_topics(
-        self, span: Span, prompt: Optional[str], response: Optional[str]
+        self, span: Span, prompt: Optional[str], response: Optional[str], safe_set_attribute
     ) -> None:
         """Check for restricted topics in prompt and response.
 
@@ -850,6 +879,7 @@ class EvaluationSpanProcessor(SpanProcessor):
             span: The span to add restricted topics attributes to
             prompt: Prompt text (optional)
             response: Response text (optional)
+            safe_set_attribute: Function to safely set attributes on ReadableSpan
         """
         if not self.restricted_topics_detector:
             return
@@ -859,11 +889,11 @@ class EvaluationSpanProcessor(SpanProcessor):
             if prompt:
                 result = self.restricted_topics_detector.detect(prompt)
                 if result.has_restricted_topic:
-                    span.set_attribute("evaluation.restricted_topics.prompt.detected", True)
-                    span.set_attribute(
+                    safe_set_attribute("evaluation.restricted_topics.prompt.detected", True)
+                    safe_set_attribute(
                         "evaluation.restricted_topics.prompt.max_score", result.max_score
                     )
-                    span.set_attribute(
+                    safe_set_attribute(
                         "evaluation.restricted_topics.prompt.topics",
                         result.detected_topics,
                     )
@@ -871,7 +901,7 @@ class EvaluationSpanProcessor(SpanProcessor):
                     # Add individual topic scores
                     for topic, score in result.topic_scores.items():
                         if score > 0:
-                            span.set_attribute(
+                            safe_set_attribute(
                                 f"evaluation.restricted_topics.prompt.{topic}_score", score
                             )
 
@@ -889,26 +919,29 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # If blocking, set error status
                     if result.blocked:
-                        span.set_status(
-                            Status(
-                                StatusCode.ERROR,
-                                "Request blocked due to restricted topic",
+                        try:
+                            span.set_status(
+                                Status(
+                                    StatusCode.ERROR,
+                                    "Request blocked due to restricted topic",
+                                )
                             )
-                        )
-                        span.set_attribute("evaluation.restricted_topics.prompt.blocked", True)
+                        except AttributeError:
+                            pass  # ReadableSpan doesn't support set_status
+                        safe_set_attribute("evaluation.restricted_topics.prompt.blocked", True)
                         self.restricted_topics_blocked_counter.add(1, {"location": "prompt"})
                 else:
-                    span.set_attribute("evaluation.restricted_topics.prompt.detected", False)
+                    safe_set_attribute("evaluation.restricted_topics.prompt.detected", False)
 
             # Check response for restricted topics
             if response:
                 result = self.restricted_topics_detector.detect(response)
                 if result.has_restricted_topic:
-                    span.set_attribute("evaluation.restricted_topics.response.detected", True)
-                    span.set_attribute(
+                    safe_set_attribute("evaluation.restricted_topics.response.detected", True)
+                    safe_set_attribute(
                         "evaluation.restricted_topics.response.max_score", result.max_score
                     )
-                    span.set_attribute(
+                    safe_set_attribute(
                         "evaluation.restricted_topics.response.topics",
                         result.detected_topics,
                     )
@@ -916,7 +949,7 @@ class EvaluationSpanProcessor(SpanProcessor):
                     # Add individual topic scores
                     for topic, score in result.topic_scores.items():
                         if score > 0:
-                            span.set_attribute(
+                            safe_set_attribute(
                                 f"evaluation.restricted_topics.response.{topic}_score", score
                             )
 
@@ -934,20 +967,23 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # If blocking, set error status
                     if result.blocked:
-                        span.set_status(
-                            Status(
-                                StatusCode.ERROR,
-                                "Response blocked due to restricted topic",
+                        try:
+                            span.set_status(
+                                Status(
+                                    StatusCode.ERROR,
+                                    "Response blocked due to restricted topic",
+                                )
                             )
-                        )
-                        span.set_attribute("evaluation.restricted_topics.response.blocked", True)
+                        except AttributeError:
+                            pass  # ReadableSpan doesn't support set_status
+                        safe_set_attribute("evaluation.restricted_topics.response.blocked", True)
                         self.restricted_topics_blocked_counter.add(1, {"location": "response"})
                 else:
-                    span.set_attribute("evaluation.restricted_topics.response.detected", False)
+                    safe_set_attribute("evaluation.restricted_topics.response.detected", False)
 
         except Exception as e:
             logger.error("Error checking restricted topics: %s", e, exc_info=True)
-            span.set_attribute("evaluation.restricted_topics.error", str(e))
+            safe_set_attribute("evaluation.restricted_topics.error", str(e))
 
     def _check_hallucination(
         self,
@@ -955,6 +991,7 @@ class EvaluationSpanProcessor(SpanProcessor):
         prompt: Optional[str],
         response: Optional[str],
         attributes: dict,
+        safe_set_attribute,
     ) -> None:
         """Check for potential hallucinations in response.
 
@@ -963,6 +1000,7 @@ class EvaluationSpanProcessor(SpanProcessor):
             prompt: Prompt text (optional, used as context)
             response: Response text (optional)
             attributes: Span attributes (for extracting context)
+            safe_set_attribute: Function to safely set attributes on ReadableSpan
         """
         if not self.hallucination_detector or not response:
             return
@@ -987,28 +1025,28 @@ class EvaluationSpanProcessor(SpanProcessor):
             result = self.hallucination_detector.detect(response, context)
 
             # Always set basic attributes
-            span.set_attribute(
+            safe_set_attribute(
                 "evaluation.hallucination.response.detected", result.has_hallucination
             )
-            span.set_attribute(
+            safe_set_attribute(
                 "evaluation.hallucination.response.score", result.hallucination_score
             )
-            span.set_attribute("evaluation.hallucination.response.citations", result.citation_count)
-            span.set_attribute(
+            safe_set_attribute("evaluation.hallucination.response.citations", result.citation_count)
+            safe_set_attribute(
                 "evaluation.hallucination.response.hedge_words", result.hedge_words_count
             )
-            span.set_attribute(
+            safe_set_attribute(
                 "evaluation.hallucination.response.claims", result.factual_claim_count
             )
 
             if result.has_hallucination:
-                span.set_attribute(
+                safe_set_attribute(
                     "evaluation.hallucination.response.indicators", result.hallucination_indicators
                 )
 
                 # Add unsupported claims
                 if result.unsupported_claims:
-                    span.set_attribute(
+                    safe_set_attribute(
                         "evaluation.hallucination.response.unsupported_claims",
                         result.unsupported_claims[:3],  # Limit to first 3
                     )
@@ -1025,7 +1063,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
         except Exception as e:
             logger.error("Error checking hallucination: %s", e, exc_info=True)
-            span.set_attribute("evaluation.hallucination.error", str(e))
+            safe_set_attribute("evaluation.hallucination.error", str(e))
 
     def shutdown(self) -> None:
         """Shutdown the span processor.
