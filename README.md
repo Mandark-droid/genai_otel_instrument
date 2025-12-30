@@ -44,7 +44,7 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 🔧 **MCP Tool Support** - Auto-instrument databases, APIs, caches, vector DBs
 💰 **Cost Tracking** - Automatic cost calculation for both streaming and non-streaming requests
 ⚡ **Streaming Support** - Full observability for streaming responses with TTFT/TBT metrics and cost tracking
-🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature, power, and electricity cost tracking
+🎮 **GPU Metrics** - Real-time GPU utilization, memory, temperature, power, and electricity cost tracking (NVIDIA & AMD)
 🛡️ **PII Detection** (NEW) - Automatic PII detection with GDPR/HIPAA/PCI-DSS compliance modes
 ☢️ **Toxicity Detection** (NEW) - Detect harmful content with Perspective API and Detoxify
 ⚖️ **Bias Detection** (NEW) - Identify demographic and other biases in prompts and responses
@@ -178,7 +178,7 @@ Complete agent workflow tracing with tool calls, iterations, and cost breakdown.
 </div>
 
 ### GPU Metrics Collection
-Real-time GPU utilization, memory, temperature, and power consumption metrics.
+Real-time GPU utilization, memory, temperature, and power consumption metrics for both NVIDIA and AMD GPUs.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/Mandark-droid/genai_otel_instrument/main/.github/images/Screenshots/GPU_Metrics.png" alt="GPU Metrics Dashboard" width="900"/>
