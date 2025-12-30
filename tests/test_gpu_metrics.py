@@ -31,9 +31,9 @@ def mock_otel_config():
 def mock_meter():
     """Fixture for a mock OpenTelemetry Meter."""
     meter = Mock()
-    # create_counter is called for both CO2 and power cost counters
+    # create_counter is called for CO2, power cost, energy consumed, and total energy counters
     # Return different Mock objects for each counter to avoid confusion
-    meter.create_counter.side_effect = [Mock(), Mock()]
+    meter.create_counter.side_effect = [Mock(), Mock(), Mock(), Mock()]
     # Return a new Mock() each time create_observable_gauge is called
     meter.create_observable_gauge.return_value = Mock()
     return meter
@@ -79,18 +79,19 @@ class TestGPUMetricsCollector:
     @patch("genai_otel.gpu_metrics.logger")
     @patch.dict(sys.modules, {"pynvml": None})
     @patch("genai_otel.gpu_metrics.NVML_AVAILABLE", False)
+    @patch("genai_otel.gpu_metrics.AMDSMI_AVAILABLE", False)
     def test_init_nvml_not_available(self, mock_logger, mock_meter, mock_otel_config):
         import genai_otel.gpu_metrics
 
-        # NVML_AVAILABLE is already False due to patch
+        # NVML_AVAILABLE and AMDSMI_AVAILABLE are both False due to patch
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
         assert not collector.gpu_available
         mock_logger.warning.assert_called_with(
-            "GPU metrics collection not available - nvidia-ml-py not installed. "
-            "Install with: pip install genai-otel-instrument[gpu]"
+            "GPU metrics collection not available - neither nvidia-ml-py nor amdsmi installed. "
+            "Install with: pip install genai-otel-instrument[all-gpu]"
         )
-        # Both CO2 and power cost counters are created even when NVML not available
-        assert mock_meter.create_counter.call_count == 2
+        # CO2, power cost, energy consumed, and total energy counters are created even when GPUs not available
+        assert mock_meter.create_counter.call_count == 4
         mock_meter.create_observable_gauge.assert_not_called()  # other gauges not created
 
     @patch("genai_otel.gpu_metrics.logger")
@@ -156,6 +157,7 @@ class TestGPUMetricsCollector:
     @patch("genai_otel.gpu_metrics.logger")
     @patch.dict(sys.modules, {"pynvml": None})
     @patch("genai_otel.gpu_metrics.NVML_AVAILABLE", False)
+    @patch("genai_otel.gpu_metrics.AMDSMI_AVAILABLE", False)
     def test_observe_gpu_utilization_nvml_not_available(
         self, mock_logger, mock_meter, mock_otel_config
     ):
@@ -263,13 +265,14 @@ class TestGPUMetricsCollector:
     @patch("genai_otel.gpu_metrics.logger")
     @patch.dict(sys.modules, {"pynvml": None})
     @patch("genai_otel.gpu_metrics.NVML_AVAILABLE", False)
+    @patch("genai_otel.gpu_metrics.AMDSMI_AVAILABLE", False)
     def test_start_nvml_not_available(self, mock_logger, mock_thread, mock_meter, mock_otel_config):
         import genai_otel.gpu_metrics
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
         collector.start()
         mock_logger.warning.assert_any_call(
-            "Cannot start GPU metrics collection - nvidia-ml-py not available"
+            "Cannot start GPU metrics collection - no GPU libraries available"
         )
         mock_thread.assert_not_called()
 

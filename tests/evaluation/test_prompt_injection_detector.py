@@ -16,7 +16,7 @@ class TestPromptInjectionConfig:
         """Test default configuration."""
         config = PromptInjectionConfig()
         assert config.enabled is False
-        assert config.threshold == 0.7
+        assert config.threshold == 0.5
         assert config.block_on_detection is False
 
     def test_custom_config(self):
