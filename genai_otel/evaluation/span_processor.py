@@ -266,6 +266,29 @@ class EvaluationSpanProcessor(SpanProcessor):
         logger.info("  - Restricted Topics: %s", self.restricted_topics_config.enabled)
         logger.info("  - Hallucination Detection: %s", self.hallucination_config.enabled)
 
+        # Register detectors with BaseInstrumentor so they can run before span ends
+        try:
+            from genai_otel.instrumentors.base import BaseInstrumentor
+
+            logger.info(
+                f"Attempting to register detectors: pii_detector={self.pii_detector is not None}, toxicity_detector={self.toxicity_detector is not None}"
+            )
+            with BaseInstrumentor._evaluation_lock:
+                if self.pii_detector:
+                    BaseInstrumentor._pii_detector = self.pii_detector
+                    logger.info("Registered PII detector with BaseInstrumentor")
+                else:
+                    logger.warning("PII detector is None, not registering")
+                if self.toxicity_detector:
+                    BaseInstrumentor._toxicity_detector = self.toxicity_detector
+                    logger.info("Registered Toxicity detector with BaseInstrumentor")
+                else:
+                    logger.warning("Toxicity detector is None, not registering")
+        except Exception as e:
+            logger.warning(
+                f"Failed to register detectors with BaseInstrumentor: {e}", exc_info=True
+            )
+
     def on_start(self, span: Span, parent_context=None) -> None:
         """Called when a span is started.
 
@@ -285,13 +308,25 @@ class EvaluationSpanProcessor(SpanProcessor):
         This is where we perform evaluation and safety checks on the span's
         prompt and response data.
 
+        Note: This method runs AFTER span.end() is called, so the span is
+        a ReadableSpan and cannot have attributes modified. Attributes must
+        be set in BaseInstrumentor before span.end(). However, we still
+        extract data and record metrics here.
+
         Args:
             span: The span that ended
         """
-        if not isinstance(span, Span):
-            return
+        # Don't check isinstance - span is ReadableSpan after end()
 
         try:
+            # Helper to safely set attributes (will fail silently on ReadableSpan)
+            def safe_set_attribute(key, value):
+                try:
+                    span.set_attribute(key, value)
+                except AttributeError:
+                    # ReadableSpan doesn't support set_attribute - attributes were already set by BaseInstrumentor
+                    pass
+
             # Extract prompt and response from span attributes
             attributes = dict(span.attributes) if span.attributes else {}
 
@@ -300,7 +335,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
             # Run PII detection
             if self.pii_config.enabled and self.pii_detector:
-                self._check_pii(span, prompt, response)
+                self._check_pii(span, prompt, response, safe_set_attribute)
 
             # Run toxicity detection
             if self.toxicity_config.enabled and self.toxicity_detector:
@@ -334,11 +369,15 @@ class EvaluationSpanProcessor(SpanProcessor):
         Returns:
             Optional[str]: Prompt text if found
         """
+        import ast
+        import json
+
         # Try different attribute names used by various instrumentors
         prompt_keys = [
             "gen_ai.prompt",
             "gen_ai.prompt.0.content",
             "gen_ai.request.prompt",
+            "gen_ai.request.first_message",  # OpenAI instrumentor
             "llm.prompts",
             "gen_ai.content.prompt",
         ]
@@ -346,10 +385,43 @@ class EvaluationSpanProcessor(SpanProcessor):
         for key in prompt_keys:
             if key in attributes:
                 value = attributes[key]
+
+                # Handle string values
                 if isinstance(value, str):
-                    return value
+                    # Check if it's a JSON/dict string (starts with '{' or '[')
+                    if value.strip().startswith(("{", "[")):
+                        try:
+                            # Try JSON parsing first (handles proper JSON)
+                            parsed = json.loads(value)
+                            if isinstance(parsed, dict) and "content" in parsed:
+                                return parsed["content"]
+                            elif isinstance(parsed, list) and parsed:
+                                if isinstance(parsed[0], dict) and "content" in parsed[0]:
+                                    return parsed[0]["content"]
+                                elif isinstance(parsed[0], str):
+                                    return parsed[0]
+                        except json.JSONDecodeError:
+                            # Try ast.literal_eval for Python dict strings
+                            try:
+                                parsed = ast.literal_eval(value)
+                                if isinstance(parsed, dict) and "content" in parsed:
+                                    return parsed["content"]
+                                elif isinstance(parsed, list) and parsed:
+                                    if isinstance(parsed[0], dict) and "content" in parsed[0]:
+                                        return parsed[0]["content"]
+                                    elif isinstance(parsed[0], str):
+                                        return parsed[0]
+                            except (ValueError, SyntaxError):
+                                # If parsing fails, treat as plain string
+                                return value
+                    else:
+                        # Plain string prompt
+                        return value
+
+                # Handle actual dict/list objects (though rare with OTel attributes)
+                elif isinstance(value, dict) and "content" in value:
+                    return value["content"]
                 elif isinstance(value, list) and value:
-                    # Handle list of messages
                     if isinstance(value[0], dict) and "content" in value[0]:
                         return value[0]["content"]
                     elif isinstance(value[0], str):
@@ -390,29 +462,36 @@ class EvaluationSpanProcessor(SpanProcessor):
 
         return None
 
-    def _check_pii(self, span: Span, prompt: Optional[str], response: Optional[str]) -> None:
+    def _check_pii(
+        self, span: Span, prompt: Optional[str], response: Optional[str], safe_set_attribute=None
+    ) -> None:
         """Check for PII in prompt and response.
 
         Args:
             span: The span to add PII attributes to
             prompt: Prompt text (optional)
             response: Response text (optional)
+            safe_set_attribute: Function to safely set attributes (optional, for ReadableSpan)
         """
         if not self.pii_detector:
             return
+
+        # If no safe_set_attribute provided, use span.set_attribute directly
+        if safe_set_attribute is None:
+            safe_set_attribute = span.set_attribute
 
         try:
             # Check prompt for PII
             if prompt:
                 result = self.pii_detector.detect(prompt)
                 if result.has_pii:
-                    span.set_attribute("evaluation.pii.prompt.detected", True)
-                    span.set_attribute("evaluation.pii.prompt.entity_count", len(result.entities))
-                    span.set_attribute(
+                    safe_set_attribute("evaluation.pii.prompt.detected", True)
+                    safe_set_attribute("evaluation.pii.prompt.entity_count", len(result.entities))
+                    safe_set_attribute(
                         "evaluation.pii.prompt.entity_types",
                         list(result.entity_counts.keys()),
                     )
-                    span.set_attribute("evaluation.pii.prompt.score", result.score)
+                    safe_set_attribute("evaluation.pii.prompt.score", result.score)
 
                     # Record metrics
                     self.pii_detection_counter.add(
@@ -421,7 +500,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # Add entity counts by type
                     for entity_type, count in result.entity_counts.items():
-                        span.set_attribute(
+                        safe_set_attribute(
                             f"evaluation.pii.prompt.{entity_type.lower()}_count", count
                         )
                         # Record entity metrics
@@ -435,33 +514,36 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # If blocking, set error status
                     if result.blocked:
-                        span.set_status(
-                            Status(
-                                StatusCode.ERROR,
-                                "Request blocked due to PII detection",
+                        try:
+                            span.set_status(
+                                Status(
+                                    StatusCode.ERROR,
+                                    "Request blocked due to PII detection",
+                                )
                             )
-                        )
-                        span.set_attribute("evaluation.pii.prompt.blocked", True)
+                        except AttributeError:
+                            pass
+                        safe_set_attribute("evaluation.pii.prompt.blocked", True)
                         # Record blocked metric
                         self.pii_blocked_counter.add(1, {"location": "prompt"})
 
                     # Add redacted text if available
                     if result.redacted_text:
-                        span.set_attribute("evaluation.pii.prompt.redacted", result.redacted_text)
+                        safe_set_attribute("evaluation.pii.prompt.redacted", result.redacted_text)
                 else:
-                    span.set_attribute("evaluation.pii.prompt.detected", False)
+                    safe_set_attribute("evaluation.pii.prompt.detected", False)
 
             # Check response for PII
             if response:
                 result = self.pii_detector.detect(response)
                 if result.has_pii:
-                    span.set_attribute("evaluation.pii.response.detected", True)
-                    span.set_attribute("evaluation.pii.response.entity_count", len(result.entities))
-                    span.set_attribute(
+                    safe_set_attribute("evaluation.pii.response.detected", True)
+                    safe_set_attribute("evaluation.pii.response.entity_count", len(result.entities))
+                    safe_set_attribute(
                         "evaluation.pii.response.entity_types",
                         list(result.entity_counts.keys()),
                     )
-                    span.set_attribute("evaluation.pii.response.score", result.score)
+                    safe_set_attribute("evaluation.pii.response.score", result.score)
 
                     # Record metrics
                     self.pii_detection_counter.add(
@@ -470,7 +552,7 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # Add entity counts by type
                     for entity_type, count in result.entity_counts.items():
-                        span.set_attribute(
+                        safe_set_attribute(
                             f"evaluation.pii.response.{entity_type.lower()}_count",
                             count,
                         )
@@ -485,25 +567,28 @@ class EvaluationSpanProcessor(SpanProcessor):
 
                     # If blocking, set error status
                     if result.blocked:
-                        span.set_status(
-                            Status(
-                                StatusCode.ERROR,
-                                "Response blocked due to PII detection",
+                        try:
+                            span.set_status(
+                                Status(
+                                    StatusCode.ERROR,
+                                    "Response blocked due to PII detection",
+                                )
                             )
-                        )
-                        span.set_attribute("evaluation.pii.response.blocked", True)
+                        except AttributeError:
+                            pass
+                        safe_set_attribute("evaluation.pii.response.blocked", True)
                         # Record blocked metric
                         self.pii_blocked_counter.add(1, {"location": "response"})
 
                     # Add redacted text if available
                     if result.redacted_text:
-                        span.set_attribute("evaluation.pii.response.redacted", result.redacted_text)
+                        safe_set_attribute("evaluation.pii.response.redacted", result.redacted_text)
                 else:
-                    span.set_attribute("evaluation.pii.response.detected", False)
+                    safe_set_attribute("evaluation.pii.response.detected", False)
 
         except Exception as e:
             logger.error("Error checking PII: %s", e, exc_info=True)
-            span.set_attribute("evaluation.pii.error", str(e))
+            safe_set_attribute("evaluation.pii.error", str(e))
 
     def _check_toxicity(self, span: Span, prompt: Optional[str], response: Optional[str]) -> None:
         """Check for toxicity in prompt and response.

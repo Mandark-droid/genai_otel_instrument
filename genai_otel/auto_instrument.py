@@ -8,6 +8,12 @@ import sys
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+    OTLPMetricExporter as GrpcOTLPMetricExporter,
+)
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+    OTLPSpanExporter as GrpcOTLPSpanExporter,
+)
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
 from opentelemetry.sdk.metrics.view import View
@@ -348,20 +354,44 @@ def setup_auto_instrumentation(config: OTelConfig):
         # Set timeout in environment variable as integer string (OTLP exporters expect int)
         os.environ["OTEL_EXPORTER_OTLP_TIMEOUT"] = str(timeout)
 
-        # Create exporters WITHOUT passing endpoint (let them read from env vars)
-        # This ensures they call _append_trace_path() correctly
-        span_exporter = OTLPSpanExporter(
-            headers=config.headers,
-        )
+        # Detect OTLP protocol (grpc or http)
+        # Priority: OTEL_EXPORTER_OTLP_PROTOCOL env var > port-based detection > default (http)
+        otlp_protocol = os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "").lower()
+        if not otlp_protocol:
+            # Detect from port: 4317 = gRPC, 4318 = HTTP
+            from urllib.parse import urlparse
+
+            parsed_endpoint = urlparse(base_url)
+            if parsed_endpoint.port == 4317:
+                otlp_protocol = "grpc"
+            else:
+                otlp_protocol = "http"
+
+        # Create exporters based on protocol
+        if otlp_protocol == "grpc":
+            span_exporter = GrpcOTLPSpanExporter(
+                headers=config.headers,
+            )
+            metric_exporter = GrpcOTLPMetricExporter(
+                headers=config.headers,
+            )
+            logger.info(f"Using OTLP gRPC protocol (endpoint: {base_url})")
+        else:
+            # Default to HTTP
+            span_exporter = OTLPSpanExporter(
+                headers=config.headers,
+            )
+            metric_exporter = OTLPMetricExporter(
+                headers=config.headers,
+            )
+            logger.info(f"Using OTLP HTTP protocol (endpoint: {base_url})")
+
         tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
         logger.info(
             f"OpenTelemetry tracing configured with OTLP endpoint: {span_exporter._endpoint}"
         )
 
         # Configure Metrics with Views for histogram buckets
-        metric_exporter = OTLPMetricExporter(
-            headers=config.headers,
-        )
         metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
 
         # Create Views to configure histogram buckets for GenAI operation duration

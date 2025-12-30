@@ -43,6 +43,20 @@ That's it! No code changes needed in your application logic.
 - **[llamaindex/](llamaindex/)** - LlamaIndex framework
 - **[huggingface/](huggingface/)** - HuggingFace Transformers
 
+### Evaluation & Safety Features
+
+- **[pii_detection/](pii_detection/)** - PII (Personally Identifiable Information) detection
+  - Basic detection, redaction, and blocking modes
+  - GDPR, HIPAA, PCI-DSS compliance
+  - Response detection and custom thresholds
+- **[toxicity_detection/](toxicity_detection/)** - Toxicity and harmful content detection
+  - Local model (Detoxify) and cloud API (Perspective) options
+  - 6 toxicity categories: toxicity, severe_toxicity, identity_attack, insult, profanity, threat
+  - Blocking mode and threshold configuration
+- **[bias_detection/](bias_detection/)** - Bias detection (Coming Soon)
+  - Gender, racial, age, and other bias categories
+  - Compliance support for EEO and fair housing
+
 ### Complete Demo
 
 - **[demo/](demo/)** - 🎯 **START HERE!** Self-contained Docker demo with Jaeger
@@ -118,6 +132,20 @@ python example.py
 - `GENAI_ENABLE_MCP_INSTRUMENTATION` - Enable MCP tools instrumentation (default: "true")
 - `GENAI_FAIL_ON_ERROR` - Fail on instrumentation errors (default: "false")
 
+### Evaluation & Safety Flags
+
+- `GENAI_ENABLE_PII_DETECTION` - Enable PII detection (default: "false")
+- `GENAI_PII_MODE` - PII mode: detect, redact, or block (default: "detect")
+- `GENAI_PII_THRESHOLD` - PII confidence threshold 0.0-1.0 (default: "0.7")
+- `GENAI_PII_GDPR_MODE` - Enable GDPR compliance (default: "false")
+- `GENAI_PII_HIPAA_MODE` - Enable HIPAA compliance (default: "false")
+- `GENAI_PII_PCI_DSS_MODE` - Enable PCI-DSS compliance (default: "false")
+- `GENAI_ENABLE_TOXICITY_DETECTION` - Enable toxicity detection (default: "false")
+- `GENAI_TOXICITY_THRESHOLD` - Toxicity threshold 0.0-1.0 (default: "0.7")
+- `GENAI_TOXICITY_USE_PERSPECTIVE_API` - Use Google Perspective API (default: "false")
+- `GENAI_TOXICITY_PERSPECTIVE_API_KEY` - Perspective API key (optional)
+- `GENAI_TOXICITY_BLOCK_ON_DETECTION` - Block toxic content (default: "false")
+
 ### Logging
 
 - `GENAI_OTEL_LOG_LEVEL` - Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: "INFO")
@@ -143,6 +171,16 @@ For each LLM call, the following data is automatically captured:
 - `genai.cost` - Estimated costs in USD
 - `genai.errors` - Error counts
 - `genai.gpu.*` - GPU metrics (if enabled)
+
+### Evaluation & Safety Metrics
+
+- `genai.evaluation.pii.detections` - PII detection events
+- `genai.evaluation.pii.entities` - PII entities by type
+- `genai.evaluation.pii.blocked` - Blocked PII requests
+- `genai.evaluation.toxicity.detections` - Toxicity detection events
+- `genai.evaluation.toxicity.categories` - Toxicity by category
+- `genai.evaluation.toxicity.score` - Toxicity score distribution
+- `genai.evaluation.toxicity.blocked` - Blocked toxic requests
 
 ### Cost Tracking
 
@@ -192,6 +230,38 @@ tracer_provider = trace.get_tracer_provider()
 
 # Instrument using existing setup
 genai_otel.instrument(tracer_provider=tracer_provider)
+```
+
+### Enabling Safety Features
+
+```python
+import genai_otel
+
+# Enable PII detection with redaction
+genai_otel.instrument(
+    service_name="my-app",
+    enable_pii_detection=True,
+    pii_mode="redact",  # Options: detect, redact, block
+    pii_threshold=0.7,
+    pii_gdpr_mode=True,  # EU compliance
+)
+
+# Enable toxicity detection
+genai_otel.instrument(
+    service_name="my-app",
+    enable_toxicity_detection=True,
+    toxicity_threshold=0.7,
+    toxicity_block_on_detection=True,
+)
+
+# Enable multiple safety features
+genai_otel.instrument(
+    service_name="my-app",
+    enable_pii_detection=True,
+    pii_mode="redact",
+    enable_toxicity_detection=True,
+    toxicity_threshold=0.7,
+)
 ```
 
 ## Troubleshooting
