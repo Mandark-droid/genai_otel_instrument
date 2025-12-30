@@ -13,7 +13,7 @@ class TestBiasConfig:
         """Test default configuration."""
         config = BiasConfig()
         assert config.enabled is False
-        assert config.threshold == 0.5
+        assert config.threshold == 0.4
         assert config.block_on_detection is False
         assert "gender" in config.bias_types
         assert "race" in config.bias_types

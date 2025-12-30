@@ -85,6 +85,15 @@ gpu = [
     "nvidia-ml-py>=11.495.46",
     "codecarbon>=2.3.0"
 ]
+amd-gpu = [
+    "amdsmi>=7.0.0",
+    "codecarbon>=2.3.0"
+]
+all-gpu = [
+    "nvidia-ml-py>=11.495.46",
+    "amdsmi>=7.0.0",
+    "codecarbon>=2.3.0"
+]
 co2 = ["codecarbon>=2.3.0"]
 # Individual LLM providers
 openai = ["openai>=1.0.0"]
@@ -209,6 +218,8 @@ all = [
     "llama-index>=0.9.0",
     "transformers>=4.30.0",
     "nvidia-ml-py>=11.495.46",
+    "amdsmi>=7.0.0",
+    "codecarbon>=2.3.0",
     "crewai>=0.1.0",
     "pyautogen>=0.2.0",
     "haystack-ai>=2.0.0",

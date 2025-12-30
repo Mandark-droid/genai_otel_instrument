@@ -16,7 +16,7 @@ class TestPIIConfig:
         config = PIIConfig()
         assert config.enabled is False
         assert config.mode == PIIMode.DETECT
-        assert config.threshold == 0.7
+        assert config.threshold == 0.5
         assert config.redaction_char == "*"
         assert not config.gdpr_mode
         assert not config.hipaa_mode
