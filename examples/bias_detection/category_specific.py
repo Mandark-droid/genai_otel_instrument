@@ -31,7 +31,7 @@ instrument(
     service_name="bias-category-specific",
     endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
     enable_bias_detection=True,
-    bias_threshold=0.5,
+    bias_threshold=0.4,  # Lower threshold for better detection in examples
     # You can customize which categories to check via config
 )
 

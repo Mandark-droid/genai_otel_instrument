@@ -31,7 +31,7 @@ instrument(
     service_name="bias-detection-basic-example",
     endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
     enable_bias_detection=True,
-    bias_threshold=0.5,  # Sensitivity threshold
+    bias_threshold=0.4,  # Sensitivity threshold (0.3=strict, 0.4=moderate, 0.5=permissive)
 )
 
 # Now import OpenAI after instrumentation is set up
