@@ -195,7 +195,7 @@ class OTelConfig:
         default_factory=lambda: os.getenv("GENAI_PII_MODE", "detect")
     )  # detect, redact, or block
     pii_threshold: float = field(
-        default_factory=lambda: float(os.getenv("GENAI_PII_THRESHOLD", "0.7"))
+        default_factory=lambda: float(os.getenv("GENAI_PII_THRESHOLD", "0.5"))
     )
     pii_gdpr_mode: bool = field(
         default_factory=lambda: os.getenv("GENAI_PII_GDPR_MODE", "false").lower() == "true"
@@ -222,13 +222,21 @@ class OTelConfig:
     toxicity_perspective_api_key: Optional[str] = field(
         default_factory=lambda: os.getenv("GENAI_TOXICITY_PERSPECTIVE_API_KEY")
     )
+    toxicity_block_on_detection: bool = field(
+        default_factory=lambda: os.getenv("GENAI_TOXICITY_BLOCK_ON_DETECTION", "false").lower()
+        == "true"
+    )
 
     # Bias Detection
     enable_bias_detection: bool = field(
         default_factory=lambda: os.getenv("GENAI_ENABLE_BIAS_DETECTION", "false").lower() == "true"
     )
     bias_threshold: float = field(
-        default_factory=lambda: float(os.getenv("GENAI_BIAS_THRESHOLD", "0.6"))
+        default_factory=lambda: float(os.getenv("GENAI_BIAS_THRESHOLD", "0.4"))
+    )
+    bias_block_on_detection: bool = field(
+        default_factory=lambda: os.getenv("GENAI_BIAS_BLOCK_ON_DETECTION", "false").lower()
+        == "true"
     )
 
     # Prompt Injection Detection
@@ -239,7 +247,13 @@ class OTelConfig:
         == "true"
     )
     prompt_injection_threshold: float = field(
-        default_factory=lambda: float(os.getenv("GENAI_PROMPT_INJECTION_THRESHOLD", "0.8"))
+        default_factory=lambda: float(os.getenv("GENAI_PROMPT_INJECTION_THRESHOLD", "0.5"))
+    )
+    prompt_injection_block_on_detection: bool = field(
+        default_factory=lambda: os.getenv(
+            "GENAI_PROMPT_INJECTION_BLOCK_ON_DETECTION", "false"
+        ).lower()
+        == "true"
     )
 
     # Restricted Topics
@@ -249,6 +263,12 @@ class OTelConfig:
     )
     restricted_topics_threshold: float = field(
         default_factory=lambda: float(os.getenv("GENAI_RESTRICTED_TOPICS_THRESHOLD", "0.7"))
+    )
+    restricted_topics_block_on_detection: bool = field(
+        default_factory=lambda: os.getenv(
+            "GENAI_RESTRICTED_TOPICS_BLOCK_ON_DETECTION", "false"
+        ).lower()
+        == "true"
     )
 
     # Hallucination Detection

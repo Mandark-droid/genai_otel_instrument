@@ -271,6 +271,7 @@ def setup_auto_instrumentation(config: OTelConfig):
                     threshold=config.toxicity_threshold,
                     use_perspective_api=config.toxicity_use_perspective_api,
                     perspective_api_key=config.toxicity_perspective_api_key,
+                    block_on_detection=config.toxicity_block_on_detection,
                 )
 
             # Build Bias config
@@ -279,6 +280,7 @@ def setup_auto_instrumentation(config: OTelConfig):
                 bias_config = BiasConfig(
                     enabled=True,
                     threshold=config.bias_threshold,
+                    block_on_detection=config.bias_block_on_detection,
                 )
 
             # Build Prompt Injection config
@@ -287,6 +289,7 @@ def setup_auto_instrumentation(config: OTelConfig):
                 prompt_injection_config = PromptInjectionConfig(
                     enabled=True,
                     threshold=config.prompt_injection_threshold,
+                    block_on_detection=config.prompt_injection_block_on_detection,
                 )
 
             # Build Restricted Topics config
@@ -295,6 +298,7 @@ def setup_auto_instrumentation(config: OTelConfig):
                 restricted_topics_config = RestrictedTopicsConfig(
                     enabled=True,
                     threshold=config.restricted_topics_threshold,
+                    block_on_detection=config.restricted_topics_block_on_detection,
                 )
 
             # Build Hallucination config

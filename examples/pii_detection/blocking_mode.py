@@ -25,7 +25,7 @@ instrument(
     endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
     enable_pii_detection=True,
     pii_mode="block",  # Block requests with PII
-    pii_threshold=0.7,
+    pii_threshold=0.5,  # Default threshold (Presidio scores: 0.5-0.7)
 )
 
 # Now import OpenAI after instrumentation is set up
@@ -37,7 +37,7 @@ print("=" * 80)
 print("PII Blocking Mode")
 print("=" * 80)
 print("\nWith blocking mode enabled, requests with PII are marked as ERROR in telemetry...")
-print("Prompt: 'My passport number is AB1234567'")
+print("Prompt: 'Send invoice to john.doe@company.com and call me at 555-123-4567'")
 
 try:
     response = client.chat.completions.create(
@@ -45,7 +45,7 @@ try:
         messages=[
             {
                 "role": "user",
-                "content": "My passport number is AB1234567",
+                "content": "Send invoice to john.doe@company.com and call me at 555-123-4567",
             }
         ],
     )
@@ -59,7 +59,7 @@ print("=" * 80)
 print("  - evaluation.pii.prompt.detected = true")
 print("  - evaluation.pii.prompt.blocked = true")
 print("  - Span status = ERROR")
-print("  - evaluation.pii.prompt.entity_types = ['US_PASSPORT']")
+print("  - evaluation.pii.prompt.entity_types = ['EMAIL_ADDRESS', 'PHONE_NUMBER']")
 print("\nMetrics:")
 print("  - genai.evaluation.pii.blocked (counter)")
 print("\nNote: The actual request is NOT blocked by the library.")

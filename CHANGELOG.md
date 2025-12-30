@@ -6,6 +6,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.28] - 2025-12-30
+
+### Fixed
+
+- **Critical: Missing Block-on-Detection Parameters**
+  - Fixed critical bug where `*_block_on_detection` parameters were NOT exposed in `OTelConfig`
+  - ALL blocking mode examples were silently failing with TypeError
+  - Added missing parameters: `toxicity_block_on_detection`, `bias_block_on_detection`, `prompt_injection_block_on_detection`, `restricted_topics_block_on_detection`
+  - Wired parameters through to detector configs in `auto_instrument.py`
+  - Blocking mode now fully functional for all evaluation types
+
+- **Evaluation Detection Thresholds**
+  - Lowered PII detection threshold from 0.7 to 0.5 (Presidio scores 0.5-0.7 for valid PII)
+  - Lowered Bias detection threshold from 0.5 to 0.4 (pattern matching scores 0.3-0.5)
+  - Lowered Prompt Injection threshold from 0.7 to 0.5 (injection patterns score 0.5-0.7)
+  - Updated environment variable defaults in `config.py`
+  - Updated documentation in `sample.env` and `README.md`
+
+- **PII Blocking Example Content**
+  - Updated `examples/pii_detection/blocking_mode.py` to use reliably detectable PII
+  - Changed from undetectable passport number to email + phone number
+  - Now properly triggers blocked metrics in Prometheus
+
+- **Unicode Encoding Error**
+  - Fixed Unicode arrow character in `bias_detection/custom_threshold.py`
+  - Changed `→` to `->` for Windows console compatibility
+  - Test now passes (was failing validation)
+
+### Added
+
+- **New Blocking Mode Examples**
+  - `examples/prompt_injection/blocking_mode.py` - Demonstrates jailbreak and system override blocking
+  - `examples/restricted_topics/blocking_mode.py` - Demonstrates medical/legal advice and self-harm blocking
+
+- **Multi-Provider Evaluation Examples**
+  - `examples/anthropic/pii_detection_example.py` - PII detection with Claude
+  - `examples/anthropic/toxicity_detection_example.py` - Toxicity detection with Claude
+  - `examples/ollama/bias_detection_example.py` - Bias detection with local Llama2
+  - `examples/huggingface/prompt_injection_example.py` - Prompt injection with HF Transformers
+  - `examples/mistralai/hallucination_detection_example.py` - Hallucination detection with Mistral
+  - Demonstrates evaluation features work across ALL supported LLM providers
+
+- **Environment Variable Documentation**
+  - Added 4 new block-on-detection parameters to `sample.env`:
+    - `GENAI_TOXICITY_BLOCK_ON_DETECTION`
+    - `GENAI_BIAS_BLOCK_ON_DETECTION`
+    - `GENAI_PROMPT_INJECTION_BLOCK_ON_DETECTION`
+    - `GENAI_RESTRICTED_TOPICS_BLOCK_ON_DETECTION`
+  - Each includes description and usage notes
+
+- **Validation Script Updates**
+  - Added multi-provider evaluation examples section
+  - Now tests Anthropic, Ollama, HuggingFace, and Mistral examples
+  - Validates 40+ examples across all evaluation types and providers
+
+### Changed
+
+- Updated default thresholds in `genai_otel/evaluation/config.py`
+- Updated default environment variables in `genai_otel/config.py`
+- Enhanced validation script with multi-provider support
+
 ## [0.1.27] - 2025-12-30
 
 ### Fixed
