@@ -2920,6 +2920,56 @@
       "completionPrice": 0.005,
       "note": "From LiteLLM - provider: moonshot"
     },
+    "moonshotai/Kimi-K2-Instruct": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "Moonshot AI flagship model - 1T parameters MoE"
+    },
+    "moonshotai/Kimi-K2-Instruct-0905": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "Moonshot AI flagship model - 1T parameters MoE, Sep 2025 release"
+    },
+    "moonshotai/Kimi-K2-Base": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024,
+      "note": "Moonshot AI base model - 1T parameters MoE"
+    },
+    "moonshotai/Kimi-K2-Thinking": {
+      "promptPrice": 0.0015,
+      "completionPrice": 0.0045,
+      "note": "Moonshot AI reasoning model - 1T parameters MoE with thinking"
+    },
+    "moonshotai/Kimi-Dev-72B": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024,
+      "note": "Moonshot AI dev model - 73B parameters"
+    },
+    "moonshotai/Kimi-Linear-48B-A3B-Instruct": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0018,
+      "note": "Moonshot AI Linear model - 49B MoE with 3B active, Kimi Delta Attention"
+    },
+    "moonshotai/Kimi-Linear-48B-A3B-Base": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Moonshot AI Linear base model - 49B MoE with 3B active"
+    },
+    "moonshotai/Kimi-VL-A3B-Instruct": {
+      "promptPrice": 0.0008,
+      "completionPrice": 0.0024,
+      "note": "Moonshot AI vision-language model - 16B parameters"
+    },
+    "moonshotai/Kimi-VL-A3B-Thinking": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "Moonshot AI vision-language reasoning model - 16B parameters"
+    },
+    "moonshotai/Kimi-VL-A3B-Thinking-2506": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.003,
+      "note": "Moonshot AI vision-language reasoning model - 16B parameters, June 2025"
+    },
     "morph/morph-v3-fast": {
       "promptPrice": 0.0007999999999999999,
       "completionPrice": 0.0012,
