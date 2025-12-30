@@ -39,9 +39,7 @@ print("=" * 80)
 print("\nCurrent Configuration:")
 print("-" * 80)
 print(f"Service Name: {os.getenv('OTEL_SERVICE_NAME', 'restricted-topics-env-config')}")
-print(
-    f"OTLP Endpoint: {os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318')}"
-)
+print(f"OTLP Endpoint: {os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318')}")
 print(
     f"Restricted Topics Detection: {os.getenv('GENAI_ENABLE_RESTRICTED_TOPICS_DETECTION', 'false (default)')}"
 )
@@ -73,7 +71,8 @@ print()
 print("=" * 80)
 print("Environment Variable Reference:")
 print("=" * 80)
-print("""
+print(
+    """
 Restricted Topics Configuration:
 
   GENAI_ENABLE_RESTRICTED_TOPICS_DETECTION
@@ -133,5 +132,6 @@ Telemetry Attributes:
   - evaluation.restricted_topics.prompt.violence_score (float)
   - evaluation.restricted_topics.prompt.illegal_score (float)
   - evaluation.restricted_topics.prompt.medical_score (float)
-""")
+"""
+)
 print("=" * 80)

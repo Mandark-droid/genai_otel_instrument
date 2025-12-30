@@ -89,7 +89,8 @@ for i, test in enumerate(policy_tests, 1):
 print("=" * 80)
 print("Content Policy Implementation:")
 print("=" * 80)
-print("""
+print(
+    """
 Policy Tier System:
 
 Tier 1 - IMMEDIATE BLOCK (High Risk):
@@ -153,5 +154,6 @@ Telemetry:
   - evaluation.restricted_topics.prompt.topics = [detected topics]
   - evaluation.restricted_topics.prompt.policy_tier = 1/2/3/4
   - evaluation.restricted_topics.prompt.action = "block"/"warn"/"redirect"/"allow"
-""")
+"""
+)
 print("=" * 80)

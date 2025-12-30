@@ -111,7 +111,8 @@ print()
 print("=" * 80)
 print("Check your telemetry backend for:")
 print("=" * 80)
-print("""
+print(
+    """
 Hallucination Indicators:
   - evaluation.hallucination.response.detected = true/false
   - evaluation.hallucination.response.score = <0.0-1.0>
@@ -131,5 +132,6 @@ Metrics:
   - genai.evaluation.hallucination.detections (counter)
   - genai.evaluation.hallucination.score (histogram)
   - genai.evaluation.hallucination.indicators (counter, by indicator)
-""")
+"""
+)
 print("=" * 80)

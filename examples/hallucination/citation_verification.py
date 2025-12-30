@@ -54,7 +54,9 @@ try:
     print(f"Response: {response_text}")
     print(f"\nCitation Analysis:")
     print(f"  - Citations detected: {response_text.count('[') + response_text.count('(source:')}")
-    print(f"  - Hedge words: {sum(1 for word in ['might', 'could', 'possibly', 'may'] if word in response_text.lower())}")
+    print(
+        f"  - Hedge words: {sum(1 for word in ['might', 'could', 'possibly', 'may'] if word in response_text.lower())}"
+    )
 except Exception as e:
     print(f"Note: {e}")
 
@@ -116,7 +118,8 @@ print()
 print("=" * 80)
 print("Citation Quality Assessment:")
 print("=" * 80)
-print("""
+print(
+    """
 Citation Types (from best to worst):
 
 1. Specific Citations (BEST):
@@ -209,5 +212,6 @@ Use Cases:
    - Teach citation practices
    - Verify academic integrity
    - Link to authoritative sources
-""")
+"""
+)
 print("=" * 80)

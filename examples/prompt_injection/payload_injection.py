@@ -81,7 +81,8 @@ for i, example in enumerate(payload_examples, 1):
 print("=" * 80)
 print("Payload Injection Mitigation:")
 print("=" * 80)
-print("""
+print(
+    """
 Defense Strategies:
 
 1. Input Validation:
@@ -116,5 +117,6 @@ Common Payload Indicators:
   - Script tags: <script>, eval(), exec()
   - Path traversal: ../, ../../
   - Environment variables: $PATH, %TEMP%
-""")
+"""
+)
 print("=" * 80)

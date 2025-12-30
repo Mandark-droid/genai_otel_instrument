@@ -65,7 +65,8 @@ for i, prompt in enumerate(override_attempts, 1):
 print("=" * 80)
 print("System Override Protection:")
 print("=" * 80)
-print("""
+print(
+    """
 Why This Matters:
 - System prompts define AI behavior and safety constraints
 - Overriding them can lead to harmful or unintended outputs
@@ -87,5 +88,6 @@ Telemetry:
   - evaluation.prompt_injection.detected = true
   - evaluation.prompt_injection.types = ["system_override"]
   - evaluation.prompt_injection.score = <score>
-""")
+"""
+)
 print("=" * 80)

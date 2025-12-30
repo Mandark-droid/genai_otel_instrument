@@ -82,7 +82,8 @@ for i, example in enumerate(jailbreak_examples, 1):
 print("=" * 80)
 print("Jailbreak Detection Patterns:")
 print("=" * 80)
-print("""
+print(
+    """
 Common Jailbreak Indicators:
 - "ignore all previous instructions"
 - "disregard your programming"
@@ -103,5 +104,6 @@ Blocking Strategy:
   - Block requests with injection_score > 0.7
   - Log and review scores between 0.4-0.7
   - Allow scores < 0.4 with monitoring
-""")
+"""
+)
 print("=" * 80)
