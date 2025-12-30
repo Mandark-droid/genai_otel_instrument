@@ -101,6 +101,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     _shared_request_success_counter = None
     _shared_request_failure_counter = None
 
+    # Evaluation detectors (set by EvaluationSpanProcessor)
+    _pii_detector = None
+    _toxicity_detector = None
+    _evaluation_lock = threading.Lock()
+
     def __init__(self):
         """Initializes the instrumentor with OpenTelemetry tracers, meters, and common metrics."""
         self.tracer = trace.get_tracer(__name__)
@@ -356,6 +361,14 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         self._record_result_metrics(span, result, start_time, kwargs)
                     except Exception as e:
                         logger.warning("Failed to record metrics for span '%s': %s", span_name, e)
+
+                    # Run evaluation checks BEFORE ending the span
+                    try:
+                        self._run_evaluation_checks(span, args, kwargs, result)
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to run evaluation checks for span '%s': %s", span_name, e
+                        )
 
                     # Set span status to OK on successful execution
                     span.set_status(Status(StatusCode.OK))
@@ -631,6 +644,117 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             logger.debug(
                 "Failed to extract or record finish reason for span '%s': %s", span.name, e
             )
+
+    def _run_evaluation_checks(self, span, args, kwargs, result):
+        """Run PII and toxicity evaluation checks before ending the span.
+
+        This method extracts prompt and response from span attributes and runs
+        evaluation detectors if they are configured. Attributes are added to the
+        span BEFORE it ends, ensuring they appear in exported traces.
+
+        Args:
+            span: The active span (mutable, not yet ended)
+            args: Original function arguments
+            kwargs: Original function keyword arguments
+            result: The LLM response object
+        """
+        if not BaseInstrumentor._pii_detector and not BaseInstrumentor._toxicity_detector:
+            return  # No detectors configured
+
+        try:
+            # Extract prompt and response from span attributes
+            import ast
+            import json
+
+            attrs = dict(span.attributes)
+
+            # Extract prompt
+            prompt = None
+            if "gen_ai.request.first_message" in attrs:
+                value = attrs["gen_ai.request.first_message"]
+                logger.debug(f"Found gen_ai.request.first_message: {value[:100]}")
+                if isinstance(value, str) and value.strip().startswith("{"):
+                    try:
+                        parsed = ast.literal_eval(value)
+                        if isinstance(parsed, dict) and "content" in parsed:
+                            prompt = parsed["content"]
+                            logger.info(f"Extracted prompt for evaluation: {prompt[:100]}...")
+                    except (ValueError, SyntaxError) as e:
+                        logger.warning(f"Failed to parse first_message: {e}")
+
+            # Extract response - try to get from result object
+            response = None
+            try:
+                if hasattr(result, "choices") and result.choices:
+                    if hasattr(result.choices[0], "message"):
+                        response = result.choices[0].message.content
+                    elif hasattr(result.choices[0], "text"):
+                        response = result.choices[0].text
+            except Exception:
+                pass
+
+            # Run PII detection
+            if BaseInstrumentor._pii_detector and prompt:
+                try:
+                    logger.info(f"Running PII detection on prompt: {prompt[:50]}...")
+                    pii_result = BaseInstrumentor._pii_detector.detect(prompt)
+                    logger.info(
+                        f"PII detection result: has_pii={pii_result.has_pii}, entities={list(pii_result.entity_counts.keys()) if pii_result.has_pii else []}"
+                    )
+                    if pii_result.has_pii:
+                        span.set_attribute("evaluation.pii.prompt.detected", True)
+                        span.set_attribute(
+                            "evaluation.pii.prompt.entity_count", len(pii_result.entities)
+                        )
+                        span.set_attribute(
+                            "evaluation.pii.prompt.entity_types",
+                            list(pii_result.entity_counts.keys()),
+                        )
+                        span.set_attribute("evaluation.pii.prompt.score", pii_result.score)
+
+                        # Add entity counts by type
+                        for entity_type, count in pii_result.entity_counts.items():
+                            span.set_attribute(
+                                f"evaluation.pii.prompt.{entity_type.lower()}_count", count
+                            )
+
+                        if pii_result.redacted_text:
+                            span.set_attribute(
+                                "evaluation.pii.prompt.redacted", pii_result.redacted_text
+                            )
+                        if pii_result.blocked:
+                            span.set_attribute("evaluation.pii.prompt.blocked", True)
+                    else:
+                        span.set_attribute("evaluation.pii.prompt.detected", False)
+                except Exception as e:
+                    logger.warning(f"PII detection failed: {e}", exc_info=True)
+
+            # Run toxicity detection
+            if BaseInstrumentor._toxicity_detector and prompt:
+                try:
+                    toxicity_result = BaseInstrumentor._toxicity_detector.detect(prompt)
+                    if toxicity_result.is_toxic:
+                        span.set_attribute("evaluation.toxicity.prompt.detected", True)
+                        span.set_attribute(
+                            "evaluation.toxicity.prompt.max_score", toxicity_result.max_score
+                        )
+                        span.set_attribute(
+                            "evaluation.toxicity.prompt.categories",
+                            toxicity_result.toxic_categories,
+                        )
+
+                        # Add individual category scores
+                        for category, score in toxicity_result.scores.items():
+                            span.set_attribute(
+                                f"evaluation.toxicity.prompt.{category}_score", score
+                            )
+                    else:
+                        span.set_attribute("evaluation.toxicity.prompt.detected", False)
+                except Exception as e:
+                    logger.warning(f"Toxicity detection failed: {e}", exc_info=True)
+
+        except Exception as e:
+            logger.warning(f"Evaluation checks failed: {e}", exc_info=True)
 
     def _wrap_streaming_response(self, stream, span, start_time: float, model: str):
         """Wrap a streaming response to capture TTFT and TBT metrics.

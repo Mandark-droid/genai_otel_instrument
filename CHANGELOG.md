@@ -6,6 +6,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.27] - 2025-12-30
+
+### Fixed
+
+- **PII Evaluation Attributes Export to Jaeger**
+  - Fixed critical issue where PII evaluation attributes were not appearing in Jaeger traces
+  - Root cause: Attributes were being set AFTER `span.end()` when span becomes immutable (ReadableSpan)
+  - Solution: Added `_run_evaluation_checks()` method in `BaseInstrumentor` that runs BEFORE `span.end()`
+  - PII attributes now successfully exported: `evaluation.pii.prompt.detected`, `evaluation.pii.prompt.entity_count`, `evaluation.pii.prompt.entity_types`, etc.
+  - Applies to both PII and Toxicity detection attributes
+
+- **Editable Installation Issue**
+  - Fixed issue where examples were using old code due to non-editable pip install
+  - Package must be installed with `pip install -e .` for development to reflect local code changes
+  - Added clear documentation in scripts/README.md
+
+### Added
+
+- **Comprehensive Example Organization**
+  - Reorganized examples into dedicated folders:
+    - `examples/pii_detection/` - 10 PII detection examples (detect, redact, block modes + compliance)
+    - `examples/toxicity_detection/` - 8 toxicity detection examples (Detoxify, Perspective API, categories)
+    - `examples/bias_detection/` - Placeholder for future bias detection
+  - All examples updated to use `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable
+
+- **Examples Validation Script**
+  - New `scripts/validate_examples.sh` for Linux/Mac
+  - New `scripts/validate_examples.bat` for Windows
+  - Features:
+    - `--dry-run` - List all examples without running
+    - `--verbose` - Show detailed output from examples
+    - `--timeout N` - Configurable timeout (default: 90s)
+    - `--help` - Show usage information
+  - Validates all PII, Toxicity, and Bias detection examples
+  - Color-coded output (PASSED/FAILED/SKIPPED)
+  - Comprehensive summary with failed/skipped example lists
+
+- **Scripts Documentation**
+  - New `scripts/README.md` with comprehensive usage guide
+  - Moved temporary test files to `scripts/` folder for organization
+  - Moved `SOLUTION_SUMMARY.md` and `VALIDATION_REPORT.md` to `scripts/` folder
+
+### Changed
+
+- **Example Files Updated**
+  - All PII examples now use `os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")`
+  - All Toxicity examples now use `os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")`
+  - Bias detection placeholder updated with env var pattern
+  - Total: 19 example files updated for flexible endpoint configuration
+
+- **File Organization**
+  - Moved debug/test scripts to `scripts/` folder:
+    - test_*.py files (9 temporary test scripts)
+    - SOLUTION_SUMMARY.md (PII/Toxicity solution documentation)
+    - VALIDATION_REPORT.md (Comprehensive validation report)
+
 ## [0.1.26] - 2025-12-09
 
 ### Added
