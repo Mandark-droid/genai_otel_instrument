@@ -86,7 +86,8 @@ for i, example in enumerate(compliance_examples, 1):
 print("=" * 80)
 print("Industry Compliance Guidelines:")
 print("=" * 80)
-print("""
+print(
+    """
 Healthcare (HIPAA):
   AVOID: Diagnoses, treatment plans, medication dosages
   ALLOW: General health information, symptom descriptions
@@ -123,5 +124,6 @@ Response Templates:
 
   Legal: "I can explain legal concepts generally, but cannot provide legal
           advice for your situation. Please consult an attorney."
-""")
+"""
+)
 print("=" * 80)

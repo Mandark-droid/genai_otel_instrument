@@ -804,9 +804,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             # Run prompt injection detection
             if BaseInstrumentor._prompt_injection_detector and prompt:
                 try:
-                    injection_result = BaseInstrumentor._prompt_injection_detector.detect(
-                        prompt
-                    )
+                    injection_result = BaseInstrumentor._prompt_injection_detector.detect(prompt)
                     if injection_result.is_injection:
                         span.set_attribute("evaluation.prompt_injection.detected", True)
                         span.set_attribute(

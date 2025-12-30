@@ -39,9 +39,7 @@ print("=" * 80)
 print("\nCurrent Configuration:")
 print("-" * 80)
 print(f"Service Name: {os.getenv('OTEL_SERVICE_NAME', 'hallucination-env-config')}")
-print(
-    f"OTLP Endpoint: {os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318')}"
-)
+print(f"OTLP Endpoint: {os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318')}")
 print(
     f"Hallucination Detection: {os.getenv('GENAI_ENABLE_HALLUCINATION_DETECTION', 'false (default)')}"
 )
@@ -73,7 +71,8 @@ print()
 print("=" * 80)
 print("Environment Variable Reference:")
 print("=" * 80)
-print("""
+print(
+    """
 Hallucination Detection Configuration:
 
   GENAI_ENABLE_HALLUCINATION_DETECTION
@@ -171,5 +170,6 @@ Integration with Monitoring:
   - Create tickets for manual review
   - Dashboard showing hallucination trends
   - Breakdown by query type, model version, time of day
-""")
+"""
+)
 print("=" * 80)
