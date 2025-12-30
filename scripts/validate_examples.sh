@@ -2,8 +2,8 @@
 #
 # Validate All Examples Script
 #
-# This script runs all PII, Toxicity, and Bias detection examples
-# and validates that they execute without errors.
+# This script runs all evaluation examples (PII, Toxicity, Bias, Prompt Injection,
+# Restricted Topics, and Hallucination detection) and validates that they execute without errors.
 #
 # Usage:
 #   ./scripts/validate_examples.sh [options] [endpoint]
@@ -197,6 +197,45 @@ if [ -d "examples/bias_detection" ]; then
     done
 else
     echo -e "${YELLOW}WARNING: examples/bias_detection directory not found${NC}"
+fi
+echo ""
+
+# Test Prompt Injection Detection Examples
+echo -e "${BLUE}=== Prompt Injection Detection Examples ===${NC}"
+if [ -d "examples/prompt_injection" ]; then
+    for example in examples/prompt_injection/*.py; do
+        if [ -f "$example" ]; then
+            run_example "$example"
+        fi
+    done
+else
+    echo -e "${YELLOW}WARNING: examples/prompt_injection directory not found${NC}"
+fi
+echo ""
+
+# Test Restricted Topics Detection Examples
+echo -e "${BLUE}=== Restricted Topics Detection Examples ===${NC}"
+if [ -d "examples/restricted_topics" ]; then
+    for example in examples/restricted_topics/*.py; do
+        if [ -f "$example" ]; then
+            run_example "$example"
+        fi
+    done
+else
+    echo -e "${YELLOW}WARNING: examples/restricted_topics directory not found${NC}"
+fi
+echo ""
+
+# Test Hallucination Detection Examples
+echo -e "${BLUE}=== Hallucination Detection Examples ===${NC}"
+if [ -d "examples/hallucination" ]; then
+    for example in examples/hallucination/*.py; do
+        if [ -f "$example" ]; then
+            run_example "$example"
+        fi
+    done
+else
+    echo -e "${YELLOW}WARNING: examples/hallucination directory not found${NC}"
 fi
 echo ""
 
