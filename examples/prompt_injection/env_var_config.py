@@ -40,9 +40,7 @@ print("=" * 80)
 print("\nCurrent Configuration:")
 print("-" * 80)
 print(f"Service Name: {os.getenv('OTEL_SERVICE_NAME', 'prompt-injection-env-config')}")
-print(
-    f"OTLP Endpoint: {os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318')}"
-)
+print(f"OTLP Endpoint: {os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318')}")
 print(
     f"Prompt Injection Detection: {os.getenv('GENAI_ENABLE_PROMPT_INJECTION_DETECTION', 'false (default)')}"
 )
@@ -74,7 +72,8 @@ print()
 print("=" * 80)
 print("Environment Variable Reference:")
 print("=" * 80)
-print("""
+print(
+    """
 Core Settings:
   OTEL_SERVICE_NAME
     Default: "genai-app"
@@ -118,5 +117,6 @@ Monitoring Telemetry:
   - evaluation.prompt_injection.score (float)
   - evaluation.prompt_injection.types (list)
   - genai.evaluation.prompt_injection.detections (counter)
-""")
+"""
+)
 print("=" * 80)

@@ -112,7 +112,8 @@ print()
 print("=" * 80)
 print("RAG Hallucination Detection Strategy:")
 print("=" * 80)
-print("""
+print(
+    """
 Implementation Pattern:
 
 ```python
@@ -174,5 +175,6 @@ Metrics to Track:
   - Average faithfulness score
   - Unsupported claims per response
   - User feedback on accuracy
-""")
+"""
+)
 print("=" * 80)
