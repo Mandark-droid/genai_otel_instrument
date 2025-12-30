@@ -105,6 +105,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     _pii_detector = None
     _toxicity_detector = None
     _bias_detector = None
+    _prompt_injection_detector = None
+    _restricted_topics_detector = None
+    _hallucination_detector = None
     _evaluation_lock = threading.Lock()
 
     def __init__(self):
@@ -647,7 +650,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             )
 
     def _run_evaluation_checks(self, span, args, kwargs, result):
-        """Run PII, toxicity, and bias evaluation checks before ending the span.
+        """Run all evaluation checks (PII, toxicity, bias, prompt injection, etc.) before ending the span.
 
         This method extracts prompt and response from span attributes and runs
         evaluation detectors if they are configured. Attributes are added to the
@@ -663,6 +666,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             not BaseInstrumentor._pii_detector
             and not BaseInstrumentor._toxicity_detector
             and not BaseInstrumentor._bias_detector
+            and not BaseInstrumentor._prompt_injection_detector
+            and not BaseInstrumentor._restricted_topics_detector
+            and not BaseInstrumentor._hallucination_detector
         ):
             return  # No detectors configured
 
