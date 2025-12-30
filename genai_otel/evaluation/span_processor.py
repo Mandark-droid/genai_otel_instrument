@@ -271,7 +271,7 @@ class EvaluationSpanProcessor(SpanProcessor):
             from genai_otel.instrumentors.base import BaseInstrumentor
 
             logger.info(
-                f"Attempting to register detectors: pii_detector={self.pii_detector is not None}, toxicity_detector={self.toxicity_detector is not None}, bias_detector={self.bias_detector is not None}"
+                f"Attempting to register detectors: pii={self.pii_detector is not None}, toxicity={self.toxicity_detector is not None}, bias={self.bias_detector is not None}, prompt_injection={self.prompt_injection_detector is not None}, restricted_topics={self.restricted_topics_detector is not None}, hallucination={self.hallucination_detector is not None}"
             )
             with BaseInstrumentor._evaluation_lock:
                 if self.pii_detector:
@@ -289,6 +289,21 @@ class EvaluationSpanProcessor(SpanProcessor):
                     logger.info("Registered Bias detector with BaseInstrumentor")
                 else:
                     logger.warning("Bias detector is None, not registering")
+                if self.prompt_injection_detector:
+                    BaseInstrumentor._prompt_injection_detector = self.prompt_injection_detector
+                    logger.info("Registered Prompt Injection detector with BaseInstrumentor")
+                else:
+                    logger.warning("Prompt Injection detector is None, not registering")
+                if self.restricted_topics_detector:
+                    BaseInstrumentor._restricted_topics_detector = self.restricted_topics_detector
+                    logger.info("Registered Restricted Topics detector with BaseInstrumentor")
+                else:
+                    logger.warning("Restricted Topics detector is None, not registering")
+                if self.hallucination_detector:
+                    BaseInstrumentor._hallucination_detector = self.hallucination_detector
+                    logger.info("Registered Hallucination detector with BaseInstrumentor")
+                else:
+                    logger.warning("Hallucination detector is None, not registering")
         except Exception as e:
             logger.warning(
                 f"Failed to register detectors with BaseInstrumentor: {e}", exc_info=True

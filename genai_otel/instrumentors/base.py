@@ -801,6 +801,99 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 except Exception as e:
                     logger.warning(f"Bias detection failed: {e}", exc_info=True)
 
+            # Run prompt injection detection
+            if BaseInstrumentor._prompt_injection_detector and prompt:
+                try:
+                    injection_result = BaseInstrumentor._prompt_injection_detector.detect(
+                        prompt
+                    )
+                    if injection_result.is_injection:
+                        span.set_attribute("evaluation.prompt_injection.detected", True)
+                        span.set_attribute(
+                            "evaluation.prompt_injection.score", injection_result.injection_score
+                        )
+                        span.set_attribute(
+                            "evaluation.prompt_injection.types", injection_result.injection_types
+                        )
+
+                        # Add patterns matched (limit to first 5 per type)
+                        for inj_type, patterns in injection_result.patterns_matched.items():
+                            if patterns:
+                                span.set_attribute(
+                                    f"evaluation.prompt_injection.{inj_type}_patterns",
+                                    patterns[:5],
+                                )
+                    else:
+                        span.set_attribute("evaluation.prompt_injection.detected", False)
+                except Exception as e:
+                    logger.warning(f"Prompt injection detection failed: {e}", exc_info=True)
+
+            # Run restricted topics detection
+            if BaseInstrumentor._restricted_topics_detector and prompt:
+                try:
+                    topics_result = BaseInstrumentor._restricted_topics_detector.detect(prompt)
+                    if topics_result.has_restricted_topic:
+                        span.set_attribute("evaluation.restricted_topics.prompt.detected", True)
+                        span.set_attribute(
+                            "evaluation.restricted_topics.prompt.max_score", topics_result.max_score
+                        )
+                        span.set_attribute(
+                            "evaluation.restricted_topics.prompt.topics",
+                            topics_result.detected_topics,
+                        )
+
+                        # Add individual topic scores
+                        for topic, score in topics_result.topic_scores.items():
+                            if score > 0:
+                                span.set_attribute(
+                                    f"evaluation.restricted_topics.prompt.{topic}_score", score
+                                )
+                    else:
+                        span.set_attribute("evaluation.restricted_topics.prompt.detected", False)
+                except Exception as e:
+                    logger.warning(f"Restricted topics detection failed: {e}", exc_info=True)
+
+            # Run hallucination detection (requires response)
+            if BaseInstrumentor._hallucination_detector and response:
+                try:
+                    # Use prompt as context if available
+                    hallucination_result = BaseInstrumentor._hallucination_detector.detect(
+                        response, context=prompt
+                    )
+                    span.set_attribute(
+                        "evaluation.hallucination.response.detected",
+                        hallucination_result.has_hallucination,
+                    )
+                    span.set_attribute(
+                        "evaluation.hallucination.response.score",
+                        hallucination_result.hallucination_score,
+                    )
+                    span.set_attribute(
+                        "evaluation.hallucination.response.citations",
+                        hallucination_result.citation_count,
+                    )
+                    span.set_attribute(
+                        "evaluation.hallucination.response.hedge_words",
+                        hallucination_result.hedge_words_count,
+                    )
+                    span.set_attribute(
+                        "evaluation.hallucination.response.claims",
+                        hallucination_result.factual_claim_count,
+                    )
+
+                    if hallucination_result.has_hallucination:
+                        span.set_attribute(
+                            "evaluation.hallucination.response.indicators",
+                            hallucination_result.hallucination_indicators,
+                        )
+                        if hallucination_result.unsupported_claims:
+                            span.set_attribute(
+                                "evaluation.hallucination.response.unsupported_claims",
+                                hallucination_result.unsupported_claims[:3],
+                            )
+                except Exception as e:
+                    logger.warning(f"Hallucination detection failed: {e}", exc_info=True)
+
         except Exception as e:
             logger.warning(f"Evaluation checks failed: {e}", exc_info=True)
 
