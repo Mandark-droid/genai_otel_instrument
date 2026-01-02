@@ -158,6 +158,12 @@ class OllamaInstrumentor(BaseInstrumentor):
         attrs["gen_ai.operation.name"] = "chat"
         attrs["gen_ai.request.message_count"] = len(messages)
 
+        # Capture first message content for evaluation features
+        if messages:
+            # Only capture first 200 chars to avoid sensitive data and span size issues
+            first_message = str(messages[0])[:200]
+            attrs["gen_ai.request.first_message"] = first_message
+
         return attrs
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
@@ -274,3 +280,58 @@ class OllamaInstrumentor(BaseInstrumentor):
         except Exception as e:
             logger.debug("Failed to extract finish_reason from Ollama response: %s", e)
         return None
+
+    def _add_content_events(self, span, result, request_kwargs: dict):
+        """Add prompt and completion content as span events and attributes.
+
+        Args:
+            span: The OpenTelemetry span.
+            result: The API response object.
+            request_kwargs: The original request kwargs.
+        """
+        # Add prompt content events for chat
+        messages = request_kwargs.get("messages", [])
+        for idx, message in enumerate(messages):
+            if isinstance(message, dict):
+                role = message.get("role", "unknown")
+                content = message.get("content", "")
+                span.add_event(
+                    f"gen_ai.prompt.{idx}",
+                    attributes={"gen_ai.prompt.role": role, "gen_ai.prompt.content": str(content)},
+                )
+
+        # Add completion content events AND attributes (for evaluation processor)
+        try:
+            # Handle both dict and object responses
+            content = None
+            if isinstance(result, dict):
+                # For generate calls
+                if "response" in result:
+                    content = result["response"]
+                # For chat calls
+                elif "message" in result:
+                    message = result["message"]
+                    if isinstance(message, dict) and "content" in message:
+                        content = message["content"]
+            elif hasattr(result, "message"):
+                # Object-like chat response
+                message = result.message
+                if hasattr(message, "content"):
+                    content = message.content
+            elif hasattr(result, "response"):
+                # Object-like generate response
+                content = result.response
+
+            if content:
+                # Add as event for observability
+                span.add_event(
+                    "gen_ai.completion.0",
+                    attributes={
+                        "gen_ai.completion.role": "assistant",
+                        "gen_ai.completion.content": str(content),
+                    },
+                )
+                # Set as attribute for evaluation processor
+                span.set_attribute("gen_ai.response", str(content))
+        except Exception as e:
+            logger.debug("Failed to add content events for Ollama response: %s", e)

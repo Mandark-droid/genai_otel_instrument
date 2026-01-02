@@ -22,6 +22,7 @@ instrument(
     endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
     enable_prompt_injection_detection=True,
     prompt_injection_threshold=0.5,
+    enable_content_capture=True,  # Required for evaluation features
 )
 
 # Now import transformers after instrumentation is set up
