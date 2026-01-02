@@ -100,6 +100,14 @@ class AnthropicInstrumentor(BaseInstrumentor):
         attrs["gen_ai.system"] = "anthropic"
         attrs["gen_ai.request.model"] = model
         attrs["gen_ai.request.message_count"] = len(messages)
+
+        # Capture first message for evaluation features
+        if messages:
+            # Messages should already be in dict format, str() preserves the dict-string format
+            # Anthropic API expects messages as [{"role": "user", "content": "..."}]
+            first_message = str(messages[0])[:200]
+            attrs["gen_ai.request.first_message"] = first_message
+
         return attrs
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
@@ -132,3 +140,43 @@ class AnthropicInstrumentor(BaseInstrumentor):
 
             return usage_dict
         return None
+
+    def _add_content_events(self, span, result, request_kwargs: dict):
+        """Add prompt and completion content as span events and attributes.
+
+        Args:
+            span: The OpenTelemetry span.
+            result: The API response object.
+            request_kwargs: The original request kwargs.
+        """
+        # Add prompt content events
+        messages = request_kwargs.get("messages", [])
+        for idx, message in enumerate(messages):
+            if isinstance(message, dict):
+                role = message.get("role", "unknown")
+                content = message.get("content", "")
+                span.add_event(
+                    f"gen_ai.prompt.{idx}",
+                    attributes={"gen_ai.prompt.role": role, "gen_ai.prompt.content": str(content)},
+                )
+
+        # Add completion content events AND attributes (for evaluation processor)
+        if hasattr(result, "content") and result.content:
+            response_text = None
+            for idx, content_block in enumerate(result.content):
+                if hasattr(content_block, "text"):
+                    # Add as event for observability
+                    span.add_event(
+                        f"gen_ai.completion.{idx}",
+                        attributes={
+                            "gen_ai.completion.role": "assistant",
+                            "gen_ai.completion.content": content_block.text,
+                        },
+                    )
+                    # Capture first text block for evaluation
+                    if idx == 0:
+                        response_text = content_block.text
+
+            # Set as attribute for evaluation processor
+            if response_text:
+                span.set_attribute("gen_ai.response", response_text)

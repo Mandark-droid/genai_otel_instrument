@@ -209,7 +209,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
         return attrs
 
     def _add_content_events(self, span, result, request_kwargs: dict):
-        """Add prompt and completion content as span events.
+        """Add prompt and completion content as span events and attributes.
 
         Args:
             span: The OpenTelemetry span.
@@ -227,11 +227,13 @@ class OpenAIInstrumentor(BaseInstrumentor):
                     attributes={"gen_ai.prompt.role": role, "gen_ai.prompt.content": str(content)},
                 )
 
-        # Add completion content events
+        # Add completion content events AND attributes (for evaluation processor)
         if hasattr(result, "choices") and result.choices:
+            response_text = None
             for idx, choice in enumerate(result.choices):
                 if hasattr(choice, "message") and hasattr(choice.message, "content"):
                     content = choice.message.content
+                    # Add as event for observability
                     span.add_event(
                         f"gen_ai.completion.{idx}",
                         attributes={
@@ -239,6 +241,13 @@ class OpenAIInstrumentor(BaseInstrumentor):
                             "gen_ai.completion.content": str(content),
                         },
                     )
+                    # Capture first completion for evaluation
+                    if idx == 0:
+                        response_text = str(content)
+
+            # Set as attribute for evaluation processor
+            if response_text:
+                span.set_attribute("gen_ai.response", response_text)
 
     def _extract_finish_reason(self, result) -> Optional[str]:
         """Extract finish reason from OpenAI response.
