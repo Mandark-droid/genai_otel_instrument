@@ -679,17 +679,20 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
             attrs = dict(span.attributes)
 
-            # Extract prompt
+            # Extract prompt from dict-string format
             prompt = None
             if "gen_ai.request.first_message" in attrs:
                 value = attrs["gen_ai.request.first_message"]
                 logger.debug(f"Found gen_ai.request.first_message: {value[:100]}")
-                if isinstance(value, str) and value.strip().startswith("{"):
+                if isinstance(value, str):
+                    # All instrumentors should format as dict-string: {'role': 'user', 'content': '...'}
                     try:
                         parsed = ast.literal_eval(value)
                         if isinstance(parsed, dict) and "content" in parsed:
                             prompt = parsed["content"]
-                            logger.info(f"Extracted prompt for evaluation: {prompt[:100]}...")
+                            logger.info(
+                                f"Extracted prompt from dict for evaluation: {prompt[:100]}..."
+                            )
                     except (ValueError, SyntaxError) as e:
                         logger.warning(f"Failed to parse first_message: {e}")
 

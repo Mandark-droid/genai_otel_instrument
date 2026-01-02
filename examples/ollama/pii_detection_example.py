@@ -1,7 +1,7 @@
 """
-Example: Bias Detection with Ollama
+Example: PII Detection with Ollama
 
-This example demonstrates bias detection working with locally-hosted Ollama models.
+This example demonstrates PII detection working with locally-hosted Ollama models.
 Shows that evaluation features work with self-hosted LLMs, not just cloud APIs.
 
 Requirements:
@@ -18,12 +18,12 @@ import os
 
 from genai_otel import instrument
 
-# Set up OpenTelemetry instrumentation with bias detection
+# Set up OpenTelemetry instrumentation with PII detection
 instrument(
-    service_name="ollama-bias-detection",
+    service_name="ollama-pii-detection",
     endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
-    enable_bias_detection=True,
-    bias_threshold=0.4,
+    enable_pii_detection=True,
+    pii_mode="detect",
     enable_content_capture=True,  # Required for evaluation features
 )
 
@@ -35,37 +35,42 @@ except ImportError:
     exit(1)
 
 print("=" * 80)
-print("Bias Detection with Ollama (Local LLM)")
+print("PII Detection with Ollama (Local LLM)")
 print("=" * 80)
-print("\nDemonstrating bias detection with self-hosted models...\n")
+print("\nDemonstrating PII detection with self-hosted models...\n")
 
 # Test cases
 test_cases = [
     {
-        "name": "Gender Bias",
-        "prompt": "Why are women bad at programming?",
-        "has_bias": True,
+        "name": "Email and Phone",
+        "prompt": "Contact John Doe at john.doe@example.com or call 555-123-4567",
+        "has_pii": True,
     },
     {
-        "name": "Racial Bias",
-        "prompt": "Why are certain races more intelligent than others?",
-        "has_bias": True,
+        "name": "SSN and Name",
+        "prompt": "Sarah Johnson's SSN is 123-45-6789",
+        "has_pii": True,
     },
     {
-        "name": "Neutral Content",
-        "prompt": "What are effective strategies for building diverse teams?",
-        "has_bias": False,
+        "name": "Credit Card",
+        "prompt": "Use card number 4532-1234-5678-9010 for payment",
+        "has_pii": True,
+    },
+    {
+        "name": "No PII",
+        "prompt": "What are the benefits of regular exercise?",
+        "has_pii": False,
     },
 ]
 
 for i, test in enumerate(test_cases, 1):
-    print(f"{i}. {test['name']} (Expected Bias: {test['has_bias']})")
+    print(f"{i}. {test['name']} (Expected PII: {test['has_pii']})")
     print("-" * 80)
     print(f"Prompt: '{test['prompt']}'")
 
     try:
         response = ollama.chat(
-            model="llama2",
+            model="smollm2:360m",
             messages=[{"role": "user", "content": test["prompt"]}],
         )
         print(f"Response: {response['message']['content'][:100]}...")
@@ -80,15 +85,17 @@ print("Check your telemetry backend for:")
 print("=" * 80)
 print("Provider: Ollama (Self-Hosted)")
 print("Evaluation Attributes:")
-print("  - evaluation.bias.prompt.detected = true/false")
-print("  - evaluation.bias.prompt.max_score = <0.0-1.0>")
-print("  - evaluation.bias.prompt.types = [...]")
+print("  - evaluation.pii.prompt.detected = true/false")
+print("  - evaluation.pii.prompt.entity_count = <number>")
+print("  - evaluation.pii.prompt.entity_types = [...]")
+print("  - evaluation.pii.prompt.EMAIL_ADDRESS = <count>")
+print("  - evaluation.pii.prompt.PHONE_NUMBER = <count>")
+print("  - evaluation.pii.prompt.SSN = <count>")
 print("\nMetrics:")
-print("  - genai.evaluation.bias.detections (counter)")
-print("  - genai.evaluation.bias.types (counter)")
-print("  - genai.evaluation.bias.score (histogram)")
+print("  - genai.evaluation.pii.detections (counter)")
+print("  - genai.evaluation.pii.entity_types (counter)")
 print("\nProvider Attributes:")
 print("  - gen_ai.system = 'ollama'")
 print("  - gen_ai.request.model = 'llama2'")
-print("\nNote: Evaluation features work identically for cloud and self-hosted LLMs!")
+print("\nNote: PII detection works identically for cloud and self-hosted LLMs!")
 print("=" * 80)

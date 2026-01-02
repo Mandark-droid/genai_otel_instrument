@@ -11,12 +11,17 @@ Local model costs are estimated based on parameter count and token usage.
 """
 
 import logging
+import threading
+import weakref
 from typing import Dict, Optional
 
 from ..config import OTelConfig
 from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
+
+# Global storage for last used tokenizer per thread (for content capture)
+_thread_local = threading.local()
 
 
 class HuggingFaceInstrumentor(BaseInstrumentor):
@@ -84,6 +89,13 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                 logger.error("Failed to instrument HuggingFace model classes: %s", e, exc_info=True)
                 if config.fail_on_error:
                     raise
+
+            # Instrument tokenizers for content capture
+            if config.enable_content_capture:
+                try:
+                    self._instrument_tokenizers()
+                except Exception as e:
+                    logger.debug(f"Could not instrument tokenizers for content capture: {e}")
 
         # Instrument InferenceClient if available
         if self._inference_client_available:
@@ -208,14 +220,20 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                 if hasattr(instance.config, "_name_or_path"):
                     model_name = instance.config._name_or_path
 
-                # Get input token count
+                # Get input token count and retrieve original text from thread-local
                 input_ids = kwargs.get("input_ids") or (args[0] if args else None)
                 prompt_tokens = 0
+                input_text = None
+
                 if input_ids is not None:
                     if hasattr(input_ids, "shape"):
                         prompt_tokens = int(input_ids.shape[-1])
                     elif isinstance(input_ids, (list, tuple)):
                         prompt_tokens = len(input_ids[0]) if input_ids else 0
+
+                    # Try to get original text from thread-local storage
+                    if hasattr(_thread_local, "last_tokenized_text"):
+                        input_text = _thread_local.last_tokenized_text.get("current")
 
                 # Create span
                 with instrumentor.tracer.start_as_current_span(
@@ -226,6 +244,12 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                     span.set_attribute("gen_ai.request.model", model_name)
                     span.set_attribute("gen_ai.operation.name", "text_generation")
                     span.set_attribute("gen_ai.request.type", "chat")
+
+                    # Set first message for evaluation if we decoded the input
+                    if input_text:
+                        # Format as dict-string for consistency with other instrumentors
+                        first_message = str({"role": "user", "content": input_text[:200]})
+                        span.set_attribute("gen_ai.request.first_message", first_message)
 
                     # Extract generation parameters
                     if "max_length" in kwargs:
@@ -323,6 +347,63 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                         except Exception as e:
                             logger.warning(f"Failed to calculate cost: {e}")
 
+                    # Add content events and attributes if content capture is enabled
+                    if instrumentor.config and instrumentor.config.enable_content_capture:
+                        try:
+                            # Add prompt event if we have the original text
+                            if input_text:
+                                span.add_event(
+                                    "gen_ai.prompt.0",
+                                    attributes={
+                                        "gen_ai.prompt.role": "user",
+                                        "gen_ai.prompt.content": str(input_text),
+                                    },
+                                )
+
+                            # Try to get tokenizer from thread-local and decode output
+                            # Check if we stored a tokenizer reference
+                            if hasattr(_thread_local, "last_tokenizer"):
+                                tokenizer = _thread_local.last_tokenizer
+                                try:
+                                    output_text = None
+                                    if hasattr(result, "tolist"):
+                                        # Convert tensor to list
+                                        output_list = result.tolist()
+                                        if isinstance(output_list[0], list):
+                                            # Batch output, take first item
+                                            output_text = tokenizer.decode(
+                                                output_list[0], skip_special_tokens=True
+                                            )
+                                        else:
+                                            output_text = tokenizer.decode(
+                                                output_list, skip_special_tokens=True
+                                            )
+
+                                    if output_text:
+                                        # Set as attribute for evaluation processor
+                                        span.set_attribute("gen_ai.response", output_text)
+                                        # Also add as event for observability
+                                        span.add_event(
+                                            "gen_ai.completion.0",
+                                            attributes={
+                                                "gen_ai.completion.role": "assistant",
+                                                "gen_ai.completion.content": output_text,
+                                            },
+                                        )
+                                except Exception as e:
+                                    logger.debug(f"Could not decode output for content: {e}")
+                        except Exception as e:
+                            logger.debug(f"Failed to add content events: {e}")
+
+                    # Run evaluation checks BEFORE ending the span
+                    try:
+                        instrumentor._run_evaluation_checks(span, args, kwargs, result)
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to run evaluation checks for HuggingFace span: {e}",
+                            exc_info=True,
+                        )
+
                     return result
 
             # Apply wrapper to GenerationMixin.generate (all models inherit this)
@@ -355,6 +436,19 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
             attrs["gen_ai.request.temperature"] = kwargs["temperature"]
         if "top_p" in kwargs:
             attrs["gen_ai.request.top_p"] = kwargs["top_p"]
+
+        # Capture first message content for evaluation features
+        messages = kwargs.get("messages", [])
+        if messages:
+            # Only capture first 200 chars to avoid sensitive data and span size issues
+            # Messages should already be in dict format, str() preserves the dict-string format
+            first_message = str(messages[0])[:200]
+            attrs["gen_ai.request.first_message"] = first_message
+        elif "prompt" in kwargs:
+            # For text_generation calls - wrap plain text in dict format
+            prompt_text = str(kwargs["prompt"])[:200]
+            first_message = str({"role": "user", "content": prompt_text})
+            attrs["gen_ai.request.first_message"] = first_message
 
         return attrs
 
@@ -397,3 +491,125 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
         # HuggingFace Transformers is free (local execution)
         # No token-based costs to track
         return None
+
+    def _add_content_events(self, span, result, request_kwargs: dict):
+        """Add prompt and completion content as span events and attributes.
+
+        Args:
+            span: The OpenTelemetry span.
+            result: The API response object.
+            request_kwargs: The original request kwargs.
+        """
+        # Add prompt content events for InferenceClient
+        messages = request_kwargs.get("messages", [])
+        if messages:
+            for idx, message in enumerate(messages):
+                if isinstance(message, dict):
+                    role = message.get("role", "unknown")
+                    content = message.get("content", "")
+                    span.add_event(
+                        f"gen_ai.prompt.{idx}",
+                        attributes={
+                            "gen_ai.prompt.role": role,
+                            "gen_ai.prompt.content": str(content),
+                        },
+                    )
+        elif "prompt" in request_kwargs:
+            # For text_generation calls
+            prompt = request_kwargs["prompt"]
+            span.add_event(
+                "gen_ai.prompt.0",
+                attributes={
+                    "gen_ai.prompt.role": "user",
+                    "gen_ai.prompt.content": str(prompt),
+                },
+            )
+
+        # Add completion content events AND attributes (for evaluation processor)
+        try:
+            response_text = None
+
+            # For InferenceClient responses
+            if hasattr(result, "choices") and result.choices:
+                for idx, choice in enumerate(result.choices):
+                    if hasattr(choice, "message") and hasattr(choice.message, "content"):
+                        content = choice.message.content
+                        if idx == 0:
+                            response_text = str(content)
+                        span.add_event(
+                            f"gen_ai.completion.{idx}",
+                            attributes={
+                                "gen_ai.completion.role": "assistant",
+                                "gen_ai.completion.content": str(content),
+                            },
+                        )
+            # For text_generation responses
+            elif hasattr(result, "generated_text"):
+                response_text = str(result.generated_text)
+                span.add_event(
+                    "gen_ai.completion.0",
+                    attributes={
+                        "gen_ai.completion.role": "assistant",
+                        "gen_ai.completion.content": response_text,
+                    },
+                )
+            # For pipeline responses (list of dicts)
+            elif isinstance(result, list) and result:
+                for idx, item in enumerate(result):
+                    if isinstance(item, dict) and "generated_text" in item:
+                        response_text = str(item["generated_text"])
+                        span.add_event(
+                            f"gen_ai.completion.{idx}",
+                            attributes={
+                                "gen_ai.completion.role": "assistant",
+                                "gen_ai.completion.content": response_text,
+                            },
+                        )
+                        break  # Only capture first completion
+
+            # Set response as attribute for evaluation processor
+            if response_text:
+                span.set_attribute("gen_ai.response", response_text)
+
+        except Exception as e:
+            logger.debug("Failed to add content events for HuggingFace response: %s", e)
+
+    def _instrument_tokenizers(self):
+        """Instrument tokenizers to capture original text for content events."""
+        try:
+            import wrapt
+            from transformers import PreTrainedTokenizerBase
+
+            # Store original __call__ method
+            original_call = PreTrainedTokenizerBase.__call__
+
+            @wrapt.decorator
+            def tokenizer_call_wrapper(wrapped, instance, args, kwargs):
+                """Wrap tokenizer __call__ to store original text and tokenizer reference."""
+                # Get the text input (first positional arg or 'text' kwarg)
+                text_input = None
+                if args:
+                    text_input = args[0]
+                elif "text" in kwargs:
+                    text_input = kwargs["text"]
+
+                # Call original tokenizer
+                result = wrapped(*args, **kwargs)
+
+                # Store text and tokenizer reference in thread-local if we have input_ids
+                if text_input and hasattr(result, "get") and "input_ids" in result:
+                    if not hasattr(_thread_local, "last_tokenized_text"):
+                        _thread_local.last_tokenized_text = {}
+                    # Store the text mapped to a simple key we can retrieve
+                    _thread_local.last_tokenized_text["current"] = text_input
+                    # Store tokenizer reference for decoding output
+                    _thread_local.last_tokenizer = instance
+
+                return result
+
+            # Apply wrapper
+            PreTrainedTokenizerBase.__call__ = tokenizer_call_wrapper(original_call)
+            logger.debug("HuggingFace tokenizers instrumented for content capture")
+
+        except Exception as e:
+            logger.debug(f"Could not instrument tokenizers: {e}")
