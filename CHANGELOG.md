@@ -6,6 +6,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Critical: Evaluation Metrics Not Captured for HuggingFace**
+  - Fixed critical bug where evaluation metrics (PII, bias, toxicity detection) were not being captured for HuggingFace instrumented spans
+  - HuggingFace instrumentor's custom wrapper was missing the call to `_run_evaluation_checks()`
+  - Added evaluation checks before span ends in `generate_wrapper()`
+  - Implemented tokenizer instrumentation with thread-local storage to preserve original text
+  - All evaluation features now work correctly for HuggingFace Transformers
+
+- **Content Capture Format Standardization**
+  - Standardized `gen_ai.request.first_message` format across all instrumentors to dict-string: `{'role': 'user', 'content': '...'}`
+  - Simplified BaseInstrumentor prompt extraction logic to handle single consistent format
+  - Updated HuggingFace, Ollama, Anthropic, and OpenAI instrumentors for consistency
+  - Set `gen_ai.response` attribute for evaluation processor in all instrumentors
+
+### Added
+
+- **Comprehensive Evaluation Examples**
+  - Added 5 new HuggingFace evaluation examples:
+    - `examples/huggingface/pii_example.py` - PII detection with Qwen model
+    - `examples/huggingface/bias_example.py` - Bias detection
+    - `examples/huggingface/toxicity_example.py` - Toxicity detection
+    - `examples/huggingface/hallucination_example.py` - Hallucination detection with context
+    - `examples/huggingface/multiple_evaluations_example.py` - Combined PII, bias, and toxicity
+  - Added 4 new Ollama evaluation examples:
+    - `examples/ollama/pii_detection_example.py` - PII detection with local model
+    - `examples/ollama/toxicity_detection_example.py` - Toxicity detection
+    - `examples/ollama/hallucination_detection_example.py` - Hallucination detection
+    - `examples/ollama/multiple_evaluations_detection_example.py` - Combined evaluations
+  - All examples demonstrate proper content capture configuration
+
 ## [0.1.28] - 2025-12-30
 
 ### Added
