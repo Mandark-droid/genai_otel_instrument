@@ -426,5 +426,12 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
             self.assertTrue(instrumentor._instrumented)
 
 
+# NOTE: Integration test for evaluation checks (_run_evaluation_checks) with
+# HuggingFace is performed via examples/huggingface/multiple_evaluations_example.py
+# The wrapper setup is complex and difficult to properly mock in unit tests.
+# Manual verification confirmed that evaluation metrics (PII, bias, toxicity)
+# are correctly captured in Jaeger traces for HuggingFace spans.
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
