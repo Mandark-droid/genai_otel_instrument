@@ -230,6 +230,80 @@ class TestGroqInstrumentor(unittest.TestCase):
 
         self.assertIsNone(usage)
 
+    def test_evaluation_support_request_capture(self):
+        """Test that request content is captured for evaluation support."""
+        instrumentor = GroqInstrumentor()
+
+        # Create mock client
+        mock_client = MagicMock()
+        original_create = MagicMock(return_value=MagicMock())
+        mock_client.chat.completions.create = original_create
+
+        # Mock tracer and metrics
+        mock_span = MagicMock()
+        instrumentor.tracer = MagicMock()
+        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.request_counter = MagicMock()
+        instrumentor._record_result_metrics = MagicMock()
+        instrumentor._extract_response_attributes = MagicMock(return_value={})
+
+        # Instrument the client
+        instrumentor._instrument_client(mock_client)
+
+        # Call with messages
+        mock_client.chat.completions.create(
+            model="llama-3.1-70b",
+            messages=[{"role": "user", "content": "What is artificial intelligence?"}],
+        )
+
+        # Verify request content was captured
+        set_attribute_calls = [call[0] for call in mock_span.set_attribute.call_args_list]
+        self.assertTrue(
+            any(
+                "gen_ai.request.first_message" in call and "artificial intelligence" in str(call)
+                for call in set_attribute_calls
+            )
+        )
+
+    def test_evaluation_support_response_capture(self):
+        """Test that response content is captured for evaluation support."""
+        instrumentor = GroqInstrumentor()
+
+        # Create mock response with choices (OpenAI-compatible format)
+        mock_message = MagicMock()
+        mock_message.content = "AI is the simulation of human intelligence in machines."
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        attrs = instrumentor._extract_response_attributes(mock_response)
+
+        self.assertIn("gen_ai.response", attrs)
+        self.assertEqual(
+            attrs["gen_ai.response"], "AI is the simulation of human intelligence in machines."
+        )
+
+    def test_response_attributes_without_content(self):
+        """Test graceful handling when response has no content."""
+        instrumentor = GroqInstrumentor()
+
+        # Test with no choices
+        mock_response = MagicMock()
+        mock_response.choices = []
+
+        attrs = instrumentor._extract_response_attributes(mock_response)
+        self.assertNotIn("gen_ai.response", attrs)
+
+        # Test with None choices
+        mock_response_none = MagicMock()
+        mock_response_none.choices = None
+
+        attrs = instrumentor._extract_response_attributes(mock_response_none)
+        self.assertNotIn("gen_ai.response", attrs)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

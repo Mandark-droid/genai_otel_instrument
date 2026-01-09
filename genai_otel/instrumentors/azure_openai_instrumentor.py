@@ -5,7 +5,7 @@ relevant attributes such as model name and token usage.
 """
 
 import logging
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
 from .base import BaseInstrumentor
@@ -47,11 +47,44 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
                     span.set_attribute("gen_ai.system", "azure_openai")
                     span.set_attribute("gen_ai.request.model", model)
 
+                    # Capture request content for evaluation support
+                    # Azure OpenAI supports both messages and prompt
+                    messages = kwargs.get("messages", [])
+                    if messages:
+                        try:
+                            first_message = messages[0]
+                            # Handle both dict and object formats
+                            if isinstance(first_message, dict):
+                                content = first_message.get("content", "")
+                            else:
+                                content = getattr(first_message, "content", "")
+
+                            truncated_content = str(content)[:150]
+                            request_str = str({"role": "user", "content": truncated_content})
+                            span.set_attribute("gen_ai.request.first_message", request_str[:200])
+                        except (IndexError, AttributeError) as e:
+                            logger.debug("Failed to extract request content: %s", e)
+                    elif "prompt" in kwargs:
+                        # Fallback to prompt if messages not present
+                        try:
+                            prompt = kwargs.get("prompt", "")
+                            truncated_prompt = str(prompt)[:150]
+                            request_str = str({"role": "user", "content": truncated_prompt})
+                            span.set_attribute("gen_ai.request.first_message", request_str[:200])
+                        except Exception as e:
+                            logger.debug("Failed to extract prompt content: %s", e)
+
                     if self.request_counter:
                         self.request_counter.add(1, {"model": model, "provider": "azure_openai"})
 
                     result = original_complete(instance, *args, **kwargs)
                     self._record_result_metrics(span, result, 0)
+
+                    # Capture response content for evaluation support
+                    response_attrs = self._extract_response_attributes(result)
+                    for key, value in response_attrs.items():
+                        span.set_attribute(key, value)
+
                     return result
 
             OpenAIClient.complete = wrapped_complete
@@ -67,3 +100,33 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
                 "total_tokens": result.usage.total_tokens,
             }
         return None
+
+    def _extract_response_attributes(self, result) -> Dict[str, Any]:
+        """Extract response attributes from Azure OpenAI response for evaluation support.
+
+        Args:
+            result: The API response object.
+
+        Returns:
+            Dict[str, Any]: Dictionary of response attributes.
+        """
+        attrs = {}
+
+        # Extract response content for evaluation support
+        try:
+            # Azure OpenAI uses OpenAI-compatible format: choices[0].message.content
+            if hasattr(result, "choices") and result.choices:
+                first_choice = result.choices[0]
+                if hasattr(first_choice, "message") and hasattr(first_choice.message, "content"):
+                    response_content = first_choice.message.content
+                    if response_content:
+                        attrs["gen_ai.response"] = response_content
+                # Fallback to text attribute for completions
+                elif hasattr(first_choice, "text"):
+                    response_content = first_choice.text
+                    if response_content:
+                        attrs["gen_ai.response"] = response_content
+        except (IndexError, AttributeError) as e:
+            logger.debug("Failed to extract response content: %s", e)
+
+        return attrs

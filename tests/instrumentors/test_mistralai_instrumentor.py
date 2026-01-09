@@ -124,6 +124,61 @@ class TestMistralAIInstrumentor(unittest.TestCase):
 
         self.assertIsNone(usage)
 
+    def test_evaluation_support_request_capture(self):
+        """Test that request content is captured for evaluation support."""
+        instrumentor = MistralAIInstrumentor()
+
+        # Test with dict format messages
+        kwargs = {
+            "model": "mistral-small-latest",
+            "messages": [{"role": "user", "content": "What is artificial intelligence?"}],
+        }
+
+        attrs = instrumentor._extract_chat_attributes(None, None, kwargs)
+
+        self.assertIn("gen_ai.request.first_message", attrs)
+        self.assertIn("user", attrs["gen_ai.request.first_message"])
+        self.assertIn("artificial intelligence", attrs["gen_ai.request.first_message"])
+
+    def test_evaluation_support_response_capture(self):
+        """Test that response content is captured for evaluation support."""
+        instrumentor = MistralAIInstrumentor()
+
+        # Create mock response with choices (OpenAI-compatible format)
+        mock_message = MagicMock()
+        mock_message.content = "AI is the simulation of human intelligence in machines."
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        attrs = instrumentor._extract_response_attributes(mock_response)
+
+        self.assertIn("gen_ai.response", attrs)
+        self.assertEqual(
+            attrs["gen_ai.response"], "AI is the simulation of human intelligence in machines."
+        )
+
+    def test_response_attributes_without_content(self):
+        """Test graceful handling when response has no content."""
+        instrumentor = MistralAIInstrumentor()
+
+        # Test with no choices
+        mock_response = MagicMock()
+        mock_response.choices = []
+
+        attrs = instrumentor._extract_response_attributes(mock_response)
+        self.assertNotIn("gen_ai.response", attrs)
+
+        # Test with None choices
+        mock_response_none = MagicMock()
+        mock_response_none.choices = None
+
+        attrs = instrumentor._extract_response_attributes(mock_response_none)
+        self.assertNotIn("gen_ai.response", attrs)
+
 
 if __name__ == "__main__":
     unittest.main()

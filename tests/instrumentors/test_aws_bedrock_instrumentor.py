@@ -378,6 +378,136 @@ class TestAWSBedrockInstrumentor(unittest.TestCase):
             # Should return client without instrumentation
             self.assertEqual(result, mock_client)
 
+    def test_evaluation_support_request_capture_with_messages(self):
+        """Test that request content is captured for evaluation support with Claude messages format."""
+        instrumentor = AWSBedrockInstrumentor()
+
+        body_data = {
+            "messages": [{"role": "user", "content": "What is artificial intelligence?"}],
+            "max_tokens": 100,
+        }
+
+        kwargs = {"modelId": "anthropic.claude-v2", "body": json.dumps(body_data)}
+
+        attrs = instrumentor._extract_aws_bedrock_attributes(None, None, kwargs)
+
+        self.assertIn("gen_ai.request.first_message", attrs)
+        self.assertIn("user", attrs["gen_ai.request.first_message"])
+        self.assertIn("artificial intelligence", attrs["gen_ai.request.first_message"])
+
+    def test_evaluation_support_request_capture_with_prompt(self):
+        """Test that request content is captured for evaluation support with Llama/Titan prompt format."""
+        instrumentor = AWSBedrockInstrumentor()
+
+        body_data = {"prompt": "What is machine learning?", "max_tokens": 100}
+
+        kwargs = {"modelId": "meta.llama2-70b", "body": json.dumps(body_data)}
+
+        attrs = instrumentor._extract_aws_bedrock_attributes(None, None, kwargs)
+
+        self.assertIn("gen_ai.request.first_message", attrs)
+        self.assertIn("machine learning", attrs["gen_ai.request.first_message"])
+
+    def test_evaluation_support_request_capture_with_input_text(self):
+        """Test that request content is captured for evaluation support with generic inputText format."""
+        instrumentor = AWSBedrockInstrumentor()
+
+        body_data = {"inputText": "What is deep learning?"}
+
+        kwargs = {"modelId": "amazon.titan-text", "body": json.dumps(body_data)}
+
+        attrs = instrumentor._extract_aws_bedrock_attributes(None, None, kwargs)
+
+        self.assertIn("gen_ai.request.first_message", attrs)
+        self.assertIn("deep learning", attrs["gen_ai.request.first_message"])
+
+    def test_evaluation_support_response_capture_with_content_list(self):
+        """Test that response content is captured for evaluation support with Claude content format."""
+        instrumentor = AWSBedrockInstrumentor()
+
+        body_data = {
+            "content": [{"text": "AI is the simulation of human intelligence in machines."}],
+            "usage": {"inputTokens": 10, "outputTokens": 20},
+        }
+
+        result = {"contentType": "application/json", "body": json.dumps(body_data)}
+
+        attrs = instrumentor._extract_response_attributes(result)
+
+        self.assertIn("gen_ai.response", attrs)
+        self.assertEqual(
+            attrs["gen_ai.response"], "AI is the simulation of human intelligence in machines."
+        )
+
+    def test_evaluation_support_response_capture_with_completion(self):
+        """Test that response content is captured for evaluation support with completion format."""
+        instrumentor = AWSBedrockInstrumentor()
+
+        body_data = {"completion": "This is a completion response."}
+
+        result = {"contentType": "application/json", "body": json.dumps(body_data)}
+
+        attrs = instrumentor._extract_response_attributes(result)
+
+        self.assertIn("gen_ai.response", attrs)
+        self.assertEqual(attrs["gen_ai.response"], "This is a completion response.")
+
+    def test_evaluation_support_response_capture_with_output_text(self):
+        """Test that response content is captured for evaluation support with outputText format."""
+        instrumentor = AWSBedrockInstrumentor()
+
+        body_data = {"outputText": "This is an output text response."}
+
+        result = {"contentType": "application/json", "body": json.dumps(body_data)}
+
+        attrs = instrumentor._extract_response_attributes(result)
+
+        self.assertIn("gen_ai.response", attrs)
+        self.assertEqual(attrs["gen_ai.response"], "This is an output text response.")
+
+    def test_evaluation_support_response_capture_with_results_array(self):
+        """Test that response content is captured for evaluation support with results array format."""
+        instrumentor = AWSBedrockInstrumentor()
+
+        body_data = {"results": [{"outputText": "Response from results array."}]}
+
+        result = {"contentType": "application/json", "body": json.dumps(body_data)}
+
+        attrs = instrumentor._extract_response_attributes(result)
+
+        self.assertIn("gen_ai.response", attrs)
+        self.assertEqual(attrs["gen_ai.response"], "Response from results array.")
+
+    def test_response_attributes_without_content(self):
+        """Test graceful handling when response has no content."""
+        instrumentor = AWSBedrockInstrumentor()
+
+        # Test with empty body
+        result = {"contentType": "application/json", "body": ""}
+
+        attrs = instrumentor._extract_response_attributes(result)
+        self.assertNotIn("gen_ai.response", attrs)
+
+        # Test with body missing content fields
+        body_data = {"usage": {"inputTokens": 10}}
+        result = {"contentType": "application/json", "body": json.dumps(body_data)}
+
+        attrs = instrumentor._extract_response_attributes(result)
+        self.assertNotIn("gen_ai.response", attrs)
+
+    def test_response_attributes_with_bytes_body(self):
+        """Test that response content is extracted correctly when body is bytes."""
+        instrumentor = AWSBedrockInstrumentor()
+
+        body_data = {"completion": "Response from bytes body."}
+
+        result = {"contentType": "application/json", "body": json.dumps(body_data).encode("utf-8")}
+
+        attrs = instrumentor._extract_response_attributes(result)
+
+        self.assertIn("gen_ai.response", attrs)
+        self.assertEqual(attrs["gen_ai.response"], "Response from bytes body.")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

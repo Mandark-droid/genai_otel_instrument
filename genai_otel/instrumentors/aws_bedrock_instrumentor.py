@@ -62,6 +62,46 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
 
         attrs["gen_ai.system"] = "aws_bedrock"
         attrs["gen_ai.request.model"] = model_id
+
+        # Capture request content for evaluation support
+        body = kwargs.get("body", "")
+        if body:
+            try:
+                # Body is usually a JSON string
+                if isinstance(body, (str, bytes)):
+                    body_dict = (
+                        json.loads(body)
+                        if isinstance(body, str)
+                        else json.loads(body.decode("utf-8"))
+                    )
+                else:
+                    body_dict = body
+
+                # Extract content based on model family
+                # Claude format: messages array
+                if "messages" in body_dict and body_dict["messages"]:
+                    first_message = body_dict["messages"][0]
+                    content = (
+                        first_message.get("content", "") if isinstance(first_message, dict) else ""
+                    )
+                    truncated_content = str(content)[:150]
+                    request_str = str({"role": "user", "content": truncated_content})
+                    attrs["gen_ai.request.first_message"] = request_str[:200]
+                # Llama/Titan format: prompt field
+                elif "prompt" in body_dict:
+                    prompt = body_dict["prompt"]
+                    truncated_prompt = str(prompt)[:150]
+                    request_str = str({"role": "user", "content": truncated_prompt})
+                    attrs["gen_ai.request.first_message"] = request_str[:200]
+                # Generic input field
+                elif "inputText" in body_dict:
+                    input_text = body_dict["inputText"]
+                    truncated_input = str(input_text)[:150]
+                    request_str = str({"role": "user", "content": truncated_input})
+                    attrs["gen_ai.request.first_message"] = request_str[:200]
+            except (json.JSONDecodeError, AttributeError, KeyError) as e:
+                logger.debug("Failed to extract request content: %s", e)
+
         return attrs
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:  # pylint: disable=R1705
@@ -92,3 +132,61 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                 except Exception as e:
                     logger.debug("Error extracting usage from Bedrock response: %s", e)
         return None
+
+    def _extract_response_attributes(self, result) -> Dict[str, Any]:
+        """Extract response attributes from AWS Bedrock response for evaluation support.
+
+        Args:
+            result: The API response object.
+
+        Returns:
+            Dict[str, Any]: Dictionary of response attributes.
+        """
+        attrs = {}
+
+        # Extract response content for evaluation support
+        try:
+            if hasattr(result, "get"):
+                body_str = result.get("body", "")
+
+                if body_str:
+                    # Parse response body
+                    if isinstance(body_str, bytes):
+                        body_str = body_str.decode("utf-8")
+
+                    body = json.loads(body_str) if isinstance(body_str, str) else body_str
+
+                    # Extract content based on model family response format
+                    # Claude format: content array
+                    if "content" in body:
+                        content = body["content"]
+                        if isinstance(content, list) and len(content) > 0:
+                            # Claude returns list of content blocks
+                            first_content = content[0]
+                            if isinstance(first_content, dict) and "text" in first_content:
+                                attrs["gen_ai.response"] = first_content["text"]
+                            else:
+                                attrs["gen_ai.response"] = str(content[0])
+                        elif isinstance(content, str):
+                            attrs["gen_ai.response"] = content
+                    # Llama/Titan format: completion or generation field
+                    elif "completion" in body:
+                        attrs["gen_ai.response"] = body["completion"]
+                    elif "generation" in body:
+                        attrs["gen_ai.response"] = body["generation"]
+                    # Generic output field
+                    elif "outputText" in body:
+                        attrs["gen_ai.response"] = body["outputText"]
+                    # Results array format
+                    elif (
+                        "results" in body
+                        and isinstance(body["results"], list)
+                        and len(body["results"]) > 0
+                    ):
+                        first_result = body["results"][0]
+                        if isinstance(first_result, dict) and "outputText" in first_result:
+                            attrs["gen_ai.response"] = first_result["outputText"]
+        except (json.JSONDecodeError, AttributeError, KeyError, IndexError) as e:
+            logger.debug("Failed to extract response content: %s", e)
+
+        return attrs
