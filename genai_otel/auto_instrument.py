@@ -38,8 +38,11 @@ from .evaluation.config import (
 )
 from .evaluation.span_processor import EvaluationSpanProcessor
 from .gpu_metrics import GPUMetricsCollector
+from .litellm_span_enrichment_processor import LiteLLMSpanEnrichmentProcessor
 from .mcp_instrumentors import MCPInstrumentorManager
+from .mcp_span_enrichment_processor import MCPSpanEnrichmentProcessor
 from .server_metrics import initialize_server_metrics
+from .smolagents_span_enrichment_processor import SmolagentsSpanEnrichmentProcessor
 from .metrics import (
     _GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS,
     _GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS,
@@ -86,6 +89,7 @@ try:
         OllamaInstrumentor,
         OpenAIInstrumentor,
         OpenAIAgentsInstrumentor,
+        OpenRouterInstrumentor,
         PydanticAIInstrumentor,
         ReplicateInstrumentor,
         SambaNovaInstrumentor,
@@ -118,6 +122,7 @@ except ImportError:
         OllamaInstrumentor,
         OpenAIInstrumentor,
         OpenAIAgentsInstrumentor,
+        OpenRouterInstrumentor,
         PydanticAIInstrumentor,
         ReplicateInstrumentor,
         SambaNovaInstrumentor,
@@ -146,6 +151,7 @@ except ImportError:
 INSTRUMENTORS = {
     "openai": OpenAIInstrumentor,
     "agents": OpenAIAgentsInstrumentor,  # OpenAI Agents SDK
+    "openrouter": OpenRouterInstrumentor,  # OpenRouter unified API aggregator
     "anthropic": AnthropicInstrumentor,
     "google.generativeai": GoogleAIInstrumentor,
     "boto3": AWSBedrockInstrumentor,
@@ -238,6 +244,39 @@ def setup_auto_instrumentation(config: OTelConfig):
             logger.info("Cost enrichment processor added")
         except Exception as e:
             logger.warning(f"Failed to add cost enrichment processor: {e}", exc_info=True)
+
+    # Add LiteLLM span enrichment processor for evaluation support
+    # This enriches LiteLLM spans (created by OpenInference) with standardized attributes
+    # enabling evaluation metrics (PII, toxicity, bias, etc.) for LiteLLM calls
+    if OPENINFERENCE_AVAILABLE and "litellm" in config.enabled_instrumentors:
+        try:
+            litellm_enrichment_processor = LiteLLMSpanEnrichmentProcessor()
+            tracer_provider.add_span_processor(litellm_enrichment_processor)
+            logger.info("LiteLLM span enrichment processor added for evaluation support")
+        except Exception as e:
+            logger.warning(f"Failed to add LiteLLM span enrichment processor: {e}", exc_info=True)
+
+    # Add Smolagents span enrichment processor for evaluation support
+    # This enriches Smolagents spans (created by OpenInference) with standardized attributes
+    if OPENINFERENCE_AVAILABLE and "smolagents" in config.enabled_instrumentors:
+        try:
+            smolagents_enrichment_processor = SmolagentsSpanEnrichmentProcessor()
+            tracer_provider.add_span_processor(smolagents_enrichment_processor)
+            logger.info("Smolagents span enrichment processor added for evaluation support")
+        except Exception as e:
+            logger.warning(
+                f"Failed to add Smolagents span enrichment processor: {e}", exc_info=True
+            )
+
+    # Add MCP span enrichment processor for evaluation support
+    # This enriches MCP tool spans (created by OpenInference) with standardized attributes
+    if OPENINFERENCE_AVAILABLE and "mcp" in config.enabled_instrumentors:
+        try:
+            mcp_enrichment_processor = MCPSpanEnrichmentProcessor()
+            tracer_provider.add_span_processor(mcp_enrichment_processor)
+            logger.info("MCP span enrichment processor added for evaluation support")
+        except Exception as e:
+            logger.warning(f"Failed to add MCP span enrichment processor: {e}", exc_info=True)
 
     # Add evaluation and safety span processor (v0.2.0)
     if any(

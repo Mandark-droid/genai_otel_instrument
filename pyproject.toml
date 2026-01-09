@@ -97,6 +97,7 @@ all-gpu = [
 co2 = ["codecarbon>=2.3.0"]
 # Individual LLM providers
 openai = ["openai>=1.0.0"]
+openrouter = ["openai>=1.0.0"]  # OpenRouter uses the OpenAI client SDK
 anthropic = ["anthropic>=0.18.0"]
 google = ["google-generativeai>=0.3.0"]
 aws = ["boto3>=1.28.0"]

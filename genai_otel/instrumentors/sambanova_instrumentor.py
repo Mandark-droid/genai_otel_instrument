@@ -175,6 +175,16 @@ class SambaNovaInstrumentor(BaseInstrumentor):
             if finish_reasons:
                 attrs["gen_ai.response.finish_reasons"] = finish_reasons
 
+            # Extract response content for evaluation support
+            try:
+                first_choice = result.choices[0]
+                if hasattr(first_choice, "message") and hasattr(first_choice.message, "content"):
+                    response_content = first_choice.message.content
+                    if response_content:
+                        attrs["gen_ai.response"] = response_content
+            except (IndexError, AttributeError) as e:
+                logger.debug("Failed to extract response content: %s", e)
+
         return attrs
 
     def _extract_finish_reason(self, result) -> Optional[str]:

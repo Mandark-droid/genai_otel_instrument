@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 # They are only added to the default list if Python version is compatible.
 DEFAULT_INSTRUMENTORS = [
     "openai",
+    "openrouter",
     "anthropic",
     "google.generativeai",
     "boto3",

@@ -6,6 +6,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Evaluation Metrics Enhancement - 150% Coverage Increase**
+  - **Evaluation support increased from 6/31 (19%) to 15/31 (48%) providers**
+  - Added 9 new providers with full evaluation metrics (PII, toxicity, bias, prompt injection, hallucination detection)
+  - Total of 102 new tests added with 92% average coverage across new features
+
+- **Span Enrichment Processors for External Instrumentors**
+  - New post-processing architecture for adding evaluation support to externally-managed instrumentors
+  - **LiteLLM Span Enrichment Processor**
+    - Enables evaluation for all 100+ LiteLLM-proxied providers
+    - Transforms OpenInference attributes to evaluation format
+    - 28 unit tests, 92% coverage
+    - No modifications to OpenInference library required
+  - **Smolagents Span Enrichment Processor**
+    - Adds evaluation support to HuggingFace Smolagents framework
+    - Extracts content from agent spans for evaluation
+    - 27 unit tests, 91% coverage
+  - **MCP Span Enrichment Processor**
+    - Enables evaluation for Model Context Protocol tools
+    - Supports database, cache, vector DB, and API tool spans
+    - 24 unit tests, 92% coverage
+  - All processors integrated into `auto_instrument.py` and enabled by default
+
+- **Direct Provider Evaluation Support (6 providers)**
+  - **SambaNova** - Added response content capture for full evaluation support
+  - **Cohere** - Added request and response capture, 12 tests (90% coverage)
+  - **Mistral AI** - Added request/response capture with dict/object format support, 8 tests (38% coverage)
+  - **Groq** - Added OpenAI-compatible request/response capture, 14 tests (90% coverage)
+  - **Azure OpenAI** - Added support for messages and prompt formats, 15 tests (91% coverage)
+  - **AWS Bedrock** - Added multi-model family support (Claude, Llama, Titan), 30 tests (92% coverage)
+    - Supports multiple request formats: messages, prompt, inputText
+    - Supports multiple response formats: content arrays, completion, outputText, results array
+
+- **OpenRouter Provider Support**
+  - Added comprehensive OpenRouter instrumentation for unified multi-provider LLM access
+  - Automatic detection of OpenRouter clients via `base_url` checking for `openrouter.ai`
+  - Captures OpenRouter-specific parameters: `provider` (routing preferences) and `route` (fallback strategy)
+  - Full support for token usage tracking, cost calculation, and response attributes
+  - Added 19 popular OpenRouter model pricing entries (Claude, GPT, Gemini, Llama, Mistral, DeepSeek, Perplexity)
+  - OpenRouter uses OpenAI-compatible SDK with custom base_url: `https://openrouter.ai/api/v1`
+  - Enabled by default in `DEFAULT_INSTRUMENTORS` list
+  - Comprehensive test suite with 18 unit tests (72% coverage)
+  - Install with: `pip install genai-otel-instrument[openrouter]` or use existing OpenAI SDK
+  - Example: `examples/openrouter/example.py`
+  - Documentation: Updated `sample.env` with `OPENROUTER_API_KEY` configuration
+
 ## [0.1.29] - 2026-01-03
 
 ### Fixed

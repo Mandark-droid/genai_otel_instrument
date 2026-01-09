@@ -33,6 +33,7 @@ from .openai_agents_instrumentor import OpenAIAgentsInstrumentor
 
 # Import instrumentors only - they handle their own dependency checking
 from .openai_instrumentor import OpenAIInstrumentor
+from .openrouter_instrumentor import OpenRouterInstrumentor
 from .pydantic_ai_instrumentor import PydanticAIInstrumentor
 from .replicate_instrumentor import ReplicateInstrumentor
 from .sambanova_instrumentor import SambaNovaInstrumentor
@@ -42,6 +43,7 @@ from .vertexai_instrumentor import VertexAIInstrumentor
 __all__ = [
     "OpenAIInstrumentor",
     "OpenAIAgentsInstrumentor",
+    "OpenRouterInstrumentor",
     "AnthropicInstrumentor",
     "GoogleAIInstrumentor",
     "AWSBedrockInstrumentor",
