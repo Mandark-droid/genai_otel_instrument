@@ -218,6 +218,56 @@ class TestCohereInstrumentor(unittest.TestCase):
         self.assertEqual(result["completion_tokens"], 20)
         self.assertEqual(result["total_tokens"], 30)
 
+    def test_evaluation_support_request_capture(self):
+        """Test that request content is captured for evaluation support."""
+        instrumentor = CohereInstrumentor()
+
+        kwargs = {
+            "model": "command",
+            "prompt": "What is artificial intelligence?",
+        }
+
+        attrs = instrumentor._extract_generate_attributes(None, None, kwargs)
+
+        self.assertIn("gen_ai.request.first_message", attrs)
+        self.assertIn("user", attrs["gen_ai.request.first_message"])
+        self.assertIn("artificial intelligence", attrs["gen_ai.request.first_message"])
+
+    def test_evaluation_support_response_capture(self):
+        """Test that response content is captured for evaluation support."""
+        instrumentor = CohereInstrumentor()
+
+        # Create mock response with generations
+        mock_response = MagicMock()
+        mock_generation = MagicMock()
+        mock_generation.text = "AI is the simulation of human intelligence in machines."
+        mock_response.generations = [mock_generation]
+
+        attrs = instrumentor._extract_response_attributes(mock_response)
+
+        self.assertIn("gen_ai.response", attrs)
+        self.assertEqual(
+            attrs["gen_ai.response"], "AI is the simulation of human intelligence in machines."
+        )
+
+    def test_response_attributes_without_content(self):
+        """Test graceful handling when response has no content."""
+        instrumentor = CohereInstrumentor()
+
+        # Test with no generations
+        mock_response = MagicMock()
+        mock_response.generations = []
+
+        attrs = instrumentor._extract_response_attributes(mock_response)
+        self.assertNotIn("gen_ai.response", attrs)
+
+        # Test with None generations
+        mock_response_none = MagicMock()
+        mock_response_none.generations = None
+
+        attrs = instrumentor._extract_response_attributes(mock_response_none)
+        self.assertNotIn("gen_ai.response", attrs)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

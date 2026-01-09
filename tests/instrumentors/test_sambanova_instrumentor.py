@@ -168,17 +168,24 @@ class TestSambaNovaInstrumentor(unittest.TestCase):
         """Test extraction of response attributes."""
         instrumentor = SambaNovaInstrumentor()
 
-        # Create mock result
+        # Create mock result with response content
         result = MagicMock()
         result.id = "resp-123"
         result.model = "Llama-4-Maverick-17B-128E-Instruct"
-        result.choices = [MagicMock(finish_reason="stop")]
+
+        # Create mock choice with message content for evaluation support
+        mock_choice = MagicMock()
+        mock_choice.finish_reason = "stop"
+        mock_choice.message.content = "This is a test response from SambaNova"
+        result.choices = [mock_choice]
 
         attrs = instrumentor._extract_response_attributes(result)
 
         self.assertEqual(attrs["gen_ai.response.id"], "resp-123")
         self.assertEqual(attrs["gen_ai.response.model"], "Llama-4-Maverick-17B-128E-Instruct")
         self.assertEqual(attrs["gen_ai.response.finish_reasons"], ["stop"])
+        # Verify response content is captured for evaluation support
+        self.assertEqual(attrs["gen_ai.response"], "This is a test response from SambaNova")
 
     def test_extract_finish_reason(self):
         """Test extraction of finish reason."""
@@ -190,6 +197,52 @@ class TestSambaNovaInstrumentor(unittest.TestCase):
         finish_reason = instrumentor._extract_finish_reason(result)
 
         self.assertEqual(finish_reason, "stop")
+
+    def test_evaluation_support_attributes(self):
+        """Test that both request and response content are captured for evaluation support."""
+        instrumentor = SambaNovaInstrumentor()
+
+        # Test request attributes capture
+        kwargs = {
+            "model": "Llama-4-Maverick-17B-128E-Instruct",
+            "messages": [{"role": "user", "content": "What is machine learning?"}],
+        }
+        request_attrs = instrumentor._extract_sambanova_attributes(None, None, kwargs)
+        self.assertIn("gen_ai.request.first_message", request_attrs)
+        self.assertIn("user", request_attrs["gen_ai.request.first_message"])
+
+        # Test response attributes capture
+        result = MagicMock()
+        result.id = "resp-456"
+        result.model = "Llama-4-Maverick-17B-128E-Instruct"
+        mock_choice = MagicMock()
+        mock_choice.finish_reason = "stop"
+        mock_choice.message.content = "Machine learning is a subset of AI."
+        result.choices = [mock_choice]
+
+        response_attrs = instrumentor._extract_response_attributes(result)
+        self.assertIn("gen_ai.response", response_attrs)
+        self.assertEqual(response_attrs["gen_ai.response"], "Machine learning is a subset of AI.")
+
+    def test_response_attributes_without_content(self):
+        """Test that response attributes extraction handles missing content gracefully."""
+        instrumentor = SambaNovaInstrumentor()
+
+        # Create result without message content
+        result = MagicMock()
+        result.id = "resp-789"
+        result.model = "Llama-4-Maverick-17B-128E-Instruct"
+        mock_choice = MagicMock(spec=["finish_reason"])
+        mock_choice.finish_reason = "stop"
+        result.choices = [mock_choice]
+
+        attrs = instrumentor._extract_response_attributes(result)
+
+        # Should still have basic attributes
+        self.assertEqual(attrs["gen_ai.response.id"], "resp-789")
+        self.assertEqual(attrs["gen_ai.response.finish_reasons"], ["stop"])
+        # But not the response content since it's missing
+        self.assertNotIn("gen_ai.response", attrs)
 
 
 if __name__ == "__main__":

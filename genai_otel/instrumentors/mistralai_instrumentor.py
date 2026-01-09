@@ -285,6 +285,23 @@ class MistralAIInstrumentor(BaseInstrumentor):
         if "max_tokens" in kwargs and kwargs["max_tokens"] is not None:
             attributes["gen_ai.request.max_tokens"] = kwargs["max_tokens"]
 
+        # Capture request content for evaluation support
+        messages = kwargs.get("messages", [])
+        if messages:
+            try:
+                first_message = messages[0]
+                # Handle both dict and object formats
+                if isinstance(first_message, dict):
+                    content = first_message.get("content", "")
+                else:
+                    content = getattr(first_message, "content", "")
+
+                truncated_content = str(content)[:150]
+                request_str = str({"role": "user", "content": truncated_content})
+                attributes["gen_ai.request.first_message"] = request_str[:200]
+            except (IndexError, AttributeError) as e:
+                logger.debug(f"Failed to extract request content: {e}")
+
         return attributes
 
     def _extract_embeddings_attributes(
@@ -313,3 +330,28 @@ class MistralAIInstrumentor(BaseInstrumentor):
             logger.debug(f"Could not extract usage from MistralAI response: {e}")
 
         return None
+
+    def _extract_response_attributes(self, result) -> Dict[str, Any]:
+        """Extract response attributes from Mistral AI response for evaluation support.
+
+        Args:
+            result: The API response object.
+
+        Returns:
+            Dict[str, Any]: Dictionary of response attributes.
+        """
+        attrs = {}
+
+        # Extract response content for evaluation support
+        try:
+            # Mistral responses use OpenAI-compatible format: choices[0].message.content
+            if hasattr(result, "choices") and result.choices:
+                first_choice = result.choices[0]
+                if hasattr(first_choice, "message") and hasattr(first_choice.message, "content"):
+                    response_content = first_choice.message.content
+                    if response_content:
+                        attrs["gen_ai.response"] = response_content
+        except (IndexError, AttributeError) as e:
+            logger.debug(f"Failed to extract response content: {e}")
+
+        return attrs

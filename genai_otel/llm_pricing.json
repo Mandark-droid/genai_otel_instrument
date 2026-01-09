@@ -3391,6 +3391,96 @@
       "promptPrice": 0.0005,
       "completionPrice": 0.0015,
       "note": "Nebius - GPT OSS 120B (estimated pricing)"
+    },
+    "openrouter/auto": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "OpenRouter auto-routing - pricing varies by selected model"
+    },
+    "anthropic/claude-3-opus": {
+      "promptPrice": 0.015,
+      "completionPrice": 0.075,
+      "note": "OpenRouter - Claude 3 Opus"
+    },
+    "anthropic/claude-3-sonnet": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015,
+      "note": "OpenRouter - Claude 3 Sonnet"
+    },
+    "anthropic/claude-3-haiku": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.00125,
+      "note": "OpenRouter - Claude 3 Haiku"
+    },
+    "anthropic/claude-3.5-sonnet": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015,
+      "note": "OpenRouter - Claude 3.5 Sonnet"
+    },
+    "openai/gpt-4-turbo": {
+      "promptPrice": 0.01,
+      "completionPrice": 0.03,
+      "note": "OpenRouter - GPT-4 Turbo"
+    },
+    "openai/gpt-4": {
+      "promptPrice": 0.03,
+      "completionPrice": 0.06,
+      "note": "OpenRouter - GPT-4"
+    },
+    "openai/gpt-3.5-turbo": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "OpenRouter - GPT-3.5 Turbo"
+    },
+    "google/gemini-pro": {
+      "promptPrice": 0.000125,
+      "completionPrice": 0.000375,
+      "note": "OpenRouter - Gemini Pro"
+    },
+    "google/gemini-pro-1.5": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.005,
+      "note": "OpenRouter - Gemini Pro 1.5"
+    },
+    "meta-llama/llama-3-70b-instruct": {
+      "promptPrice": 0.00059,
+      "completionPrice": 0.00079,
+      "note": "OpenRouter - Llama 3 70B Instruct"
+    },
+    "meta-llama/llama-3-8b-instruct": {
+      "promptPrice": 0.00005,
+      "completionPrice": 0.00005,
+      "note": "OpenRouter - Llama 3 8B Instruct"
+    },
+    "mistralai/mistral-7b-instruct": {
+      "promptPrice": 0.00006,
+      "completionPrice": 0.00006,
+      "note": "OpenRouter - Mistral 7B Instruct"
+    },
+    "mistralai/mixtral-8x7b-instruct": {
+      "promptPrice": 0.00024,
+      "completionPrice": 0.00024,
+      "note": "OpenRouter - Mixtral 8x7B Instruct"
+    },
+    "mistralai/mistral-large": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.009,
+      "note": "OpenRouter - Mistral Large"
+    },
+    "deepseek/deepseek-chat": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "note": "OpenRouter - DeepSeek Chat"
+    },
+    "deepseek/deepseek-coder": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "note": "OpenRouter - DeepSeek Coder"
+    },
+    "perplexity/llama-3-sonar-large-32k-online": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.001,
+      "note": "OpenRouter - Perplexity Sonar Large"
     }
   }
 }

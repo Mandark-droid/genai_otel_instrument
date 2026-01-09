@@ -90,6 +90,12 @@ class CohereInstrumentor(BaseInstrumentor):
         attrs["gen_ai.operation.name"] = "generate"
         attrs["gen_ai.request.message_count"] = 1 if prompt else 0
 
+        # Capture request content for evaluation support
+        if prompt:
+            # Truncate to 200 chars to avoid span size issues
+            first_message = str({"role": "user", "content": str(prompt)[:150]})
+            attrs["gen_ai.request.first_message"] = first_message[:200]
+
         return attrs
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
@@ -138,3 +144,28 @@ class CohereInstrumentor(BaseInstrumentor):
         except Exception as e:
             logger.debug("Failed to extract usage from Cohere response: %s", e)
             return None
+
+    def _extract_response_attributes(self, result) -> Dict[str, Any]:
+        """Extract response attributes from Cohere response for evaluation support.
+
+        Args:
+            result: The API response object.
+
+        Returns:
+            Dict[str, Any]: Dictionary of response attributes.
+        """
+        attrs = {}
+
+        # Extract response content for evaluation support
+        try:
+            # Cohere responses have a generations list with text
+            if hasattr(result, "generations") and result.generations:
+                first_generation = result.generations[0]
+                if hasattr(first_generation, "text"):
+                    response_text = first_generation.text
+                    if response_text:
+                        attrs["gen_ai.response"] = response_text
+        except (IndexError, AttributeError) as e:
+            logger.debug("Failed to extract response content: %s", e)
+
+        return attrs

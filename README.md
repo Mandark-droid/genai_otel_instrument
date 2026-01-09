@@ -39,7 +39,7 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 ## Features
 
 🚀 **Zero-Code Instrumentation** - Just install and set env vars
-🤖 **17+ LLM Providers** - OpenAI, Anthropic, Google, AWS, Azure, SambaNova, Hyperbolic, and more
+🤖 **18+ LLM Providers** - OpenAI, OpenRouter, Anthropic, Google, AWS, Azure, SambaNova, Hyperbolic, and more
 🤝 **Multi-Agent Frameworks** - CrewAI, LangGraph, OpenAI Agents SDK, AutoGen, Pydantic AI for agent orchestration
 🔧 **MCP Tool Support** - Auto-instrument databases, APIs, caches, vector DBs
 💰 **Cost Tracking** - Automatic cost calculation for both streaming and non-streaming requests
@@ -94,7 +94,7 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 ## What Gets Instrumented?
 
 ### LLM Providers (Auto-detected)
-- **With Full Cost Tracking**: OpenAI, Anthropic, Google AI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, Vertex AI, SambaNova, Hyperbolic
+- **With Full Cost Tracking**: OpenAI, OpenRouter, Anthropic, Google AI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, Vertex AI, SambaNova, Hyperbolic
 - **Hardware/Local Pricing**: Replicate (hardware-based $/second), HuggingFace (local execution with estimated costs)
   - **HuggingFace Support**: `pipeline()`, `AutoModelForCausalLM.generate()`, `AutoModelForSeq2SeqLM.generate()`, `InferenceClient` API calls
 - **Other Providers**: Anyscale
@@ -877,6 +877,29 @@ We're implementing significant enhancements for this release, focusing on evalua
   - Unsupported claims identification
   - Span attributes and metrics for hallucination risks
   - Example: `examples/comprehensive_evaluation_example.py`
+
+**Evaluation Support Coverage:**
+
+15 out of 31 providers (48%) now support full evaluation metrics:
+
+**Direct Provider Support (12 providers):**
+- ✅ OpenAI
+- ✅ Anthropic
+- ✅ HuggingFace
+- ✅ Ollama
+- ✅ Google AI
+- ✅ Hyperbolic
+- ✅ SambaNova
+- ✅ Cohere (NEW)
+- ✅ Mistral AI (NEW)
+- ✅ Groq (NEW)
+- ✅ Azure OpenAI (NEW)
+- ✅ AWS Bedrock (NEW)
+
+**Via Span Enrichment (3 providers):**
+- ✅ LiteLLM (NEW) - Enables evaluation for 100+ proxied providers
+- ✅ Smolagents (NEW) - HuggingFace agents framework
+- ✅ MCP (NEW) - Model Context Protocol tools
 
 **Implementation:**
 ```python

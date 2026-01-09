@@ -249,6 +249,168 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
 
             self.assertIsNone(usage)
 
+    def test_evaluation_support_request_capture_with_messages(self):
+        """Test that request content is captured for evaluation support with messages."""
+
+        # Create a real OpenAIClient class for testing
+        class MockOpenAIClient:
+            def complete(self, *args, **kwargs):
+                return MagicMock()
+
+        # Create mock azure.ai.openai module
+        mock_azure_openai = MagicMock()
+        mock_azure_openai.OpenAIClient = MockOpenAIClient
+
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": mock_azure_openai},
+        ):
+            instrumentor = AzureOpenAIInstrumentor()
+            config = OTelConfig()
+
+            # Mock tracer and span
+            mock_span = MagicMock()
+            mock_tracer = MagicMock()
+            mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            instrumentor.tracer = mock_tracer
+            instrumentor.request_counter = MagicMock()
+            instrumentor._record_result_metrics = MagicMock()
+            instrumentor._extract_response_attributes = MagicMock(return_value={})
+
+            # Call instrument
+            instrumentor.instrument(config)
+
+            # Create client and call complete with messages
+            client = MockOpenAIClient()
+            client.complete(
+                model="gpt-4",
+                messages=[{"role": "user", "content": "What is artificial intelligence?"}],
+            )
+
+            # Verify request content was captured
+            set_attribute_calls = [call[0] for call in mock_span.set_attribute.call_args_list]
+            self.assertTrue(
+                any(
+                    "gen_ai.request.first_message" in call
+                    and "artificial intelligence" in str(call)
+                    for call in set_attribute_calls
+                )
+            )
+
+    def test_evaluation_support_request_capture_with_prompt(self):
+        """Test that request content is captured for evaluation support with prompt."""
+
+        # Create a real OpenAIClient class for testing
+        class MockOpenAIClient:
+            def complete(self, *args, **kwargs):
+                return MagicMock()
+
+        # Create mock azure.ai.openai module
+        mock_azure_openai = MagicMock()
+        mock_azure_openai.OpenAIClient = MockOpenAIClient
+
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": mock_azure_openai},
+        ):
+            instrumentor = AzureOpenAIInstrumentor()
+            config = OTelConfig()
+
+            # Mock tracer and span
+            mock_span = MagicMock()
+            mock_tracer = MagicMock()
+            mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            instrumentor.tracer = mock_tracer
+            instrumentor.request_counter = MagicMock()
+            instrumentor._record_result_metrics = MagicMock()
+            instrumentor._extract_response_attributes = MagicMock(return_value={})
+
+            # Call instrument
+            instrumentor.instrument(config)
+
+            # Create client and call complete with prompt
+            client = MockOpenAIClient()
+            client.complete(model="gpt-4", prompt="What is machine learning?")
+
+            # Verify request content was captured
+            set_attribute_calls = [call[0] for call in mock_span.set_attribute.call_args_list]
+            self.assertTrue(
+                any(
+                    "gen_ai.request.first_message" in call and "machine learning" in str(call)
+                    for call in set_attribute_calls
+                )
+            )
+
+    def test_evaluation_support_response_capture(self):
+        """Test that response content is captured for evaluation support."""
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": MagicMock()},
+        ):
+            instrumentor = AzureOpenAIInstrumentor()
+
+            # Create mock response with choices (OpenAI-compatible format)
+            mock_message = MagicMock()
+            mock_message.content = "AI is the simulation of human intelligence in machines."
+
+            mock_choice = MagicMock()
+            mock_choice.message = mock_message
+
+            mock_response = MagicMock()
+            mock_response.choices = [mock_choice]
+
+            attrs = instrumentor._extract_response_attributes(mock_response)
+
+            self.assertIn("gen_ai.response", attrs)
+            self.assertEqual(
+                attrs["gen_ai.response"],
+                "AI is the simulation of human intelligence in machines.",
+            )
+
+    def test_evaluation_support_response_capture_with_text(self):
+        """Test that response content is captured from text attribute for completions."""
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": MagicMock()},
+        ):
+            instrumentor = AzureOpenAIInstrumentor()
+
+            # Create mock response with text instead of message
+            mock_choice = MagicMock()
+            mock_choice.text = "This is a completion response."
+            # Remove message attribute
+            del mock_choice.message
+
+            mock_response = MagicMock()
+            mock_response.choices = [mock_choice]
+
+            attrs = instrumentor._extract_response_attributes(mock_response)
+
+            self.assertIn("gen_ai.response", attrs)
+            self.assertEqual(attrs["gen_ai.response"], "This is a completion response.")
+
+    def test_response_attributes_without_content(self):
+        """Test graceful handling when response has no content."""
+        with patch.dict(
+            "sys.modules",
+            {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": MagicMock()},
+        ):
+            instrumentor = AzureOpenAIInstrumentor()
+
+            # Test with no choices
+            mock_response = MagicMock()
+            mock_response.choices = []
+
+            attrs = instrumentor._extract_response_attributes(mock_response)
+            self.assertNotIn("gen_ai.response", attrs)
+
+            # Test with None choices
+            mock_response_none = MagicMock()
+            mock_response_none.choices = None
+
+            attrs = instrumentor._extract_response_attributes(mock_response_none)
+            self.assertNotIn("gen_ai.response", attrs)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
