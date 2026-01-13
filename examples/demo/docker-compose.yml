@@ -102,6 +102,19 @@ services:
       - GF_DATABASE_PATH=/var/lib/grafana/data/grafana.db
       - GF_DATABASE_MAX_IDLE_CONN=2
       - GF_DATABASE_MAX_OPEN_CONN=10
+      # SMTP / Email Alert Configuration (Uncomment and configure to enable)
+      # - GF_SMTP_ENABLED=true
+      # - GF_SMTP_HOST=smtp.gmail.com:587
+      # - GF_SMTP_USER=your-email@gmail.com
+      # - GF_SMTP_PASSWORD=your-app-password
+      # - GF_SMTP_FROM_ADDRESS=your-email@gmail.com
+      # - GF_SMTP_FROM_NAME=GenAI Evaluation Alerts
+      # - GF_SMTP_SKIP_VERIFY=false
+      # - GF_SMTP_STARTTLS_POLICY=MandatoryStartTLS
+      # Unified Alerting Settings (enabled by default in Grafana 9+)
+      - GF_UNIFIED_ALERTING_ENABLED=true
+      - GF_ALERTING_ENABLED=false  # Disable legacy alerting
+      - GF_UNIFIED_ALERTING_EXECUTE_ALERTS=true
     volumes:
       # Mount provisioning configuration
       - ./grafana/provisioning:/etc/grafana/provisioning
