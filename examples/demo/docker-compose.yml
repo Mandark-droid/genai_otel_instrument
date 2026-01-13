@@ -9,8 +9,8 @@ services:
     volumes:
       - ./otel-collector-config.yml:/etc/otel-collector-config.yml
     ports:
-      #- "4317:4317"    # OTLP gRPC receiver
-      - "4318:4318"    # OTLP HTTP receiver
+      - "55680:55680"    # OTLP gRPC receiver
+      - "55681:55681"    # OTLP HTTP receiver
       - "8888:8888"    # Prometheus metrics (collector internal)
       - "8889:8889"    # Prometheus exporter
     networks:
@@ -180,7 +180,7 @@ services:
     environment:
       # OpenTelemetry Configuration
       - OTEL_SERVICE_NAME=genai-demo-app
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:55681
       - OTEL_SERVICE_INSTANCE_ID=demo-instance-1
       - OTEL_ENVIRONMENT=demo
       - OTEL_EXPORTER_OTLP_TIMEOUT=10.0
