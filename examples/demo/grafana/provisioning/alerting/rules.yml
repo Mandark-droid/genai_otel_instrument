@@ -1,0 +1,705 @@
+apiVersion: 1
+
+groups:
+  # ========== CRITICAL SECURITY ALERTS ==========
+  - orgId: 1
+    name: genai_security_critical
+    folder: Evaluation Alerts
+    interval: 1m
+    rules:
+      - uid: critical_pii_exposure
+        title: Critical PII Exposure Detected
+        condition: C
+        data:
+          - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "evaluation_pii_response_detected:true AND evaluation_pii_response_score:[0.7 TO *]"
+              refId: A
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: C
+            queryType: ''
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: last
+              type: reduce
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          summary: High-confidence PII detected in LLM response
+          description: |
+            PII with confidence score >= 0.7 detected in response.
+            This requires immediate investigation.
+            Check the dashboard for affected traces.
+        labels:
+          severity: critical
+          category: security
+          detector: pii
+        isPaused: false
+
+      - uid: prompt_injection_attack
+        title: Prompt Injection Attack Detected
+        condition: C
+        data:
+          - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "evaluation_prompt_injection_detected:true"
+              refId: A
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: C
+            queryType: ''
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 3
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: sum
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: sum
+              type: reduce
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          summary: Multiple prompt injection attempts detected
+          description: |
+            3 or more prompt injection attempts detected in the last minute.
+            This may indicate an active attack. Review logs immediately.
+        labels:
+          severity: critical
+          category: security
+          detector: prompt_injection
+        isPaused: false
+
+      - uid: blocked_requests_spike
+        title: Spike in Blocked Requests
+        condition: C
+        data:
+          - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "evaluation_pii_prompt_blocked:true OR evaluation_pii_response_blocked:true OR evaluation_toxicity_prompt_blocked:true OR evaluation_toxicity_response_blocked:true OR evaluation_prompt_injection_blocked:true"
+              refId: A
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: C
+            queryType: ''
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 10
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: sum
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: sum
+              type: reduce
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: Unusual spike in blocked requests
+          description: |
+            More than 10 requests blocked in 5 minutes.
+            This may indicate an attack or misconfiguration.
+        labels:
+          severity: critical
+          category: security
+          detector: multiple
+        isPaused: false
+
+  # ========== HIGH PRIORITY ALERTS ==========
+  - orgId: 1
+    name: genai_quality_high
+    folder: Evaluation Alerts
+    interval: 5m
+    rules:
+      - uid: high_toxicity_rate
+        title: High Toxicity Detection Rate
+        condition: C
+        data:
+          - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "evaluation_toxicity_response_detected:true"
+              refId: A
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: B
+            queryType: ''
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "gen_ai_system:*"
+              refId: B
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: C
+            queryType: ''
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.05
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A / B
+              type: math
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: Toxicity detection rate exceeds 5%
+          description: |
+            More than 5% of responses in the last 15 minutes contain toxic content.
+            Consider enabling stricter content filtering.
+        labels:
+          severity: high
+          category: quality
+          detector: toxicity
+        isPaused: false
+
+      - uid: high_bias_rate
+        title: High Bias Detection Rate
+        condition: C
+        data:
+          - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "evaluation_bias_response_detected:true"
+              refId: A
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: B
+            queryType: ''
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "gen_ai_system:*"
+              refId: B
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: C
+            queryType: ''
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.1
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A / B
+              type: math
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: Bias detection rate exceeds 10%
+          description: |
+            More than 10% of responses in the last 15 minutes contain biased content.
+            Review model outputs and consider retraining or filtering.
+        labels:
+          severity: high
+          category: quality
+          detector: bias
+        isPaused: false
+
+  # ========== MEDIUM PRIORITY ALERTS ==========
+  - orgId: 1
+    name: genai_quality_medium
+    folder: Evaluation Alerts
+    interval: 15m
+    rules:
+      - uid: hallucination_spike
+        title: Hallucination Detection Spike
+        condition: C
+        data:
+          - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "evaluation_hallucination_response_detected:true"
+              refId: A
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: B
+            queryType: ''
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "gen_ai_system:*"
+              refId: B
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: C
+            queryType: ''
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.2
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A / B
+              type: math
+        noDataState: NoData
+        execErrState: Error
+        for: 15m
+        annotations:
+          summary: Hallucination rate exceeds 20%
+          description: |
+            More than 20% of responses in the last hour show signs of hallucination.
+            Review RAG configuration, context quality, and model selection.
+        labels:
+          severity: medium
+          category: quality
+          detector: hallucination
+        isPaused: false
+
+      - uid: pii_detection_pattern
+        title: Recurring PII Detection Pattern
+        condition: C
+        data:
+          - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "evaluation_pii_prompt_detected:true OR evaluation_pii_response_detected:true"
+              refId: A
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: C
+            queryType: ''
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 5
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: sum
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: sum
+              type: reduce
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        annotations:
+          summary: Multiple PII detections in 30 minutes
+          description: |
+            5 or more PII detections in the last 30 minutes.
+            Review input validation and data handling procedures.
+        labels:
+          severity: medium
+          category: compliance
+          detector: pii
+        isPaused: false
+
+      - uid: low_citation_quality
+        title: Low Citation Quality Detected
+        condition: C
+        data:
+          - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "evaluation_hallucination_response_detected:true AND evaluation_hallucination_response_citations:[0 TO 2]"
+              refId: A
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: C
+            queryType: ''
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 10
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: sum
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: sum
+              type: reduce
+        noDataState: NoData
+        execErrState: Error
+        for: 15m
+        annotations:
+          summary: Multiple responses with insufficient citations
+          description: |
+            10+ responses with potential hallucinations and fewer than 3 citations.
+            Review RAG citation configuration and context retrieval quality.
+        labels:
+          severity: medium
+          category: quality
+          detector: hallucination
+        isPaused: false
+
+  # ========== LOW PRIORITY / INFORMATIONAL ==========
+  - orgId: 1
+    name: genai_informational
+    folder: Evaluation Alerts
+    interval: 1h
+    rules:
+      - uid: evaluation_metrics_health
+        title: Evaluation Metrics Health Check
+        condition: C
+        data:
+          - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: grafana-opensearch-datasource
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: "evaluation_pii_prompt_detected:* OR evaluation_toxicity_prompt_detected:* OR evaluation_bias_prompt_detected:*"
+              refId: A
+              timeField: startTimeMillis
+              bucketAggs:
+                - field: startTimeMillis
+                  id: '2'
+                  settings:
+                    interval: auto
+                    min_doc_count: '0'
+                    trimEdges: '0'
+                  type: date_histogram
+              metrics:
+                - id: '1'
+                  type: count
+          - refId: C
+            queryType: ''
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: sum
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: sum
+              type: reduce
+        noDataState: Alerting
+        execErrState: Error
+        for: 1h
+        annotations:
+          summary: No evaluation metrics detected in last hour
+          description: |
+            No evaluation metrics have been recorded in the last hour.
+            This may indicate that evaluation features are not enabled or data is not flowing correctly.
+        labels:
+          severity: low
+          category: monitoring
+          detector: health_check
+        isPaused: false

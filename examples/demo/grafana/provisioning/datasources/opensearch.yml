@@ -2,6 +2,7 @@ apiVersion: 1
 
 datasources:
   - name: OpenSearch
+    uid: grafana-opensearch-datasource
     type: opensearch
     access: proxy
     url: http://opensearch:9200
