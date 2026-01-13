@@ -1,0 +1,71 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: default-email
+    receivers:
+      - uid: default-email-receiver
+        type: email
+        settings:
+          addresses: "admin@example.com"
+          singleEmail: false
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: security-team
+    receivers:
+      - uid: security-email-receiver
+        type: email
+        settings:
+          addresses: "security@example.com"
+          singleEmail: false
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: slack-alerts
+    receivers:
+      - uid: slack-receiver
+        type: slack
+        settings:
+          # Configure your Slack webhook URL here
+          # url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+          # recipient: "#genai-alerts"
+          # username: "Grafana"
+          # icon_emoji: ":warning:"
+          text: |
+            {{ define "alert_severity_prefix_emoji" -}}
+              {{- if ne .Status "firing" -}}
+                :white_check_mark:
+              {{- else if eq .CommonLabels.severity "critical" -}}
+                :fire:
+              {{- else if eq .CommonLabels.severity "warning" -}}
+                :warning:
+              {{- else -}}
+                :information_source:
+              {{- end -}}
+            {{- end -}}
+
+            {{ template "alert_severity_prefix_emoji" . }} *[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]* {{ .GroupLabels.alertname }}
+
+            {{ range .Alerts -}}
+            *Alert:* {{ .Labels.alertname }}
+            *Severity:* {{ .Labels.severity }}
+            *Summary:* {{ .Annotations.summary }}
+            *Description:* {{ .Annotations.description }}
+            {{ if .DashboardURL }}*Dashboard:* {{ .DashboardURL }}{{ end }}
+            {{ if .PanelURL }}*Panel:* {{ .PanelURL }}{{ end }}
+            {{ end }}
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: console-only
+    receivers:
+      - uid: console-receiver
+        type: log
+        settings: {}
+        disableResolveMessage: false
+
+deleteContactPoints:
+  # Cleanup old contact points if needed
+  # - orgId: 1
+  #   uid: old-contact-point-uid
