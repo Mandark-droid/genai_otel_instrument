@@ -51,26 +51,104 @@ echo -e "\n\nCreating index template for jaeger-span indices..."
 curl -X PUT $CURL_AUTH "$OPENSEARCH_URL/_template/genai-jaeger-span-template" \
   -H 'Content-Type: application/json' \
   -d '{
-  "index_patterns": ["jaeger-span-*"],
-  "template": {
-    "settings": {
-      "index": {
-        "number_of_shards": 1,
-        "number_of_replicas": 0,
-        "default_pipeline": "genai-ingest-pipeline"
+  "order": 0,
+  "index_patterns": ["*jaeger-span-*"],
+  "settings": {
+    "index": {
+      "mapping": {
+        "nested_fields": {
+          "limit": "50"
+        }
+      },
+      "requests": {
+        "cache": {
+          "enable": "true"
+        }
+      },
+      "number_of_shards": "5",
+      "number_of_replicas": "0",
+      "default_pipeline": "genai-ingest-pipeline"
+    }
+  },
+  "mappings": {
+    "dynamic_templates": [
+      {
+        "span_tags_map": {
+          "path_match": "tag.*",
+          "mapping": {
+            "ignore_above": 256,
+            "type": "keyword"
+          }
+        }
+      },
+      {
+        "process_tags_map": {
+          "path_match": "process.tag.*",
+          "mapping": {
+            "ignore_above": 256,
+            "type": "keyword"
+          }
+        }
+      },
+      {
+        "strings_as_keyword": {
+          "match_mapping_type": "string",
+          "mapping": {
+            "ignore_above": 256,
+            "index": false,
+            "type": "keyword"
+          }
+        }
       }
-    },
-    "mappings": {
-      "properties": {
-        "traceID": { "type": "keyword" },
-        "spanID": { "type": "keyword" },
-        "parent_spanID": { "type": "keyword" },
-        "operationName": { "type": "keyword" },
-        "duration": { "type": "long" },
-        "startTime": { "type": "long" },
-        "startTimeMillis": { "type": "date" },
-        "span_status": { "type": "keyword" },
-        "trace_status": { "type": "keyword" },
+    ],
+    "date_detection": true,
+    "numeric_detection": false,
+    "properties": {
+      "traceID": { "type": "keyword", "ignore_above": 256 },
+      "spanID": { "type": "keyword", "ignore_above": 256 },
+      "parentSpanID": { "type": "keyword", "ignore_above": 256 },
+      "parent_spanID": { "type": "keyword" },
+      "operationName": { "type": "keyword", "ignore_above": 256 },
+      "flags": { "type": "integer" },
+      "duration": { "type": "long" },
+      "startTime": { "type": "long" },
+      "startTimeMillis": { "type": "date", "format": "epoch_millis" },
+      "span_status": { "type": "keyword" },
+      "trace_status": { "type": "keyword" },
+      "process": {
+        "properties": {
+          "serviceName": { "type": "keyword", "ignore_above": 256 },
+          "tag": { "type": "object" },
+          "tags": {
+            "type": "nested",
+            "dynamic": false,
+            "properties": {
+              "key": { "type": "keyword", "ignore_above": 256 },
+              "value": { "type": "keyword", "ignore_above": 256 },
+              "tagType": { "type": "keyword", "ignore_above": 256 }
+            }
+          }
+        }
+      },
+      "tags": {
+        "type": "nested",
+        "dynamic": false,
+        "properties": {
+          "key": { "type": "keyword", "ignore_above": 256 },
+          "value": { "type": "keyword", "ignore_above": 256 },
+          "tagType": { "type": "keyword", "ignore_above": 256 }
+        }
+      },
+      "tag": { "type": "object" },
+      "references": {
+        "type": "nested",
+        "dynamic": false,
+        "properties": {
+          "refType": { "type": "keyword", "ignore_above": 256 },
+          "traceID": { "type": "keyword", "ignore_above": 256 },
+          "spanID": { "type": "keyword", "ignore_above": 256 }
+        }
+      },
 
         "gen_ai_system": { "type": "keyword" },
         "gen_ai_request_model": { "type": "keyword" },
@@ -173,7 +251,6 @@ curl -X PUT $CURL_AUTH "$OPENSEARCH_URL/_template/genai-jaeger-span-template" \
         "evaluation_hallucination_response_indicators": { "type": "keyword" },
         "evaluation_hallucination_response_unsupported_claims": { "type": "text", "index": false },
         "evaluation_hallucination_error": { "type": "text" }
-      }
     }
   }
 }'
