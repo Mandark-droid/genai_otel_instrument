@@ -16,7 +16,7 @@ groups:
             relativeTimeRange:
               from: 300
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
@@ -85,7 +85,7 @@ groups:
             relativeTimeRange:
               from: 60
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
@@ -153,7 +153,7 @@ groups:
             relativeTimeRange:
               from: 300
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
@@ -227,7 +227,7 @@ groups:
             relativeTimeRange:
               from: 900
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
@@ -250,7 +250,7 @@ groups:
             relativeTimeRange:
               from: 900
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
@@ -317,7 +317,7 @@ groups:
             relativeTimeRange:
               from: 900
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
@@ -340,7 +340,7 @@ groups:
             relativeTimeRange:
               from: 900
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
@@ -413,7 +413,7 @@ groups:
             relativeTimeRange:
               from: 3600
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
@@ -436,7 +436,7 @@ groups:
             relativeTimeRange:
               from: 3600
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
@@ -503,7 +503,7 @@ groups:
             relativeTimeRange:
               from: 1800
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
@@ -571,7 +571,7 @@ groups:
             relativeTimeRange:
               from: 3600
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
@@ -645,7 +645,7 @@ groups:
             relativeTimeRange:
               from: 3600
               to: 0
-            datasourceUid: grafana-opensearch-datasource
+            datasourceUid: OpenSearch
             model:
               intervalMs: 1000
               maxDataPoints: 43200
