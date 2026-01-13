@@ -25,15 +25,45 @@ services:
       retries: 5
       start_period: 10s
 
+  # OpenSearch - Advanced search and analytics engine for trace storage
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: genai-otel-opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - DISABLE_SECURITY_PLUGIN=true
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "9200:9200"    # REST API
+      - "9600:9600"    # Performance Analyzer
+    networks:
+      - genai-otel-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   # OpenSearch Setup - Creates ingest pipeline and index template
-  # Uses external OpenSearch instance
   opensearch-setup:
     image: alpine:latest
     container_name: genai-otel-opensearch-setup
     volumes:
       - ./opensearch-setup.sh:/tmp/setup-orig.sh:ro
     environment:
-      - OPENSEARCH_URL=http://192.168.13.107:9200
+      - OPENSEARCH_URL=http://opensearch:9200
       - OPENSEARCH_USERNAME=admin
       - OPENSEARCH_PASSWORD=admin
     entrypoint: /bin/sh
@@ -44,6 +74,11 @@ services:
         cp /tmp/setup-orig.sh /tmp/setup.sh
         dos2unix /tmp/setup.sh
         sh /tmp/setup.sh
+    networks:
+      - genai-otel-network
+    depends_on:
+      opensearch:
+        condition: service_healthy
     restart: "no"
 
   # Jaeger - Distributed tracing backend with OpenSearch storage
@@ -52,20 +87,29 @@ services:
     container_name: genai-otel-jaeger
     environment:
       - COLLECTOR_OTLP_ENABLED=true
-      - SPAN_STORAGE_TYPE=opensearch
-      - ES_SERVER_URLS=http://192.168.13.107:9200
+      - SPAN_STORAGE_TYPE=elasticsearch
+      - ES_SERVER_URLS=http://opensearch:9200
       - ES_USERNAME=admin
       - ES_PASSWORD=admin
       - ES_VERSION=7
-      - ES_USE_ALIASES=true
-      - ES_INDEX_PREFIX=jaeger
       - ES_TLS_ENABLED=false
     ports:
       - "16686:16686"  # Jaeger UI
       - "14250:14250"  # Model.proto gRPC
+      - "14268:14268"  # Jaeger Collector HTTP
       - "4317:4317"    # OTLP gRPC receiver
+      - "4318:4318"    # OTLP HTTP receiver
     networks:
       - genai-otel-network
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:16686/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   # Prometheus - Metrics storage and querying
   prometheus:
@@ -87,7 +131,6 @@ services:
       - genai-otel-network
 
   # Grafana - Visualization and dashboards
-# Grafana - Visualization and dashboards
   grafana:
     image: grafana/grafana:latest
     container_name: genai-otel-grafana
@@ -116,11 +159,8 @@ services:
       - GF_ALERTING_ENABLED=false  # Disable legacy alerting
       - GF_UNIFIED_ALERTING_EXECUTE_ALERTS=true
     volumes:
-      # Mount provisioning configuration
       - ./grafana/provisioning:/etc/grafana/provisioning
-      # Mount dashboards directory (if you have static dashboards)
       - ./grafana/dashboards:/var/lib/grafana/dashboards
-      # CORRECT: Mount host directory for SQLite persistence
       - ./grafana/data:/var/lib/grafana
     ports:
       - "3000:3000"    # Grafana UI
@@ -181,5 +221,6 @@ networks:
     driver: bridge
 
 volumes:
+  opensearch-data:
   prometheus-data:
   grafana-data:
