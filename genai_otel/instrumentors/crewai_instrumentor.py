@@ -5,11 +5,16 @@ collaborative workflows using the CrewAI multi-agent framework.
 
 Includes automatic context propagation for threading/async execution to ensure
 complete trace continuity without requiring manual context management.
+
+IMPORTANT: CrewAI has built-in telemetry that conflicts with OpenTelemetry.
+This instrumentor automatically disables CrewAI's built-in telemetry by setting
+the CREWAI_TELEMETRY_OPT_OUT environment variable to prevent conflicts.
 """
 
 import functools
 import json
 import logging
+import os
 from typing import Any, Callable, Dict, Optional
 
 from opentelemetry import context
@@ -86,6 +91,11 @@ class CrewAIInstrumentor(BaseInstrumentor):
             return
 
         self.config = config
+
+        # Disable CrewAI's built-in telemetry to prevent conflicts with OpenTelemetry
+        # CrewAI has its own telemetry system that interferes with OTel tracing
+        os.environ["CREWAI_TELEMETRY_OPT_OUT"] = "true"
+        logger.info("Disabled CrewAI built-in telemetry (CREWAI_TELEMETRY_OPT_OUT=true)")
 
         try:
             import crewai

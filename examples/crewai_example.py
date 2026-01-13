@@ -19,6 +19,9 @@ import os
 import genai_otel
 
 # Initialize instrumentation - CrewAI is enabled automatically
+# NOTE: CrewAI's built-in telemetry is automatically disabled by the instrumentor
+# to prevent conflicts with OpenTelemetry tracing. The instrumentor sets
+# CREWAI_TELEMETRY_OPT_OUT=true environment variable automatically.
 genai_otel.instrument(
     service_name="crewai-example",
     endpoint="http://localhost:4318",
