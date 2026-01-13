@@ -21,16 +21,16 @@ policies:
         repeat_interval: 1h
         continue: true
 
-      # High priority alerts route
-      - receiver: slack-alerts
-        object_matchers:
-          - ['severity', '=~', 'critical|high']
-        group_by:
-          - alertname
-        group_wait: 30s
-        group_interval: 5m
-        repeat_interval: 4h
-        continue: false
+      # High priority alerts route - Commented out (slack-alerts disabled)
+#      - receiver: slack-alerts
+#        object_matchers:
+#          - ['severity', '=~', 'critical|high']
+#        group_by:
+#          - alertname
+#        group_wait: 30s
+#        group_interval: 5m
+#        repeat_interval: 4h
+#        continue: false
 
       # Medium priority alerts
       - receiver: default-email
@@ -43,16 +43,16 @@ policies:
         repeat_interval: 12h
         continue: false
 
-      # Low priority alerts - console only
-      - receiver: console-only
-        object_matchers:
-          - ['severity', '=', 'low']
-        group_by:
-          - alertname
-        group_wait: 5m
-        group_interval: 30m
-        repeat_interval: 24h
-        continue: false
+      # Low priority alerts - Commented out (console-only disabled)
+#      - receiver: console-only
+#        object_matchers:
+#          - ['severity', '=', 'low']
+#        group_by:
+#          - alertname
+#        group_wait: 5m
+#        group_interval: 30m
+#        repeat_interval: 24h
+#        continue: false
 
     mute_time_intervals:
       # Optional: Define maintenance windows
