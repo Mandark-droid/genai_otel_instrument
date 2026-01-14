@@ -46,8 +46,13 @@ DEFAULT_INSTRUMENTORS = [
     "anyscale",
     "sambanova",
     "langchain",
+    "langgraph",
     "llama_index",
     "transformers",
+    "autogen",
+    "pydantic_ai",
+    "openai_agents",
+    "bedrock_agents",
 ]
 
 # Add OpenInference instrumentors only for Python >= 3.10

@@ -16,12 +16,24 @@ Requirements:
 
 import os
 
+# Load environment variables from .env file if it exists
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()  # Load .env file from project root
+except ImportError:
+    pass  # python-dotenv not installed, that's okay
+
 import genai_otel
 
 # Initialize instrumentation - OpenAI Agents SDK is enabled automatically
 genai_otel.instrument(
     service_name="openai-agents-example",
-    endpoint="http://localhost:4318",
+    # endpoint="http://localhost:4318",
+    # Only enable instrumentors that are installed
+    enabled_instrumentors=["openai", "openai_agents"],
+    enable_mcp_instrumentation=False,  # Disable MCP to avoid optional deps
+    enable_gpu_metrics=False,  # Disable GPU metrics to avoid warnings
 )
 
 print("\n" + "=" * 80)
