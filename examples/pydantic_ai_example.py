@@ -23,13 +23,29 @@ Environment Setup:
 import os
 from typing import Optional
 
+# Load environment variables from .env file if it exists
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()  # Load .env file from project root
+except ImportError:
+    pass  # python-dotenv not installed, that's okay
+
 # Step 1: Set up OpenTelemetry instrumentation
 # This should be done BEFORE importing Pydantic AI
 from genai_otel import instrument
 
 instrument(
     service_name="pydantic-ai-example",
-    endpoint="http://localhost:4318",  # OTLP endpoint
+    # endpoint="http://localhost:4318",  # OTLP endpoint
+    # Only enable instrumentors that are installed
+    enabled_instrumentors=[
+        "openai",
+        "anthropic",
+        "pydantic_ai",
+    ],
+    enable_mcp_instrumentation=False,  # Disable MCP to avoid optional deps
+    enable_gpu_metrics=False,  # Disable GPU metrics to avoid warnings
 )
 
 # Step 2: Import Pydantic AI after instrumentation is set up

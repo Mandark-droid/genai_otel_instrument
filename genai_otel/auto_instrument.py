@@ -151,6 +151,7 @@ except ImportError:
 INSTRUMENTORS = {
     "openai": OpenAIInstrumentor,
     "agents": OpenAIAgentsInstrumentor,  # OpenAI Agents SDK
+    "openai_agents": OpenAIAgentsInstrumentor,  # OpenAI Agents SDK (alias)
     "openrouter": OpenRouterInstrumentor,  # OpenRouter unified API aggregator
     "anthropic": AnthropicInstrumentor,
     "google.generativeai": GoogleAIInstrumentor,

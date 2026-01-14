@@ -139,7 +139,7 @@ class LangGraphInstrumentor(BaseInstrumentor):
             extract_attributes=lambda i, a, kw: self._extract_graph_attributes(
                 i, a, kw, state_graph
             ),
-        )(wrapped)(instance, *args, **kwargs)
+        )(wrapped)(*args, **kwargs)
 
     def _wrap_graph_stream(self, wrapped, instance, args, kwargs, state_graph, is_async):
         """Wrap graph stream/astream method with span.
@@ -158,7 +158,7 @@ class LangGraphInstrumentor(BaseInstrumentor):
             extract_attributes=lambda i, a, kw: self._extract_graph_attributes(
                 i, a, kw, state_graph
             ),
-        )(wrapped)(instance, *args, **kwargs)
+        )(wrapped)(*args, **kwargs)
 
     def _extract_graph_attributes(
         self, instance: Any, args: Any, kwargs: Any, state_graph: Any

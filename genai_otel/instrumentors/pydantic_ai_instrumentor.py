@@ -93,7 +93,7 @@ class PydanticAIInstrumentor(BaseInstrumentor):
         return self.create_span_wrapper(
             span_name="pydantic_ai.agent.run",
             extract_attributes=self._extract_agent_attributes,
-        )(wrapped)(instance, *args, **kwargs)
+        )(wrapped)(*args, **kwargs)
 
     def _wrap_agent_run_sync(self, wrapped, instance, args, kwargs):
         """Wrap Agent.run_sync method with span.
@@ -107,7 +107,7 @@ class PydanticAIInstrumentor(BaseInstrumentor):
         return self.create_span_wrapper(
             span_name="pydantic_ai.agent.run_sync",
             extract_attributes=self._extract_agent_attributes,
-        )(wrapped)(instance, *args, **kwargs)
+        )(wrapped)(*args, **kwargs)
 
     def _wrap_agent_run_stream(self, wrapped, instance, args, kwargs):
         """Wrap Agent.run_stream method with span.
@@ -121,7 +121,7 @@ class PydanticAIInstrumentor(BaseInstrumentor):
         return self.create_span_wrapper(
             span_name="pydantic_ai.agent.run_stream",
             extract_attributes=self._extract_agent_attributes,
-        )(wrapped)(instance, *args, **kwargs)
+        )(wrapped)(*args, **kwargs)
 
     def _extract_agent_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Agent.run call.
