@@ -2,7 +2,7 @@
 
 # OpenSearch Setup Script for GenAI Trace Instrumentation
 # This script creates an ingest pipeline and index template for extracting GenAI fields from Jaeger spans
-# Version 2.4 - COMPLETE: Includes LLM function calling fields + all framework support
+# Version 2.5 - COMPLETE: LangGraph + Pydantic AI fields + Fixed otel_status_code bug
 
 OPENSEARCH_URL="${OPENSEARCH_URL:-http://localhost:9200}"
 OPENSEARCH_USERNAME="${OPENSEARCH_USERNAME:-}"
@@ -30,12 +30,14 @@ echo "  - OpenInference semantic conventions"
 echo "  - Tool/MCP instrumentation fields"
 echo "  - Smolagents fields"
 echo "  - LLM function calling fields (AutoGen)"
+echo "  - LangGraph stateful workflow fields"
+echo "  - Pydantic AI agent framework fields"
 echo ""
 curl -X PUT $CURL_AUTH "$OPENSEARCH_URL/_ingest/pipeline/genai-ingest-pipeline" \
   -H 'Content-Type: application/json' \
   -d '{
-  "description": "GenAI OTel Instrumentation Pipeline v2.4 - COMPLETE field extraction including LLM function calling.",
-  "version": 24,
+  "description": "GenAI OTel Instrumentation Pipeline v2.5 - LangGraph + Pydantic AI + otel_status_code fix.",
+  "version": 25,
   "processors": [
     {
       "script": {
@@ -48,7 +50,7 @@ curl -X PUT $CURL_AUTH "$OPENSEARCH_URL/_ingest/pipeline/genai-ingest-pipeline" 
       "script": {
         "lang": "painless",
         "ignore_failure": true,
-        "source": "// Calculate span status based on GenAI context\nif (ctx?.duration != null) {\n  if (ctx?.gen_ai_system != null) {\n    // For GenAI operations\n    if (ctx?.error != null && ctx?.error == \"true\") {\n      ctx.span_status = \"ERROR\";\n      if (ctx?.references == null || ctx?.references.length == 0) {\n        ctx.trace_status = \"ERROR\";\n      }\n    } else if (ctx?.http_status_code != null && ctx?.http_status_code >= 400) {\n      ctx.span_status = \"ERROR\";\n      if (ctx?.references == null || ctx?.references.length == 0) {\n        ctx.trace_status = \"ERROR\";\n      }\n    } else if (ctx?.duration > 30000000) {\n      // >30 seconds is slow for LLM calls\n      ctx.span_status = \"SLOW\";\n      if (ctx?.references == null || ctx?.references.length == 0) {\n        ctx.trace_status = \"SLOW\";\n      }\n    } else {\n      ctx.span_status = \"OK\";\n      if (ctx?.references == null || ctx?.references.length == 0) {\n        ctx.trace_status = \"OK\";\n      }\n    }\n  } else {\n    // For non-GenAI operations, use standard logic\n    if (ctx?.http_status_code != null) {\n      if (ctx?.http_status_code >= 200 && ctx?.http_status_code < 400) {\n        if (ctx?.duration > 0 && ctx?.duration <= 5000000) {\n          ctx.span_status = \"OK\";\n          if (ctx?.references == null || ctx?.references.length == 0) {\n            ctx.trace_status = \"OK\";\n          }\n        } else if (ctx?.duration > 5000000) {\n          ctx.span_status = \"SLOW\";\n          if (ctx?.references == null || ctx?.references.length == 0) {\n            ctx.trace_status = \"SLOW\";\n          }\n        }\n      } else if (ctx?.http_status_code >= 400 && ctx?.http_status_code < 600) {\n        ctx.span_status = \"ERROR\";\n        if (ctx?.references == null || ctx?.references.length == 0) {\n          ctx.trace_status = \"ERROR\";\n        }\n      }\n    } else if (ctx?.error != null && ctx?.error == \"true\") {\n      ctx.span_status = \"ERROR\";\n      if (ctx?.references == null || ctx?.references.length == 0) {\n        ctx.trace_status = \"ERROR\";\n      }\n    } else {\n      if (ctx?.duration > 0 && ctx?.duration <= 5000000) {\n        ctx.span_status = \"OK\";\n        if (ctx?.references == null || ctx?.references.length == 0) {\n          ctx.trace_status = \"OK\";\n        }\n      } else if (ctx?.duration > 5000000) {\n        ctx.span_status = \"SLOW\";\n        if (ctx?.references == null || ctx?.references.length == 0) {\n          ctx.trace_status = \"SLOW\";\n        }\n      }\n    }\n  }\n}"
+        "source": "// Calculate span status based on GenAI context\n// CRITICAL: Check otel_status_code FIRST (highest priority)\nif (ctx?.otel_status_code != null && (ctx?.otel_status_code == \"ERROR\" || ctx?.otel_status_code == \"error\")) {\n  ctx.span_status = \"ERROR\";\n  if (ctx?.references == null || ctx?.references.length == 0) {\n    ctx.trace_status = \"ERROR\";\n  }\n} else if (ctx?.duration != null) {\n  if (ctx?.gen_ai_system != null) {\n    // For GenAI operations\n    if (ctx?.error != null && ctx?.error == \"true\") {\n      ctx.span_status = \"ERROR\";\n      if (ctx?.references == null || ctx?.references.length == 0) {\n        ctx.trace_status = \"ERROR\";\n      }\n    } else if (ctx?.http_status_code != null && ctx?.http_status_code >= 400) {\n      ctx.span_status = \"ERROR\";\n      if (ctx?.references == null || ctx?.references.length == 0) {\n        ctx.trace_status = \"ERROR\";\n      }\n    } else if (ctx?.duration > 30000000) {\n      // >30 seconds is slow for LLM calls\n      ctx.span_status = \"SLOW\";\n      if (ctx?.references == null || ctx?.references.length == 0) {\n        ctx.trace_status = \"SLOW\";\n      }\n    } else {\n      ctx.span_status = \"OK\";\n      if (ctx?.references == null || ctx?.references.length == 0) {\n        ctx.trace_status = \"OK\";\n      }\n    }\n  } else {\n    // For non-GenAI operations, use standard logic\n    if (ctx?.http_status_code != null) {\n      if (ctx?.http_status_code >= 200 && ctx?.http_status_code < 400) {\n        if (ctx?.duration > 0 && ctx?.duration <= 5000000) {\n          ctx.span_status = \"OK\";\n          if (ctx?.references == null || ctx?.references.length == 0) {\n            ctx.trace_status = \"OK\";\n          }\n        } else if (ctx?.duration > 5000000) {\n          ctx.span_status = \"SLOW\";\n          if (ctx?.references == null || ctx?.references.length == 0) {\n            ctx.trace_status = \"SLOW\";\n          }\n        }\n      } else if (ctx?.http_status_code >= 400 && ctx?.http_status_code < 600) {\n        ctx.span_status = \"ERROR\";\n        if (ctx?.references == null || ctx?.references.length == 0) {\n          ctx.trace_status = \"ERROR\";\n        }\n      }\n    } else if (ctx?.error != null && ctx?.error == \"true\") {\n      ctx.span_status = \"ERROR\";\n      if (ctx?.references == null || ctx?.references.length == 0) {\n        ctx.trace_status = \"ERROR\";\n      }\n    } else {\n      if (ctx?.duration > 0 && ctx?.duration <= 5000000) {\n        ctx.span_status = \"OK\";\n        if (ctx?.references == null || ctx?.references.length == 0) {\n          ctx.trace_status = \"OK\";\n        }\n      } else if (ctx?.duration > 5000000) {\n        ctx.span_status = \"SLOW\";\n        if (ctx?.references == null || ctx?.references.length == 0) {\n          ctx.trace_status = \"SLOW\";\n        }\n      }\n    }\n  }\n}"
       }
     }
   ]
@@ -258,6 +260,37 @@ curl -X PUT $CURL_AUTH "$OPENSEARCH_URL/_template/genai-jaeger-span-template" \
         "llm_tool_call_function_name": { "type": "keyword" },
         "llm_tool_call_function_arguments": { "type": "text", "index": false },
 
+        "__comment_langgraph": { "type": "text", "index": false, "doc_values": false },
+        "langgraph_node_count": { "type": "integer" },
+        "langgraph_nodes": { "type": "keyword" },
+        "langgraph_edge_count": { "type": "integer" },
+        "langgraph_channels": { "type": "keyword" },
+        "langgraph_channel_count": { "type": "integer" },
+        "langgraph_input_keys": { "type": "keyword" },
+        "langgraph_output_keys": { "type": "keyword" },
+        "langgraph_thread_id": { "type": "keyword" },
+        "langgraph_checkpoint_id": { "type": "keyword" },
+        "langgraph_recursion_limit": { "type": "integer" },
+        "langgraph_message_count": { "type": "integer" },
+        "langgraph_steps": { "type": "integer" },
+
+        "__comment_pydantic_ai": { "type": "text", "index": false, "doc_values": false },
+        "pydantic_ai_agent_name": { "type": "keyword" },
+        "pydantic_ai_model_name": { "type": "keyword" },
+        "pydantic_ai_model_provider": { "type": "keyword" },
+        "pydantic_ai_system_prompts": { "type": "text", "index": false },
+        "pydantic_ai_tools": { "type": "keyword" },
+        "pydantic_ai_tools_count": { "type": "integer" },
+        "pydantic_ai_result_type": { "type": "text", "index": false },
+        "pydantic_ai_user_prompt": { "type": "text", "index": false },
+        "pydantic_ai_message_history_count": { "type": "integer" },
+        "pydantic_ai_result_data": { "type": "text", "index": false },
+        "pydantic_ai_result_messages_count": { "type": "integer" },
+        "pydantic_ai_result_last_message": { "type": "text", "index": false },
+        "pydantic_ai_result_last_role": { "type": "keyword" },
+        "pydantic_ai_result_timestamp": { "type": "keyword" },
+        "pydantic_ai_result_cost": { "type": "double" },
+
         "__comment_service": { "type": "text", "index": false, "doc_values": false },
         "service_name": { "type": "keyword" },
         "service_instance_id": { "type": "keyword" },
@@ -334,24 +367,22 @@ curl -X PUT $CURL_AUTH "$OPENSEARCH_URL/_template/genai-jaeger-span-template" \
 }'
 
 echo -e "\n\n================================"
-echo "OpenSearch setup COMPLETE v2.4"
+echo "OpenSearch setup COMPLETE v2.5"
 echo "================================"
 echo ""
-echo "Pipeline: genai-ingest-pipeline (v2.4)"
+echo "Pipeline: genai-ingest-pipeline (v2.5)"
 echo "Template: genai-jaeger-span-template"
 echo ""
-echo "NEW in v2.4 - 4 additional LLM function calling fields:"
-echo "  [AutoGen/Function Calling] llm.tools, tool_call.id, function.name, function.arguments"
+echo "NEW in v2.5 - Critical bug fix + 27 new fields:"
+echo "  [CRITICAL] Fixed span_status to check otel_status_code first"
+echo "  [LangGraph] 12 stateful workflow fields (node_count, nodes, channels, etc.)"
+echo "  [Pydantic AI] 15 agent framework fields (agent.name, model, tools, results)"
 echo ""
-echo "Previous v2.3 additions (32 fields):"
-echo "  [OTel Core] otel.scope.name, otel.scope.version (2)"
-echo "  [CrewAI] Complete framework support (18 fields)"
-echo "  [OpenInference] span.kind, input/output values (4)"
-echo "  [Tools/MCP] tool.name, description, parameters (3)"
-echo "  [Smolagents] max_steps, tools_names (2)"
-echo "  [Token Counts] llm.token_count.* aliases (3)"
+echo "Previous additions:"
+echo "  v2.4: LLM function calling (AutoGen) - 4 fields"
+echo "  v2.3: CrewAI, OpenInference, Tools/MCP, Smolagents - 32 fields"
 echo ""
-echo "Total fields extracted: ~99 fields"
+echo "Total fields extracted: ~126 fields"
 echo ""
 echo "Framework Support:"
 echo "  - GenAI Semantic Conventions (full)"
@@ -359,6 +390,8 @@ echo "  - CrewAI (complete)"
 echo "  - OpenInference (complete)"
 echo "  - Smolagents (complete)"
 echo "  - AutoGen function calling (complete)"
+echo "  - LangGraph stateful workflows (complete)"
+echo "  - Pydantic AI agents (complete)"
 echo "  - Tool/MCP instrumentation (complete)"
 echo "  - Evaluation Metrics (PII, Toxicity, Bias, Hallucination)"
 echo ""
