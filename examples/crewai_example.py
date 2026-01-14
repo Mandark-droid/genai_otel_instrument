@@ -24,7 +24,7 @@ import genai_otel
 # CREWAI_TELEMETRY_OPT_OUT=true environment variable automatically.
 genai_otel.instrument(
     service_name="crewai-example",
-    endpoint="http://localhost:4318",
+    # endpoint="http://localhost:4318",
 )
 
 print("\n" + "=" * 80)
@@ -150,7 +150,7 @@ visualization_task = Task(
 
 # Hierarchical crew with a manager agent
 # Hierarchical process requires a manager_llm to coordinate agents
-manager_llm = LLM(model="gpt-4", temperature=0.1)
+manager_llm = LLM(model="gpt-4.1-nano", temperature=0.1)
 hierarchical_crew = Crew(
     agents=[data_analyst, visualization_expert],
     tasks=[analysis_task, visualization_task],
