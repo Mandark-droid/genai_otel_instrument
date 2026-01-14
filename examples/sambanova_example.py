@@ -19,7 +19,7 @@ import genai_otel
 # Initialize instrumentation - SambaNova is enabled by default
 genai_otel.instrument(
     service_name="sambanova-example",
-    endpoint="http://localhost:4318",
+    # endpoint="http://localhost:4318",
 )
 
 print("\n" + "=" * 80)

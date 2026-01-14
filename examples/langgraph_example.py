@@ -22,7 +22,7 @@ import genai_otel
 # Initialize instrumentation - LangGraph is enabled automatically
 genai_otel.instrument(
     service_name="langgraph-example",
-    endpoint="http://localhost:4318",
+    # endpoint="http://localhost:4318",
 )
 
 print("\n" + "=" * 80)

@@ -26,7 +26,7 @@ from genai_otel import instrument
 
 instrument(
     service_name="autogen-example",
-    endpoint="http://localhost:4318",  # OTLP endpoint
+    # endpoint="http://localhost:4318",  # OTLP endpoint
 )
 
 # Step 2: Import AutoGen after instrumentation is set up
@@ -35,7 +35,7 @@ import autogen
 # AutoGen configuration for LLM
 config_list = [
     {
-        "model": "gpt-4",
+        "model": "gpt-4.1-nano",
         "api_key": os.environ.get("OPENAI_API_KEY"),
     }
 ]
