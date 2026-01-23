@@ -71,6 +71,25 @@ class GPUMetricsCollector:
         self.gpu_memory_total_gauge: Optional[ObservableGauge] = None
         self.gpu_temperature_gauge: Optional[ObservableGauge] = None
         self.gpu_power_gauge: Optional[ObservableGauge] = None
+        # Enhanced GPU metrics
+        self.gpu_memory_utilization_gauge: Optional[ObservableGauge] = None
+        self.gpu_power_limit_gauge: Optional[ObservableGauge] = None
+        self.gpu_sm_clock_gauge: Optional[ObservableGauge] = None
+        self.gpu_memory_clock_gauge: Optional[ObservableGauge] = None
+        self.gpu_fan_speed_gauge: Optional[ObservableGauge] = None
+        self.gpu_performance_state_gauge: Optional[ObservableGauge] = None
+        self.gpu_pcie_tx_gauge: Optional[ObservableGauge] = None
+        self.gpu_pcie_rx_gauge: Optional[ObservableGauge] = None
+        self.gpu_throttle_thermal_gauge: Optional[ObservableGauge] = None
+        self.gpu_throttle_power_gauge: Optional[ObservableGauge] = None
+        self.gpu_throttle_hw_slowdown_gauge: Optional[ObservableGauge] = None
+        self.gpu_ecc_errors_corrected_gauge: Optional[ObservableGauge] = None
+        self.gpu_ecc_errors_uncorrected_gauge: Optional[ObservableGauge] = None
+        # Aggregate GPU metrics (across all GPUs)
+        self.gpu_aggregate_mean_utilization_gauge: Optional[ObservableGauge] = None
+        self.gpu_aggregate_total_memory_used_gauge: Optional[ObservableGauge] = None
+        self.gpu_aggregate_total_power_gauge: Optional[ObservableGauge] = None
+        self.gpu_aggregate_max_temperature_gauge: Optional[ObservableGauge] = None
         self.config = config
         self.interval = interval  # seconds
         self.gpu_available = False
@@ -170,6 +189,25 @@ class GPUMetricsCollector:
             memory_total_callbacks = []
             temperature_callbacks = []
             power_callbacks = []
+            # Enhanced metrics callbacks (NVIDIA-only for now)
+            memory_utilization_callbacks = []
+            power_limit_callbacks = []
+            sm_clock_callbacks = []
+            memory_clock_callbacks = []
+            fan_speed_callbacks = []
+            performance_state_callbacks = []
+            pcie_tx_callbacks = []
+            pcie_rx_callbacks = []
+            throttle_thermal_callbacks = []
+            throttle_power_callbacks = []
+            throttle_hw_slowdown_callbacks = []
+            ecc_corrected_callbacks = []
+            ecc_uncorrected_callbacks = []
+            # Aggregate metrics callbacks
+            aggregate_mean_utilization_callbacks = []
+            aggregate_total_memory_callbacks = []
+            aggregate_total_power_callbacks = []
+            aggregate_max_temp_callbacks = []
 
             # Add NVIDIA callbacks if available
             if NVML_AVAILABLE and self.nvidia_device_count > 0:
@@ -178,6 +216,27 @@ class GPUMetricsCollector:
                 memory_total_callbacks.append(self._observe_gpu_memory_total)
                 temperature_callbacks.append(self._observe_gpu_temperature)
                 power_callbacks.append(self._observe_gpu_power)
+                # Enhanced NVIDIA-specific metrics
+                memory_utilization_callbacks.append(self._observe_memory_utilization)
+                power_limit_callbacks.append(self._observe_power_limit)
+                sm_clock_callbacks.append(self._observe_sm_clock)
+                memory_clock_callbacks.append(self._observe_memory_clock)
+                fan_speed_callbacks.append(self._observe_fan_speed)
+                performance_state_callbacks.append(self._observe_performance_state)
+                pcie_tx_callbacks.append(self._observe_pcie_tx)
+                pcie_rx_callbacks.append(self._observe_pcie_rx)
+                throttle_thermal_callbacks.append(self._observe_throttle_thermal)
+                throttle_power_callbacks.append(self._observe_throttle_power)
+                throttle_hw_slowdown_callbacks.append(self._observe_throttle_hw_slowdown)
+                ecc_corrected_callbacks.append(self._observe_ecc_errors_corrected)
+                ecc_uncorrected_callbacks.append(self._observe_ecc_errors_uncorrected)
+                # Aggregate metrics (NVIDIA)
+                aggregate_mean_utilization_callbacks.append(
+                    self._observe_aggregate_mean_utilization
+                )
+                aggregate_total_memory_callbacks.append(self._observe_aggregate_total_memory)
+                aggregate_total_power_callbacks.append(self._observe_aggregate_total_power)
+                aggregate_max_temp_callbacks.append(self._observe_aggregate_max_temperature)
 
             # Add AMD callbacks if available
             if self.amd_collector and self.amd_collector.available:
@@ -222,6 +281,129 @@ class GPUMetricsCollector:
                     callbacks=power_callbacks,
                     description="GPU power consumption in Watts",
                     unit="W",
+                )
+
+            # Enhanced GPU metrics
+            if memory_utilization_callbacks:
+                self.gpu_memory_utilization_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.memory.utilization",
+                    callbacks=memory_utilization_callbacks,
+                    description="GPU memory controller utilization percentage",
+                    unit="%",
+                )
+            if power_limit_callbacks:
+                self.gpu_power_limit_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.power.limit",
+                    callbacks=power_limit_callbacks,
+                    description="GPU power limit in Watts",
+                    unit="W",
+                )
+            if sm_clock_callbacks:
+                self.gpu_sm_clock_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.clock.sm",
+                    callbacks=sm_clock_callbacks,
+                    description="GPU SM (streaming multiprocessor) clock speed in MHz",
+                    unit="MHz",
+                )
+            if memory_clock_callbacks:
+                self.gpu_memory_clock_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.clock.memory",
+                    callbacks=memory_clock_callbacks,
+                    description="GPU memory clock speed in MHz",
+                    unit="MHz",
+                )
+            if fan_speed_callbacks:
+                self.gpu_fan_speed_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.fan.speed",
+                    callbacks=fan_speed_callbacks,
+                    description="GPU fan speed percentage",
+                    unit="%",
+                )
+            if performance_state_callbacks:
+                self.gpu_performance_state_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.performance.state",
+                    callbacks=performance_state_callbacks,
+                    description="GPU performance state (P-state: 0=P0 highest, 15=P15 lowest)",
+                    unit="1",
+                )
+            if pcie_tx_callbacks:
+                self.gpu_pcie_tx_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.pcie.tx",
+                    callbacks=pcie_tx_callbacks,
+                    description="GPU PCIe transmit throughput in KB/s",
+                    unit="KB/s",
+                )
+            if pcie_rx_callbacks:
+                self.gpu_pcie_rx_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.pcie.rx",
+                    callbacks=pcie_rx_callbacks,
+                    description="GPU PCIe receive throughput in KB/s",
+                    unit="KB/s",
+                )
+            if throttle_thermal_callbacks:
+                self.gpu_throttle_thermal_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.throttle.thermal",
+                    callbacks=throttle_thermal_callbacks,
+                    description="GPU thermal throttling active (1=throttling, 0=not throttling)",
+                    unit="1",
+                )
+            if throttle_power_callbacks:
+                self.gpu_throttle_power_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.throttle.power",
+                    callbacks=throttle_power_callbacks,
+                    description="GPU power throttling active (1=throttling, 0=not throttling)",
+                    unit="1",
+                )
+            if throttle_hw_slowdown_callbacks:
+                self.gpu_throttle_hw_slowdown_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.throttle.hw_slowdown",
+                    callbacks=throttle_hw_slowdown_callbacks,
+                    description="GPU hardware slowdown active (1=slowdown, 0=normal)",
+                    unit="1",
+                )
+            if ecc_corrected_callbacks:
+                self.gpu_ecc_errors_corrected_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.ecc.errors.corrected",
+                    callbacks=ecc_corrected_callbacks,
+                    description="GPU ECC corrected memory errors count",
+                    unit="1",
+                )
+            if ecc_uncorrected_callbacks:
+                self.gpu_ecc_errors_uncorrected_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.ecc.errors.uncorrected",
+                    callbacks=ecc_uncorrected_callbacks,
+                    description="GPU ECC uncorrected memory errors count",
+                    unit="1",
+                )
+
+            # Aggregate GPU metrics (across all GPUs)
+            if aggregate_mean_utilization_callbacks:
+                self.gpu_aggregate_mean_utilization_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.aggregate.mean_utilization",
+                    callbacks=aggregate_mean_utilization_callbacks,
+                    description="Mean GPU utilization across all GPUs",
+                    unit="%",
+                )
+            if aggregate_total_memory_callbacks:
+                self.gpu_aggregate_total_memory_used_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.aggregate.total_memory_used",
+                    callbacks=aggregate_total_memory_callbacks,
+                    description="Total GPU memory used across all GPUs in GiB",
+                    unit="GiB",
+                )
+            if aggregate_total_power_callbacks:
+                self.gpu_aggregate_total_power_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.aggregate.total_power",
+                    callbacks=aggregate_total_power_callbacks,
+                    description="Total power consumption across all GPUs in Watts",
+                    unit="W",
+                )
+            if aggregate_max_temp_callbacks:
+                self.gpu_aggregate_max_temperature_gauge = self.meter.create_observable_gauge(
+                    "gen_ai.gpu.aggregate.max_temperature",
+                    callbacks=aggregate_max_temp_callbacks,
+                    description="Maximum temperature across all GPUs in Celsius",
+                    unit="Cel",
                 )
         except Exception as e:
             logger.error("Failed to create GPU metrics instruments: %s", e, exc_info=True)
@@ -473,6 +655,533 @@ class GPUMetricsCollector:
             pynvml.nvmlShutdown()
         except Exception as e:
             logger.error("Error observing GPU power: %s", e)
+
+    # ==================== Enhanced GPU Metrics Callbacks ====================
+
+    def _observe_memory_utilization(self, options):
+        """Observable callback for GPU memory controller utilization."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    utilization = pynvml.nvmlDeviceGetUtilizationRates(handle)
+                    yield Observation(
+                        value=utilization.memory,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get memory utilization for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing memory utilization: %s", e)
+
+    def _observe_power_limit(self, options):
+        """Observable callback for GPU power limit."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    # Power limit is returned in milliwatts, convert to watts
+                    power_limit_mw = pynvml.nvmlDeviceGetPowerManagementLimit(handle)
+                    power_limit_w = power_limit_mw / 1000.0
+                    yield Observation(
+                        value=power_limit_w,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get power limit for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing power limit: %s", e)
+
+    def _observe_sm_clock(self, options):
+        """Observable callback for GPU SM clock speed."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    sm_clock = pynvml.nvmlDeviceGetClockInfo(handle, pynvml.NVML_CLOCK_SM)
+                    yield Observation(
+                        value=sm_clock,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get SM clock for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing SM clock: %s", e)
+
+    def _observe_memory_clock(self, options):
+        """Observable callback for GPU memory clock speed."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    mem_clock = pynvml.nvmlDeviceGetClockInfo(handle, pynvml.NVML_CLOCK_MEM)
+                    yield Observation(
+                        value=mem_clock,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get memory clock for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing memory clock: %s", e)
+
+    def _observe_fan_speed(self, options):
+        """Observable callback for GPU fan speed."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    fan_speed = pynvml.nvmlDeviceGetFanSpeed(handle)
+                    yield Observation(
+                        value=fan_speed,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    # Fan speed may not be available on all GPUs (e.g., passively cooled)
+                    logger.debug("Failed to get fan speed for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing fan speed: %s", e)
+
+    def _observe_performance_state(self, options):
+        """Observable callback for GPU performance state (P-state)."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    # P-state is returned as an enum (P0-P15), we convert to int
+                    pstate = pynvml.nvmlDeviceGetPerformanceState(handle)
+                    yield Observation(
+                        value=int(pstate),
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get performance state for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing performance state: %s", e)
+
+    def _observe_pcie_tx(self, options):
+        """Observable callback for GPU PCIe TX throughput."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    # Returns throughput in KB/s
+                    tx_throughput = pynvml.nvmlDeviceGetPcieThroughput(
+                        handle, pynvml.NVML_PCIE_UTIL_TX_BYTES
+                    )
+                    yield Observation(
+                        value=tx_throughput,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get PCIe TX throughput for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing PCIe TX throughput: %s", e)
+
+    def _observe_pcie_rx(self, options):
+        """Observable callback for GPU PCIe RX throughput."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    # Returns throughput in KB/s
+                    rx_throughput = pynvml.nvmlDeviceGetPcieThroughput(
+                        handle, pynvml.NVML_PCIE_UTIL_RX_BYTES
+                    )
+                    yield Observation(
+                        value=rx_throughput,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get PCIe RX throughput for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing PCIe RX throughput: %s", e)
+
+    def _observe_throttle_thermal(self, options):
+        """Observable callback for GPU thermal throttling status."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    throttle_reasons = pynvml.nvmlDeviceGetCurrentClocksThrottleReasons(handle)
+                    # Check if thermal throttling bit is set
+                    is_thermal_throttling = (
+                        1
+                        if throttle_reasons & pynvml.nvmlClocksThrottleReasonSwThermalSlowdown
+                        else 0
+                    )
+                    yield Observation(
+                        value=is_thermal_throttling,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get thermal throttle status for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing thermal throttle status: %s", e)
+
+    def _observe_throttle_power(self, options):
+        """Observable callback for GPU power throttling status."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    throttle_reasons = pynvml.nvmlDeviceGetCurrentClocksThrottleReasons(handle)
+                    # Check if power throttling bit is set
+                    is_power_throttling = (
+                        1 if throttle_reasons & pynvml.nvmlClocksThrottleReasonSwPowerCap else 0
+                    )
+                    yield Observation(
+                        value=is_power_throttling,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get power throttle status for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing power throttle status: %s", e)
+
+    def _observe_throttle_hw_slowdown(self, options):
+        """Observable callback for GPU hardware slowdown status."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    throttle_reasons = pynvml.nvmlDeviceGetCurrentClocksThrottleReasons(handle)
+                    # Check if hardware slowdown bit is set
+                    is_hw_slowdown = (
+                        1 if throttle_reasons & pynvml.nvmlClocksThrottleReasonHwSlowdown else 0
+                    )
+                    yield Observation(
+                        value=is_hw_slowdown,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except Exception as e:
+                    logger.debug("Failed to get HW slowdown status for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing HW slowdown status: %s", e)
+
+    def _observe_ecc_errors_corrected(self, options):
+        """Observable callback for GPU ECC corrected memory errors."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    # Get volatile (since last reboot) corrected errors
+                    corrected_errors = pynvml.nvmlDeviceGetTotalEccErrors(
+                        handle,
+                        pynvml.NVML_MEMORY_ERROR_TYPE_CORRECTED,
+                        pynvml.NVML_VOLATILE_ECC,
+                    )
+                    yield Observation(
+                        value=corrected_errors,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except pynvml.NVMLError as e:
+                    # ECC not supported on all GPUs - this is expected
+                    logger.debug("ECC not supported or error for GPU %d: %s", i, e)
+                except Exception as e:
+                    logger.debug("Failed to get ECC corrected errors for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing ECC corrected errors: %s", e)
+
+    def _observe_ecc_errors_uncorrected(self, options):
+        """Observable callback for GPU ECC uncorrected memory errors."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                device_name = self._get_device_name(handle, i)
+
+                try:
+                    # Get volatile (since last reboot) uncorrected errors
+                    uncorrected_errors = pynvml.nvmlDeviceGetTotalEccErrors(
+                        handle,
+                        pynvml.NVML_MEMORY_ERROR_TYPE_UNCORRECTED,
+                        pynvml.NVML_VOLATILE_ECC,
+                    )
+                    yield Observation(
+                        value=uncorrected_errors,
+                        attributes={"gpu_id": str(i), "gpu_name": device_name},
+                    )
+                except pynvml.NVMLError as e:
+                    # ECC not supported on all GPUs - this is expected
+                    logger.debug("ECC not supported or error for GPU %d: %s", i, e)
+                except Exception as e:
+                    logger.debug("Failed to get ECC uncorrected errors for GPU %d: %s", i, e)
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing ECC uncorrected errors: %s", e)
+
+    # ==================== Aggregate GPU Metrics Callbacks ====================
+
+    def _observe_aggregate_mean_utilization(self, options):
+        """Observable callback for mean GPU utilization across all GPUs."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            if device_count == 0:
+                pynvml.nvmlShutdown()
+                return
+
+            total_utilization = 0.0
+            valid_count = 0
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                try:
+                    utilization = pynvml.nvmlDeviceGetUtilizationRates(handle)
+                    total_utilization += utilization.gpu
+                    valid_count += 1
+                except Exception as e:
+                    logger.debug("Failed to get utilization for GPU %d in aggregate: %s", i, e)
+
+            if valid_count > 0:
+                mean_utilization = total_utilization / valid_count
+                yield Observation(
+                    value=mean_utilization,
+                    attributes={"gpu_count": str(valid_count)},
+                )
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing aggregate mean utilization: %s", e)
+
+    def _observe_aggregate_total_memory(self, options):
+        """Observable callback for total GPU memory used across all GPUs."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            if device_count == 0:
+                pynvml.nvmlShutdown()
+                return
+
+            total_memory_used_bytes = 0
+            valid_count = 0
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                try:
+                    memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                    total_memory_used_bytes += memory_info.used
+                    valid_count += 1
+                except Exception as e:
+                    logger.debug("Failed to get memory for GPU %d in aggregate: %s", i, e)
+
+            if valid_count > 0:
+                # Convert bytes to GiB
+                total_memory_gib = total_memory_used_bytes / (1024**3)
+                yield Observation(
+                    value=total_memory_gib,
+                    attributes={"gpu_count": str(valid_count)},
+                )
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing aggregate total memory: %s", e)
+
+    def _observe_aggregate_total_power(self, options):
+        """Observable callback for total power consumption across all GPUs."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            if device_count == 0:
+                pynvml.nvmlShutdown()
+                return
+
+            total_power_w = 0.0
+            valid_count = 0
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                try:
+                    # Power usage is returned in milliwatts
+                    power_mw = pynvml.nvmlDeviceGetPowerUsage(handle)
+                    total_power_w += power_mw / 1000.0
+                    valid_count += 1
+                except Exception as e:
+                    logger.debug("Failed to get power for GPU %d in aggregate: %s", i, e)
+
+            if valid_count > 0:
+                yield Observation(
+                    value=total_power_w,
+                    attributes={"gpu_count": str(valid_count)},
+                )
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing aggregate total power: %s", e)
+
+    def _observe_aggregate_max_temperature(self, options):
+        """Observable callback for maximum temperature across all GPUs."""
+        if not NVML_AVAILABLE or not self.gpu_available:
+            return
+
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            if device_count == 0:
+                pynvml.nvmlShutdown()
+                return
+
+            max_temp = None
+            valid_count = 0
+
+            for i in range(device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                try:
+                    temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+                    if max_temp is None or temp > max_temp:
+                        max_temp = temp
+                    valid_count += 1
+                except Exception as e:
+                    logger.debug("Failed to get temperature for GPU %d in aggregate: %s", i, e)
+
+            if valid_count > 0 and max_temp is not None:
+                yield Observation(
+                    value=max_temp,
+                    attributes={"gpu_count": str(valid_count)},
+                )
+
+            pynvml.nvmlShutdown()
+        except Exception as e:
+            logger.error("Error observing aggregate max temperature: %s", e)
 
     def start(self):
         """Starts the GPU metrics collection.

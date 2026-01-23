@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.31] - 2026-01-24
+
+### Added
+
+- **Enhanced GPU Metrics Collection**
+  - Added 17 new GPU metrics for comprehensive NVIDIA GPU monitoring:
+    - **Per-GPU metrics:**
+      - `gen_ai.gpu.memory.utilization`: Memory controller utilization percentage
+      - `gen_ai.gpu.power.limit`: GPU power limit in Watts
+      - `gen_ai.gpu.clock.sm`: SM (streaming multiprocessor) clock speed in MHz
+      - `gen_ai.gpu.clock.memory`: Memory clock speed in MHz
+      - `gen_ai.gpu.fan.speed`: Fan speed percentage
+      - `gen_ai.gpu.performance.state`: GPU P-state (0=P0 highest performance, 15=P15 lowest)
+      - `gen_ai.gpu.pcie.tx`: PCIe transmit throughput in KB/s
+      - `gen_ai.gpu.pcie.rx`: PCIe receive throughput in KB/s
+      - `gen_ai.gpu.throttle.thermal`: Thermal throttling indicator (0/1)
+      - `gen_ai.gpu.throttle.power`: Power throttling indicator (0/1)
+      - `gen_ai.gpu.throttle.hw_slowdown`: Hardware slowdown indicator (0/1)
+      - `gen_ai.gpu.ecc.errors.corrected`: ECC corrected memory errors count
+      - `gen_ai.gpu.ecc.errors.uncorrected`: ECC uncorrected memory errors count
+    - **Aggregate metrics (across all GPUs):**
+      - `gen_ai.gpu.aggregate.mean_utilization`: Mean GPU utilization across all GPUs
+      - `gen_ai.gpu.aggregate.total_memory_used`: Total GPU memory used across all GPUs (GiB)
+      - `gen_ai.gpu.aggregate.total_power`: Total power consumption across all GPUs (W)
+      - `gen_ai.gpu.aggregate.max_temperature`: Maximum temperature across all GPUs (Celsius)
+  - All new metrics use pynvml (nvidia-ml-py) for data collection
+  - Graceful handling for GPUs that don't support certain metrics (e.g., ECC, fan speed on passively cooled GPUs)
+  - Aggregate metrics include `gpu_count` attribute for context
+
 ## [0.1.30] - 2026-01-09
 
 ### Added
