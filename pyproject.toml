@@ -109,6 +109,7 @@ groq = ["groq>=0.4.0"]
 ollama = ["ollama>=0.1.0"]
 replicate = ["replicate>=0.15.0"]
 sambanova = ["sambanova>=1.0.0"]
+sarvamai = ["sarvamai>=0.1.0"]
 
 # LLM Frameworks
 langchain = ["langchain>=0.1.0"]
@@ -168,6 +169,7 @@ all-providers = [
     "ollama>=0.1.0",
     "replicate>=0.15.0",
     "sambanova>=1.0.0",
+    "sarvamai>=0.1.0",
     "langchain>=0.1.0",
     "langgraph>=0.1.0",
     "llama-index>=0.9.0",
@@ -214,6 +216,7 @@ all = [
     "ollama>=0.1.0",
     "replicate>=0.15.0",
     "sambanova>=1.0.0",
+    "sarvamai>=0.1.0",
     "langchain>=0.1.0",
     "langgraph>=0.1.0",
     "llama-index>=0.9.0",
