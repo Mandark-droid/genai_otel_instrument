@@ -39,7 +39,7 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 ## Features
 
 🚀 **Zero-Code Instrumentation** - Just install and set env vars
-🤖 **18+ LLM Providers** - OpenAI, OpenRouter, Anthropic, Google, AWS, Azure, SambaNova, Hyperbolic, and more
+🤖 **19+ LLM Providers** - OpenAI, OpenRouter, Anthropic, Google, AWS, Azure, SambaNova, Hyperbolic, Sarvam AI, and more
 🤝 **Multi-Agent Frameworks** - CrewAI, LangGraph, OpenAI Agents SDK, AutoGen, Pydantic AI for agent orchestration
 🔧 **MCP Tool Support** - Auto-instrument databases, APIs, caches, vector DBs
 💰 **Cost Tracking** - Automatic cost calculation for both streaming and non-streaming requests
@@ -94,7 +94,7 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 ## What Gets Instrumented?
 
 ### LLM Providers (Auto-detected)
-- **With Full Cost Tracking**: OpenAI, OpenRouter, Anthropic, Google AI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, Vertex AI, SambaNova, Hyperbolic
+- **With Full Cost Tracking**: OpenAI, OpenRouter, Anthropic, Google AI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, Vertex AI, SambaNova, Hyperbolic, Sarvam AI
 - **Hardware/Local Pricing**: Replicate (hardware-based $/second), HuggingFace (local execution with estimated costs)
   - **HuggingFace Support**: `pipeline()`, `AutoModelForCausalLM.generate()`, `AutoModelForSeq2SeqLM.generate()`, `InferenceClient` API calls
 - **Other Providers**: Anyscale
@@ -206,7 +206,7 @@ Watch a comprehensive walkthrough of GenAI OpenTelemetry Auto-Instrumentation in
 
 ## Cost Tracking Coverage
 
-The library includes comprehensive cost tracking with pricing data for **340+ models** across **20+ providers**:
+The library includes comprehensive cost tracking with pricing data for **350+ models** across **21+ providers**:
 
 ### Providers with Full Token-Based Cost Tracking
 - **OpenAI**: GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo, o1/o3 series, embeddings, audio, vision (35+ models)
@@ -220,6 +220,7 @@ The library includes comprehensive cost tracking with pricing data for **340+ mo
 - **Groq**: Llama 3.x series, Mixtral, Gemma models (15+ models)
 - **Ollama**: Local models with token tracking (pricing via cost estimation)
 - **Vertex AI**: Gemini models via Google Cloud with usage metadata extraction
+- **Sarvam AI**: sarvam-m chat, Saarika/Saaras STT, Bulbul TTS, Mayura/Sarvam Translate, Vision (12+ models)
 
 ### Special Pricing Models
 - **Replicate**: Hardware-based pricing ($/second of GPU/CPU time) - not token-based

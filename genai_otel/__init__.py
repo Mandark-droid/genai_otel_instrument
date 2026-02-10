@@ -45,6 +45,7 @@ from .instrumentors import (
     OllamaInstrumentor,
     OpenAIInstrumentor,
     ReplicateInstrumentor,
+    SarvamAIInstrumentor,
     TogetherAIInstrumentor,
     VertexAIInstrumentor,
 )
@@ -127,6 +128,7 @@ __all__ = [
     "VertexAIInstrumentor",
     "ReplicateInstrumentor",
     "AnyscaleInstrumentor",
+    "SarvamAIInstrumentor",
     # MCP Manager
     "MCPInstrumentorManager",
 ]
