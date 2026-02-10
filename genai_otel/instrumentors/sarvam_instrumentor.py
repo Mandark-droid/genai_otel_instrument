@@ -57,7 +57,7 @@ class SarvamAIInstrumentor(BaseInstrumentor):
             def wrapped_init(instance, *args, **kwargs):
                 original_init(instance, *args, **kwargs)
                 self._instrument_client(instance)
-                return instance
+                # __init__ must return None, not instance
 
             sarvamai.SarvamAI.__init__ = wrapped_init
 
@@ -69,7 +69,7 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     def wrapped_async_init(instance, *args, **kwargs):
                         original_async_init(instance, *args, **kwargs)
                         self._instrument_client(instance)
-                        return instance
+                        # __init__ must return None, not instance
 
                     sarvamai.AsyncSarvamAI.__init__ = wrapped_async_init
                     logger.debug("Sarvam AI async client instrumentation enabled")
