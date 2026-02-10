@@ -192,9 +192,7 @@ class TestSarvamAIInstrumentor(unittest.TestCase):
             model="sarvam-m", messages=[{"role": "user", "content": "Namaste"}]
         )
 
-        instrumentor.tracer.start_as_current_span.assert_called_once_with(
-            "sarvam.chat.completions"
-        )
+        instrumentor.tracer.start_as_current_span.assert_called_once_with("sarvam.chat.completions")
 
         mock_span.set_attribute.assert_any_call("gen_ai.system", "sarvam")
         mock_span.set_attribute.assert_any_call("gen_ai.request.model", "sarvam-m")
@@ -317,9 +315,7 @@ class TestSarvamAIInstrumentor(unittest.TestCase):
 
         instrumentor._instrument_client(mock_client)
 
-        result = mock_client.chat.completions(
-            messages=[{"role": "user", "content": "hi"}]
-        )
+        result = mock_client.chat.completions(messages=[{"role": "user", "content": "hi"}])
 
         mock_span.set_attribute.assert_any_call("gen_ai.request.model", "sarvam-m")
 
@@ -432,9 +428,7 @@ class TestSarvamAIInstrumentor(unittest.TestCase):
             source_language_code="hi-IN", target_language_code="en-IN"
         )
 
-        instrumentor.tracer.start_as_current_span.assert_called_with(
-            "sarvam.text.transliterate"
-        )
+        instrumentor.tracer.start_as_current_span.assert_called_with("sarvam.text.transliterate")
 
         mock_span.set_attribute.assert_any_call("gen_ai.system", "sarvam")
         mock_span.set_attribute.assert_any_call("gen_ai.operation.name", "transliterate")
