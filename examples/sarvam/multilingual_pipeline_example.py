@@ -17,6 +17,7 @@ across all Sarvam AI API calls.
 
 Prerequisites:
     pip install sarvamai genai-otel-instrument
+    pip install playsound  # Optional: for audio playback
 
 Environment variables:
     SARVAM_API_KEY: Your Sarvam AI API subscription key
@@ -32,10 +33,53 @@ Sarvam AI Drop Week (Feb 2026):
     - Drop 7: Sarvam Arya (agent orchestration stack)
 """
 
+import base64
 import os
+import tempfile
 import time
 
 from genai_otel import instrument
+
+
+def play_audio(audio_base64: str):
+    """Decode base64 audio and play it."""
+    try:
+        audio_bytes = base64.b64decode(audio_base64)
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            f.write(audio_bytes)
+            temp_path = f.name
+
+        played = False
+        try:
+            from playsound import playsound
+
+            playsound(temp_path)
+            played = True
+        except ImportError:
+            pass
+
+        if not played:
+            try:
+                import winsound
+
+                winsound.PlaySound(temp_path, winsound.SND_FILENAME)
+                played = True
+            except (ImportError, RuntimeError):
+                pass
+
+        if not played:
+            output_path = f"sarvam_pipeline_audio_{time.time():.0f}.wav"
+            with open(output_path, "wb") as out:
+                out.write(audio_bytes)
+            print(f"  Audio saved to: {output_path}")
+
+        try:
+            os.unlink(temp_path)
+        except OSError:
+            pass
+    except Exception as e:
+        print(f"  Audio playback error: {e}")
+
 
 # Initialize instrumentation BEFORE importing the Sarvam AI client
 # Enable cost tracking and content capture for full observability
@@ -54,34 +98,34 @@ client = SarvamAI(api_subscription_key=os.environ.get("SARVAM_API_KEY"))
 # Simulated customer queries in different Indian languages
 CUSTOMER_QUERIES = [
     {
-        "name": "Priya (Tamil)",
+        "name": "anushka (Tamil)",
         "query": "Ennudaiya order eppo varum? Order number 12345.",
         "expected_lang": "ta-IN",
-        "tts_speaker": "meera",
+        "tts_speaker": "anushka",
     },
     {
-        "name": "Rahul (Hindi)",
+        "name": "abhilash (Hindi)",
         "query": "Mera refund kab milega? Maine 3 din pehle request kiya tha.",
         "expected_lang": "hi-IN",
-        "tts_speaker": "shubh",
+        "tts_speaker": "abhilash",
     },
     {
-        "name": "Ananya (Bengali)",
+        "name": "manisha (Bengali)",
         "query": "Ami amar account e login korte parchi na. Ki korbo?",
         "expected_lang": "bn-IN",
-        "tts_speaker": "meera",
+        "tts_speaker": "manisha",
     },
     {
-        "name": "Vikram (Gujarati)",
+        "name": "hitesh (Gujarati)",
         "query": "Maru product kharab aavyu chhe. Exchange karavi shakay?",
         "expected_lang": "gu-IN",
-        "tts_speaker": "shubh",
+        "tts_speaker": "hitesh",
     },
     {
-        "name": "Lakshmi (Telugu)",
+        "name": "vidya (Telugu)",
         "query": "Naa subscription eppudu expire avutundi? Renew cheyyadam ela?",
         "expected_lang": "te-IN",
-        "tts_speaker": "meera",
+        "tts_speaker": "vidya",
     },
 ]
 
@@ -176,6 +220,14 @@ def process_customer_query(customer):
             speaker=customer["tts_speaker"],
         )
         print(f"  TTS: Audio generated successfully")
+
+        # Play the audio
+        if hasattr(audio_result, "audios") and audio_result.audios:
+            play_audio(audio_result.audios[0])
+        elif hasattr(audio_result, "audio_base64"):
+            play_audio(audio_result.audio_base64)
+        elif isinstance(audio_result, str):
+            play_audio(audio_result)
     except Exception as e:
         print(f"  TTS conversion failed: {e}")
 
