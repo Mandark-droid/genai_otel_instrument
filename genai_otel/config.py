@@ -45,6 +45,7 @@ DEFAULT_INSTRUMENTORS = [
     "replicate",
     "anyscale",
     "sambanova",
+    "sarvamai",
     "langchain",
     "langgraph",
     "llama_index",
