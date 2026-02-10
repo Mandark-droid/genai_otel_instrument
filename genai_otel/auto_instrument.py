@@ -93,6 +93,7 @@ try:
         PydanticAIInstrumentor,
         ReplicateInstrumentor,
         SambaNovaInstrumentor,
+        SarvamAIInstrumentor,
         TogetherAIInstrumentor,
         VertexAIInstrumentor,
     )
@@ -126,6 +127,7 @@ except ImportError:
         PydanticAIInstrumentor,
         ReplicateInstrumentor,
         SambaNovaInstrumentor,
+        SarvamAIInstrumentor,
         TogetherAIInstrumentor,
         VertexAIInstrumentor,
     )
@@ -173,6 +175,7 @@ INSTRUMENTORS = {
     "replicate": ReplicateInstrumentor,
     "anyscale": AnyscaleInstrumentor,
     "sambanova": SambaNovaInstrumentor,
+    "sarvamai": SarvamAIInstrumentor,  # Sarvam AI sovereign Indian AI platform
     "hyperbolic": HyperbolicInstrumentor,
     "langchain": LangChainInstrumentor,
     "langgraph": LangGraphInstrumentor,  # LangGraph stateful workflow framework

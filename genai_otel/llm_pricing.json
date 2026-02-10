@@ -1099,6 +1099,16 @@
       "promptPrice": 0.001,
       "completionPrice": 0.003
     },
+    "kimi-k2.5": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.003,
+      "note": "Moonshot AI - Kimi K2.5 (Jan 2026, 1T MoE)"
+    },
+    "moonshotai/kimi-k2.5": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.003,
+      "note": "Moonshot AI - Kimi K2.5 via OpenRouter"
+    },
     "smollm2:135m": {
       "promptPrice": 0.0001,
       "completionPrice": 0.0002
@@ -1326,6 +1336,16 @@
     "mistral-medium-3": {
       "promptPrice": 0.0004,
       "completionPrice": 0.002
+    },
+    "voxtral-mini-transcribe-v2": {
+      "promptPrice": 0.00005,
+      "completionPrice": 0.0,
+      "note": "Mistral AI - Voxtral Mini Transcribe V2 batch ($0.003/min, Feb 2026)"
+    },
+    "voxtral-realtime": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0,
+      "note": "Mistral AI - Voxtral Realtime streaming ($0.006/min, Feb 2026)"
     },
     "mistral-medium-2025": {
       "promptPrice": 0.0004,
@@ -2009,6 +2029,21 @@
       "promptPrice": 0.005,
       "completionPrice": 0.025,
       "note": "From LiteLLM - provider: anthropic"
+    },
+    "claude-opus-4-6": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "Anthropic - Claude Opus 4.6 (Feb 2026)"
+    },
+    "claude-opus-4.6": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "Anthropic - Claude Opus 4.6 (Feb 2026)"
+    },
+    "claude-4-opus-4.6": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "Anthropic - Claude Opus 4.6 (Feb 2026)"
     },
     "claude-sonnet-4-20250514": {
       "promptPrice": 0.003,
@@ -3391,6 +3426,66 @@
       "promptPrice": 0.0005,
       "completionPrice": 0.0015,
       "note": "Nebius - GPT OSS 120B (estimated pricing)"
+    },
+    "sarvam-m": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Sarvam AI - sarvam-m chat model (free tier)"
+    },
+    "sarvam-translate:v1": {
+      "promptPrice": 0.000024,
+      "completionPrice": 0.000024,
+      "note": "Sarvam AI - Translation (22 Indic languages, ~INR 20/10K chars)"
+    },
+    "mayura:v1": {
+      "promptPrice": 0.000024,
+      "completionPrice": 0.000024,
+      "note": "Sarvam AI - Mayura translation model (12 languages, ~INR 20/10K chars)"
+    },
+    "saarika:v2.5": {
+      "promptPrice": 0.000036,
+      "completionPrice": 0.0,
+      "note": "Sarvam AI - Speech-to-text (~INR 30/hour of audio)"
+    },
+    "saaras:v2.5": {
+      "promptPrice": 0.000036,
+      "completionPrice": 0.0,
+      "note": "Sarvam AI - Speech-to-text + translate (~INR 30/hour of audio)"
+    },
+    "bulbul-v3": {
+      "promptPrice": 0.000036,
+      "completionPrice": 0.0,
+      "note": "Sarvam AI - Text-to-speech Bulbul V3 (~INR 30/10K chars)"
+    },
+    "bulbul-v2": {
+      "promptPrice": 0.000018,
+      "completionPrice": 0.0,
+      "note": "Sarvam AI - Text-to-speech Bulbul V2 (~INR 15/10K chars)"
+    },
+    "saarika:v2.5-diarization": {
+      "promptPrice": 0.000054,
+      "completionPrice": 0.0,
+      "note": "Sarvam AI - STT + Diarization (~INR 45/hour of audio)"
+    },
+    "saaras:v2.5-diarization": {
+      "promptPrice": 0.000054,
+      "completionPrice": 0.0,
+      "note": "Sarvam AI - STT + Translate + Diarization (~INR 45/hour of audio)"
+    },
+    "sarvam-transliterate": {
+      "promptPrice": 0.000024,
+      "completionPrice": 0.0,
+      "note": "Sarvam AI - Transliteration (~INR 20/10K chars)"
+    },
+    "sarvam-detect-language": {
+      "promptPrice": 0.0000042,
+      "completionPrice": 0.0,
+      "note": "Sarvam AI - Language identification (~INR 3.50/10K chars)"
+    },
+    "sarvam-vision": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Sarvam AI - Sarvam Vision 3B VLM (free during Feb 2026 launch)"
     },
     "openrouter/auto": {
       "promptPrice": 0.0,

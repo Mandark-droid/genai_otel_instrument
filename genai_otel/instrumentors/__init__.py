@@ -37,6 +37,7 @@ from .openrouter_instrumentor import OpenRouterInstrumentor
 from .pydantic_ai_instrumentor import PydanticAIInstrumentor
 from .replicate_instrumentor import ReplicateInstrumentor
 from .sambanova_instrumentor import SambaNovaInstrumentor
+from .sarvam_instrumentor import SarvamAIInstrumentor
 from .togetherai_instrumentor import TogetherAIInstrumentor
 from .vertexai_instrumentor import VertexAIInstrumentor
 
@@ -70,4 +71,5 @@ __all__ = [
     "LlamaIndexInstrumentor",
     "HuggingFaceInstrumentor",
     "PydanticAIInstrumentor",
+    "SarvamAIInstrumentor",
 ]
