@@ -24,6 +24,7 @@ observability into agent execution.
 
 Prerequisites:
     pip install sarvamai genai-otel-instrument
+    pip install playsound  # Optional: for audio playback
 
 Environment variables:
     SARVAM_API_KEY: Your Sarvam AI API subscription key
@@ -35,13 +36,56 @@ References:
     - AWS Marketplace: https://aws.amazon.com/marketplace/pp/prodview-cqx47vs5o6h4e
 """
 
+import base64
 import json
 import os
+import tempfile
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 from genai_otel import instrument
+
+
+def play_audio(audio_base64: str):
+    """Decode base64 audio and play it."""
+    try:
+        audio_bytes = base64.b64decode(audio_base64)
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            f.write(audio_bytes)
+            temp_path = f.name
+
+        played = False
+        try:
+            from playsound import playsound
+
+            playsound(temp_path)
+            played = True
+        except ImportError:
+            pass
+
+        if not played:
+            try:
+                import winsound
+
+                winsound.PlaySound(temp_path, winsound.SND_FILENAME)
+                played = True
+            except (ImportError, RuntimeError):
+                pass
+
+        if not played:
+            output_path = "sarvam_agent_audio.wav"
+            with open(output_path, "wb") as out:
+                out.write(audio_bytes)
+            print(f"    -> audio saved to: {output_path}")
+
+        try:
+            os.unlink(temp_path)
+        except OSError:
+            pass
+    except Exception as e:
+        print(f"    -> audio playback error: {e}")
+
 
 # Initialize instrumentation BEFORE importing the Sarvam AI client
 instrument(
@@ -234,12 +278,21 @@ def synthesize_speech_primitive(state: AgentState) -> AgentState:
     """Primitive: Convert the localized response to speech using Bulbul v3."""
     print(f"    [primitive] synthesize_speech (Bulbul v3, lang={state.detected_language})")
     try:
-        client.text_to_speech.convert(
+        audio_response = client.text_to_speech.convert(
             text=state.agent_response_local or state.agent_response_en,
             target_language_code=state.detected_language or "en-IN",
-            speaker="meera",
+            speaker="anushka",
         )
         print(f"    -> audio: generated")
+
+        # Play the audio
+        if hasattr(audio_response, "audios") and audio_response.audios:
+            play_audio(audio_response.audios[0])
+        elif hasattr(audio_response, "audio_base64"):
+            play_audio(audio_response.audio_base64)
+        elif isinstance(audio_response, str):
+            play_audio(audio_response)
+
         return state.with_update(audio_generated=True)
     except Exception as e:
         print(f"    -> error: {e}")
@@ -394,7 +447,7 @@ if __name__ == "__main__":
 
   [sarvam.text_to_speech.convert]     -- synthesize voice
     -> gen_ai.request.model = 'bulbul'
-    -> sarvam.speaker = 'meera'
+    -> sarvam.speaker = 'priya'
 
   All spans are automatically captured by TraceVerde with:
   - Cost tracking for each API call
