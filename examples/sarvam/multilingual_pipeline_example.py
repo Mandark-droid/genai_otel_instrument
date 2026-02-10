@@ -221,7 +221,9 @@ if __name__ == "__main__":
     print("with TraceVerde OpenTelemetry Instrumentation")
     print("=" * 70)
     print(f"\nProcessing {len(CUSTOMER_QUERIES)} customer queries across 5 Indian languages")
-    print("Each query goes through a 5-step pipeline (detect -> translate -> chat -> translate -> TTS)")
+    print(
+        "Each query goes through a 5-step pipeline (detect -> translate -> chat -> translate -> TTS)"
+    )
     print(f"Total expected API calls: {len(CUSTOMER_QUERIES) * 5} + transliteration demos")
 
     start_time = time.time()
@@ -252,7 +254,8 @@ if __name__ == "__main__":
     print(f"\n{'='*70}")
     print("OpenTelemetry Traces Captured:")
     print(f"{'='*70}")
-    print("""
+    print(
+        """
 Each pipeline execution generates spans with these attributes:
 
   sarvam.chat.completions:
@@ -279,4 +282,5 @@ Each pipeline execution generates spans with these attributes:
 
 View traces at your OTLP endpoint (Jaeger, Grafana, etc.) to see the
 full distributed trace across all pipeline steps.
-""")
+"""
+    )

@@ -63,9 +63,7 @@ class SarvamAIInstrumentor(BaseInstrumentor):
 
             # Also instrument async client if available
             try:
-                if hasattr(sarvamai, "AsyncSarvamAI") and isinstance(
-                    sarvamai.AsyncSarvamAI, type
-                ):
+                if hasattr(sarvamai, "AsyncSarvamAI") and isinstance(sarvamai.AsyncSarvamAI, type):
                     original_async_init = sarvamai.AsyncSarvamAI.__init__
 
                     def wrapped_async_init(instance, *args, **kwargs):
@@ -98,9 +96,7 @@ class SarvamAIInstrumentor(BaseInstrumentor):
             instrumentor = self
 
             def wrapped_completions(*args, **kwargs):
-                with instrumentor.tracer.start_as_current_span(
-                    "sarvam.chat.completions"
-                ) as span:
+                with instrumentor.tracer.start_as_current_span("sarvam.chat.completions") as span:
                     model = kwargs.get("model", "sarvam-m")
                     span.set_attribute("gen_ai.system", "sarvam")
                     span.set_attribute("gen_ai.request.model", model)
@@ -122,9 +118,7 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                             logger.debug("Failed to extract request content: %s", e)
 
                     if instrumentor.request_counter:
-                        instrumentor.request_counter.add(
-                            1, {"model": model, "provider": "sarvam"}
-                        )
+                        instrumentor.request_counter.add(1, {"model": model, "provider": "sarvam"})
 
                     result = original_completions(*args, **kwargs)
                     instrumentor._record_result_metrics(span, result, 0)
@@ -143,9 +137,7 @@ class SarvamAIInstrumentor(BaseInstrumentor):
             instrumentor = self
 
             def wrapped_translate(*args, **kwargs):
-                with instrumentor.tracer.start_as_current_span(
-                    "sarvam.text.translate"
-                ) as span:
+                with instrumentor.tracer.start_as_current_span("sarvam.text.translate") as span:
                     span.set_attribute("gen_ai.system", "sarvam")
                     span.set_attribute("gen_ai.operation.name", "translate")
                     span.set_attribute("gen_ai.request.type", "translate")
@@ -170,7 +162,9 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     result = original_translate(*args, **kwargs)
 
                     if hasattr(result, "translated_text"):
-                        span.set_attribute("sarvam.translated_text", str(result.translated_text)[:500])
+                        span.set_attribute(
+                            "sarvam.translated_text", str(result.translated_text)[:500]
+                        )
 
                     return result
 
@@ -182,9 +176,7 @@ class SarvamAIInstrumentor(BaseInstrumentor):
             instrumentor = self
 
             def wrapped_transliterate(*args, **kwargs):
-                with instrumentor.tracer.start_as_current_span(
-                    "sarvam.text.transliterate"
-                ) as span:
+                with instrumentor.tracer.start_as_current_span("sarvam.text.transliterate") as span:
                     span.set_attribute("gen_ai.system", "sarvam")
                     span.set_attribute("gen_ai.operation.name", "transliterate")
 
@@ -248,9 +240,7 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     span.set_attribute("sarvam.language_code", language_code)
 
                     if instrumentor.request_counter:
-                        instrumentor.request_counter.add(
-                            1, {"model": model, "provider": "sarvam"}
-                        )
+                        instrumentor.request_counter.add(1, {"model": model, "provider": "sarvam"})
 
                     result = original_transcribe(*args, **kwargs)
 
@@ -277,9 +267,7 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     span.set_attribute("gen_ai.request.type", "speech_to_text_translate")
 
                     if instrumentor.request_counter:
-                        instrumentor.request_counter.add(
-                            1, {"model": model, "provider": "sarvam"}
-                        )
+                        instrumentor.request_counter.add(1, {"model": model, "provider": "sarvam"})
 
                     result = original_stt_translate(*args, **kwargs)
                     return result

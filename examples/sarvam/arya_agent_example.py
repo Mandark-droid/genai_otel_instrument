@@ -91,6 +91,7 @@ class AgentState:
 # Each function is a self-contained primitive that can be composed freely.
 # ---------------------------------------------------------------------------
 
+
 def detect_language_primitive(state: AgentState) -> AgentState:
     """Primitive: Detect input language using Sarvam's language identification."""
     print(f"    [primitive] detect_language")
@@ -337,7 +338,7 @@ if __name__ == "__main__":
 
         for msg in conversation["messages"]:
             turn_id += 1
-            print(f"\n  Turn {turn_id}: \"{msg}\"")
+            print(f'\n  Turn {turn_id}: "{msg}"')
             print(f"  {'-'*60}")
 
             state = run_agent(msg, turn_id)
@@ -368,7 +369,8 @@ if __name__ == "__main__":
     print(f"\n{'='*70}")
     print("OpenTelemetry Trace Structure (per agent turn)")
     print(f"{'='*70}")
-    print("""
+    print(
+        """
   Each agent turn generates a sequence of instrumented spans:
 
   [sarvam.text.identify_language]     -- detect user language
@@ -402,4 +404,5 @@ if __name__ == "__main__":
 
   View traces at your OTLP endpoint (Jaeger, Grafana Tempo, etc.)
   to see the full agent execution flow.
-""")
+"""
+    )
