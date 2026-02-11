@@ -131,25 +131,16 @@ class CostEnrichmentSpanProcessor(SpanProcessor):
             )
 
             if cost_info and cost_info.get("total", 0.0) > 0:
-                # Add cost attributes to the span
-                # Use duck typing to check if span supports set_attribute
-                if hasattr(span, "set_attribute") and callable(getattr(span, "set_attribute")):
-                    span.set_attribute("gen_ai.usage.cost.total", cost_info["total"])
-
-                    if cost_info.get("prompt", 0.0) > 0:
-                        span.set_attribute("gen_ai.usage.cost.prompt", cost_info["prompt"])
-                    if cost_info.get("completion", 0.0) > 0:
-                        span.set_attribute("gen_ai.usage.cost.completion", cost_info["completion"])
-
-                    logger.info(
-                        f"Enriched span '{span.name}' with cost: {cost_info['total']:.6f} USD "
-                        f"for model {model} ({usage['total_tokens']} tokens)"
-                    )
-                else:
-                    logger.warning(
-                        f"Span '{span.name}' is not mutable (type: {type(span).__name__}), "
-                        "cannot add cost attributes"
-                    )
+                # Note: on_end() receives ReadableSpan which is immutable - we cannot
+                # set attributes here. Cost enrichment is handled by
+                # CostEnrichingSpanExporter which creates new ReadableSpan objects
+                # with cost attributes before export. This processor serves as a
+                # logging/monitoring hook for cost calculation events.
+                logger.info(
+                    f"Cost calculated for span '{span.name}': {cost_info['total']:.6f} USD "
+                    f"for model {model} ({usage['total_tokens']} tokens) "
+                    f"[enrichment applied by CostEnrichingSpanExporter]"
+                )
 
         except Exception as e:
             # Don't fail span processing due to cost enrichment errors

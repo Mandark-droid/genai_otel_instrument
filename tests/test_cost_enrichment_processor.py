@@ -62,8 +62,13 @@ class TestCostEnrichmentSpanProcessor(unittest.TestCase):
         mock_span.set_attribute.assert_not_called()
 
     def test_on_end_with_valid_tokens_new_convention(self):
-        """Test on_end with valid tokens using new semantic conventions."""
+        """Test on_end with valid tokens using new semantic conventions.
+
+        Note: The processor now logs cost info instead of setting span attributes.
+        Cost attribute enrichment is handled by CostEnrichingSpanExporter.
+        """
         mock_span = MagicMock(spec=Span)
+        mock_span.name = "test-span"
         mock_span.attributes = {
             "gen_ai.request.model": "gpt-4o",
             "gen_ai.usage.prompt_tokens": 100,
@@ -93,14 +98,18 @@ class TestCostEnrichmentSpanProcessor(unittest.TestCase):
                 call_type="chat",
             )
 
-            # Verify cost attributes were set
-            mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.total", 0.0035)
-            mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.prompt", 0.00005)
-            mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.completion", 0.0003)
+            # Processor now logs cost info; actual attribute enrichment
+            # is done by CostEnrichingSpanExporter at export time
+            mock_span.set_attribute.assert_not_called()
 
     def test_on_end_with_valid_tokens_old_convention(self):
-        """Test on_end with valid tokens using old semantic conventions."""
+        """Test on_end with valid tokens using old semantic conventions.
+
+        Note: The processor now logs cost info instead of setting span attributes.
+        Cost attribute enrichment is handled by CostEnrichingSpanExporter.
+        """
         mock_span = MagicMock(spec=Span)
+        mock_span.name = "test-span"
         mock_span.attributes = {
             "gen_ai.request.model": "gpt-3.5-turbo",
             "gen_ai.usage.input_tokens": 50,
@@ -130,8 +139,9 @@ class TestCostEnrichmentSpanProcessor(unittest.TestCase):
                 call_type="chat",
             )
 
-            # Verify cost attribute was set
-            mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.total", 0.00015)
+            # Processor now logs cost info; actual attribute enrichment
+            # is done by CostEnrichingSpanExporter at export time
+            mock_span.set_attribute.assert_not_called()
 
     def test_on_end_with_embedding_operation(self):
         """Test on_end with embedding operation."""
@@ -291,8 +301,13 @@ class TestCostEnrichmentSpanProcessor(unittest.TestCase):
         self.assertTrue(result)
 
     def test_openinference_llm_span(self):
-        """Test on_end with OpenInference LLM span attributes."""
+        """Test on_end with OpenInference LLM span attributes.
+
+        Note: The processor now logs cost info instead of setting span attributes.
+        Cost attribute enrichment is handled by CostEnrichingSpanExporter.
+        """
         mock_span = MagicMock(spec=Span)
+        mock_span.name = "test-openinference-span"
         mock_span.attributes = {
             "llm.model_name": "gpt-4",
             "llm.token_count.prompt": 100,
@@ -321,8 +336,9 @@ class TestCostEnrichmentSpanProcessor(unittest.TestCase):
                 call_type="chat",  # LLM maps to chat
             )
 
-            # Verify cost attributes were set
-            mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.total", 0.003)
+            # Processor now logs cost info; actual attribute enrichment
+            # is done by CostEnrichingSpanExporter at export time
+            mock_span.set_attribute.assert_not_called()
 
     def test_openinference_embedding_span(self):
         """Test on_end with OpenInference EMBEDDING span attributes."""

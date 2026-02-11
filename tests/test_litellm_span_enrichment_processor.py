@@ -215,25 +215,28 @@ class TestLiteLLMSpanEnrichmentProcessor(unittest.TestCase):
         mock_span.set_attribute.assert_called_once_with("test.key", "test.value")
 
     def test_set_attribute_on_readable_span_with_private_attributes(self):
-        """Test setting attribute on ReadableSpan with _attributes."""
+        """Test setting attribute on ReadableSpan via _attributes fallback.
+
+        When set_attribute is not available (or raises), the processor
+        falls back to writing directly to _attributes (BoundedAttributes).
+        """
         mock_span = MagicMock()
         mock_span._attributes = {}
+        # Make set_attribute raise to test fallback to _attributes
+        mock_span.set_attribute.side_effect = AttributeError("not available")
 
         self.processor._set_attribute(mock_span, "test.key", "test.value")
 
         self.assertEqual(mock_span._attributes["test.key"], "test.value")
 
     def test_set_attribute_on_readable_span_with_public_attributes(self):
-        """Test setting attribute on ReadableSpan with public attributes dict."""
+        """Test setting attribute via set_attribute when available."""
         mock_span = MagicMock()
-        # Remove _attributes to test fallback
-        if hasattr(mock_span, "_attributes"):
-            delattr(mock_span, "_attributes")
-        mock_span.attributes = {}
+        mock_span.set_attribute = MagicMock()
 
         self.processor._set_attribute(mock_span, "test.key", "test.value")
 
-        self.assertEqual(mock_span.attributes["test.key"], "test.value")
+        mock_span.set_attribute.assert_called_once_with("test.key", "test.value")
 
     def test_on_end_enriches_litellm_span(self):
         """Test that on_end enriches LiteLLM spans with evaluation attributes."""
@@ -247,9 +250,10 @@ class TestLiteLLMSpanEnrichmentProcessor(unittest.TestCase):
 
         self.processor.on_end(mock_span)
 
-        # Verify that evaluation attributes were added
-        self.assertIn("gen_ai.request.first_message", mock_span._attributes)
-        self.assertIn("gen_ai.response", mock_span._attributes)
+        # Verify that evaluation attributes were set via set_attribute
+        set_attr_calls = {call[0][0]: call[0][1] for call in mock_span.set_attribute.call_args_list}
+        self.assertIn("gen_ai.request.first_message", set_attr_calls)
+        self.assertIn("gen_ai.response", set_attr_calls)
 
     def test_on_end_skips_non_litellm_span(self):
         """Test that on_end skips non-LiteLLM spans."""
@@ -334,16 +338,17 @@ class TestLiteLLMSpanEnrichmentProcessor(unittest.TestCase):
         # Process the span
         self.processor.on_end(mock_span)
 
-        # Verify enrichment
-        self.assertIn("gen_ai.request.first_message", mock_span._attributes)
-        self.assertIn("gen_ai.response", mock_span._attributes)
+        # Verify enrichment via set_attribute calls
+        set_attr_calls = {call[0][0]: call[0][1] for call in mock_span.set_attribute.call_args_list}
+        self.assertIn("gen_ai.request.first_message", set_attr_calls)
+        self.assertIn("gen_ai.response", set_attr_calls)
 
         # Verify content accuracy
-        request_attr = mock_span._attributes["gen_ai.request.first_message"]
+        request_attr = set_attr_calls["gen_ai.request.first_message"]
         self.assertIn("system", request_attr)
         self.assertIn("helpful assistant", request_attr)
 
-        response_attr = mock_span._attributes["gen_ai.response"]
+        response_attr = set_attr_calls["gen_ai.response"]
         self.assertEqual(response_attr, "Machine learning is a subset of artificial intelligence.")
 
 

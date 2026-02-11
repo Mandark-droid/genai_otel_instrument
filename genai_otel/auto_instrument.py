@@ -433,7 +433,15 @@ def setup_auto_instrumentation(config: OTelConfig):
             )
             logger.info(f"Using OTLP HTTP protocol (endpoint: {base_url})")
 
-        tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
+        # Wrap exporter with cost enrichment if cost tracking is enabled
+        # This enriches OpenInference spans (LiteLLM, smolagents, MCP) with cost attributes
+        # by creating new ReadableSpan objects with added cost data before export
+        if cost_calculator:
+            enriching_exporter = CostEnrichingSpanExporter(span_exporter, cost_calculator)
+            tracer_provider.add_span_processor(BatchSpanProcessor(enriching_exporter))
+            logger.info("Cost-enriching span exporter enabled for OTLP")
+        else:
+            tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
         logger.info(
             f"OpenTelemetry tracing configured with OTLP endpoint: {span_exporter._endpoint}"
         )
@@ -514,7 +522,13 @@ def setup_auto_instrumentation(config: OTelConfig):
     else:
         # Configure Console Exporters if no OTLP endpoint is set
         span_exporter = ConsoleSpanExporter()
-        tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
+        # Wrap exporter with cost enrichment if cost tracking is enabled
+        if cost_calculator:
+            enriching_exporter = CostEnrichingSpanExporter(span_exporter, cost_calculator)
+            tracer_provider.add_span_processor(BatchSpanProcessor(enriching_exporter))
+            logger.info("Cost-enriching span exporter enabled for console")
+        else:
+            tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
         logger.info("No OTLP endpoint configured, traces will be exported to console.")
 
         metric_exporter = ConsoleMetricExporter()

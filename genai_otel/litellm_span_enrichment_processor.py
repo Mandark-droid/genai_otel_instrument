@@ -234,21 +234,32 @@ class LiteLLMSpanEnrichmentProcessor(SpanProcessor):
     def _set_attribute(self, span: ReadableSpan, key: str, value: str) -> None:
         """Set an attribute on a span.
 
-        Note: ReadableSpan attributes are immutable, but we can still set them
-        during the on_end callback for export purposes.
+        In on_end(), the span is a ReadableSpan. The .attributes property returns a
+        MappingProxyType (immutable view), but the underlying _attributes is a
+        BoundedAttributes object which supports item assignment. We access _attributes
+        directly to enrich the span before it reaches the exporter.
 
         Args:
             span: The span to set the attribute on.
             key: The attribute key.
             value: The attribute value.
         """
-        # Cast to Span to access set_attribute if still mutable
-        if isinstance(span, Span):
-            span.set_attribute(key, value)
-        else:
-            # For ReadableSpan, we need to modify the attributes dict directly
-            # This works because on_end is called before the span is fully sealed
-            if hasattr(span, "_attributes"):
+        # Prefer set_attribute if available (mutable Span)
+        if hasattr(span, "set_attribute") and callable(getattr(span, "set_attribute", None)):
+            try:
+                span.set_attribute(key, value)
+                return
+            except (AttributeError, RuntimeError):
+                pass  # Fall through to _attributes approach
+
+        # For ReadableSpan in on_end: _attributes is BoundedAttributes (mutable)
+        if hasattr(span, "_attributes") and span._attributes is not None:
+            try:
                 span._attributes[key] = value
-            elif hasattr(span, "attributes") and isinstance(span.attributes, dict):
-                span.attributes[key] = value
+            except (TypeError, AttributeError) as e:
+                logger.debug(
+                    "Cannot set attribute '%s' on span '%s': %s",
+                    key,
+                    getattr(span, "name", "unknown"),
+                    e,
+                )
