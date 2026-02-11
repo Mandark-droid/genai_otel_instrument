@@ -447,6 +447,55 @@ class EvaluationSpanProcessor(SpanProcessor):
                     elif isinstance(value[0], str):
                         return value[0]
 
+        # OpenInference attributes (LiteLLM, smolagents, MCP spans)
+        # These store messages in different formats than GenAI conventions
+        if "llm.input_messages" in attributes:
+            try:
+                messages_json = attributes["llm.input_messages"]
+                if isinstance(messages_json, str):
+                    messages = json.loads(messages_json)
+                else:
+                    messages = messages_json
+
+                if messages and isinstance(messages, list) and len(messages) > 0:
+                    # Find the last user message for evaluation
+                    for msg in reversed(messages):
+                        if isinstance(msg, dict):
+                            content = msg.get("message", {}).get("content") or msg.get("content")
+                            role = msg.get("message", {}).get("role") or msg.get("role", "")
+                            if content and role.lower() == "user":
+                                return str(content)
+                    # Fallback: use first message content
+                    first_msg = messages[0]
+                    if isinstance(first_msg, dict):
+                        content = first_msg.get("message", {}).get("content") or first_msg.get(
+                            "content"
+                        )
+                        if content:
+                            return str(content)
+                    elif isinstance(first_msg, str):
+                        return first_msg
+            except (json.JSONDecodeError, TypeError, IndexError) as e:
+                logger.debug("Failed to parse llm.input_messages: %s", e)
+
+        if "input.value" in attributes:
+            input_value = attributes["input.value"]
+            if input_value and isinstance(input_value, str):
+                # input.value may be JSON or plain text
+                try:
+                    parsed = json.loads(input_value)
+                    if isinstance(parsed, dict) and "content" in parsed:
+                        return parsed["content"]
+                    elif isinstance(parsed, list) and parsed:
+                        if isinstance(parsed[0], dict) and "content" in parsed[0]:
+                            return parsed[0]["content"]
+                        elif isinstance(parsed[0], str):
+                            return parsed[0]
+                    else:
+                        return str(input_value)
+                except (json.JSONDecodeError, TypeError):
+                    return str(input_value)
+
         return None
 
     def _extract_response(self, attributes: dict) -> Optional[str]:
@@ -479,6 +528,35 @@ class EvaluationSpanProcessor(SpanProcessor):
                         return value[0]["content"]
                     elif isinstance(value[0], str):
                         return value[0]
+
+        # OpenInference attributes (LiteLLM, smolagents, MCP spans)
+        if "llm.output_messages" in attributes:
+            try:
+                import json
+
+                messages_json = attributes["llm.output_messages"]
+                if isinstance(messages_json, str):
+                    messages = json.loads(messages_json)
+                else:
+                    messages = messages_json
+
+                if messages and isinstance(messages, list) and len(messages) > 0:
+                    first_msg = messages[0]
+                    if isinstance(first_msg, dict):
+                        content = first_msg.get("message", {}).get("content") or first_msg.get(
+                            "content"
+                        )
+                        if content:
+                            return str(content)
+                    elif isinstance(first_msg, str):
+                        return first_msg
+            except (json.JSONDecodeError, TypeError, IndexError) as e:
+                logger.debug("Failed to parse llm.output_messages: %s", e)
+
+        if "output.value" in attributes:
+            output_value = attributes["output.value"]
+            if output_value:
+                return str(output_value)
 
         return None
 

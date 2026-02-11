@@ -15,6 +15,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional
 
 import wrapt
+from opentelemetry import context as otel_context
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -313,8 +314,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 # Check if this is a streaming request before creating the span
                 is_streaming = kwargs.get("stream", False)
 
-                # Start the span (but don't use context manager for streaming to keep it open)
+                # Start the span and activate it as the current span in context
+                # so nested calls (e.g. tool calls within an LLM call) inherit
+                # this span as their parent for proper trace hierarchy
                 span = self.tracer.start_span(span_name, attributes=initial_attributes)
+                ctx = trace.set_span_in_context(span)
+                token = otel_context.attach(ctx)
                 start_time = time.time()
 
                 # Increment server metrics: running requests counter
@@ -357,6 +362,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             "model", initial_attributes.get("gen_ai.request.model", "unknown")
                         )
                         logger.debug(f"Detected streaming response for model: {model}")
+                        # Detach context before returning streaming wrapper
+                        # The streaming wrapper manages its own lifecycle
+                        otel_context.detach(token)
                         # Wrap the streaming response - span will be finalized when iteration completes
                         return self._wrap_streaming_response(result, span, start_time, model)
 
@@ -377,6 +385,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     # Set span status to OK on successful execution
                     span.set_status(Status(StatusCode.OK))
                     span.end()
+
+                    # Detach context after span is ended
+                    otel_context.detach(token)
 
                     # Decrement server metrics: running requests counter
                     server_metrics = get_server_metrics()
@@ -400,6 +411,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     span.record_exception(e)
                     span.end()
+
+                    # Detach context after span is ended (error path)
+                    otel_context.detach(token)
 
                     # Decrement server metrics: running requests counter (error path)
                     server_metrics = get_server_metrics()

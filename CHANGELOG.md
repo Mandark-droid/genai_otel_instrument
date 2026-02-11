@@ -6,6 +6,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.34] - 2026-02-11
+
+### Fixed
+
+- **Critical: CostEnrichingSpanExporter now plugged into the pipeline**
+  - `CostEnrichingSpanExporter` was defined in `cost_enriching_exporter.py` but never used in the span export pipeline
+  - The raw `OTLPSpanExporter` was passed directly to `BatchSpanProcessor`, bypassing cost enrichment for all OpenInference spans (LiteLLM, smolagents, MCP)
+  - Now wraps the span exporter with `CostEnrichingSpanExporter` when cost tracking is enabled, for both OTLP and Console exporter paths
+  - This immediately enables cost tracking for all OpenInference-instrumented spans
+
+- **Critical: Context propagation fixed in BaseInstrumentor**
+  - `create_span_wrapper()` used `start_span()` which creates a span but does NOT set it as the current active span in the context
+  - Nested calls (e.g., tool calls within an LLM call) would not inherit the parent span, breaking trace hierarchy
+  - Now uses `otel_context.attach(trace.set_span_in_context(span))` to properly activate the span, with `detach()` in all code paths (success, error, streaming)
+
+- **CostEnrichmentSpanProcessor no longer attempts to mutate immutable ReadableSpan**
+  - `on_end()` receives `ReadableSpan` which does not support `set_attribute()`, causing "Span is not mutable" warnings
+  - Processor now serves as a logging/monitoring hook for cost calculations; actual attribute enrichment is handled by `CostEnrichingSpanExporter` at export time
+
+- **LiteLLMSpanEnrichmentProcessor attribute setting made robust**
+  - `_set_attribute()` was trying to assign to `ReadableSpan._attributes` which could fail depending on the underlying type
+  - Now prefers `set_attribute()` when available (mutable Span), with fallback to `_attributes` direct access (works with `BoundedAttributes` in OTel SDK 1.38+)
+  - Added proper error handling around both code paths
+
+- **Evaluation processor now extracts prompts/responses from OpenInference spans**
+  - `_extract_prompt()` was missing `llm.input_messages` and `input.value` attribute keys used by OpenInference LiteLLM/smolagents spans
+  - `_extract_response()` was missing `llm.output_messages` and `output.value` attribute keys
+  - Added JSON parsing support for OpenInference message formats, including nested `message.content` structures
+  - Evaluation features (PII detection, toxicity, bias, prompt injection, hallucination) now work for LiteLLM-proxied providers
+
+## [0.1.33] - 2026-02-10
+
+### Fixed
+
+- **Sarvam AI Instrumentor Fixes**
+  - Fixed Sarvam instrumentor `__init__` returning instance instead of None
+  - Added `sarvamai` to `DEFAULT_INSTRUMENTORS` for automatic enablement
+  - Added audio playback to all Sarvam examples and fixed invalid speaker names
+
+### Added
+
+- Added `sarvamai` as optional dependency in `pyproject.toml`
+- Added `SARVAM_API_KEY` and `SAMBANOVA_API_KEY` to `sample.env`
+
+## [0.1.32] - 2026-02-10
+
+### Added
+
+- **Sarvam AI Instrumentation**
+  - New `SarvamAIInstrumentor` for Sarvam AI sovereign Indian AI platform
+  - Full instrumentation for Sarvam AI translate, transliterate, text-to-speech, and speech-to-text APIs
+  - Token usage tracking and cost calculation for Sarvam AI models
+  - Updated `llm_pricing.json` with Sarvam AI model pricing
+  - Added complex multilingual pipeline example for Sarvam AI
+  - Added Sarvam Arya agent orchestration example
+
 ## [0.1.31] - 2026-01-24
 
 ### Added
