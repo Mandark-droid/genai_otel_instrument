@@ -138,9 +138,14 @@ class TestAutoInstrumentation:
                         mock_otlp_span_exporter.assert_called_once_with(
                             headers=config.headers,
                         )
-                        mock_batch_span_processor.assert_called_once_with(
-                            mock_span_exporter_instance
-                        )
+                        # BatchSpanProcessor is now called with CostEnrichingSpanExporter
+                        # wrapping the raw span exporter (when cost tracking is enabled)
+                        mock_batch_span_processor.assert_called_once()
+                        batch_arg = mock_batch_span_processor.call_args[0][0]
+                        from genai_otel.cost_enriching_exporter import CostEnrichingSpanExporter
+
+                        assert isinstance(batch_arg, CostEnrichingSpanExporter)
+                        assert batch_arg.wrapped_exporter == mock_span_exporter_instance
                         # Should add 2 processors: CostEnrichmentSpanProcessor + BatchSpanProcessor
                         assert mock_tracer_provider_instance.add_span_processor.call_count == 2
                         # Verify the BatchSpanProcessor was added (second call)
