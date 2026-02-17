@@ -6,6 +6,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.35] - 2026-02-17
+
+### Fixed
+
+- **Sarvam AI cost tracking for all non-chat operations**
+  - Translate, transliterate, language detection, STT, and TTS operations now record character-based cost via `_record_sarvam_cost()`
+  - Pricing lookup uses `speech_to_text` category in `llm_pricing.json` (per 1K characters)
+  - Chat completions `start_time` fixed from `0` to `time.time()` for accurate latency measurement
+
+- **Sarvam AI model names on all spans**
+  - Translate spans now show `gen_ai.request.model = mayura:v1` (or `sarvam-translate:v1` when explicit)
+  - Transliterate spans now show `gen_ai.request.model = sarvam-transliterate`
+  - Language detection spans now show `gen_ai.request.model = sarvam-detect-language`
+  - TTS default model corrected from `bulbul` to `bulbul-v2` to match actual SDK behavior
+  - TTS model normalization: `bulbul:v3` -> `bulbul-v3` for pricing key lookup
+
+- **Sarvam SDK OMIT sentinel handling**
+  - New `_safe_kwarg()` helper detects SDK `OMIT`/`NotGiven` sentinel objects in optional parameters
+  - Prevents instrumentation errors when optional params are not provided by the user
+
+### Added
+
+- **Comprehensive Sarvam-specific metadata capture on all spans**
+  - Translate: `sarvam.translate.mode`, `sarvam.translate.speaker_gender`, `sarvam.translate.numerals_format`, `sarvam.translate.output_script`, `sarvam.translate.enable_preprocessing`
+  - Transliterate: `sarvam.transliterate.numerals_format`, `sarvam.transliterate.spoken_form`, `sarvam.transliterate.spoken_form_numerals_language`
+  - TTS: `sarvam.tts.pace`, `sarvam.tts.temperature`, `sarvam.tts.pitch`, `sarvam.tts.loudness`, `sarvam.tts.speech_sample_rate`, `sarvam.tts.enable_preprocessing`, `sarvam.tts.output_audio_codec`
+  - STT: `sarvam.stt.mode`, `sarvam.stt.input_audio_codec`, `sarvam.stt.prompt`
+  - All spans: `gen_ai.usage.characters` and `gen_ai.usage.cost.total`
+
+- **New Sarvam AI example files**
+  - `examples/sarvam/bulbul_v3_tts_example.py`: Bulbul v3 TTS with 48 speakers, pace/temperature control, all 11 languages
+  - `examples/sarvam/mayura_translate_example.py`: Mayura v1 translation with modes, speaker gender, numerals format, model comparison, transliteration
+
+- **15 new tests for Sarvam instrumentor**
+  - Tests for `_safe_kwarg()`, `_normalize_sarvam_tts_model()`, `_record_sarvam_cost()`, metadata capture, model attributes, start_time validation
+  - Total Sarvam tests: 37 (up from 22)
+
 ## [0.1.34] - 2026-02-11
 
 ### Fixed
