@@ -232,12 +232,13 @@ class TestSarvamAIInstrumentor(unittest.TestCase):
         instrumentor.tracer.start_as_current_span.assert_called_with("sarvam.text.translate")
 
         mock_span.set_attribute.assert_any_call("gen_ai.system", "sarvam")
+        mock_span.set_attribute.assert_any_call("gen_ai.request.model", "mayura:v1")
         mock_span.set_attribute.assert_any_call("gen_ai.operation.name", "translate")
         mock_span.set_attribute.assert_any_call("sarvam.source_language", "en-IN")
         mock_span.set_attribute.assert_any_call("sarvam.target_language", "hi-IN")
 
         instrumentor.request_counter.add.assert_called_once_with(
-            1, {"operation": "translate", "provider": "sarvam"}
+            1, {"model": "mayura:v1", "operation": "translate", "provider": "sarvam"}
         )
 
     def test_wrapped_speech_to_text_execution(self):
@@ -458,6 +459,290 @@ class TestSarvamAIInstrumentor(unittest.TestCase):
 
         mock_span.set_attribute.assert_any_call("gen_ai.system", "sarvam")
         mock_span.set_attribute.assert_any_call("sarvam.detected_language", "hi-IN")
+
+    def test_safe_kwarg_returns_value(self):
+        """Test that _safe_kwarg returns the actual value when present."""
+        from genai_otel.instrumentors.sarvam_instrumentor import _safe_kwarg
+
+        self.assertEqual(_safe_kwarg({"key": "value"}, "key"), "value")
+        self.assertEqual(_safe_kwarg({"key": 42}, "key"), 42)
+
+    def test_safe_kwarg_returns_default_for_missing(self):
+        """Test that _safe_kwarg returns default when key is missing."""
+        from genai_otel.instrumentors.sarvam_instrumentor import _safe_kwarg
+
+        self.assertIsNone(_safe_kwarg({}, "key"))
+        self.assertEqual(_safe_kwarg({}, "key", "default"), "default")
+
+    def test_safe_kwarg_returns_default_for_none(self):
+        """Test that _safe_kwarg returns default when value is None."""
+        from genai_otel.instrumentors.sarvam_instrumentor import _safe_kwarg
+
+        self.assertEqual(_safe_kwarg({"key": None}, "key", "default"), "default")
+
+    def test_safe_kwarg_handles_omit_sentinel(self):
+        """Test that _safe_kwarg detects OMIT/NotGiven sentinels."""
+        from genai_otel.instrumentors.sarvam_instrumentor import _safe_kwarg
+
+        class NotGiven:
+            pass
+
+        class OMIT:
+            pass
+
+        self.assertEqual(_safe_kwarg({"k": NotGiven()}, "k", "default"), "default")
+        self.assertEqual(_safe_kwarg({"k": OMIT()}, "k", "default"), "default")
+
+    def test_normalize_sarvam_tts_model_bulbul(self):
+        """Test TTS model normalization for bulbul models."""
+        self.assertEqual(SarvamAIInstrumentor._normalize_sarvam_tts_model("bulbul:v2"), "bulbul-v2")
+        self.assertEqual(SarvamAIInstrumentor._normalize_sarvam_tts_model("bulbul:v3"), "bulbul-v3")
+
+    def test_normalize_sarvam_tts_model_non_bulbul(self):
+        """Test TTS model normalization leaves non-bulbul models unchanged."""
+        self.assertEqual(
+            SarvamAIInstrumentor._normalize_sarvam_tts_model("saarika:v2.5"), "saarika:v2.5"
+        )
+        self.assertEqual(SarvamAIInstrumentor._normalize_sarvam_tts_model("mayura:v1"), "mayura:v1")
+
+    def test_record_sarvam_cost_with_pricing(self):
+        """Test that _record_sarvam_cost records cost when pricing is available."""
+        instrumentor = SarvamAIInstrumentor()
+        instrumentor.config = OTelConfig(enable_cost_tracking=True)
+        instrumentor.cost_calculator = MagicMock()
+        instrumentor.cost_calculator.pricing_data = {
+            "speech_to_text": {
+                "mayura:v1": {"promptPrice": 0.000024, "completionPrice": 0},
+            }
+        }
+        instrumentor.latency_histogram = MagicMock()
+        instrumentor.cost_counter = MagicMock()
+
+        mock_span = MagicMock()
+        mock_span.name = "sarvam.text.translate"
+
+        import time
+
+        start_time = time.time() - 0.5  # Simulate 0.5s elapsed
+
+        instrumentor._record_sarvam_cost(mock_span, "mayura:v1", 1000, start_time)
+
+        # Should record character count
+        mock_span.set_attribute.assert_any_call("gen_ai.usage.characters", 1000)
+        # Should record cost: (1000/1000) * 0.000024 = 0.000024
+        mock_span.set_attribute.assert_any_call("gen_ai.usage.cost.total", 0.000024)
+        # Should record latency
+        instrumentor.latency_histogram.record.assert_called_once()
+
+    def test_record_sarvam_cost_no_pricing(self):
+        """Test that _record_sarvam_cost handles missing pricing gracefully."""
+        instrumentor = SarvamAIInstrumentor()
+        instrumentor.config = OTelConfig(enable_cost_tracking=True)
+        instrumentor.cost_calculator = MagicMock()
+        instrumentor.cost_calculator.pricing_data = {"speech_to_text": {}}
+        instrumentor.latency_histogram = MagicMock()
+        instrumentor.cost_counter = MagicMock()
+
+        mock_span = MagicMock()
+        mock_span.name = "test"
+
+        import time
+
+        instrumentor._record_sarvam_cost(mock_span, "unknown-model", 100, time.time())
+
+        # Should still record character count
+        mock_span.set_attribute.assert_any_call("gen_ai.usage.characters", 100)
+        # Should not set cost attribute (no pricing found)
+        cost_calls = [
+            c
+            for c in mock_span.set_attribute.call_args_list
+            if c[0][0] == "gen_ai.usage.cost.total"
+        ]
+        self.assertEqual(len(cost_calls), 0)
+
+    def test_translate_with_explicit_model(self):
+        """Test translate with explicitly specified model."""
+        instrumentor = SarvamAIInstrumentor()
+
+        mock_client = MagicMock()
+        mock_result = MagicMock()
+        mock_result.translated_text = "Translated text"
+        original_translate = MagicMock(return_value=mock_result)
+        mock_client.text.translate = original_translate
+
+        mock_span = MagicMock()
+        instrumentor.tracer = MagicMock()
+        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.request_counter = MagicMock()
+        instrumentor._record_sarvam_cost = MagicMock()
+
+        instrumentor._instrument_client(mock_client)
+
+        mock_client.text.translate(
+            input="Hello",
+            source_language_code="en-IN",
+            target_language_code="hi-IN",
+            model="sarvam-translate:v1",
+        )
+
+        mock_span.set_attribute.assert_any_call("gen_ai.request.model", "sarvam-translate:v1")
+        instrumentor.request_counter.add.assert_called_once_with(
+            1, {"model": "sarvam-translate:v1", "operation": "translate", "provider": "sarvam"}
+        )
+
+    def test_translate_captures_metadata(self):
+        """Test translate captures Sarvam-specific metadata params."""
+        instrumentor = SarvamAIInstrumentor()
+
+        mock_client = MagicMock()
+        mock_result = MagicMock()
+        mock_result.translated_text = "Translated"
+        mock_client.text.translate = MagicMock(return_value=mock_result)
+
+        mock_span = MagicMock()
+        instrumentor.tracer = MagicMock()
+        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.request_counter = MagicMock()
+        instrumentor._record_sarvam_cost = MagicMock()
+
+        instrumentor._instrument_client(mock_client)
+
+        mock_client.text.translate(
+            input="Hello",
+            source_language_code="en-IN",
+            target_language_code="hi-IN",
+            mode="classic-colloquial",
+            speaker_gender="male",
+            numerals_format="international",
+        )
+
+        mock_span.set_attribute.assert_any_call("sarvam.translate.mode", "classic-colloquial")
+        mock_span.set_attribute.assert_any_call("sarvam.translate.speaker_gender", "male")
+        mock_span.set_attribute.assert_any_call("sarvam.translate.numerals_format", "international")
+
+    def test_tts_captures_metadata(self):
+        """Test TTS captures Sarvam-specific metadata params."""
+        instrumentor = SarvamAIInstrumentor()
+
+        mock_client = MagicMock()
+        mock_client.text_to_speech.convert = MagicMock(return_value=MagicMock())
+
+        mock_span = MagicMock()
+        instrumentor.tracer = MagicMock()
+        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.request_counter = MagicMock()
+        instrumentor._record_sarvam_cost = MagicMock()
+
+        instrumentor._instrument_client(mock_client)
+
+        mock_client.text_to_speech.convert(
+            text="Namaste",
+            target_language_code="hi-IN",
+            speaker="shubh",
+            model="bulbul:v3",
+            pace=1.2,
+            pitch=0.5,
+            loudness=1.5,
+        )
+
+        mock_span.set_attribute.assert_any_call("gen_ai.request.model", "bulbul-v3")
+        mock_span.set_attribute.assert_any_call("sarvam.tts.pace", 1.2)
+        mock_span.set_attribute.assert_any_call("sarvam.tts.pitch", 0.5)
+        mock_span.set_attribute.assert_any_call("sarvam.tts.loudness", 1.5)
+
+    def test_tts_default_model_is_bulbul_v2(self):
+        """Test TTS uses bulbul-v2 as default model when not specified."""
+        instrumentor = SarvamAIInstrumentor()
+
+        mock_client = MagicMock()
+        mock_client.text_to_speech.convert = MagicMock(return_value=MagicMock())
+
+        mock_span = MagicMock()
+        instrumentor.tracer = MagicMock()
+        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.request_counter = MagicMock()
+        instrumentor._record_sarvam_cost = MagicMock()
+
+        instrumentor._instrument_client(mock_client)
+
+        mock_client.text_to_speech.convert(
+            text="Hello", target_language_code="en-IN", speaker="shubh"
+        )
+
+        mock_span.set_attribute.assert_any_call("gen_ai.request.model", "bulbul-v2")
+
+    def test_transliterate_has_model_attribute(self):
+        """Test transliterate sets model attribute to sarvam-transliterate."""
+        instrumentor = SarvamAIInstrumentor()
+
+        mock_client = MagicMock()
+        mock_client.text.transliterate = MagicMock(return_value=MagicMock())
+
+        mock_span = MagicMock()
+        instrumentor.tracer = MagicMock()
+        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.request_counter = MagicMock()
+        instrumentor._record_sarvam_cost = MagicMock()
+
+        instrumentor._instrument_client(mock_client)
+
+        mock_client.text.transliterate(
+            input="Namaste",
+            source_language_code="en-IN",
+            target_language_code="hi-IN",
+        )
+
+        mock_span.set_attribute.assert_any_call("gen_ai.request.model", "sarvam-transliterate")
+
+    def test_identify_language_has_model_attribute(self):
+        """Test identify_language sets model attribute to sarvam-detect-language."""
+        instrumentor = SarvamAIInstrumentor()
+
+        mock_client = MagicMock()
+        mock_result = MagicMock()
+        mock_result.language_code = "hi-IN"
+        mock_client.text.identify_language = MagicMock(return_value=mock_result)
+
+        mock_span = MagicMock()
+        instrumentor.tracer = MagicMock()
+        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.request_counter = MagicMock()
+        instrumentor._record_sarvam_cost = MagicMock()
+
+        instrumentor._instrument_client(mock_client)
+
+        mock_client.text.identify_language(input="Namaste")
+
+        mock_span.set_attribute.assert_any_call("gen_ai.request.model", "sarvam-detect-language")
+
+    def test_chat_completions_records_start_time(self):
+        """Test that chat completions passes real start_time to _record_result_metrics."""
+        instrumentor = SarvamAIInstrumentor()
+
+        mock_client = MagicMock()
+        mock_client.chat.completions = MagicMock(return_value=MagicMock())
+
+        mock_span = MagicMock()
+        instrumentor.tracer = MagicMock()
+        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.request_counter = MagicMock()
+        instrumentor._record_result_metrics = MagicMock()
+
+        instrumentor._instrument_client(mock_client)
+
+        import time
+
+        before = time.time()
+        mock_client.chat.completions(messages=[{"role": "user", "content": "hi"}])
+        after = time.time()
+
+        call_args = instrumentor._record_result_metrics.call_args
+        start_time_arg = call_args[0][2]  # Third positional arg is start_time
+
+        # start_time should be a real timestamp, not 0
+        self.assertGreater(start_time_arg, 0)
+        self.assertGreaterEqual(start_time_arg, before)
+        self.assertLessEqual(start_time_arg, after)
 
 
 if __name__ == "__main__":
