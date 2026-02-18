@@ -60,7 +60,9 @@ class TestGoogleADKInstrumentor(unittest.TestCase):
         mock_runners.Runner = MockRunner
         mock_runners.InMemoryRunner = MockInMemoryRunner
 
-        mock_wrapt = MagicMock()
+        # Save original methods
+        original_run_async = MockRunner.run_async
+        original_run_debug = MockInMemoryRunner.run_debug
 
         with patch.dict(
             "sys.modules",
@@ -68,7 +70,6 @@ class TestGoogleADKInstrumentor(unittest.TestCase):
                 "google": MagicMock(),
                 "google.adk": MagicMock(),
                 "google.adk.runners": mock_runners,
-                "wrapt": mock_wrapt,
             },
         ):
             instrumentor = GoogleADKInstrumentor()
@@ -78,8 +79,9 @@ class TestGoogleADKInstrumentor(unittest.TestCase):
 
             self.assertTrue(instrumentor._instrumented)
             mock_logger.info.assert_called_with("Google ADK instrumentation enabled")
-            # Runner.run_async + InMemoryRunner.run_debug = 2
-            self.assertEqual(mock_wrapt.FunctionWrapper.call_count, 2)
+            # Verify methods were wrapped
+            self.assertIsNot(MockRunner.run_async, original_run_async)
+            self.assertIsNot(MockInMemoryRunner.run_debug, original_run_debug)
 
     def test_extract_runner_attributes_basic(self):
         """Test extraction of basic runner attributes."""
@@ -181,24 +183,23 @@ class TestGoogleADKInstrumentor(unittest.TestCase):
         mock_google_adk = MagicMock()
         mock_runners = MagicMock()
 
-        # Make wrapt.FunctionWrapper raise to trigger the except block
-        mock_wrapt = MagicMock()
-        mock_wrapt.FunctionWrapper.side_effect = RuntimeError("Test error")
-
         with patch.dict(
             "sys.modules",
             {
                 "google": MagicMock(),
                 "google.adk": mock_google_adk,
                 "google.adk.runners": mock_runners,
-                "wrapt": mock_wrapt,
             },
         ):
             instrumentor = GoogleADKInstrumentor()
             config = MagicMock()
             config.fail_on_error = False
 
-            instrumentor.instrument(config)
+            # Make create_span_wrapper raise to trigger the except block
+            with patch.object(
+                instrumentor, "create_span_wrapper", side_effect=RuntimeError("Test error")
+            ):
+                instrumentor.instrument(config)
 
             mock_logger.error.assert_called_once()
 
@@ -208,24 +209,23 @@ class TestGoogleADKInstrumentor(unittest.TestCase):
         mock_google_adk = MagicMock()
         mock_runners = MagicMock()
 
-        mock_wrapt = MagicMock()
-        mock_wrapt.FunctionWrapper.side_effect = RuntimeError("Test error")
-
         with patch.dict(
             "sys.modules",
             {
                 "google": MagicMock(),
                 "google.adk": mock_google_adk,
                 "google.adk.runners": mock_runners,
-                "wrapt": mock_wrapt,
             },
         ):
             instrumentor = GoogleADKInstrumentor()
             config = MagicMock()
             config.fail_on_error = True
 
-            with self.assertRaises(RuntimeError):
-                instrumentor.instrument(config)
+            with patch.object(
+                instrumentor, "create_span_wrapper", side_effect=RuntimeError("Test error")
+            ):
+                with self.assertRaises(RuntimeError):
+                    instrumentor.instrument(config)
 
 
 if __name__ == "__main__":

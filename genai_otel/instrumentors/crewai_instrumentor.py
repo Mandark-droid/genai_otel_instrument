@@ -17,7 +17,7 @@ import logging
 import os
 from typing import Any, Dict, Optional
 
-from opentelemetry import context
+from opentelemetry import context as otel_context
 
 from ..config import OTelConfig
 from .base import BaseInstrumentor
@@ -71,72 +71,48 @@ class CrewAIInstrumentor(BaseInstrumentor):
 
         try:
             import crewai
-            import wrapt
+
+            # Create span wrappers for each operation type
+            crew_wrapper = self.create_span_wrapper(
+                span_name="crewai.crew.execution",
+                extract_attributes=self._extract_crew_attributes,
+            )
+            task_wrapper = self.create_span_wrapper(
+                span_name="crewai.task.execution",
+                extract_attributes=self._extract_task_attributes,
+            )
+            agent_wrapper = self.create_span_wrapper(
+                span_name="crewai.agent.execution",
+                extract_attributes=self._extract_agent_attributes,
+            )
 
             # Instrument all Crew kickoff methods (sync, async, and batch variants)
             if hasattr(crewai, "Crew"):
-                # Sync kickoff
-                if hasattr(crewai.Crew, "kickoff"):
-                    crewai.Crew.kickoff = wrapt.FunctionWrapper(
-                        crewai.Crew.kickoff, self._wrap_crew_kickoff
-                    )
-                    logger.debug("Instrumented Crew.kickoff()")
-
-                # Thread-wrapped async kickoff
-                if hasattr(crewai.Crew, "kickoff_async"):
-                    crewai.Crew.kickoff_async = wrapt.FunctionWrapper(
-                        crewai.Crew.kickoff_async, self._wrap_crew_kickoff
-                    )
-                    logger.debug("Instrumented Crew.kickoff_async()")
-
-                # Native async kickoff (newer CrewAI versions)
-                if hasattr(crewai.Crew, "akickoff"):
-                    crewai.Crew.akickoff = wrapt.FunctionWrapper(
-                        crewai.Crew.akickoff, self._wrap_crew_kickoff
-                    )
-                    logger.debug("Instrumented Crew.akickoff()")
-
-                # Batch kickoff (sync)
-                if hasattr(crewai.Crew, "kickoff_for_each"):
-                    crewai.Crew.kickoff_for_each = wrapt.FunctionWrapper(
-                        crewai.Crew.kickoff_for_each, self._wrap_crew_kickoff
-                    )
-                    logger.debug("Instrumented Crew.kickoff_for_each()")
-
-                # Batch kickoff (thread-wrapped async)
-                if hasattr(crewai.Crew, "kickoff_for_each_async"):
-                    crewai.Crew.kickoff_for_each_async = wrapt.FunctionWrapper(
-                        crewai.Crew.kickoff_for_each_async, self._wrap_crew_kickoff
-                    )
-                    logger.debug("Instrumented Crew.kickoff_for_each_async()")
-
-                # Batch kickoff (native async)
-                if hasattr(crewai.Crew, "akickoff_for_each"):
-                    crewai.Crew.akickoff_for_each = wrapt.FunctionWrapper(
-                        crewai.Crew.akickoff_for_each, self._wrap_crew_kickoff
-                    )
-                    logger.debug("Instrumented Crew.akickoff_for_each()")
+                for method_name in [
+                    "kickoff",
+                    "kickoff_async",
+                    "akickoff",
+                    "kickoff_for_each",
+                    "kickoff_for_each_async",
+                    "akickoff_for_each",
+                ]:
+                    if hasattr(crewai.Crew, method_name):
+                        original = getattr(crewai.Crew, method_name)
+                        setattr(crewai.Crew, method_name, crew_wrapper(original))
+                        logger.debug("Instrumented Crew.%s()", method_name)
 
             # Instrument Task execution methods
             if hasattr(crewai, "Task"):
-                if hasattr(crewai.Task, "execute_sync"):
-                    crewai.Task.execute_sync = wrapt.FunctionWrapper(
-                        crewai.Task.execute_sync, self._wrap_task_execute
-                    )
-                    logger.debug("Instrumented Task.execute_sync()")
-
-                if hasattr(crewai.Task, "execute_async"):
-                    crewai.Task.execute_async = wrapt.FunctionWrapper(
-                        crewai.Task.execute_async, self._wrap_task_execute
-                    )
-                    logger.debug("Instrumented Task.execute_async()")
+                for method_name in ["execute_sync", "execute_async"]:
+                    if hasattr(crewai.Task, method_name):
+                        original = getattr(crewai.Task, method_name)
+                        setattr(crewai.Task, method_name, task_wrapper(original))
+                        logger.debug("Instrumented Task.%s()", method_name)
 
             # Instrument Agent execution
             if hasattr(crewai, "Agent"):
                 if hasattr(crewai.Agent, "execute_task"):
-                    crewai.Agent.execute_task = wrapt.FunctionWrapper(
-                        crewai.Agent.execute_task, self._wrap_agent_execute
-                    )
+                    crewai.Agent.execute_task = agent_wrapper(crewai.Agent.execute_task)
                     logger.debug("Instrumented Agent.execute_task()")
 
             # Patch ThreadPoolExecutor.submit to propagate context automatically
@@ -165,15 +141,15 @@ class CrewAIInstrumentor(BaseInstrumentor):
             def context_propagating_submit(self, fn, /, *args, **kwargs):
                 """Submit with automatic context propagation."""
                 # Capture current context
-                ctx = context.get_current()
+                ctx = otel_context.get_current()
 
                 # Wrap the function to propagate context
                 def wrapper():
-                    token = context.attach(ctx)
+                    token = otel_context.attach(ctx)
                     try:
                         return fn(*args, **kwargs)
                     finally:
-                        context.detach(token)
+                        otel_context.detach(token)
 
                 # Submit the wrapped function
                 return original_submit(self, wrapper)
@@ -184,56 +160,6 @@ class CrewAIInstrumentor(BaseInstrumentor):
         except Exception as e:
             logger.debug(f"Could not patch ThreadPoolExecutor: {e}")
             # Not critical - continue with other instrumentation
-
-    def _wrap_crew_kickoff(self, wrapped, instance, args, kwargs):
-        """Wrap Crew.kickoff() method with span.
-
-        Args:
-            wrapped: The original method.
-            instance: The Crew instance.
-            args: Positional arguments.
-            kwargs: Keyword arguments.
-        """
-        return self.create_span_wrapper(
-            span_name="crewai.crew.execution",
-            extract_attributes=self._extract_crew_attributes,
-        )(wrapped)(instance, *args, **kwargs)
-
-    def _wrap_task_execute(self, wrapped, instance, args, kwargs):
-        """Wrap Task execution methods with span.
-
-        Context propagation is handled by create_span_wrapper() which sets the
-        new span as the current span in context, so nested calls (agent execution,
-        LLM calls) automatically become child spans.
-
-        Args:
-            wrapped: The original method.
-            instance: The Task instance.
-            args: Positional arguments.
-            kwargs: Keyword arguments.
-        """
-        return self.create_span_wrapper(
-            span_name="crewai.task.execution",
-            extract_attributes=self._extract_task_attributes,
-        )(wrapped)(instance, *args, **kwargs)
-
-    def _wrap_agent_execute(self, wrapped, instance, args, kwargs):
-        """Wrap Agent.execute_task() method with span.
-
-        Context propagation is handled by create_span_wrapper() which sets the
-        new span as the current span in context, so nested LLM calls
-        automatically become child spans.
-
-        Args:
-            wrapped: The original method.
-            instance: The Agent instance.
-            args: Positional arguments.
-            kwargs: Keyword arguments.
-        """
-        return self.create_span_wrapper(
-            span_name="crewai.agent.execution",
-            extract_attributes=self._extract_agent_attributes,
-        )(wrapped)(instance, *args, **kwargs)
 
     def _extract_task_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Task execution.

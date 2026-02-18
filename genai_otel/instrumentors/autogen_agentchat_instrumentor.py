@@ -57,31 +57,33 @@ class AutoGenAgentChatInstrumentor(BaseInstrumentor):
         self.config = config
 
         try:
-            import wrapt
-
             # Instrument BaseChatAgent.run() and run_stream()
             try:
                 from autogen_agentchat.base import ChatAgent
 
-                # BaseChatAgent has run() and run_stream() inherited from TaskRunner
-                # We instrument at the base level to catch all agent types
+                agent_run_wrapper = self.create_span_wrapper(
+                    span_name="autogen_agentchat.agent.run",
+                    extract_attributes=self._extract_agent_run_attributes,
+                )
+                agent_run_stream_wrapper = self.create_span_wrapper(
+                    span_name="autogen_agentchat.agent.run_stream",
+                    extract_attributes=self._extract_agent_run_attributes,
+                )
+                on_messages_wrapper = self.create_span_wrapper(
+                    span_name="autogen_agentchat.agent.on_messages",
+                    extract_attributes=self._extract_on_messages_attributes,
+                )
+
                 if hasattr(ChatAgent, "run"):
-                    original_run = ChatAgent.run
-                    ChatAgent.run = wrapt.FunctionWrapper(original_run, self._wrap_agent_run)
+                    ChatAgent.run = agent_run_wrapper(ChatAgent.run)
                     logger.debug("Instrumented ChatAgent.run()")
 
                 if hasattr(ChatAgent, "run_stream"):
-                    original_run_stream = ChatAgent.run_stream
-                    ChatAgent.run_stream = wrapt.FunctionWrapper(
-                        original_run_stream, self._wrap_agent_run_stream
-                    )
+                    ChatAgent.run_stream = agent_run_stream_wrapper(ChatAgent.run_stream)
                     logger.debug("Instrumented ChatAgent.run_stream()")
 
                 if hasattr(ChatAgent, "on_messages"):
-                    original_on_messages = ChatAgent.on_messages
-                    ChatAgent.on_messages = wrapt.FunctionWrapper(
-                        original_on_messages, self._wrap_on_messages
-                    )
+                    ChatAgent.on_messages = on_messages_wrapper(ChatAgent.on_messages)
                     logger.debug("Instrumented ChatAgent.on_messages()")
             except ImportError:
                 logger.debug("Could not import autogen_agentchat.base.ChatAgent")
@@ -90,18 +92,21 @@ class AutoGenAgentChatInstrumentor(BaseInstrumentor):
             try:
                 from autogen_agentchat.teams import BaseGroupChat
 
+                team_run_wrapper = self.create_span_wrapper(
+                    span_name="autogen_agentchat.team.run",
+                    extract_attributes=self._extract_team_run_attributes,
+                )
+                team_run_stream_wrapper = self.create_span_wrapper(
+                    span_name="autogen_agentchat.team.run_stream",
+                    extract_attributes=self._extract_team_run_attributes,
+                )
+
                 if hasattr(BaseGroupChat, "run"):
-                    original_team_run = BaseGroupChat.run
-                    BaseGroupChat.run = wrapt.FunctionWrapper(
-                        original_team_run, self._wrap_team_run
-                    )
+                    BaseGroupChat.run = team_run_wrapper(BaseGroupChat.run)
                     logger.debug("Instrumented BaseGroupChat.run()")
 
                 if hasattr(BaseGroupChat, "run_stream"):
-                    original_team_run_stream = BaseGroupChat.run_stream
-                    BaseGroupChat.run_stream = wrapt.FunctionWrapper(
-                        original_team_run_stream, self._wrap_team_run_stream
-                    )
+                    BaseGroupChat.run_stream = team_run_stream_wrapper(BaseGroupChat.run_stream)
                     logger.debug("Instrumented BaseGroupChat.run_stream()")
             except ImportError:
                 logger.debug("Could not import autogen_agentchat.teams.BaseGroupChat")
@@ -113,41 +118,6 @@ class AutoGenAgentChatInstrumentor(BaseInstrumentor):
             logger.error("Failed to instrument AutoGen AgentChat: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
-
-    def _wrap_agent_run(self, wrapped, instance, args, kwargs):
-        """Wrap ChatAgent.run() method with span."""
-        return self.create_span_wrapper(
-            span_name="autogen_agentchat.agent.run",
-            extract_attributes=self._extract_agent_run_attributes,
-        )(wrapped)(instance, *args, **kwargs)
-
-    def _wrap_agent_run_stream(self, wrapped, instance, args, kwargs):
-        """Wrap ChatAgent.run_stream() method with span."""
-        return self.create_span_wrapper(
-            span_name="autogen_agentchat.agent.run_stream",
-            extract_attributes=self._extract_agent_run_attributes,
-        )(wrapped)(instance, *args, **kwargs)
-
-    def _wrap_on_messages(self, wrapped, instance, args, kwargs):
-        """Wrap ChatAgent.on_messages() method with span."""
-        return self.create_span_wrapper(
-            span_name="autogen_agentchat.agent.on_messages",
-            extract_attributes=self._extract_on_messages_attributes,
-        )(wrapped)(instance, *args, **kwargs)
-
-    def _wrap_team_run(self, wrapped, instance, args, kwargs):
-        """Wrap BaseGroupChat.run() method with span."""
-        return self.create_span_wrapper(
-            span_name="autogen_agentchat.team.run",
-            extract_attributes=self._extract_team_run_attributes,
-        )(wrapped)(instance, *args, **kwargs)
-
-    def _wrap_team_run_stream(self, wrapped, instance, args, kwargs):
-        """Wrap BaseGroupChat.run_stream() method with span."""
-        return self.create_span_wrapper(
-            span_name="autogen_agentchat.team.run_stream",
-            extract_attributes=self._extract_team_run_attributes,
-        )(wrapped)(instance, *args, **kwargs)
 
     def _extract_agent_run_attributes(
         self, instance: Any, args: Any, kwargs: Any

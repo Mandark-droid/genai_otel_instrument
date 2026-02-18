@@ -70,7 +70,9 @@ class TestAutoGenAgentChatInstrumentor(unittest.TestCase):
         mock_teams = MagicMock()
         mock_teams.BaseGroupChat = MockBaseGroupChat
 
-        mock_wrapt = MagicMock()
+        # Save original methods
+        original_agent_run = MockChatAgent.run
+        original_team_run = MockBaseGroupChat.run
 
         with patch.dict(
             "sys.modules",
@@ -78,7 +80,6 @@ class TestAutoGenAgentChatInstrumentor(unittest.TestCase):
                 "autogen_agentchat": MagicMock(),
                 "autogen_agentchat.base": mock_base,
                 "autogen_agentchat.teams": mock_teams,
-                "wrapt": mock_wrapt,
             },
         ):
             instrumentor = AutoGenAgentChatInstrumentor()
@@ -88,10 +89,9 @@ class TestAutoGenAgentChatInstrumentor(unittest.TestCase):
 
             self.assertTrue(instrumentor._instrumented)
             mock_logger.info.assert_called_with("AutoGen AgentChat instrumentation enabled")
-            # ChatAgent: run + run_stream + on_messages = 3
-            # BaseGroupChat: run + run_stream = 2
-            # Total = 5
-            self.assertEqual(mock_wrapt.FunctionWrapper.call_count, 5)
+            # Verify methods were wrapped
+            self.assertIsNot(MockChatAgent.run, original_agent_run)
+            self.assertIsNot(MockBaseGroupChat.run, original_team_run)
 
     def test_extract_agent_run_attributes_basic(self):
         """Test extraction of basic agent run attributes."""
@@ -205,47 +205,46 @@ class TestAutoGenAgentChatInstrumentor(unittest.TestCase):
     @patch("genai_otel.instrumentors.autogen_agentchat_instrumentor.logger")
     def test_instrument_exception_with_fail_on_error_false(self, mock_logger):
         """Test that instrument handles exceptions gracefully when fail_on_error is False."""
-        mock_wrapt = MagicMock()
-        mock_wrapt.FunctionWrapper.side_effect = RuntimeError("Test error")
-
         with patch.dict(
             "sys.modules",
             {
                 "autogen_agentchat": MagicMock(),
                 "autogen_agentchat.base": MagicMock(),
                 "autogen_agentchat.teams": MagicMock(),
-                "wrapt": mock_wrapt,
             },
         ):
             instrumentor = AutoGenAgentChatInstrumentor()
             config = MagicMock()
             config.fail_on_error = False
 
-            instrumentor.instrument(config)
+            # Make create_span_wrapper raise to trigger the except block
+            with patch.object(
+                instrumentor, "create_span_wrapper", side_effect=RuntimeError("Test error")
+            ):
+                instrumentor.instrument(config)
 
             mock_logger.error.assert_called_once()
 
     @patch("genai_otel.instrumentors.autogen_agentchat_instrumentor.logger")
     def test_instrument_exception_with_fail_on_error_true(self, mock_logger):
         """Test that instrument raises exceptions when fail_on_error is True."""
-        mock_wrapt = MagicMock()
-        mock_wrapt.FunctionWrapper.side_effect = RuntimeError("Test error")
-
         with patch.dict(
             "sys.modules",
             {
                 "autogen_agentchat": MagicMock(),
                 "autogen_agentchat.base": MagicMock(),
                 "autogen_agentchat.teams": MagicMock(),
-                "wrapt": mock_wrapt,
             },
         ):
             instrumentor = AutoGenAgentChatInstrumentor()
             config = MagicMock()
             config.fail_on_error = True
 
-            with self.assertRaises(RuntimeError):
-                instrumentor.instrument(config)
+            with patch.object(
+                instrumentor, "create_span_wrapper", side_effect=RuntimeError("Test error")
+            ):
+                with self.assertRaises(RuntimeError):
+                    instrumentor.instrument(config)
 
 
 if __name__ == "__main__":

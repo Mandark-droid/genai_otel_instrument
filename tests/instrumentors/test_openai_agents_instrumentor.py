@@ -61,10 +61,11 @@ class TestOpenAIAgentsInstrumentor(unittest.TestCase):
         mock_agents = MagicMock()
         mock_agents.Runner = MockRunner
 
-        # Create a mock wrapt module
-        mock_wrapt = MagicMock()
+        # Save original methods
+        original_run = MockRunner.run
+        original_run_sync = MockRunner.run_sync
 
-        with patch.dict("sys.modules", {"agents": mock_agents, "wrapt": mock_wrapt}):
+        with patch.dict("sys.modules", {"agents": mock_agents}):
             instrumentor = OpenAIAgentsInstrumentor()
             config = MagicMock()
 
@@ -75,8 +76,9 @@ class TestOpenAIAgentsInstrumentor(unittest.TestCase):
             self.assertEqual(instrumentor.config, config)
             self.assertTrue(instrumentor._instrumented)
             mock_logger.info.assert_called_with("OpenAI Agents SDK instrumentation enabled")
-            # Verify FunctionWrapper was called to wrap both methods
-            self.assertEqual(mock_wrapt.FunctionWrapper.call_count, 2)
+            # Verify methods were wrapped
+            self.assertIsNot(MockRunner.run, original_run)
+            self.assertIsNot(MockRunner.run_sync, original_run_sync)
 
     @patch("genai_otel.instrumentors.openai_agents_instrumentor.logger")
     def test_instrument_exception_with_fail_on_error_false(self, mock_logger):
@@ -90,7 +92,7 @@ class TestOpenAIAgentsInstrumentor(unittest.TestCase):
                 raise RuntimeError("Test error")
             return True
 
-        with patch.dict("sys.modules", {"agents": mock_agents, "wrapt": MagicMock()}):
+        with patch.dict("sys.modules", {"agents": mock_agents}):
             with patch("builtins.hasattr", side_effect=mock_hasattr_side_effect):
                 instrumentor = OpenAIAgentsInstrumentor()
                 config = MagicMock()
@@ -113,7 +115,7 @@ class TestOpenAIAgentsInstrumentor(unittest.TestCase):
                 raise RuntimeError("Test error")
             return True
 
-        with patch.dict("sys.modules", {"agents": mock_agents, "wrapt": MagicMock()}):
+        with patch.dict("sys.modules", {"agents": mock_agents}):
             with patch("builtins.hasattr", side_effect=mock_hasattr_side_effect):
                 instrumentor = OpenAIAgentsInstrumentor()
                 config = MagicMock()

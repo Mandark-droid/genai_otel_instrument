@@ -57,17 +57,16 @@ class GoogleADKInstrumentor(BaseInstrumentor):
         self.config = config
 
         try:
-            import wrapt
-
             # Instrument Runner.run_async()
             try:
                 from google.adk.runners import Runner
 
+                run_wrapper = self.create_span_wrapper(
+                    span_name="google_adk.runner.run",
+                    extract_attributes=self._extract_runner_attributes,
+                )
                 if hasattr(Runner, "run_async"):
-                    original_run_async = Runner.run_async
-                    Runner.run_async = wrapt.FunctionWrapper(
-                        original_run_async, self._wrap_runner_run_async
-                    )
+                    Runner.run_async = run_wrapper(Runner.run_async)
                     logger.debug("Instrumented Runner.run_async()")
             except ImportError:
                 logger.debug("Could not import google.adk.runners.Runner")
@@ -76,11 +75,12 @@ class GoogleADKInstrumentor(BaseInstrumentor):
             try:
                 from google.adk.runners import InMemoryRunner
 
+                debug_wrapper = self.create_span_wrapper(
+                    span_name="google_adk.runner.run_debug",
+                    extract_attributes=self._extract_runner_debug_attributes,
+                )
                 if hasattr(InMemoryRunner, "run_debug"):
-                    original_run_debug = InMemoryRunner.run_debug
-                    InMemoryRunner.run_debug = wrapt.FunctionWrapper(
-                        original_run_debug, self._wrap_runner_run_debug
-                    )
+                    InMemoryRunner.run_debug = debug_wrapper(InMemoryRunner.run_debug)
                     logger.debug("Instrumented InMemoryRunner.run_debug()")
             except ImportError:
                 logger.debug("Could not import google.adk.runners.InMemoryRunner")
@@ -92,34 +92,6 @@ class GoogleADKInstrumentor(BaseInstrumentor):
             logger.error("Failed to instrument Google ADK: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
-
-    def _wrap_runner_run_async(self, wrapped, instance, args, kwargs):
-        """Wrap Runner.run_async() method with span.
-
-        Args:
-            wrapped: The original method.
-            instance: The Runner instance.
-            args: Positional arguments.
-            kwargs: Keyword arguments.
-        """
-        return self.create_span_wrapper(
-            span_name="google_adk.runner.run",
-            extract_attributes=self._extract_runner_attributes,
-        )(wrapped)(instance, *args, **kwargs)
-
-    def _wrap_runner_run_debug(self, wrapped, instance, args, kwargs):
-        """Wrap InMemoryRunner.run_debug() method with span.
-
-        Args:
-            wrapped: The original method.
-            instance: The InMemoryRunner instance.
-            args: Positional arguments.
-            kwargs: Keyword arguments.
-        """
-        return self.create_span_wrapper(
-            span_name="google_adk.runner.run_debug",
-            extract_attributes=self._extract_runner_debug_attributes,
-        )(wrapped)(instance, *args, **kwargs)
 
     def _extract_runner_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Runner.run_async() call.
