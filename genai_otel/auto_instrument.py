@@ -69,6 +69,7 @@ try:
     from .instrumentors import (
         AnthropicInstrumentor,
         AnyscaleInstrumentor,
+        AutoGenAgentChatInstrumentor,
         AutoGenInstrumentor,
         AWSBedrockInstrumentor,
         AzureOpenAIInstrumentor,
@@ -76,6 +77,7 @@ try:
         CohereInstrumentor,
         CrewAIInstrumentor,
         DSPyInstrumentor,
+        GoogleADKInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
         GuardrailsAIInstrumentor,
@@ -103,6 +105,7 @@ except ImportError:
     from genai_otel.instrumentors import (
         AnthropicInstrumentor,
         AnyscaleInstrumentor,
+        AutoGenAgentChatInstrumentor,
         AutoGenInstrumentor,
         AWSBedrockInstrumentor,
         AzureOpenAIInstrumentor,
@@ -110,6 +113,7 @@ except ImportError:
         CohereInstrumentor,
         CrewAIInstrumentor,
         DSPyInstrumentor,
+        GoogleADKInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
         GuardrailsAIInstrumentor,
@@ -158,9 +162,11 @@ INSTRUMENTORS = {
     "openrouter": OpenRouterInstrumentor,  # OpenRouter unified API aggregator
     "anthropic": AnthropicInstrumentor,
     "google.generativeai": GoogleAIInstrumentor,
+    "google_adk": GoogleADKInstrumentor,  # Google Agent Development Kit
     "boto3": AWSBedrockInstrumentor,
     "azure.ai.openai": AzureOpenAIInstrumentor,
-    "autogen": AutoGenInstrumentor,  # AutoGen multi-agent framework
+    "autogen": AutoGenInstrumentor,  # AutoGen multi-agent framework (legacy)
+    "autogen_agentchat": AutoGenAgentChatInstrumentor,  # AutoGen AgentChat v0.4+
     "bedrock_agents": BedrockAgentsInstrumentor,  # AWS Bedrock Agents
     "cohere": CohereInstrumentor,
     "crewai": CrewAIInstrumentor,  # CrewAI multi-agent framework

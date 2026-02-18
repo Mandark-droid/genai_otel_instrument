@@ -210,7 +210,12 @@ print(
     """
 For each crew execution, the following data is automatically collected:
 
-TRACES (Spans):
+TRACES (Spans with proper parent-child hierarchy):
+- crewai.crew.execution (root span)
+  - crewai.task.execution (child - per task)
+    - crewai.agent.execution (child - per agent)
+      - LLM provider spans (child - per API call)
+
 - Span name: crewai.crew.execution
 - Attributes:
   - gen_ai.system: "crewai"
@@ -245,7 +250,9 @@ print("=" * 80)
 print(
     """
 Key Features Instrumented:
-- Crew Execution: Tracks crew.kickoff() with full visibility
+- Crew Execution: Tracks all kickoff variants (sync and async):
+  - kickoff(), kickoff_async(), akickoff()
+  - kickoff_for_each(), kickoff_for_each_async(), akickoff_for_each()
 - Agent Collaboration: Monitors role-based agent interactions
 - Task Execution: Tracks task assignment and completion
 - Process Types: Sequential and hierarchical coordination

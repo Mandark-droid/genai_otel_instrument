@@ -40,7 +40,7 @@ Production-ready OpenTelemetry instrumentation for GenAI/LLM applications with z
 
 🚀 **Zero-Code Instrumentation** - Just install and set env vars
 🤖 **19+ LLM Providers** - OpenAI, OpenRouter, Anthropic, Google, AWS, Azure, SambaNova, Hyperbolic, Sarvam AI, and more
-🤝 **Multi-Agent Frameworks** - CrewAI, LangGraph, OpenAI Agents SDK, AutoGen, Pydantic AI for agent orchestration
+🤝 **Multi-Agent Frameworks** - CrewAI, LangGraph, OpenAI Agents SDK, AutoGen, AutoGen AgentChat, Google ADK, Pydantic AI for agent orchestration
 🔧 **MCP Tool Support** - Auto-instrument databases, APIs, caches, vector DBs
 💰 **Cost Tracking** - Automatic cost calculation for both streaming and non-streaming requests
 ⚡ **Streaming Support** - Full observability for streaming responses with TTFT/TBT metrics and cost tracking
@@ -108,16 +108,21 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 - **Instructor** (Pydantic-based structured output extraction with validation and retries)
 - **Guardrails AI** (input/output validation guards with on-fail policies: reask, fix, filter, refrain)
 
-### Multi-Agent Frameworks (NEW)
+### Multi-Agent Frameworks
 - **OpenAI Agents SDK** (agent orchestration with handoffs, sessions, guardrails)
 - **CrewAI** (role-based multi-agent collaboration with crews and tasks)
-  - ✨ **Zero-code context propagation** - Automatic trace continuity across threads/async
-  - 🔗 **Complete span hierarchy** - Crew → Agent → Task → LLM calls
-  - 🎯 **Rich attributes** - Task descriptions, agent roles, goals, LLM models
-  - 🧵 **ThreadPoolExecutor patching** - Automatic context propagation to worker threads
-  - 📊 **Three span types** - `crewai.crew.execution`, `crewai.task.execution`, `crewai.agent.execution`
+  - Complete span hierarchy: Crew -> Task -> Agent -> LLM calls
+  - All kickoff variants: `kickoff()`, `kickoff_async()`, `akickoff()`, `kickoff_for_each()`, and async batch variants
+  - Automatic ThreadPoolExecutor context propagation for worker threads
+  - Three span types: `crewai.crew.execution`, `crewai.task.execution`, `crewai.agent.execution`
+- **Google ADK** (Google Agent Development Kit - open-source agent framework)
+  - Instruments `Runner.run_async()` and `InMemoryRunner.run_debug()`
+  - Captures agent name, model, tools, sub-agents, session info
+- **AutoGen AgentChat** (v0.4+ - ChatAgent, Teams, RoundRobinGroupChat, SelectorGroupChat, Swarm)
+  - Instruments agent `run()`/`run_stream()` and team execution
+  - Captures participants, task content, termination conditions
+- **AutoGen** (legacy Microsoft multi-agent conversations with group chats)
 - **LangGraph** (stateful workflows with graph-based orchestration)
-- **AutoGen** (Microsoft multi-agent conversations with group chats)
 - **Pydantic AI** (type-safe agents with Pydantic validation and multi-provider support)
 - **AWS Bedrock Agents** (managed agent runtime with knowledge bases and RAG)
 
