@@ -7,7 +7,7 @@ It includes methods for creating OpenTelemetry spans, recording metrics,
 and handling configuration and cost calculation.
 """
 
-import asyncio
+import inspect
 import json
 import logging
 import threading
@@ -357,7 +357,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     # keep the span open and context attached until the
                     # coroutine completes so nested async calls inherit this
                     # span as their parent.
-                    if asyncio.iscoroutine(result):
+                    if inspect.iscoroutine(result):
 
                         async def _async_traced():
                             try:
