@@ -1,3 +1,4 @@
+import asyncio
 import threading
 import time
 import unittest.mock
@@ -926,3 +927,184 @@ def test_finish_reason_ambiguous_not_categorized(instrumentor):
     # Verify neither success nor failure counters were called
     inst._shared_request_success_counter.add.assert_not_called()
     inst._shared_request_failure_counter.add.assert_not_called()
+
+
+# --- Tests for Async Function Support ---
+@pytest.mark.asyncio
+async def test_async_wrapper_awaits_coroutine(instrumentor):
+    """Test that create_span_wrapper properly awaits async functions."""
+    inst, mock_span = instrumentor
+
+    async def async_func(*args, **kwargs):
+        await asyncio.sleep(0)
+        return {"usage": None}
+
+    wrapped = inst.create_span_wrapper("test.async_span")(async_func)
+    result = await wrapped()
+
+    assert result == {"usage": None}
+    mock_span.set_status.assert_called_once()
+    mock_span.end.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_wrapper_records_metrics(instrumentor):
+    """Test that async wrapper records metrics from the actual result."""
+    inst, mock_span = instrumentor
+    mock_span.attributes.get.return_value = "test_model"
+
+    async def async_func(*args, **kwargs):
+        await asyncio.sleep(0)
+        return {"usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}}
+
+    wrapped = inst.create_span_wrapper("test.async_span")(async_func)
+    result = await wrapped()
+
+    assert result == {"usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}}
+    # The operation key uses span.name which is "test.span" from the fixture mock
+    inst.request_counter.add.assert_called_once_with(1, {"operation": "test.span"})
+    inst.latency_histogram.record.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_wrapper_handles_exception(instrumentor):
+    """Test that async wrapper properly records errors from async functions."""
+    inst, mock_span = instrumentor
+
+    async def async_func(*args, **kwargs):
+        await asyncio.sleep(0)
+        raise ValueError("Async error")
+
+    wrapped = inst.create_span_wrapper("test.async_span")(async_func)
+
+    with pytest.raises(ValueError, match="Async error"):
+        await wrapped()
+
+    assert mock_span.set_status.call_args[0][0].status_code == base.StatusCode.ERROR
+    mock_span.record_exception.assert_called_once()
+    mock_span.end.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_wrapper_detaches_context(instrumentor):
+    """Test that async wrapper detaches OTel context after completion."""
+    inst, mock_span = instrumentor
+
+    async def async_func(*args, **kwargs):
+        await asyncio.sleep(0)
+        return {"usage": None}
+
+    with patch("genai_otel.instrumentors.base.otel_context") as mock_ctx:
+        mock_ctx.attach.return_value = "test_token"
+        wrapped = inst.create_span_wrapper("test.async_span")(async_func)
+        await wrapped()
+
+        mock_ctx.detach.assert_called_once_with("test_token")
+
+
+@pytest.mark.asyncio
+async def test_async_wrapper_detaches_context_on_error(instrumentor):
+    """Test that async wrapper detaches OTel context even on error."""
+    inst, mock_span = instrumentor
+
+    async def async_func(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    with patch("genai_otel.instrumentors.base.otel_context") as mock_ctx:
+        mock_ctx.attach.return_value = "test_token"
+        wrapped = inst.create_span_wrapper("test.async_span")(async_func)
+
+        with pytest.raises(RuntimeError):
+            await wrapped()
+
+        mock_ctx.detach.assert_called_once_with("test_token")
+
+
+@pytest.mark.asyncio
+async def test_async_wrapper_keeps_span_open_during_execution(instrumentor):
+    """Test that span stays open while async function executes (not ended instantly)."""
+    inst, mock_span = instrumentor
+    span_ended_during_execution = False
+
+    async def async_func(*args, **kwargs):
+        nonlocal span_ended_during_execution
+        # Check if span.end was called before our async work completes
+        span_ended_during_execution = mock_span.end.called
+        await asyncio.sleep(0)
+        return {"usage": None}
+
+    wrapped = inst.create_span_wrapper("test.async_span")(async_func)
+    await wrapped()
+
+    # Span should NOT have been ended before the async function completed
+    assert span_ended_during_execution is False
+    # But it should be ended after
+    mock_span.end.assert_called_once()
+
+
+def test_sync_wrapper_still_works(instrumentor):
+    """Test that sync functions continue to work after adding async support."""
+    inst, mock_span = instrumentor
+    original_function = MagicMock(return_value={"usage": None})
+    wrapped = inst.create_span_wrapper("test.sync_span")(original_function)
+
+    result = wrapped("arg1")
+
+    original_function.assert_called_once_with("arg1")
+    assert result == {"usage": None}
+    mock_span.end.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_wrapper_runs_evaluation_checks(instrumentor):
+    """Test that async wrapper runs evaluation checks on the actual result."""
+    inst, mock_span = instrumentor
+
+    async def async_func(*args, **kwargs):
+        return {"usage": None}
+
+    with patch.object(inst, "_run_evaluation_checks") as mock_eval:
+        wrapped = inst.create_span_wrapper("test.async_span")(async_func)
+        await wrapped()
+
+        mock_eval.assert_called_once()
+        # Verify it was called with the actual result, not the coroutine
+        call_args = mock_eval.call_args
+        assert call_args[0][3] == {"usage": None}
+
+
+@pytest.mark.asyncio
+async def test_async_wrapper_decrements_server_metrics(instrumentor):
+    """Test that async wrapper decrements server metrics on completion."""
+    inst, mock_span = instrumentor
+
+    async def async_func(*args, **kwargs):
+        return {"usage": None}
+
+    mock_server_metrics = MagicMock()
+    with patch(
+        "genai_otel.instrumentors.base.get_server_metrics", return_value=mock_server_metrics
+    ):
+        wrapped = inst.create_span_wrapper("test.async_span")(async_func)
+        await wrapped()
+
+    mock_server_metrics.decrement_requests_running.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_async_wrapper_decrements_server_metrics_on_error(instrumentor):
+    """Test that async wrapper decrements server metrics even on error."""
+    inst, mock_span = instrumentor
+
+    async def async_func(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    mock_server_metrics = MagicMock()
+    with patch(
+        "genai_otel.instrumentors.base.get_server_metrics", return_value=mock_server_metrics
+    ):
+        wrapped = inst.create_span_wrapper("test.async_span")(async_func)
+        with pytest.raises(RuntimeError):
+            await wrapped()
+
+    mock_server_metrics.decrement_requests_running.assert_called()
