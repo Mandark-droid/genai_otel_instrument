@@ -45,10 +45,15 @@ class TestLiteLLMSpanEnrichmentProcessor(unittest.TestCase):
         self.assertTrue(result)
 
     def test_is_litellm_span_by_attributes(self):
-        """Test detection of LiteLLM span by attributes."""
+        """Test detection of LiteLLM span by attributes with OpenInference scope."""
         mock_span = MagicMock()
         mock_span.name = "some.span"
         mock_span.attributes = {"llm.provider": "openai", "llm.model": "gpt-4"}
+
+        # Attributes alone are not enough - need scope name to avoid false positives
+        mock_scope = MagicMock()
+        mock_scope.name = "openinference.instrumentation.litellm"
+        mock_span.instrumentation_scope = mock_scope
 
         result = self.processor._is_litellm_span(mock_span)
         self.assertTrue(result)
@@ -350,6 +355,158 @@ class TestLiteLLMSpanEnrichmentProcessor(unittest.TestCase):
 
         response_attr = set_attr_calls["gen_ai.response"]
         self.assertEqual(response_attr, "Machine learning is a subset of artificial intelligence.")
+
+    def test_is_litellm_span_by_scope_name_primary(self):
+        """Test that instrumentation scope name is the primary detection method."""
+        mock_span = MagicMock()
+        mock_span.name = "acompletion"  # Bare function name (no 'litellm' prefix)
+        mock_span.attributes = {}  # No LLM-specific attributes
+
+        # Set instrumentation scope to LiteLLM
+        mock_scope = MagicMock()
+        mock_scope.name = "openinference.instrumentation.litellm"
+        mock_span.instrumentation_scope = mock_scope
+
+        result = self.processor._is_litellm_span(mock_span)
+        self.assertTrue(result)
+
+    def test_is_litellm_span_by_bare_function_name(self):
+        """Test detection of LiteLLM span by bare function name with OpenInference scope."""
+        for span_name in ["acompletion", "completion", "atext_completion", "embedding"]:
+            mock_span = MagicMock()
+            mock_span.name = span_name
+            mock_span.attributes = {}
+
+            mock_scope = MagicMock()
+            mock_scope.name = "openinference.instrumentation.litellm"
+            mock_span.instrumentation_scope = mock_scope
+
+            result = self.processor._is_litellm_span(mock_span)
+            self.assertTrue(result, f"Failed to detect span with name: {span_name}")
+
+    def test_is_litellm_span_by_model_name_attribute(self):
+        """Test detection of LiteLLM span by llm.model_name (OpenInference convention)."""
+        mock_span = MagicMock()
+        mock_span.name = "acompletion"
+        mock_span.attributes = {"llm.model_name": "openai/gpt-4o"}
+
+        mock_scope = MagicMock()
+        mock_scope.name = "openinference.instrumentation.litellm"
+        mock_span.instrumentation_scope = mock_scope
+
+        result = self.processor._is_litellm_span(mock_span)
+        self.assertTrue(result)
+
+    def test_is_not_litellm_span_bare_name_wrong_scope(self):
+        """Test that bare function name with non-LiteLLM scope is not matched."""
+        mock_span = MagicMock()
+        mock_span.name = "acompletion"
+        mock_span.attributes = {}
+
+        mock_scope = MagicMock()
+        mock_scope.name = "some.other.instrumentor"
+        mock_span.instrumentation_scope = mock_scope
+
+        result = self.processor._is_litellm_span(mock_span)
+        self.assertFalse(result)
+
+    def test_is_not_litellm_span_attributes_no_scope(self):
+        """Test that LLM attributes alone without scope don't match."""
+        mock_span = MagicMock()
+        mock_span.name = "some.span"
+        mock_span.attributes = {"llm.model_name": "gpt-4o"}
+        mock_span.instrumentation_scope = None
+
+        result = self.processor._is_litellm_span(mock_span)
+        self.assertFalse(result)
+
+    def test_extract_request_content_from_indexed_attributes(self):
+        """Test extraction of request content from OpenInference indexed attributes."""
+        mock_span = MagicMock()
+        mock_span.attributes = {
+            "llm.input_messages.0.message.role": "user",
+            "llm.input_messages.0.message.content": "What is machine learning?",
+            "llm.input_messages.1.message.role": "system",
+            "llm.input_messages.1.message.content": "You are a helpful assistant",
+        }
+
+        result = self.processor._extract_request_content(mock_span)
+
+        self.assertIsNotNone(result)
+        self.assertIn("user", result)
+        self.assertIn("What is machine learning?", result)
+
+    def test_extract_request_content_from_input_value_json(self):
+        """Test extraction of request content from input.value with JSON messages."""
+        mock_span = MagicMock()
+        mock_span.attributes = {
+            "input.value": json.dumps(
+                {
+                    "messages": [
+                        {"role": "system", "content": "You are helpful"},
+                        {"role": "user", "content": "Tell me about AI"},
+                    ]
+                }
+            )
+        }
+
+        result = self.processor._extract_request_content(mock_span)
+
+        self.assertIsNotNone(result)
+        self.assertIn("user", result)
+        self.assertIn("Tell me about AI", result)
+
+    def test_extract_response_content_from_indexed_attributes(self):
+        """Test extraction of response content from OpenInference indexed attributes."""
+        mock_span = MagicMock()
+        mock_span.attributes = {
+            "llm.output_messages.0.message.role": "assistant",
+            "llm.output_messages.0.message.content": "ML is a subset of AI.",
+        }
+
+        result = self.processor._extract_response_content(mock_span)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result, "ML is a subset of AI.")
+
+    def test_on_end_enriches_openinference_litellm_span(self):
+        """Test that on_end enriches a real OpenInference LiteLLM span (bare function name)."""
+        mock_span = MagicMock()
+        mock_span.name = "acompletion"
+
+        # Set up attributes as OpenInference LiteLLM instrumentor v0.1.19 would
+        mock_span.attributes = {
+            "llm.model_name": "openai/gpt-4o",
+            "openinference.span.kind": "LLM",
+            "llm.token_count.prompt": 111,
+            "llm.token_count.completion": 351,
+            "llm.input_messages.0.message.role": "system",
+            "llm.input_messages.0.message.content": "You are a senior loan underwriter",
+            "llm.input_messages.1.message.role": "user",
+            "llm.input_messages.1.message.content": "Provide a brief risk assessment",
+            "llm.output_messages.0.message.role": "assistant",
+            "llm.output_messages.0.message.content": "Risk Assessment Note: Auto Loan",
+            "input.value": '{"messages": [{"role": "system", "content": "You are a senior loan underwriter"}, {"role": "user", "content": "Provide a brief risk assessment"}]}',
+            "output.value": "Risk Assessment Note: Auto Loan",
+        }
+        mock_span._attributes = dict(mock_span.attributes)
+
+        # Set up instrumentation scope
+        mock_scope = MagicMock()
+        mock_scope.name = "openinference.instrumentation.litellm"
+        mock_span.instrumentation_scope = mock_scope
+
+        # Process the span
+        self.processor.on_end(mock_span)
+
+        # Verify enrichment via set_attribute calls
+        set_attr_calls = {call[0][0]: call[0][1] for call in mock_span.set_attribute.call_args_list}
+        self.assertIn("gen_ai.request.first_message", set_attr_calls)
+        self.assertIn("gen_ai.response", set_attr_calls)
+
+        # Verify response content
+        response_attr = set_attr_calls["gen_ai.response"]
+        self.assertEqual(response_attr, "Risk Assessment Note: Auto Loan")
 
 
 if __name__ == "__main__":
