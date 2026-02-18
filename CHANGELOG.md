@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.36] - 2026-02-18
+
+### Fixed
+
+- **Critical: Evaluation attributes missing on OpenInference LiteLLM spans**
+  - `LiteLLMSpanEnrichmentProcessor._is_litellm_span()` failed to recognize spans from OpenInference LiteLLM instrumentor v0.1.19+ which uses bare function names (e.g., `acompletion`) instead of prefixed names (`litellm.acompletion`), and `llm.model_name` instead of `llm.model`
+  - Now checks `instrumentation_scope.name` as the primary detection method, recognizes bare function names (`acompletion`, `completion`, `aembedding`, etc.), and checks `llm.model_name` attribute
+  - Added scope name verification for attribute-based checks to prevent false positives
+
+- **Critical: Evaluation attributes silently lost on ReadableSpan**
+  - `EvaluationSpanProcessor.on_end()` received `ReadableSpan` (immutable) and called `span.set_attribute()` which silently failed via `except AttributeError: pass`, discarding all PII, toxicity, bias, prompt injection, and hallucination detection results
+  - Fixed `safe_set_attribute()` to fall back to `_attributes` direct access on `ReadableSpan` (matching the pattern used by `LiteLLMSpanEnrichmentProcessor._set_attribute()`)
+  - Created `EvaluationEnrichingSpanExporter` following the `CostEnrichingSpanExporter` pattern: wraps the exporter chain, runs all evaluation detectors, and creates new enriched `ReadableSpan` objects with evaluation attributes before export
+
+- **LiteLLM span content extraction for OpenInference indexed attributes**
+  - `_extract_request_content()` now handles `llm.input_messages.0.message.content` (indexed attribute format used by OpenInference v0.1.19+) and JSON-formatted `input.value` containing a `messages` array
+  - `_extract_response_content()` now handles `llm.output_messages.0.message.content` indexed attributes
+
+### Added
+
+- **`trace_operation()` context manager for trace hierarchy**
+  - New `genai_otel.tracing.trace_operation(name, attributes)` creates parent spans that group nested LLM calls into a single trace, solving the single-span trace problem
+  - All instrumented calls (LiteLLM, OpenAI, etc.) within the context automatically become child spans
+  - Exported from `genai_otel` package for easy access: `from genai_otel import trace_operation`
+
+- **`EvaluationEnrichingSpanExporter`** - New span exporter that enriches spans with evaluation attributes (PII, toxicity, bias, prompt injection, restricted topics, hallucination) at export time, ensuring evaluation works for all span types including OpenInference spans
+
+- **32 new tests**
+  - 10 new tests for `LiteLLMSpanEnrichmentProcessor` (scope-based detection, bare function names, indexed attributes, JSON input.value, OpenInference LiteLLM spans)
+  - 13 new tests for `EvaluationEnrichingSpanExporter` (all detector types, multiple detectors, exception handling, skip-if-evaluated)
+  - 9 new tests for `trace_operation` (span creation, attributes, span kind, exception propagation, package import)
+
 ## [0.1.35] - 2026-02-17
 
 ### Fixed

@@ -339,13 +339,23 @@ class EvaluationSpanProcessor(SpanProcessor):
         # Don't check isinstance - span is ReadableSpan after end()
 
         try:
-            # Helper to safely set attributes (will fail silently on ReadableSpan)
+            # Helper to safely set attributes on both mutable Span and ReadableSpan
             def safe_set_attribute(key, value):
-                try:
-                    span.set_attribute(key, value)
-                except AttributeError:
-                    # ReadableSpan doesn't support set_attribute - attributes were already set by BaseInstrumentor
-                    pass
+                # Try normal set_attribute first (works on mutable Span)
+                if hasattr(span, "set_attribute") and callable(
+                    getattr(span, "set_attribute", None)
+                ):
+                    try:
+                        span.set_attribute(key, value)
+                        return
+                    except (AttributeError, RuntimeError):
+                        pass
+                # For ReadableSpan in on_end: _attributes is BoundedAttributes (mutable)
+                if hasattr(span, "_attributes") and span._attributes is not None:
+                    try:
+                        span._attributes[key] = value
+                    except (TypeError, AttributeError):
+                        logger.debug("Cannot set evaluation attribute '%s' on span", key)
 
             # Extract prompt and response from span attributes
             attributes = dict(span.attributes) if span.attributes else {}
