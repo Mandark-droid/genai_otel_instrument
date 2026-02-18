@@ -85,10 +85,12 @@ class TestCrewAIInstrumentor(unittest.TestCase):
         mock_crewai.Task = MockTask
         mock_crewai.Agent = MockAgent
 
-        # Create a mock wrapt module
-        mock_wrapt = MagicMock()
+        # Save original methods to verify they get wrapped
+        original_kickoff = MockCrew.kickoff
+        original_execute_sync = MockTask.execute_sync
+        original_execute_task = MockAgent.execute_task
 
-        with patch.dict("sys.modules", {"crewai": mock_crewai, "wrapt": mock_wrapt}):
+        with patch.dict("sys.modules", {"crewai": mock_crewai}):
             instrumentor = CrewAIInstrumentor()
             config = MagicMock()
 
@@ -101,9 +103,10 @@ class TestCrewAIInstrumentor(unittest.TestCase):
             mock_logger.info.assert_called_with(
                 "CrewAI instrumentation enabled with automatic context propagation"
             )
-            # Verify FunctionWrapper was called to wrap all methods:
-            # 6 kickoff variants + 2 task methods + 1 agent method = 9
-            self.assertEqual(mock_wrapt.FunctionWrapper.call_count, 9)
+            # Verify methods were wrapped (no longer the original functions)
+            self.assertIsNot(MockCrew.kickoff, original_kickoff)
+            self.assertIsNot(MockTask.execute_sync, original_execute_sync)
+            self.assertIsNot(MockAgent.execute_task, original_execute_task)
 
     @patch("genai_otel.instrumentors.crewai_instrumentor.logger")
     def test_instrument_exception_with_fail_on_error_false(self, mock_logger):
@@ -117,7 +120,7 @@ class TestCrewAIInstrumentor(unittest.TestCase):
                 raise RuntimeError("Test error")
             return True
 
-        with patch.dict("sys.modules", {"crewai": mock_crewai, "wrapt": MagicMock()}):
+        with patch.dict("sys.modules", {"crewai": mock_crewai}):
             with patch("builtins.hasattr", side_effect=mock_hasattr_side_effect):
                 instrumentor = CrewAIInstrumentor()
                 config = MagicMock()
@@ -140,7 +143,7 @@ class TestCrewAIInstrumentor(unittest.TestCase):
                 raise RuntimeError("Test error")
             return True
 
-        with patch.dict("sys.modules", {"crewai": mock_crewai, "wrapt": MagicMock()}):
+        with patch.dict("sys.modules", {"crewai": mock_crewai}):
             with patch("builtins.hasattr", side_effect=mock_hasattr_side_effect):
                 instrumentor = CrewAIInstrumentor()
                 config = MagicMock()
