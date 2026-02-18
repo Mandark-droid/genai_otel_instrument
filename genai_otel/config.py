@@ -51,6 +51,8 @@ DEFAULT_INSTRUMENTORS = [
     "llama_index",
     "transformers",
     "autogen",
+    "autogen_agentchat",
+    "google_adk",
     "pydantic_ai",
     "openai_agents",
     "bedrock_agents",

@@ -10,6 +10,7 @@ are not installed.
 
 from .anthropic_instrumentor import AnthropicInstrumentor
 from .anyscale_instrumentor import AnyscaleInstrumentor
+from .autogen_agentchat_instrumentor import AutoGenAgentChatInstrumentor
 from .autogen_instrumentor import AutoGenInstrumentor
 from .aws_bedrock_instrumentor import AWSBedrockInstrumentor
 from .azure_openai_instrumentor import AzureOpenAIInstrumentor
@@ -17,6 +18,7 @@ from .bedrock_agents_instrumentor import BedrockAgentsInstrumentor
 from .cohere_instrumentor import CohereInstrumentor
 from .crewai_instrumentor import CrewAIInstrumentor
 from .dspy_instrumentor import DSPyInstrumentor
+from .google_adk_instrumentor import GoogleADKInstrumentor
 from .google_ai_instrumentor import GoogleAIInstrumentor
 from .groq_instrumentor import GroqInstrumentor
 from .guardrails_ai_instrumentor import GuardrailsAIInstrumentor
@@ -46,9 +48,11 @@ __all__ = [
     "OpenAIAgentsInstrumentor",
     "OpenRouterInstrumentor",
     "AnthropicInstrumentor",
+    "GoogleADKInstrumentor",
     "GoogleAIInstrumentor",
     "AWSBedrockInstrumentor",
     "AzureOpenAIInstrumentor",
+    "AutoGenAgentChatInstrumentor",
     "AutoGenInstrumentor",
     "BedrockAgentsInstrumentor",
     "CohereInstrumentor",
