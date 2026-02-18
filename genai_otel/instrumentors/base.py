@@ -7,6 +7,7 @@ It includes methods for creating OpenTelemetry spans, recording metrics,
 and handling configuration and cost calculation.
 """
 
+import asyncio
 import json
 import logging
 import threading
@@ -351,6 +352,67 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 try:
                     # Call the original function
                     result = wrapped(*args, **kwargs)
+
+                    # Handle async functions: if the result is a coroutine,
+                    # keep the span open and context attached until the
+                    # coroutine completes so nested async calls inherit this
+                    # span as their parent.
+                    if asyncio.iscoroutine(result):
+
+                        async def _async_traced():
+                            try:
+                                actual_result = await result
+
+                                if self.request_counter:
+                                    self.request_counter.add(1, {"operation": span.name})
+
+                                try:
+                                    self._record_result_metrics(
+                                        span, actual_result, start_time, kwargs
+                                    )
+                                except Exception as e:
+                                    logger.warning(
+                                        "Failed to record metrics for span '%s': %s",
+                                        span_name,
+                                        e,
+                                    )
+
+                                try:
+                                    self._run_evaluation_checks(span, args, kwargs, actual_result)
+                                except Exception as e:
+                                    logger.warning(
+                                        "Failed to run evaluation checks for span '%s': %s",
+                                        span_name,
+                                        e,
+                                    )
+
+                                span.set_status(Status(StatusCode.OK))
+                                return actual_result
+
+                            except Exception as e:
+                                try:
+                                    if self.error_counter:
+                                        self.error_counter.add(
+                                            1,
+                                            {
+                                                "operation": span_name,
+                                                "error_type": type(e).__name__,
+                                            },
+                                        )
+                                except Exception:
+                                    pass
+                                span.set_status(Status(StatusCode.ERROR, str(e)))
+                                span.record_exception(e)
+                                raise
+
+                            finally:
+                                span.end()
+                                otel_context.detach(token)
+                                server_metrics = get_server_metrics()
+                                if server_metrics:
+                                    server_metrics.decrement_requests_running()
+
+                        return _async_traced()
 
                     if self.request_counter:
                         self.request_counter.add(1, {"operation": span.name})

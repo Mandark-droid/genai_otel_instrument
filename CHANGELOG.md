@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.37] - 2026-02-18
+
+### Fixed
+
+- **Critical: `create_span_wrapper` does not support async functions**
+  - `BaseInstrumentor.create_span_wrapper()` now detects when wrapped functions return coroutines and handles the span lifecycle asynchronously
+  - Previously, wrapping async methods (e.g., LangGraph's `ainvoke()`, CrewAI's async `kickoff()`, OpenAI Agents' `Runner.run()`) caused parent spans to start and end instantly before the coroutine executed, and nested async LLM calls became disconnected root spans
+  - The async path keeps the span open and OTel context attached until the coroutine completes, ensuring proper parent-child trace hierarchy for all async framework instrumentors
+
+### Added
+
+- **10 new async tests** for `create_span_wrapper` covering coroutine awaiting, metrics recording, exception handling, context lifecycle, evaluation checks, and server metrics cleanup
+
 ## [0.1.36] - 2026-02-18
 
 ### Fixed
