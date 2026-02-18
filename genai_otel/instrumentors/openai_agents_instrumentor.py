@@ -4,7 +4,6 @@ This instrumentor automatically traces agent execution, handoffs, sessions,
 and guardrails using the OpenAI Agents SDK (openai-agents package).
 """
 
-import json
 import logging
 from typing import Any, Dict, Optional
 
@@ -48,21 +47,23 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
 
         try:
             import agents
-            import wrapt
 
-            # Instrument Runner.run() (async) and Runner.run_sync() (sync)
+            run_wrapper = self.create_span_wrapper(
+                span_name="openai_agents.runner.run",
+                extract_attributes=self._extract_runner_attributes,
+            )
+            run_sync_wrapper = self.create_span_wrapper(
+                span_name="openai_agents.runner.run_sync",
+                extract_attributes=self._extract_runner_attributes,
+            )
+
+            # Instrument Runner.run() (async/classmethod) and Runner.run_sync() (sync/classmethod)
             if hasattr(agents, "Runner"):
-                # Instrument async run method
                 if hasattr(agents.Runner, "run"):
-                    original_run = agents.Runner.run
-                    agents.Runner.run = wrapt.FunctionWrapper(original_run, self._wrap_runner_run)
+                    agents.Runner.run = run_wrapper(agents.Runner.run)
 
-                # Instrument sync run method
                 if hasattr(agents.Runner, "run_sync"):
-                    original_run_sync = agents.Runner.run_sync
-                    agents.Runner.run_sync = wrapt.FunctionWrapper(
-                        original_run_sync, self._wrap_runner_run_sync
-                    )
+                    agents.Runner.run_sync = run_sync_wrapper(agents.Runner.run_sync)
 
                 self._instrumented = True
                 logger.info("OpenAI Agents SDK instrumentation enabled")
@@ -71,34 +72,6 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
             logger.error("Failed to instrument OpenAI Agents SDK: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
-
-    def _wrap_runner_run(self, wrapped, instance, args, kwargs):
-        """Wrap Runner.run() async method with span.
-
-        Args:
-            wrapped: The original method.
-            instance: The Runner instance.
-            args: Positional arguments.
-            kwargs: Keyword arguments.
-        """
-        return self.create_span_wrapper(
-            span_name="openai_agents.runner.run",
-            extract_attributes=self._extract_runner_attributes,
-        )(wrapped)(instance, *args, **kwargs)
-
-    def _wrap_runner_run_sync(self, wrapped, instance, args, kwargs):
-        """Wrap Runner.run_sync() sync method with span.
-
-        Args:
-            wrapped: The original method.
-            instance: The Runner instance.
-            args: Positional arguments.
-            kwargs: Keyword arguments.
-        """
-        return self.create_span_wrapper(
-            span_name="openai_agents.runner.run_sync",
-            extract_attributes=self._extract_runner_attributes,
-        )(wrapped)(instance, *args, **kwargs)
 
     def _extract_runner_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Runner.run() or Runner.run_sync() call.
