@@ -47,9 +47,24 @@ class TestCrewAIInstrumentor(unittest.TestCase):
     def test_instrument_with_crewai_available(self, mock_logger):
         """Test that instrument wraps Crew.kickoff, Task, and Agent methods when available."""
 
-        # Create a real Crew class
+        # Create a real Crew class with all kickoff variants
         class MockCrew:
             def kickoff(self, inputs=None):
+                return "crew_result"
+
+            def kickoff_async(self, inputs=None):
+                return "crew_result"
+
+            async def akickoff(self, inputs=None):
+                return "crew_result"
+
+            def kickoff_for_each(self, inputs=None):
+                return "crew_result"
+
+            def kickoff_for_each_async(self, inputs=None):
+                return "crew_result"
+
+            async def akickoff_for_each(self, inputs=None):
                 return "crew_result"
 
         # Create mock Task and Agent classes
@@ -86,8 +101,9 @@ class TestCrewAIInstrumentor(unittest.TestCase):
             mock_logger.info.assert_called_with(
                 "CrewAI instrumentation enabled with automatic context propagation"
             )
-            # Verify FunctionWrapper was called to wrap all methods (kickoff, execute_sync, execute_async, execute_task)
-            self.assertEqual(mock_wrapt.FunctionWrapper.call_count, 4)
+            # Verify FunctionWrapper was called to wrap all methods:
+            # 6 kickoff variants + 2 task methods + 1 agent method = 9
+            self.assertEqual(mock_wrapt.FunctionWrapper.call_count, 9)
 
     @patch("genai_otel.instrumentors.crewai_instrumentor.logger")
     def test_instrument_exception_with_fail_on_error_false(self, mock_logger):

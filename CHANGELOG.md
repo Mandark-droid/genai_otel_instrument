@@ -6,6 +6,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.38] - 2026-02-18
+
+### Fixed
+
+- **CrewAI trace hierarchy: spans now form proper parent-child trees**
+  - Removed `_propagate_context()` method which was conflicting with `create_span_wrapper()` in the base class, causing all CrewAI spans (crew, task, agent) to be flat/disconnected instead of forming a proper trace hierarchy
+  - `create_span_wrapper()` already correctly handles context via `trace.set_span_in_context()` + `otel_context.attach()`, making the extra context wrapping redundant and harmful
+  - Task and agent spans now correctly appear as children of the crew span, and LLM calls appear as children of agent spans
+
+### Added
+
+- **Google ADK (Agent Development Kit) instrumentor**
+  - New `GoogleADKInstrumentor` for Google's open-source agent framework (`google-adk` on PyPI)
+  - Instruments `Runner.run_async()` and `InMemoryRunner.run_debug()` with automatic span creation
+  - Captures agent name, model, app name, tools, sub-agents, user/session IDs
+  - `gen_ai.system = "google_adk"` with operation names `runner.run` and `runner.run_debug`
+
+- **AutoGen AgentChat (v0.4+) instrumentor**
+  - New `AutoGenAgentChatInstrumentor` for the newer AutoGen AgentChat framework (`autogen-agentchat` package)
+  - Instruments `ChatAgent.run()`, `run_stream()`, `on_messages()` for agent execution
+  - Instruments `BaseGroupChat.run()`, `run_stream()` covering all team types (RoundRobinGroupChat, SelectorGroupChat, Swarm, MagenticOneGroupChat)
+  - Captures agent name/type, team participants, task content, termination conditions, stop reasons
+  - `gen_ai.system = "autogen_agentchat"` with operation names for agent and team execution
+
+- **CrewAI full async support**
+  - Now instruments all 6 kickoff variants: `kickoff()`, `kickoff_async()`, `akickoff()`, `kickoff_for_each()`, `kickoff_for_each_async()`, `akickoff_for_each()`
+  - Added `gen_ai.system` and `gen_ai.operation.name` attributes to task and agent spans for consistency
+
+- **24 new tests** for Google ADK instrumentor (12), AutoGen AgentChat instrumentor (12), and updated CrewAI tests
+
 ## [0.1.37] - 2026-02-18
 
 ### Fixed
