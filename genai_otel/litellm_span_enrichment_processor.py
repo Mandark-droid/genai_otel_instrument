@@ -84,6 +84,20 @@ class LiteLLMSpanEnrichmentProcessor(SpanProcessor):
         """
         return True
 
+    # Known OpenInference LiteLLM span names (bare function names without prefix)
+    _LITELLM_SPAN_NAMES = frozenset(
+        {
+            "acompletion",
+            "completion",
+            "atext_completion",
+            "text_completion",
+            "aembedding",
+            "embedding",
+            "aimage_generation",
+            "image_generation",
+        }
+    )
+
     def _is_litellm_span(self, span: ReadableSpan) -> bool:
         """Check if a span is from LiteLLM instrumentation.
 
@@ -93,27 +107,41 @@ class LiteLLMSpanEnrichmentProcessor(SpanProcessor):
         Returns:
             bool: True if this is a LiteLLM span.
         """
-        # Check span name patterns used by OpenInference LiteLLM instrumentor
+        # PRIMARY CHECK: instrumentation scope name (most reliable for OpenInference spans)
+        instrumentation_scope = getattr(span, "instrumentation_scope", None)
+        scope_name = ""
+        if instrumentation_scope:
+            scope_name = getattr(instrumentation_scope, "name", "") or ""
+            if "litellm" in scope_name.lower():
+                return True
+
+        # Check span name contains "litellm"
         if span.name and "litellm" in span.name.lower():
             return True
 
         # Check for OpenInference semantic convention attributes
         attributes = span.attributes or {}
 
-        # OpenInference uses 'llm.system' or similar attributes
-        # LiteLLM spans typically have these patterns
-        if "llm.provider" in attributes or "llm.model" in attributes:
-            return True
+        # OpenInference uses 'llm.provider', 'llm.model', or 'llm.model_name'
+        if (
+            "llm.provider" in attributes
+            or "llm.model" in attributes
+            or "llm.model_name" in attributes
+        ):
+            # Verify it's from a LiteLLM/OpenInference scope to avoid false positives
+            if "litellm" in scope_name.lower() or "openinference" in scope_name.lower():
+                return True
 
-        # Check for gen_ai.system attribute (may be set by OpenInference)
+        # Check bare function name patterns from OpenInference LiteLLM instrumentor
+        # e.g. span.name = "acompletion" (not "litellm.acompletion")
+        if span.name in self._LITELLM_SPAN_NAMES:
+            if "openinference" in scope_name.lower():
+                return True
+
+        # Check for gen_ai.system attribute with LiteLLM scope
         if attributes.get("gen_ai.system") in ["litellm", "openai", "anthropic", "cohere"]:
-            # Additional check: if it's already a known provider span, don't double-process
-            # LiteLLM acts as a proxy, so its spans have litellm-specific markers
-            instrumentation_scope = getattr(span, "instrumentation_scope", None)
-            if instrumentation_scope:
-                scope_name = getattr(instrumentation_scope, "name", "")
-                if "litellm" in scope_name.lower():
-                    return True
+            if "litellm" in scope_name.lower():
+                return True
 
         return False
 
@@ -122,7 +150,8 @@ class LiteLLMSpanEnrichmentProcessor(SpanProcessor):
 
         OpenInference may store messages in various formats:
         - llm.input_messages (JSON array of message objects)
-        - input.value (raw input text)
+        - llm.input_messages.N.message.role / .content (indexed attributes)
+        - input.value (raw input text or JSON)
         - llm.prompts (array of prompts)
 
         Args:
@@ -149,10 +178,36 @@ class LiteLLMSpanEnrichmentProcessor(SpanProcessor):
             except (json.JSONDecodeError, TypeError, IndexError) as e:
                 logger.debug("Failed to parse llm.input_messages: %s", e)
 
-        # Try input.value (simple text input)
+        # Try OpenInference indexed attributes: llm.input_messages.0.message.content
+        # This is the format used by OpenInference LiteLLM instrumentor v0.1.19+
+        if "llm.input_messages.0.message.content" in attributes:
+            role = attributes.get("llm.input_messages.0.message.role", "user")
+            content = attributes["llm.input_messages.0.message.content"]
+            if content:
+                return str({"role": str(role), "content": str(content)[:200]})
+
+        # Try input.value (simple text input or JSON)
         if "input.value" in attributes:
             input_value = attributes["input.value"]
             if input_value:
+                # input.value may contain JSON with messages array
+                if isinstance(input_value, str) and input_value.strip().startswith("{"):
+                    try:
+                        parsed = json.loads(input_value)
+                        if isinstance(parsed, dict) and "messages" in parsed:
+                            messages = parsed["messages"]
+                            if messages and isinstance(messages, list):
+                                # Find last user message
+                                for msg in reversed(messages):
+                                    if isinstance(msg, dict) and msg.get("role") == "user":
+                                        content = msg.get("content", "")
+                                        return str({"role": "user", "content": str(content)[:200]})
+                                # Fallback to first message
+                                first_msg = messages[0]
+                                if isinstance(first_msg, dict):
+                                    return str(first_msg)[:200]
+                    except (json.JSONDecodeError, TypeError):
+                        pass
                 # Convert to dict-string format matching other instrumentors
                 return str({"role": "user", "content": str(input_value)[:200]})
 
@@ -176,6 +231,7 @@ class LiteLLMSpanEnrichmentProcessor(SpanProcessor):
 
         OpenInference may store responses in various formats:
         - llm.output_messages (JSON array of message objects)
+        - llm.output_messages.N.message.content (indexed attributes)
         - output.value (raw output text)
 
         Args:
@@ -209,6 +265,12 @@ class LiteLLMSpanEnrichmentProcessor(SpanProcessor):
                         return first_message
             except (json.JSONDecodeError, TypeError, IndexError) as e:
                 logger.debug("Failed to parse llm.output_messages: %s", e)
+
+        # Try OpenInference indexed attributes: llm.output_messages.0.message.content
+        if "llm.output_messages.0.message.content" in attributes:
+            content = attributes["llm.output_messages.0.message.content"]
+            if content:
+                return str(content)
 
         # Try output.value (simple text output)
         if "output.value" in attributes:

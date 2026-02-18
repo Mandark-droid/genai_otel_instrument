@@ -51,6 +51,7 @@ from .instrumentors import (
 )
 from .mcp_instrumentors.manager import MCPInstrumentorManager
 from .server_metrics import ServerMetricsCollector, get_server_metrics
+from .tracing import trace_operation
 
 logger = logging.getLogger(__name__)
 
@@ -131,4 +132,6 @@ __all__ = [
     "SarvamAIInstrumentor",
     # MCP Manager
     "MCPInstrumentorManager",
+    # Tracing utilities
+    "trace_operation",
 ]
