@@ -158,10 +158,8 @@ class OllamaInstrumentor(BaseInstrumentor):
         attrs["gen_ai.operation.name"] = "chat"
         attrs["gen_ai.request.message_count"] = len(messages)
 
-        # Capture first message content for evaluation features
-        if messages:
-            # Only capture first 200 chars to avoid sensitive data and span size issues
-            first_message = str(messages[0])[:200]
+        first_message = self._build_first_message(messages)
+        if first_message:
             attrs["gen_ai.request.first_message"] = first_message
 
         return attrs

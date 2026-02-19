@@ -92,9 +92,9 @@ class CohereInstrumentor(BaseInstrumentor):
 
         # Capture request content for evaluation support
         if prompt:
-            # Truncate to 200 chars to avoid span size issues
-            first_message = str({"role": "user", "content": str(prompt)[:150]})
-            attrs["gen_ai.request.first_message"] = first_message[:200]
+            first_message = self._build_first_message([{"role": "user", "content": str(prompt)}])
+            if first_message:
+                attrs["gen_ai.request.first_message"] = first_message
 
         return attrs
 

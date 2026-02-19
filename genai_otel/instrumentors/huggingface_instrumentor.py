@@ -247,9 +247,9 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
 
                     # Set first message for evaluation if we decoded the input
                     if input_text:
-                        # Format as dict-string for consistency with other instrumentors
-                        first_message = str({"role": "user", "content": input_text[:200]})
-                        span.set_attribute("gen_ai.request.first_message", first_message)
+                        fm = self._build_first_message([{"role": "user", "content": input_text}])
+                        if fm:
+                            span.set_attribute("gen_ai.request.first_message", fm)
 
                     # Extract generation parameters
                     if "max_length" in kwargs:
@@ -440,15 +440,13 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
         # Capture first message content for evaluation features
         messages = kwargs.get("messages", [])
         if messages:
-            # Only capture first 200 chars to avoid sensitive data and span size issues
-            # Messages should already be in dict format, str() preserves the dict-string format
-            first_message = str(messages[0])[:200]
-            attrs["gen_ai.request.first_message"] = first_message
+            fm = self._build_first_message(messages)
+            if fm:
+                attrs["gen_ai.request.first_message"] = fm
         elif "prompt" in kwargs:
-            # For text_generation calls - wrap plain text in dict format
-            prompt_text = str(kwargs["prompt"])[:200]
-            first_message = str({"role": "user", "content": prompt_text})
-            attrs["gen_ai.request.first_message"] = first_message
+            fm = self._build_first_message([{"role": "user", "content": str(kwargs["prompt"])}])
+            if fm:
+                attrs["gen_ai.request.first_message"] = fm
 
         return attrs
 

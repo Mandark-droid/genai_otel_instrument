@@ -127,9 +127,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
             except (TypeError, ValueError) as e:
                 logger.debug("Failed to serialize tools: %s", e)
 
-        if messages:
-            # Only capture first 200 chars to avoid sensitive data and span size issues
-            first_message = str(messages[0])[:200]
+        first_message = self._build_first_message(messages)
+        if first_message:
             attrs["gen_ai.request.first_message"] = first_message
 
         return attrs

@@ -83,16 +83,9 @@ class GroqInstrumentor(BaseInstrumentor):
                 messages = kwargs.get("messages", [])
                 if messages:
                     try:
-                        first_message = messages[0]
-                        # Handle both dict and object formats
-                        if isinstance(first_message, dict):
-                            content = first_message.get("content", "")
-                        else:
-                            content = getattr(first_message, "content", "")
-
-                        truncated_content = str(content)[:150]
-                        request_str = str({"role": "user", "content": truncated_content})
-                        span.set_attribute("gen_ai.request.first_message", request_str[:200])
+                        fm = self._build_first_message(messages)
+                        if fm:
+                            span.set_attribute("gen_ai.request.first_message", fm)
                     except (IndexError, AttributeError) as e:
                         logger.debug("Failed to extract request content: %s", e)
 

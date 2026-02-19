@@ -183,9 +183,17 @@ class OTelConfig:
     )
 
     # Enable content capture as span events
-    # WARNING: May capture sensitive data. Use with caution.
+    # Controls whether request/response content is captured on spans.
+    # Set to "true" to enable content capture for full visibility.
     enable_content_capture: bool = field(
         default_factory=lambda: os.getenv("GENAI_ENABLE_CONTENT_CAPTURE", "false").lower() == "true"
+    )
+
+    # Maximum length for captured content (prompt text within the first_message attribute).
+    # Only applies when enable_content_capture is true.
+    # Default: 200 (current behavior). Set to 0 for no limit (full content).
+    content_max_length: int = field(
+        default_factory=lambda: int(os.getenv("GENAI_CONTENT_MAX_LENGTH", "200"))
     )
 
     # Custom pricing configuration for models not in llm_pricing.json

@@ -388,6 +388,7 @@ OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf # Protocol: "http/protobuf" (default) 
 # Semantic conventions (NEW)
 OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai  # "gen_ai" for new conventions only, "gen_ai/dup" for dual emission
 GENAI_ENABLE_CONTENT_CAPTURE=false  # WARNING: May capture sensitive data. Enable with caution.
+GENAI_CONTENT_MAX_LENGTH=200  # Max chars for captured content (0 = no limit). Only applies when content capture is enabled.
 
 # Logging configuration
 GENAI_OTEL_LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL. Logs are written to 'logs/genai_otel.log' with rotation (10 files, 10MB each).

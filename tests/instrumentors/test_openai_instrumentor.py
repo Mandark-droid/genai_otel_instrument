@@ -191,7 +191,7 @@ class TestOpenAIInstrumentor(unittest.TestCase):
             self.assertNotIn("gen_ai.request.first_message", attrs)
 
     def test_extract_openai_attributes_with_long_message(self):
-        """Test that first message is truncated to 200 chars."""
+        """Test that first message content is truncated to content_max_length."""
         with patch.dict("sys.modules", {"openai": MagicMock()}):
             instrumentor = OpenAIInstrumentor()
 
@@ -204,7 +204,12 @@ class TestOpenAIInstrumentor(unittest.TestCase):
             attrs = instrumentor._extract_openai_attributes(None, [], kwargs)
 
             self.assertIn("gen_ai.request.first_message", attrs)
-            self.assertLessEqual(len(attrs["gen_ai.request.first_message"]), 200)
+            # Content is truncated to 200 (default), but the full attribute
+            # includes the dict wrapper: {'role': 'user', 'content': '...'}
+            import ast
+
+            parsed = ast.literal_eval(attrs["gen_ai.request.first_message"])
+            self.assertLessEqual(len(parsed["content"]), 200)
 
     def test_extract_usage_with_usage_object(self):
         """Test that _extract_usage extracts token counts from response."""
