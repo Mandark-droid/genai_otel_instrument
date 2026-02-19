@@ -6,6 +6,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.40] - 2026-02-19
+
+### Fixed
+
+- **`Failed to parse first_message: unterminated string literal` warning**
+  - All 13 LLM instrumentors now use a centralized `_build_first_message()` helper that truncates content text *before* building the dict string, ensuring `ast.literal_eval()` always receives syntactically valid Python
+  - Previously, `str(messages[0])[:200]` truncated the serialized dict mid-string, producing invalid Python that caused parse warnings on every request
+  - Added regex fallback in evaluation parsing for any remaining edge cases with truncated strings
+
+- **0ms duration on streaming spans (`astream()`, `run_stream()`)**
+  - `create_span_wrapper()` now handles async generators (`inspect.isasyncgen`) and sync generators (`inspect.isgenerator`) in addition to coroutines
+  - Previously, streaming methods that return generators fell through to the sync code path, ending the span immediately (0ms) while actual iteration happened later
+  - Generator wrappers keep the span open during iteration, properly recording duration, errors, and metrics
+
+### Added
+
+- **`GENAI_CONTENT_MAX_LENGTH` environment variable** for controlling maximum captured content length
+  - Default: 200 characters (current behavior). Set to 0 for no limit (full content capture)
+  - Only applies when `GENAI_ENABLE_CONTENT_CAPTURE=true`
+  - Configurable via `OTelConfig(content_max_length=500)` or environment variable
+
+- **`_build_first_message()` helper on `BaseInstrumentor`**
+  - Centralized, config-aware method for building `gen_ai.request.first_message` span attributes
+  - Respects `enable_content_capture` and `content_max_length` configuration
+  - Handles both dict-style messages and plain string messages
+
+## [0.1.39] - 2026-02-19
+
+### Fixed
+
+- **Double-wrapping bug in framework instrumentors (CrewAI, Google ADK, AutoGen, OpenAI Agents)**
+  - Framework instrumentors used `wrapt.FunctionWrapper` with a callback that called `create_span_wrapper()`, resulting in double-wrapped functions (two spans per call, duplicate metrics)
+  - Replaced with direct `create_span_wrapper()` application matching the pattern used by all LLM provider instrumentors
+  - All 4 framework instrumentors now correctly create a single span per operation
+
 ## [0.1.38] - 2026-02-18
 
 ### Fixed

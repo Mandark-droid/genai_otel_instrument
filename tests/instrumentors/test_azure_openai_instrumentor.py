@@ -266,7 +266,7 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
             {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": mock_azure_openai},
         ):
             instrumentor = AzureOpenAIInstrumentor()
-            config = OTelConfig()
+            config = OTelConfig(enable_content_capture=True)
 
             # Mock tracer and span
             mock_span = MagicMock()
@@ -314,7 +314,7 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
             {"azure": MagicMock(), "azure.ai": MagicMock(), "azure.ai.openai": mock_azure_openai},
         ):
             instrumentor = AzureOpenAIInstrumentor()
-            config = OTelConfig()
+            config = OTelConfig(enable_content_capture=True)
 
             # Mock tracer and span
             mock_span = MagicMock()

@@ -80,25 +80,23 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                 # Extract content based on model family
                 # Claude format: messages array
                 if "messages" in body_dict and body_dict["messages"]:
-                    first_message = body_dict["messages"][0]
-                    content = (
-                        first_message.get("content", "") if isinstance(first_message, dict) else ""
-                    )
-                    truncated_content = str(content)[:150]
-                    request_str = str({"role": "user", "content": truncated_content})
-                    attrs["gen_ai.request.first_message"] = request_str[:200]
+                    fm = self._build_first_message(body_dict["messages"])
+                    if fm:
+                        attrs["gen_ai.request.first_message"] = fm
                 # Llama/Titan format: prompt field
                 elif "prompt" in body_dict:
-                    prompt = body_dict["prompt"]
-                    truncated_prompt = str(prompt)[:150]
-                    request_str = str({"role": "user", "content": truncated_prompt})
-                    attrs["gen_ai.request.first_message"] = request_str[:200]
+                    fm = self._build_first_message(
+                        [{"role": "user", "content": str(body_dict["prompt"])}]
+                    )
+                    if fm:
+                        attrs["gen_ai.request.first_message"] = fm
                 # Generic input field
                 elif "inputText" in body_dict:
-                    input_text = body_dict["inputText"]
-                    truncated_input = str(input_text)[:150]
-                    request_str = str({"role": "user", "content": truncated_input})
-                    attrs["gen_ai.request.first_message"] = request_str[:200]
+                    fm = self._build_first_message(
+                        [{"role": "user", "content": str(body_dict["inputText"])}]
+                    )
+                    if fm:
+                        attrs["gen_ai.request.first_message"] = fm
             except (json.JSONDecodeError, AttributeError, KeyError) as e:
                 logger.debug("Failed to extract request content: %s", e)
 

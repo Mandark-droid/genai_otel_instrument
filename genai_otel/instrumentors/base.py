@@ -7,9 +7,11 @@ It includes methods for creating OpenTelemetry spans, recording metrics,
 and handling configuration and cost calculation.
 """
 
+import ast
 import inspect
 import json
 import logging
+import re
 import threading
 import time
 from abc import ABC, abstractmethod
@@ -284,6 +286,44 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             config (OTelConfig): The OpenTelemetry configuration object.
         """
 
+    def _build_first_message(self, messages) -> Optional[str]:
+        """Build a parseable first_message attribute from a messages list.
+
+        Respects ``enable_content_capture`` and ``content_max_length`` config.
+        Truncates the *content* value before building the dict string so that
+        ``ast.literal_eval()`` in ``_run_evaluation_checks`` always receives
+        a syntactically valid Python dict.
+
+        When config is not set (e.g. during unit tests), defaults to capturing
+        with a 200-char content limit.
+
+        Returns:
+            A dict-string like ``"{'role': 'user', 'content': '...'}"`` or
+            ``None`` if content capture is disabled or messages is empty.
+        """
+        if not messages:
+            return None
+
+        config = getattr(self, "config", None)
+        # When config is set, respect enable_content_capture flag.
+        # When config is not set, default to capturing (backward-compat).
+        if config and not config.enable_content_capture:
+            return None
+
+        msg = messages[0]
+        if isinstance(msg, dict):
+            role = msg.get("role", "user")
+            content = str(msg.get("content", ""))
+        else:
+            role = "user"
+            content = str(msg)
+
+        max_len = config.content_max_length if config else 200
+        if max_len > 0:
+            content = content[:max_len]
+
+        return str({"role": role, "content": content})
+
     def create_span_wrapper(
         self, span_name: str, extract_attributes: Optional[Callable[[Any, Any, Any], Dict]] = None
     ) -> Callable:
@@ -413,6 +453,75 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                     server_metrics.decrement_requests_running()
 
                         return _async_traced()
+
+                    # Handle async generators (e.g. astream(), run_stream())
+                    # These return immediately but the actual work happens during
+                    # iteration, so keep the span open until iteration completes.
+                    if inspect.isasyncgen(result):
+
+                        async def _async_gen_traced():
+                            try:
+                                async for item in result:
+                                    yield item
+                                if self.request_counter:
+                                    self.request_counter.add(1, {"operation": span.name})
+                                span.set_status(Status(StatusCode.OK))
+                            except Exception as e:
+                                try:
+                                    if self.error_counter:
+                                        self.error_counter.add(
+                                            1,
+                                            {
+                                                "operation": span_name,
+                                                "error_type": type(e).__name__,
+                                            },
+                                        )
+                                except Exception:
+                                    pass
+                                span.set_status(Status(StatusCode.ERROR, str(e)))
+                                span.record_exception(e)
+                                raise
+                            finally:
+                                span.end()
+                                otel_context.detach(token)
+                                server_metrics = get_server_metrics()
+                                if server_metrics:
+                                    server_metrics.decrement_requests_running()
+
+                        return _async_gen_traced()
+
+                    # Handle sync generators (e.g. stream())
+                    if inspect.isgenerator(result):
+
+                        def _gen_traced():
+                            try:
+                                yield from result
+                                if self.request_counter:
+                                    self.request_counter.add(1, {"operation": span.name})
+                                span.set_status(Status(StatusCode.OK))
+                            except Exception as e:
+                                try:
+                                    if self.error_counter:
+                                        self.error_counter.add(
+                                            1,
+                                            {
+                                                "operation": span_name,
+                                                "error_type": type(e).__name__,
+                                            },
+                                        )
+                                except Exception:
+                                    pass
+                                span.set_status(Status(StatusCode.ERROR, str(e)))
+                                span.record_exception(e)
+                                raise
+                            finally:
+                                span.end()
+                                otel_context.detach(token)
+                                server_metrics = get_server_metrics()
+                                if server_metrics:
+                                    server_metrics.decrement_requests_running()
+
+                        return _gen_traced()
 
                     if self.request_counter:
                         self.request_counter.add(1, {"operation": span.name})
@@ -750,9 +859,6 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
         try:
             # Extract prompt and response from span attributes
-            import ast
-            import json
-
             attrs = dict(span.attributes)
 
             # Extract prompt from dict-string format
@@ -761,7 +867,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 value = attrs["gen_ai.request.first_message"]
                 logger.debug(f"Found gen_ai.request.first_message: {value[:100]}")
                 if isinstance(value, str):
-                    # All instrumentors should format as dict-string: {'role': 'user', 'content': '...'}
+                    # Try ast.literal_eval first (works when dict-string is not truncated)
                     try:
                         parsed = ast.literal_eval(value)
                         if isinstance(parsed, dict) and "content" in parsed:
@@ -769,8 +875,21 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             logger.info(
                                 f"Extracted prompt from dict for evaluation: {prompt[:100]}..."
                             )
-                    except (ValueError, SyntaxError) as e:
-                        logger.warning(f"Failed to parse first_message: {e}")
+                    except (ValueError, SyntaxError):
+                        # Truncated dict-string - extract content with regex fallback
+                        match = re.search(r"'content':\s*'(.*)", value)
+                        if not match:
+                            match = re.search(r'"content":\s*"(.*)', value)
+                        if match:
+                            prompt = match.group(1).rstrip("'\"}")
+                            logger.info(
+                                "Extracted prompt from truncated dict via regex: %s...",
+                                prompt[:100],
+                            )
+                        else:
+                            # Last resort: use the raw value as prompt
+                            prompt = value
+                            logger.debug("Using raw first_message as prompt: %s...", prompt[:100])
 
             # Extract response - try to get from result object
             response = None
