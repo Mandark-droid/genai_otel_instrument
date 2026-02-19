@@ -145,9 +145,8 @@ class HyperbolicInstrumentor(BaseInstrumentor):
         if "max_tokens" in request_data:
             attrs["gen_ai.request.max_tokens"] = request_data["max_tokens"]
 
-        # First message preview
-        if messages:
-            first_message = str(messages[0])[:200]
+        first_message = self._build_first_message(messages)
+        if first_message:
             attrs["gen_ai.request.first_message"] = first_message
 
         return attrs

@@ -193,14 +193,9 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     messages = kwargs.get("messages", [])
                     if messages:
                         try:
-                            first_message = messages[0]
-                            if isinstance(first_message, dict):
-                                content = first_message.get("content", "")
-                            else:
-                                content = getattr(first_message, "content", "")
-                            truncated_content = str(content)[:150]
-                            request_str = str({"role": "user", "content": truncated_content})
-                            span.set_attribute("gen_ai.request.first_message", request_str[:200])
+                            fm = instrumentor._build_first_message(messages)
+                            if fm:
+                                span.set_attribute("gen_ai.request.first_message", fm)
                         except (IndexError, AttributeError) as e:
                             logger.debug("Failed to extract request content: %s", e)
 
@@ -241,10 +236,11 @@ class SarvamAIInstrumentor(BaseInstrumentor):
 
                     input_text = kwargs.get("input", "")
                     if input_text:
-                        span.set_attribute(
-                            "gen_ai.request.first_message",
-                            str({"role": "user", "content": str(input_text)[:150]})[:200],
+                        fm = instrumentor._build_first_message(
+                            [{"role": "user", "content": str(input_text)}]
                         )
+                        if fm:
+                            span.set_attribute("gen_ai.request.first_message", fm)
 
                     # Capture Sarvam-specific translate params
                     mode = _safe_kwarg(kwargs, "mode")

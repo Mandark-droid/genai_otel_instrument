@@ -101,11 +101,8 @@ class AnthropicInstrumentor(BaseInstrumentor):
         attrs["gen_ai.request.model"] = model
         attrs["gen_ai.request.message_count"] = len(messages)
 
-        # Capture first message for evaluation features
-        if messages:
-            # Messages should already be in dict format, str() preserves the dict-string format
-            # Anthropic API expects messages as [{"role": "user", "content": "..."}]
-            first_message = str(messages[0])[:200]
+        first_message = self._build_first_message(messages)
+        if first_message:
             attrs["gen_ai.request.first_message"] = first_message
 
         return attrs
