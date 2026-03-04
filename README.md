@@ -138,7 +138,7 @@ For a more comprehensive demonstration of various LLM providers and MCP tools, r
 - MCP - Model Context Protocol instrumentation
 - LiteLLM - Multi-provider LLM proxy
 
-**Cost Enrichment:** OpenInference instrumentors are automatically enriched with cost tracking! When cost tracking is enabled (`GENAI_ENABLE_COST_TRACKING=true`), a custom `CostEnrichmentSpanProcessor` extracts model and token usage from OpenInference spans and adds cost attributes (`gen_ai.usage.cost.total`, `gen_ai.usage.cost.prompt`, `gen_ai.usage.cost.completion`) using our comprehensive pricing database of 340+ models across 20+ providers.
+**Cost Enrichment:** OpenInference instrumentors are automatically enriched with cost tracking! When cost tracking is enabled (`GENAI_ENABLE_COST_TRACKING=true`), a custom `CostEnrichmentSpanProcessor` extracts model and token usage from OpenInference spans and adds cost attributes (`gen_ai.usage.cost.total`, `gen_ai.usage.cost.prompt`, `gen_ai.usage.cost.completion`) using our comprehensive pricing database of 1,050+ models across 30+ providers.
 
 The processor supports OpenInference semantic conventions:
 - Model: `llm.model_name`, `embedding.model_name`
@@ -211,21 +211,30 @@ Watch a comprehensive walkthrough of GenAI OpenTelemetry Auto-Instrumentation in
 
 ## Cost Tracking Coverage
 
-The library includes comprehensive cost tracking with pricing data for **350+ models** across **21+ providers**:
+The library includes comprehensive cost tracking with pricing data for **1,050+ models** across **30+ providers**:
 
 ### Providers with Full Token-Based Cost Tracking
-- **OpenAI**: GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo, o1/o3 series, embeddings, audio, vision (35+ models)
-- **Anthropic**: Claude 3.5 Sonnet/Opus/Haiku, Claude 3 series (10+ models)
-- **Google AI**: Gemini 1.5/2.0 Pro/Flash, PaLM 2 (12+ models)
-- **AWS Bedrock**: Amazon Titan, Claude, Llama, Mistral models (20+ models)
+- **OpenAI**: GPT-4o, GPT-4 Turbo, GPT-5.2, o1/o3 series, embeddings, audio, realtime, vision (50+ models)
+- **Anthropic**: Claude Sonnet 4.6, Claude 3.5 Sonnet/Opus/Haiku, Claude 3 series (15+ models)
+- **Google AI**: Gemini 3.1/2.5/2.0 Pro/Flash, TTS, image generation, PaLM 2 (30+ models)
+- **AWS Bedrock**: Amazon Titan, Claude, Llama, Mistral models (25+ models)
 - **Azure OpenAI**: Same as OpenAI with Azure-specific pricing
-- **Cohere**: Command R/R+, Command Light, Embed v3/v2 (8+ models)
-- **Mistral AI**: Mistral Large/Medium/Small, Mixtral, embeddings (8+ models)
+- **Cohere**: Command R/R+, Command Light, Embed v4/v3, rerankers (15+ models)
+- **Mistral AI**: Mistral Large/Medium/Small, Mixtral, OCR, Voxtral audio, embeddings (20+ models)
 - **Together AI**: DeepSeek-R1, Llama 3.x, Qwen, Mixtral (25+ models)
-- **Groq**: Llama 3.x series, Mixtral, Gemma models (15+ models)
+- **Groq**: Llama 3.x series, Mixtral, Gemma, Whisper STT (20+ models)
 - **Ollama**: Local models with token tracking (pricing via cost estimation)
 - **Vertex AI**: Gemini models via Google Cloud with usage metadata extraction
 - **Sarvam AI**: sarvam-m chat, Saarika/Saaras STT, Bulbul TTS, Mayura/Sarvam Translate, Vision (12+ models)
+- **Voyage AI**: voyage-4/3.5/3 series, code, finance, law, multilingual embeddings (15+ models)
+- **Jina AI**: jina-embeddings-v3, jina-clip-v2 embeddings (5+ models)
+- **Deepgram**: Nova-3/2 STT, Aura TTS, Whisper variants (20+ models)
+- **AssemblyAI**: Universal-3 Pro, Universal-2, slam-1 STT (5+ models)
+- **ElevenLabs**: Multilingual v2, Turbo v2, Scribe STT (8+ models)
+- **IBM Granite**: Chat, vision/OCR, document conversion, embeddings (10+ models)
+- **DeepSeek**: DeepSeek-V3, R1, OCR, VL vision models (15+ models)
+- **Qwen/Alibaba**: Qwen 3.5, Qwen 2.5 VL, VL-OCR, embeddings (25+ models)
+- **xAI**: Grok 4.20, Grok 4.1 Fast (5+ models)
 
 ### Special Pricing Models
 - **Replicate**: Hardware-based pricing ($/second of GPU/CPU time) - not token-based

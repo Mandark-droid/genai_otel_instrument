@@ -115,7 +115,60 @@
     "together-ai-embedding-151m-to-350m": 1.6000000000000003e-05,
     "together-ai-embedding-up-to-150m": 8.000000000000001e-06,
     "voyage/rerank-2": 4.9999999999999996e-05,
-    "voyage/rerank-2-lite": 2e-05
+    "voyage/rerank-2-lite": 2e-05,
+    "voyage/voyage-3": 6e-05,
+    "voyage/voyage-3-lite": 2e-05,
+    "voyage/voyage-3-large": 0.00018,
+    "voyage/voyage-3.5": 6e-05,
+    "voyage/voyage-3.5-lite": 2e-05,
+    "voyage/voyage-4": 6e-05,
+    "voyage/voyage-4-large": 0.00012,
+    "voyage/voyage-4-lite": 2e-05,
+    "voyage/voyage-code-3": 0.00018,
+    "voyage/voyage-context-3": 0.00018,
+    "voyage/voyage-finance-2": 0.00012,
+    "voyage/voyage-law-2": 0.00012,
+    "voyage/voyage-multilingual-2": 0.00012,
+    "voyage/voyage-multimodal-3": 0.00012,
+    "voyage/voyage-multimodal-3.5": 0.00012,
+    "voyage-3": 6e-05,
+    "voyage-3-lite": 2e-05,
+    "voyage-3-large": 0.00018,
+    "voyage-3.5": 6e-05,
+    "voyage-3.5-lite": 2e-05,
+    "voyage-4": 6e-05,
+    "voyage-4-large": 0.00012,
+    "voyage-4-lite": 2e-05,
+    "voyage-code-3": 0.00018,
+    "voyage-context-3": 0.00018,
+    "voyage-finance-2": 0.00012,
+    "voyage-law-2": 0.00012,
+    "voyage-multilingual-2": 0.00012,
+    "openai/text-embedding-3-small": 2e-05,
+    "openai/text-embedding-3-large": 0.00013,
+    "openai/text-embedding-ada-002": 0.0001,
+    "text-embedding-005": 0.0001,
+    "cohere/embed-v4.0": 0.00012,
+    "embed-v4.0": 0.00012,
+    "mistral/codestral-embed-latest": 0.00015,
+    "codestral-embed": 0.00015,
+    "jina-embeddings-v3": 2e-05,
+    "jina-embeddings-v2-base-en": 2e-05,
+    "jina-clip-v2": 2e-05,
+    "jina/jina-embeddings-v3": 2e-05,
+    "jina/jina-clip-v2": 2e-05,
+    "ibm/granite-embedding-107m-multilingual": 0.0001,
+    "ibm/granite-embedding-278m-multilingual": 0.0001,
+    "ibm-granite/granite-embedding-107m-multilingual": 0.0001,
+    "ibm-granite/granite-embedding-278m-multilingual": 0.0001,
+    "dashscope/text-embedding-v3": 5e-05,
+    "dashscope/text-embedding-v4": 7e-05,
+    "alibaba/text-embedding-v3": 5e-05,
+    "alibaba/text-embedding-v4": 7e-05,
+    "BAAI/bge-large-en-v1.5": 2e-05,
+    "nomic-ai/nomic-embed-text-v1.5": 1.6e-05,
+    "amazon.titan-embed-text-v2:0": 0.00011,
+    "cohere.embed-v4:0": 0.00012
   },
   "images": {
     "dall-e-3": {
@@ -231,6 +284,45 @@
     },
     "standard/1792-x-1024/dall-e-3": {
       "note": "Pricing varies by provider"
+    },
+    "gemini-2-5-flash-image": {
+      "standard": {
+        "1000000": 0.03
+      },
+      "note": "Google Gemini 2.5 Flash Image - token-based, $0.03/1K output tokens"
+    },
+    "nano-banana": {
+      "standard": {
+        "1000000": 0.03
+      },
+      "note": "Google Nano Banana (Gemini 2.5 Flash Image alias)"
+    },
+    "nano-banana-2": {
+      "standard": {
+        "512x512": 0.045,
+        "1024x1024": 0.067,
+        "2048x2048": 0.101,
+        "4096x4096": 0.151
+      },
+      "note": "Google Nano Banana 2 / Gemini 3.1 Flash Image (Feb 2026)"
+    },
+    "nano-banana-pro": {
+      "standard": {
+        "512x512": 0.055,
+        "1024x1024": 0.085,
+        "2048x2048": 0.13,
+        "4096x4096": 0.2
+      },
+      "note": "Google Nano Banana Pro - premium image generation"
+    },
+    "gemini-3.1-flash-image": {
+      "standard": {
+        "512x512": 0.045,
+        "1024x1024": 0.067,
+        "2048x2048": 0.101,
+        "4096x4096": 0.151
+      },
+      "note": "Google Gemini 3.1 Flash Image / Nano Banana 2 (Feb 2026)"
     }
   },
   "audio": {
@@ -297,7 +389,54 @@
     "gpt-4o-mini-transcribe": 0.00125,
     "gpt-4o-mini-tts": 0.0025,
     "gpt-4o-transcribe": 0.0025,
-    "whisper-1": 0.006
+    "whisper-1": 0.006,
+    "voxtral-mini-transcribe-v2": 0.00005,
+    "voxtral-mini-2602": 0.00005,
+    "voxtral-realtime": 0.0001,
+    "voxtral-mini-transcribe-realtime-2602": 0.0001,
+    "mistral/voxtral-mini-transcribe-v2": 0.00005,
+    "mistral/voxtral-realtime": 0.0001,
+    "mistralai/Voxtral-Mini-4B-Realtime-2602": 0.0001,
+    "gemini-2.5-flash-preview-tts": 0.00015,
+    "gemini-2.5-pro-tts": 0.00125,
+    "gemini-2.5-flash-tts": 0.0005,
+    "gemini/gemini-2.5-flash-tts": 0.0005,
+    "gemini/gemini-2.5-pro-tts": 0.00125,
+    "gemini-2.5-flash-lite-preview-tts": 0.0001,
+    "gemini/gemini-2.5-flash-lite-preview-tts": 0.0001,
+    "gemini-live-2.5-flash-preview-native-audio": 0.0003,
+    "gpt-4o-mini-realtime-preview": 0.01,
+    "gpt-4o-realtime-preview": 0.04,
+    "gpt-realtime": 0.032,
+    "gpt-realtime-mini": 0.01,
+    "groq/whisper-large-v3": 0.00185,
+    "groq/whisper-large-v3-turbo": 0.000667,
+    "groq/distil-whisper-large-v3-en": 0.000333,
+    "fireworks/whisper-v3": 0.004,
+    "fireworks/whisper-v3-turbo": 0.002,
+    "deepgram/aura-asteria-en": 0.015,
+    "deepgram/aura-luna-en": 0.015,
+    "deepgram/aura-stella-en": 0.015,
+    "deepgram/aura-athena-en": 0.015,
+    "deepgram/aura-hera-en": 0.015,
+    "deepgram/aura-orion-en": 0.015,
+    "deepgram/aura-arcas-en": 0.015,
+    "deepgram/aura-perseus-en": 0.015,
+    "deepgram/aura-2": 0.03,
+    "deepgram/nova-3-multilingual": 0.0092,
+    "assemblyai/universal-2": 0.0025,
+    "assemblyai/universal-3-pro": 0.0035,
+    "assemblyai/slam-1": 0.0045,
+    "cartesia/sonic-2": 0.042,
+    "cartesia/sonic-english": 0.042,
+    "cartesia/sonic-multilingual": 0.042,
+    "azure/whisper": 0.006,
+    "azure/tts-1": 0.015,
+    "azure/tts-1-hd": 0.03,
+    "hume/evi-2": 0.07,
+    "speechmatics/standard": 0.0117,
+    "playht/Play3.0-mini": 0.03,
+    "playht/PlayDialog": 0.05
   },
   "chat": {
     "gpt-4.1-nano-2025-04-14": {
@@ -715,14 +854,6 @@
       "promptPrice": 0.0,
       "completionPrice": 0.0,
       "note": "Gemini 2.0 Flash Experimental - free during experimental phase"
-    },
-    "gemini-2-5-flash-image": {
-      "promptPrice": 0.0003,
-      "completionPrice": 0.03
-    },
-    "nano-banana": {
-      "promptPrice": 0.0003,
-      "completionPrice": 0.03
     },
     "text-bison": {
       "promptPrice": 0.001,
@@ -1336,16 +1467,6 @@
     "mistral-medium-3": {
       "promptPrice": 0.0004,
       "completionPrice": 0.002
-    },
-    "voxtral-mini-transcribe-v2": {
-      "promptPrice": 0.00005,
-      "completionPrice": 0.0,
-      "note": "Mistral AI - Voxtral Mini Transcribe V2 batch ($0.003/min, Feb 2026)"
-    },
-    "voxtral-realtime": {
-      "promptPrice": 0.0001,
-      "completionPrice": 0.0,
-      "note": "Mistral AI - Voxtral Realtime streaming ($0.006/min, Feb 2026)"
     },
     "mistral-medium-2025": {
       "promptPrice": 0.0004,
@@ -3374,6 +3495,371 @@
       "promptPrice": 0.0006,
       "completionPrice": 0.0022,
       "note": "From LiteLLM - provider: zai"
+    },
+    "claude-sonnet-4-6": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015,
+      "note": "Anthropic - Claude Sonnet 4.6 (Feb 2026)"
+    },
+    "claude-sonnet-4.6": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015,
+      "note": "Anthropic - Claude Sonnet 4.6 (Feb 2026)"
+    },
+    "claude-4-sonnet-4.6": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015,
+      "note": "Anthropic - Claude Sonnet 4.6 (Feb 2026)"
+    },
+    "glm-5": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.0032,
+      "note": "Zhipu AI - GLM-5 (Feb 2026), frontier model"
+    },
+    "THUDM/GLM-5": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.0032,
+      "note": "Zhipu AI - GLM-5 (Feb 2026), frontier model"
+    },
+    "zai/glm-5": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.0032,
+      "note": "Zhipu AI - GLM-5 (Feb 2026) via Z.AI provider"
+    },
+    "minimax-m2.5": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "note": "MiniMax M2.5 (Feb 2026)"
+    },
+    "MiniMax-M2.5": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "note": "MiniMax M2.5 (Feb 2026)"
+    },
+    "seed-2.0-pro": {
+      "promptPrice": 0.00047,
+      "completionPrice": 0.00237,
+      "note": "ByteDance Seed 2.0 Pro (Feb 2026) - frontier intelligence"
+    },
+    "seed-2.0-lite": {
+      "promptPrice": 9.4e-05,
+      "completionPrice": 0.000474,
+      "note": "ByteDance Seed 2.0 Lite (Feb 2026) - balanced performance/cost"
+    },
+    "seed-2.0-mini": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0004,
+      "note": "ByteDance Seed 2.0 Mini (Feb 2026) - high concurrency, low latency"
+    },
+    "bytedance-seed/seed-2.0-pro": {
+      "promptPrice": 0.00047,
+      "completionPrice": 0.00237,
+      "note": "ByteDance Seed 2.0 Pro (Feb 2026)"
+    },
+    "bytedance-seed/seed-2.0-mini": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0004,
+      "note": "ByteDance Seed 2.0 Mini (Feb 2026) via OpenRouter"
+    },
+    "Nanbeige/Nanbeige4.1-3B": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "Nanbeige 4.1 3B (Feb 2026) - open source, 262K context"
+    },
+    "nanbeige-4.1-3b": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "Nanbeige 4.1 3B (Feb 2026) - open source, 262K context"
+    },
+    "qwen3.5": {
+      "promptPrice": 0.00055,
+      "completionPrice": 0.0035,
+      "note": "Qwen 3.5 flagship 397B-A17B MoE (Feb 2026)"
+    },
+    "qwen3.5-flash": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0004,
+      "note": "Qwen 3.5 Flash - 35B-A3B hosted variant (Feb 2026)"
+    },
+    "qwen3.5-27b": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0024,
+      "note": "Qwen 3.5 27B dense model (Feb 2026)"
+    },
+    "qwen3.5-35b-a3b": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.002,
+      "note": "Qwen 3.5 35B MoE, 3B active (Feb 2026)"
+    },
+    "qwen3.5-122b-a10b": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0032,
+      "note": "Qwen 3.5 122B MoE, 10B active (Feb 2026)"
+    },
+    "qwen3.5-397b-a17b": {
+      "promptPrice": 0.00055,
+      "completionPrice": 0.0035,
+      "note": "Qwen 3.5 397B MoE, 17B active (Feb 2026)"
+    },
+    "qwen-qwen3.5-flash": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0004,
+      "note": "Qwen 3.5 Flash via provider format"
+    },
+    "dashscope/qwen3.5-flash": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0004,
+      "note": "Qwen 3.5 Flash via Alibaba Cloud dashscope"
+    },
+    "dashscope/qwen3.5": {
+      "promptPrice": 0.00055,
+      "completionPrice": 0.0035,
+      "note": "Qwen 3.5 flagship via Alibaba Cloud dashscope"
+    },
+    "Qwen/Qwen3.5-0.8B": {
+      "promptPrice": 5e-05,
+      "completionPrice": 0.0001,
+      "note": "Qwen 3.5 Small 0.8B (Mar 2026) - open source, on-device"
+    },
+    "Qwen/Qwen3.5-2B": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "Qwen 3.5 Small 2B (Mar 2026) - open source, on-device"
+    },
+    "Qwen/Qwen3.5-4B": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "Qwen 3.5 Small 4B (Mar 2026) - open source, on-device"
+    },
+    "Qwen/Qwen3.5-9B": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.001,
+      "note": "Qwen 3.5 Small 9B (Mar 2026) - open source, on-device"
+    },
+    "Qwen/Qwen3.5-27B": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0024,
+      "note": "Qwen 3.5 27B dense model (Feb 2026) - HuggingFace"
+    },
+    "Qwen/Qwen3.5-35B-A3B": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.002,
+      "note": "Qwen 3.5 35B MoE, 3B active (Feb 2026) - HuggingFace"
+    },
+    "Qwen/Qwen3.5-122B-A10B": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0032,
+      "note": "Qwen 3.5 122B MoE, 10B active (Feb 2026) - HuggingFace"
+    },
+    "Qwen/Qwen3.5-397B-A17B": {
+      "promptPrice": 0.00055,
+      "completionPrice": 0.0035,
+      "note": "Qwen 3.5 397B MoE, 17B active (Feb 2026) - HuggingFace flagship"
+    },
+    "qwen3.5:0.8b": {
+      "promptPrice": 5e-05,
+      "completionPrice": 0.0001,
+      "note": "Ollama variant of Qwen 3.5 0.8B"
+    },
+    "qwen3.5:2b": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "Ollama variant of Qwen 3.5 2B"
+    },
+    "qwen3.5:4b": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "Ollama variant of Qwen 3.5 4B"
+    },
+    "qwen3.5:9b": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.001,
+      "note": "Ollama variant of Qwen 3.5 9B"
+    },
+    "qwen3.5:27b": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0024,
+      "note": "Ollama variant of Qwen 3.5 27B"
+    },
+    "CohereLabs/tiny-aya-global": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "Cohere Tiny Aya Global 3.35B (Feb 2026) - 70 languages, open source"
+    },
+    "tiny-aya": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0006,
+      "note": "Cohere Tiny Aya 3.35B (Feb 2026) - 70 languages, open source"
+    },
+    "arcee-ai/Trinity-Large-Preview": {
+      "promptPrice": 0,
+      "completionPrice": 0,
+      "note": "Arcee AI Trinity Large 400B MoE - free during preview period"
+    },
+    "gemini-3-flash": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.003,
+      "note": "Google Gemini 3 Flash (Jan 2026) - outperforms 2.5 Pro"
+    },
+    "gemini-3-flash-preview": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.003,
+      "note": "Google Gemini 3 Flash Preview (Jan 2026)"
+    },
+    "gemini/gemini-3-flash": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.003,
+      "note": "Google Gemini 3 Flash (Jan 2026)"
+    },
+    "gemini-3.1-pro-preview": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.012,
+      "note": "Google Gemini 3.1 Pro Preview (Mar 2026) - 1M context, <=200K pricing"
+    },
+    "gemini/gemini-3.1-pro-preview": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.012,
+      "note": "Google Gemini 3.1 Pro Preview (Mar 2026)"
+    },
+    "gemini-3.1-flash-lite": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.0015,
+      "note": "Google Gemini 3.1 Flash-Lite (Mar 2026) - cost-effective, 2.5x faster TTFA"
+    },
+    "gemini/gemini-3.1-flash-lite": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.0015,
+      "note": "Google Gemini 3.1 Flash-Lite (Mar 2026)"
+    },
+    "gpt-5.2": {
+      "promptPrice": 0.00175,
+      "completionPrice": 0.014,
+      "note": "OpenAI GPT-5.2 (Dec 2025) - 400K context"
+    },
+    "gpt-5.2-2025-12-10": {
+      "promptPrice": 0.00175,
+      "completionPrice": 0.014,
+      "note": "OpenAI GPT-5.2 (Dec 2025) - 400K context"
+    },
+    "gpt-5.2-pro": {
+      "promptPrice": 0.021,
+      "completionPrice": 0.168,
+      "note": "OpenAI GPT-5.2 Pro - premium tier, 200K context"
+    },
+    "grok-4.20": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015,
+      "note": "xAI Grok 4.20 - upcoming, pricing TBD (estimated based on Grok 4)"
+    },
+    "grok-4.1-fast": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0005,
+      "note": "xAI Grok 4.1 Fast (2026) - budget model, 2M context"
+    },
+    "mistral-medium-3.1": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.002,
+      "note": "Mistral Medium 3.1 (Aug 2025) - frontier-class multimodal"
+    },
+    "mistral-medium-3-1": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.002,
+      "note": "Mistral Medium 3.1 (Aug 2025) - frontier-class multimodal"
+    },
+    "mistral/mistral-medium-3.1": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.002,
+      "note": "Mistral Medium 3.1 via Mistral provider"
+    },
+    "mistral-small-creative": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Mistral Small Creative (Labs) - creative writing variant"
+    },
+    "mistral/mistral-small-creative": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Mistral Small Creative via Mistral provider"
+    },
+    "mistral-ocr-latest": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.001,
+      "note": "Mistral dedicated OCR model - $1.00/1K pages, token-based pricing estimated"
+    },
+    "mistral-ocr-2512": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.002,
+      "note": "Mistral OCR 3 (Dec 2025) - $2.00/1K pages, improved tables and handwriting"
+    },
+    "mistral/mistral-ocr-latest": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.001,
+      "note": "Mistral OCR via provider prefix"
+    },
+    "mistral/mistral-ocr-2512": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.002,
+      "note": "Mistral OCR 3 via provider prefix"
+    },
+    "qwen-vl-ocr": {
+      "promptPrice": 7e-05,
+      "completionPrice": 0.00016,
+      "note": "Qwen dedicated OCR model - $0.07/1M input, $0.16/1M output (international)"
+    },
+    "qwen-vl-ocr-latest": {
+      "promptPrice": 7e-05,
+      "completionPrice": 0.00016,
+      "note": "Qwen dedicated OCR model latest alias"
+    },
+    "dashscope/qwen-vl-ocr": {
+      "promptPrice": 7e-05,
+      "completionPrice": 0.00016,
+      "note": "Qwen OCR via DashScope provider"
+    },
+    "qwen2.5-vl-72b-instruct": {
+      "promptPrice": 0.002294,
+      "completionPrice": 0.006881,
+      "note": "Qwen 2.5 VL 72B - vision-language model with OCR capabilities"
+    },
+    "qwen2.5-vl-32b-instruct": {
+      "promptPrice": 0.001147,
+      "completionPrice": 0.003441,
+      "note": "Qwen 2.5 VL 32B - vision-language model with OCR capabilities"
+    },
+    "qwen2.5-vl-7b-instruct": {
+      "promptPrice": 0.000287,
+      "completionPrice": 0.000717,
+      "note": "Qwen 2.5 VL 7B - vision-language model with OCR capabilities"
+    },
+    "qwen2.5-vl-3b-instruct": {
+      "promptPrice": 0.000173,
+      "completionPrice": 0.000517,
+      "note": "Qwen 2.5 VL 3B - vision-language model with OCR capabilities"
+    },
+    "Qwen/Qwen2.5-VL-72B-Instruct": {
+      "promptPrice": 0.002294,
+      "completionPrice": 0.006881,
+      "note": "Qwen 2.5 VL 72B HuggingFace format"
+    },
+    "Qwen/Qwen2.5-VL-7B-Instruct": {
+      "promptPrice": 0.000287,
+      "completionPrice": 0.000717,
+      "note": "Qwen 2.5 VL 7B HuggingFace format"
+    },
+    "ibm-granite/granite-vision-3.2-2b": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0001,
+      "note": "IBM Granite Vision 3.2 2B - OCR capable, #2 on OCRBench leaderboard"
+    },
+    "ibm-granite/granite-docling-258M": {
+      "promptPrice": 0,
+      "completionPrice": 0,
+      "note": "IBM Granite Docling 258M - free open-source document conversion model"
+    },
+    "deepseek-ai/DeepSeek-OCR-2": {
+      "promptPrice": 0.00003,
+      "completionPrice": 0.0001,
+      "note": "DeepSeek OCR 2 (Jan 2026) - open-source OCR model"
     }
   },
   "speech_to_text": {
