@@ -1362,7 +1362,7 @@ See [Contributing.md](Contributing.md) for detailed contribution guidelines.
 
 **Join our Community:**
 - GitHub Discussions: [Share ideas and questions]
-- Discord: [Coming soon - Real-time chat]
+- Discord: [Join our Discord](https://discord.gg/RHExMxVS)
 - Twitter/X: [@genai_otel]
 - Blog: [Technical deep-dives and updates]
 
