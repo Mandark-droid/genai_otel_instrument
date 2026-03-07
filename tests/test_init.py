@@ -11,8 +11,10 @@ from genai_otel.config import OTelConfig
 def test_instrument_success():
     """Test successful instrumentation initialization."""
     # Mock the actual implementation paths, not the re-exported names
-    with patch("genai_otel.OTelConfig") as mock_otel_config:
-        with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
+    with patch("genai_otel.config.OTelConfig") as mock_otel_config:
+        with patch(
+            "genai_otel.auto_instrument.setup_auto_instrumentation"
+        ) as mock_setup_auto_instrumentation:
             with patch("genai_otel.logger") as mock_logger:
                 mock_config_instance = MagicMock(spec=OTelConfig)
                 mock_otel_config.return_value = mock_config_instance
@@ -32,8 +34,10 @@ def test_instrument_success():
 
 def test_instrument_with_kwargs():
     """Test instrumentation with custom keyword arguments."""
-    with patch("genai_otel.OTelConfig") as mock_otel_config:
-        with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
+    with patch("genai_otel.config.OTelConfig") as mock_otel_config:
+        with patch(
+            "genai_otel.auto_instrument.setup_auto_instrumentation"
+        ) as mock_setup_auto_instrumentation:
             with patch("genai_otel.logger") as mock_logger:
                 mock_config_instance = MagicMock(spec=OTelConfig)
                 mock_otel_config.return_value = mock_config_instance
@@ -55,8 +59,10 @@ def test_instrument_with_kwargs():
 
 def test_instrument_failure_no_fail_on_error():
     """Test instrumentation failure when fail_on_error is False (default)."""
-    with patch("genai_otel.OTelConfig") as mock_otel_config:
-        with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
+    with patch("genai_otel.config.OTelConfig") as mock_otel_config:
+        with patch(
+            "genai_otel.auto_instrument.setup_auto_instrumentation"
+        ) as mock_setup_auto_instrumentation:
             with patch("genai_otel.logger") as mock_logger:
                 mock_config_instance = MagicMock(spec=OTelConfig)
                 mock_otel_config.return_value = mock_config_instance
@@ -81,8 +87,10 @@ def test_instrument_failure_no_fail_on_error():
 
 def test_instrument_failure_with_fail_on_error_kwarg():
     """Test instrumentation failure when fail_on_error is True via kwarg."""
-    with patch("genai_otel.OTelConfig") as mock_otel_config:
-        with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
+    with patch("genai_otel.config.OTelConfig") as mock_otel_config:
+        with patch(
+            "genai_otel.auto_instrument.setup_auto_instrumentation"
+        ) as mock_setup_auto_instrumentation:
             with patch("genai_otel.logger") as mock_logger:
                 mock_config_instance = MagicMock(spec=OTelConfig)
                 mock_otel_config.return_value = mock_config_instance
@@ -109,8 +117,10 @@ def test_instrument_failure_with_fail_on_error_env_var(monkeypatch):
     """Test instrumentation failure when GENAI_FAIL_ON_ERROR env var is True."""
     monkeypatch.setenv("GENAI_FAIL_ON_ERROR", "true")
 
-    with patch("genai_otel.OTelConfig") as mock_otel_config:
-        with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
+    with patch("genai_otel.config.OTelConfig") as mock_otel_config:
+        with patch(
+            "genai_otel.auto_instrument.setup_auto_instrumentation"
+        ) as mock_setup_auto_instrumentation:
             with patch("genai_otel.logger") as mock_logger:
                 mock_config_instance = MagicMock(spec=OTelConfig)
                 mock_otel_config.return_value = mock_config_instance
@@ -138,8 +148,8 @@ def test_instrument_kwargs_override_env_vars(monkeypatch):
     monkeypatch.setenv("OTEL_SERVICE_NAME", "env-service")
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://env-endpoint")
 
-    with patch("genai_otel.OTelConfig") as mock_otel_config:
-        with patch("genai_otel.setup_auto_instrumentation"):
+    with patch("genai_otel.config.OTelConfig") as mock_otel_config:
+        with patch("genai_otel.auto_instrument.setup_auto_instrumentation"):
             with patch("genai_otel.logger"):
                 mock_config_instance = MagicMock(spec=OTelConfig)
                 mock_otel_config.return_value = mock_config_instance
@@ -159,8 +169,10 @@ def test_instrument_kwargs_override_env_vars(monkeypatch):
 
 def test_instrument_metrics_setup_failure():
     """Test instrumentation when metrics setup fails but doesn't break everything."""
-    with patch("genai_otel.OTelConfig") as mock_otel_config:
-        with patch("genai_otel.setup_auto_instrumentation") as mock_setup_auto_instrumentation:
+    with patch("genai_otel.config.OTelConfig") as mock_otel_config:
+        with patch(
+            "genai_otel.auto_instrument.setup_auto_instrumentation"
+        ) as mock_setup_auto_instrumentation:
             with patch("genai_otel.logger") as mock_logger:
                 mock_config_instance = MagicMock(spec=OTelConfig)
                 mock_otel_config.return_value = mock_config_instance
