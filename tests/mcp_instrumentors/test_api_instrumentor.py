@@ -18,7 +18,8 @@ class TestAPIInstrumentor(unittest.TestCase):
 
     @patch("genai_otel.mcp_instrumentors.api_instrumentor.logger")
     @patch("genai_otel.mcp_instrumentors.api_instrumentor.wrapt")
-    def test_instrument_httpx_success(self, mock_wrapt, mock_logger):
+    @patch("genai_otel.mcp_instrumentors.api_instrumentor.httpx", new_callable=MagicMock)
+    def test_instrument_httpx_success(self, mock_httpx, mock_wrapt, mock_logger):
         """Test successful instrumentation of httpx"""
         instrumentor = APIInstrumentor(self.config)
         instrumentor.instrument(self.config)
@@ -29,19 +30,21 @@ class TestAPIInstrumentor(unittest.TestCase):
 
     @patch("genai_otel.mcp_instrumentors.api_instrumentor.logger")
     @patch("genai_otel.mcp_instrumentors.api_instrumentor.wrapt")
+    @patch("genai_otel.mcp_instrumentors.api_instrumentor.httpx", None)
     def test_instrument_httpx_import_error(self, mock_wrapt, mock_logger):
         """Test handling of httpx ImportError"""
-        mock_wrapt.wrap_function_wrapper.side_effect = ImportError("No httpx module")
-
         instrumentor = APIInstrumentor(self.config)
         instrumentor.instrument(self.config)
 
-        # Verify debug log for import error
+        # When httpx is None, the instrumentor logs debug and skips
         mock_logger.debug.assert_called_with("httpx library not found, skipping instrumentation.")
 
     @patch("genai_otel.mcp_instrumentors.api_instrumentor.logger")
     @patch("genai_otel.mcp_instrumentors.api_instrumentor.wrapt")
-    def test_instrument_httpx_exception_fail_on_error_false(self, mock_wrapt, mock_logger):
+    @patch("genai_otel.mcp_instrumentors.api_instrumentor.httpx", new_callable=MagicMock)
+    def test_instrument_httpx_exception_fail_on_error_false(
+        self, mock_httpx, mock_wrapt, mock_logger
+    ):
         """Test handling of exceptions when fail_on_error is False"""
         mock_wrapt.wrap_function_wrapper.side_effect = RuntimeError("Wrapping failed")
 
@@ -54,7 +57,10 @@ class TestAPIInstrumentor(unittest.TestCase):
 
     @patch("genai_otel.mcp_instrumentors.api_instrumentor.logger")
     @patch("genai_otel.mcp_instrumentors.api_instrumentor.wrapt")
-    def test_instrument_httpx_exception_fail_on_error_true(self, mock_wrapt, mock_logger):
+    @patch("genai_otel.mcp_instrumentors.api_instrumentor.httpx", new_callable=MagicMock)
+    def test_instrument_httpx_exception_fail_on_error_true(
+        self, mock_httpx, mock_wrapt, mock_logger
+    ):
         """Test that exceptions are raised when fail_on_error is True"""
         mock_wrapt.wrap_function_wrapper.side_effect = RuntimeError("Wrapping failed")
 
