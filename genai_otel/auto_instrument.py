@@ -36,7 +36,6 @@ from .evaluation.config import (
     RestrictedTopicsConfig,
     ToxicityConfig,
 )
-from .evaluation.span_processor import EvaluationSpanProcessor
 from .evaluation_enriching_exporter import EvaluationEnrichingSpanExporter
 from .gpu_metrics import GPUMetricsCollector
 from .litellm_span_enrichment_processor import LiteLLMSpanEnrichmentProcessor
@@ -53,15 +52,7 @@ from .metrics import (
     _MCP_PAYLOAD_SIZE_BUCKETS,
 )
 
-# Import semantic conventions
-try:
-    from openlit.semcov import SemanticConvention as SC
-except ImportError:
-    # Fallback if openlit not available
-    class SC:
-        GEN_AI_CLIENT_OPERATION_DURATION = "gen_ai.client.operation.duration"
-        GEN_AI_SERVER_TTFT = "gen_ai.server.ttft"
-        GEN_AI_SERVER_TBT = "gen_ai.server.tbt"
+from .semconv import SemanticConvention as SC
 
 
 # Import instrumentors - fix the import path based on your actual structure
@@ -139,20 +130,42 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Optional OpenInference instrumentors (requires Python >= 3.10)
-try:
-    from openinference.instrumentation.litellm import LiteLLMInstrumentor  # noqa: E402
-    from openinference.instrumentation.mcp import MCPInstrumentor  # noqa: E402
-    from openinference.instrumentation.smolagents import (  # noqa: E402
-        SmolagentsInstrumentor,
-    )
+# OpenInference instrumentors are loaded lazily to avoid importing litellm (~10s)
+# at module import time. They are resolved in setup_auto_instrumentation() instead.
+OPENINFERENCE_AVAILABLE = None  # Tri-state: None=not checked, True/False=result
 
-    OPENINFERENCE_AVAILABLE = True
-except ImportError:
-    LiteLLMInstrumentor = None
-    MCPInstrumentor = None
-    SmolagentsInstrumentor = None
-    OPENINFERENCE_AVAILABLE = False
+# Re-entrancy guard to prevent double-instrumentation
+_INSTRUMENTATION_INITIALIZED = False
+# Track active providers/collectors for uninstrument()
+_active_tracer_provider = None
+_active_meter_provider = None
+_active_gpu_collector = None
+
+
+def _check_openinference():
+    """Lazily check and import OpenInference instrumentors (requires Python >= 3.10)."""
+    global OPENINFERENCE_AVAILABLE
+    if OPENINFERENCE_AVAILABLE is not None:
+        return OPENINFERENCE_AVAILABLE
+    try:
+        from openinference.instrumentation.litellm import LiteLLMInstrumentor  # noqa: E402
+        from openinference.instrumentation.mcp import MCPInstrumentor  # noqa: E402
+        from openinference.instrumentation.smolagents import (  # noqa: E402
+            SmolagentsInstrumentor,
+        )
+
+        INSTRUMENTORS.update(
+            {
+                "smolagents": SmolagentsInstrumentor,
+                "litellm": LiteLLMInstrumentor,
+                "mcp": MCPInstrumentor,
+            }
+        )
+        OPENINFERENCE_AVAILABLE = True
+    except ImportError:
+        OPENINFERENCE_AVAILABLE = False
+    return OPENINFERENCE_AVAILABLE
+
 
 # Defines the available instrumentors. This is now at the module level for easier mocking in tests.
 INSTRUMENTORS = {
@@ -191,23 +204,62 @@ INSTRUMENTORS = {
     "transformers": HuggingFaceInstrumentor,
 }
 
-# Add OpenInference instrumentors if available (requires Python >= 3.10)
-# IMPORTANT: Order matters! Load in this specific sequence:
-# 1. smolagents - instruments the agent framework
-# 2. litellm - instruments LLM calls made by agents
-# 3. mcp - instruments Model Context Protocol tools
-if OPENINFERENCE_AVAILABLE:
-    INSTRUMENTORS.update(
-        {
-            "smolagents": SmolagentsInstrumentor,
-            "litellm": LiteLLMInstrumentor,
-            "mcp": MCPInstrumentor,
-        }
-    )
+# OpenInference instrumentors (smolagents, litellm, mcp) are added to INSTRUMENTORS
+# lazily via _check_openinference() called in setup_auto_instrumentation()
 
 
-# Global list to store OTLP exporter sessions that should not be instrumented
-_OTLP_EXPORTER_SESSIONS = []
+def _setup_meter_provider(resource, metric_reader):
+    """Create and configure the MeterProvider with histogram Views.
+
+    Args:
+        resource: OpenTelemetry Resource for the meter provider.
+        metric_reader: The metric reader (OTLP or Console).
+    """
+    views = [
+        View(
+            instrument_name=SC.GEN_AI_CLIENT_OPERATION_DURATION,
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS
+            ),
+        ),
+        View(
+            instrument_name="mcp.client.operation.duration",
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_MCP_CLIENT_OPERATION_DURATION_BUCKETS
+            ),
+        ),
+        View(
+            instrument_name="mcp.request.size",
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_MCP_PAYLOAD_SIZE_BUCKETS),
+        ),
+        View(
+            instrument_name="mcp.response.size",
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_MCP_PAYLOAD_SIZE_BUCKETS),
+        ),
+        View(
+            instrument_name=SC.GEN_AI_SERVER_TTFT,
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TFTT),
+        ),
+        View(
+            instrument_name=SC.GEN_AI_SERVER_TBT,
+            aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TBT),
+        ),
+        View(
+            instrument_name="gen_ai.client.token.usage.prompt",
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
+            ),
+        ),
+        View(
+            instrument_name="gen_ai.client.token.usage.completion",
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
+            ),
+        ),
+    ]
+    meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader], views=views)
+    metrics.set_meter_provider(meter_provider)
+    return meter_provider
 
 
 def setup_auto_instrumentation(config: OTelConfig):
@@ -217,8 +269,15 @@ def setup_auto_instrumentation(config: OTelConfig):
     Args:
         config: OTelConfig instance with configuration parameters.
     """
-    global _OTLP_EXPORTER_SESSIONS
+    global _INSTRUMENTATION_INITIALIZED
+    if _INSTRUMENTATION_INITIALIZED:
+        logger.warning("Auto-instrumentation already initialized, skipping re-initialization")
+        return
     logger.info("Starting auto-instrumentation setup...")
+
+    # Lazily check and register OpenInference instrumentors (smolagents, litellm, mcp)
+    # This defers the heavy litellm import (~10s) to instrumentation time, not package import.
+    _check_openinference()
 
     # Configure OpenTelemetry SDK (TracerProvider, MeterProvider, etc.)
     import os
@@ -233,7 +292,18 @@ def setup_auto_instrumentation(config: OTelConfig):
     resource = Resource.create(resource_attributes)
 
     # Configure Tracing
-    tracer_provider = TracerProvider(resource=resource)
+    global _active_tracer_provider, _active_meter_provider
+
+    # Apply sampling rate if configured (< 1.0 means probabilistic sampling)
+    sampler = None
+    if config.sampling_rate < 1.0:
+        from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
+
+        sampler = TraceIdRatioBased(config.sampling_rate)
+        logger.info("Trace sampling rate set to %s", config.sampling_rate)
+
+    tracer_provider = TracerProvider(resource=resource, sampler=sampler)
+    _active_tracer_provider = tracer_provider
     trace.set_tracer_provider(tracer_provider)
     from opentelemetry.propagate import set_global_textmap
     from opentelemetry.trace.propagation.tracecontext import (
@@ -254,7 +324,7 @@ def setup_auto_instrumentation(config: OTelConfig):
             tracer_provider.add_span_processor(cost_processor)
             logger.info("Cost enrichment processor added")
         except Exception as e:
-            logger.warning(f"Failed to add cost enrichment processor: {e}", exc_info=True)
+            logger.warning("Failed to add cost enrichment processor: %s", e, exc_info=True)
 
     # Add LiteLLM span enrichment processor for evaluation support
     # This enriches LiteLLM spans (created by OpenInference) with standardized attributes
@@ -265,7 +335,7 @@ def setup_auto_instrumentation(config: OTelConfig):
             tracer_provider.add_span_processor(litellm_enrichment_processor)
             logger.info("LiteLLM span enrichment processor added for evaluation support")
         except Exception as e:
-            logger.warning(f"Failed to add LiteLLM span enrichment processor: {e}", exc_info=True)
+            logger.warning("Failed to add LiteLLM span enrichment processor: %s", e, exc_info=True)
 
     # Add Smolagents span enrichment processor for evaluation support
     # This enriches Smolagents spans (created by OpenInference) with standardized attributes
@@ -276,7 +346,7 @@ def setup_auto_instrumentation(config: OTelConfig):
             logger.info("Smolagents span enrichment processor added for evaluation support")
         except Exception as e:
             logger.warning(
-                f"Failed to add Smolagents span enrichment processor: {e}", exc_info=True
+                "Failed to add Smolagents span enrichment processor: %s", e, exc_info=True
             )
 
     # Add MCP span enrichment processor for evaluation support
@@ -287,7 +357,7 @@ def setup_auto_instrumentation(config: OTelConfig):
             tracer_provider.add_span_processor(mcp_enrichment_processor)
             logger.info("MCP span enrichment processor added for evaluation support")
         except Exception as e:
-            logger.warning(f"Failed to add MCP span enrichment processor: {e}", exc_info=True)
+            logger.warning("Failed to add MCP span enrichment processor: %s", e, exc_info=True)
 
     # Add evaluation and safety span processor (v0.2.0)
     # Store the evaluation processor so we can wrap it in the exporter chain
@@ -361,7 +431,10 @@ def setup_auto_instrumentation(config: OTelConfig):
                     threshold=config.hallucination_threshold,
                 )
 
-            # Create and add evaluation processor
+            # Create and add evaluation processor (lazy import to avoid loading
+            # heavy ML dependencies like spacy/torch at package import time)
+            from .evaluation.span_processor import EvaluationSpanProcessor
+
             evaluation_processor = EvaluationSpanProcessor(
                 pii_config=pii_config,
                 toxicity_config=toxicity_config,
@@ -373,9 +446,9 @@ def setup_auto_instrumentation(config: OTelConfig):
             tracer_provider.add_span_processor(evaluation_processor)
             logger.info("Evaluation and safety span processor added")
         except Exception as e:
-            logger.warning(f"Failed to add evaluation span processor: {e}", exc_info=True)
+            logger.warning("Failed to add evaluation span processor: %s", e, exc_info=True)
 
-    logger.debug(f"OTelConfig endpoint: {config.endpoint}")
+    logger.debug("OTelConfig endpoint: %s", config.endpoint)
     if config.endpoint:
         # Use timeout from config (already validated as int)
         timeout = config.exporter_timeout
@@ -405,7 +478,7 @@ def setup_auto_instrumentation(config: OTelConfig):
         if existing:
             excluded_urls.append(existing)
         os.environ["OTEL_PYTHON_REQUESTS_EXCLUDED_URLS"] = ",".join(excluded_urls)
-        logger.info(f"Excluded OTLP endpoints from instrumentation: {base_url}")
+        logger.info("Excluded OTLP endpoints from instrumentation: %s", base_url)
 
         # Set timeout in environment variable as integer string (OTLP exporters expect int)
         os.environ["OTEL_EXPORTER_OTLP_TIMEOUT"] = str(timeout)
@@ -415,8 +488,6 @@ def setup_auto_instrumentation(config: OTelConfig):
         otlp_protocol = os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "").lower()
         if not otlp_protocol:
             # Detect from port: 4317 = gRPC, 4318 = HTTP
-            from urllib.parse import urlparse
-
             parsed_endpoint = urlparse(base_url)
             if parsed_endpoint.port == 4317:
                 otlp_protocol = "grpc"
@@ -431,7 +502,7 @@ def setup_auto_instrumentation(config: OTelConfig):
             metric_exporter = GrpcOTLPMetricExporter(
                 headers=config.headers,
             )
-            logger.info(f"Using OTLP gRPC protocol (endpoint: {base_url})")
+            logger.info("Using OTLP gRPC protocol (endpoint: %s)", base_url)
         else:
             # Default to HTTP
             span_exporter = OTLPSpanExporter(
@@ -440,7 +511,7 @@ def setup_auto_instrumentation(config: OTelConfig):
             metric_exporter = OTLPMetricExporter(
                 headers=config.headers,
             )
-            logger.info(f"Using OTLP HTTP protocol (endpoint: {base_url})")
+            logger.info("Using OTLP HTTP protocol (endpoint: %s)", base_url)
 
         # Build the exporter chain: span_exporter -> cost enrichment -> evaluation enrichment
         # Each wrapper enriches ReadableSpan objects before passing to the next exporter
@@ -458,81 +529,14 @@ def setup_auto_instrumentation(config: OTelConfig):
 
         tracer_provider.add_span_processor(BatchSpanProcessor(final_exporter))
         logger.info(
-            f"OpenTelemetry tracing configured with OTLP endpoint: {span_exporter._endpoint}"
+            "OpenTelemetry tracing configured with OTLP endpoint: %s", span_exporter._endpoint
         )
 
         # Configure Metrics with Views for histogram buckets
         metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
-
-        # Create Views to configure histogram buckets for GenAI operation duration
-        duration_view = View(
-            instrument_name=SC.GEN_AI_CLIENT_OPERATION_DURATION,
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS
-            ),
-        )
-
-        # Create Views for MCP metrics histograms
-        mcp_duration_view = View(
-            instrument_name="mcp.client.operation.duration",
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_MCP_CLIENT_OPERATION_DURATION_BUCKETS
-            ),
-        )
-
-        mcp_request_size_view = View(
-            instrument_name="mcp.request.size",
-            aggregation=ExplicitBucketHistogramAggregation(boundaries=_MCP_PAYLOAD_SIZE_BUCKETS),
-        )
-
-        mcp_response_size_view = View(
-            instrument_name="mcp.response.size",
-            aggregation=ExplicitBucketHistogramAggregation(boundaries=_MCP_PAYLOAD_SIZE_BUCKETS),
-        )
-
-        # Create Views for streaming metrics (Phase 3.4)
-        ttft_view = View(
-            instrument_name=SC.GEN_AI_SERVER_TTFT,
-            aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TFTT),
-        )
-
-        tbt_view = View(
-            instrument_name=SC.GEN_AI_SERVER_TBT,
-            aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TBT),
-        )
-
-        # Create Views for token distribution histograms
-        prompt_tokens_view = View(
-            instrument_name="gen_ai.client.token.usage.prompt",
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
-            ),
-        )
-
-        completion_tokens_view = View(
-            instrument_name="gen_ai.client.token.usage.completion",
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
-            ),
-        )
-
-        meter_provider = MeterProvider(
-            resource=resource,
-            metric_readers=[metric_reader],
-            views=[
-                duration_view,
-                mcp_duration_view,
-                mcp_request_size_view,
-                mcp_response_size_view,
-                ttft_view,
-                tbt_view,
-                prompt_tokens_view,
-                completion_tokens_view,
-            ],
-        )
-        metrics.set_meter_provider(meter_provider)
+        _active_meter_provider = _setup_meter_provider(resource, metric_reader)
         logger.info(
-            f"OpenTelemetry metrics configured with OTLP endpoint: {metric_exporter._endpoint}"
+            "OpenTelemetry metrics configured with OTLP endpoint: %s", metric_exporter._endpoint
         )
     else:
         # Configure Console Exporters if no OTLP endpoint is set
@@ -553,74 +557,7 @@ def setup_auto_instrumentation(config: OTelConfig):
 
         metric_exporter = ConsoleMetricExporter()
         metric_reader = PeriodicExportingMetricReader(exporter=metric_exporter)
-
-        # Create Views to configure histogram buckets (same as OTLP path)
-        duration_view = View(
-            instrument_name=SC.GEN_AI_CLIENT_OPERATION_DURATION,
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS
-            ),
-        )
-
-        # Create Views for MCP metrics histograms
-        mcp_duration_view = View(
-            instrument_name="mcp.client.operation.duration",
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_MCP_CLIENT_OPERATION_DURATION_BUCKETS
-            ),
-        )
-
-        mcp_request_size_view = View(
-            instrument_name="mcp.request.size",
-            aggregation=ExplicitBucketHistogramAggregation(boundaries=_MCP_PAYLOAD_SIZE_BUCKETS),
-        )
-
-        mcp_response_size_view = View(
-            instrument_name="mcp.response.size",
-            aggregation=ExplicitBucketHistogramAggregation(boundaries=_MCP_PAYLOAD_SIZE_BUCKETS),
-        )
-
-        # Create Views for streaming metrics (Phase 3.4)
-        ttft_view = View(
-            instrument_name=SC.GEN_AI_SERVER_TTFT,
-            aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TFTT),
-        )
-
-        tbt_view = View(
-            instrument_name=SC.GEN_AI_SERVER_TBT,
-            aggregation=ExplicitBucketHistogramAggregation(boundaries=_GEN_AI_SERVER_TBT),
-        )
-
-        # Create Views for token distribution histograms
-        prompt_tokens_view = View(
-            instrument_name="gen_ai.client.token.usage.prompt",
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
-            ),
-        )
-
-        completion_tokens_view = View(
-            instrument_name="gen_ai.client.token.usage.completion",
-            aggregation=ExplicitBucketHistogramAggregation(
-                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
-            ),
-        )
-
-        meter_provider = MeterProvider(
-            resource=resource,
-            metric_readers=[metric_reader],
-            views=[
-                duration_view,
-                mcp_duration_view,
-                mcp_request_size_view,
-                mcp_response_size_view,
-                ttft_view,
-                tbt_view,
-                prompt_tokens_view,
-                completion_tokens_view,
-            ],
-        )
-        metrics.set_meter_provider(meter_provider)
+        _active_meter_provider = _setup_meter_provider(resource, metric_reader)
         logger.info("No OTLP endpoint configured, metrics will be exported to console.")
 
     # OpenInference instrumentors that use different API (no config parameter)
@@ -642,13 +579,13 @@ def setup_auto_instrumentation(config: OTelConfig):
                 else:
                     instrumentor.instrument(config=config)
 
-                logger.info(f"{name} instrumentation enabled")
+                logger.info("%s instrumentation enabled", name)
             except Exception as e:
-                logger.error(f"Failed to instrument {name}: {e}", exc_info=True)
+                logger.error("Failed to instrument %s: %s", name, e, exc_info=True)
                 if config.fail_on_error:
                     raise
         else:
-            logger.warning(f"Unknown instrumentor '{name}' requested.")
+            logger.warning("Unknown instrumentor '%s' requested.", name)
 
     # Auto-instrument MCP tools (databases, APIs, etc.)
     # NOTE: OTLP endpoints are excluded via OTEL_PYTHON_REQUESTS_EXCLUDED_URLS set above
@@ -658,7 +595,7 @@ def setup_auto_instrumentation(config: OTelConfig):
             mcp_manager.instrument_all(config.fail_on_error)
             logger.info("MCP tools instrumentation enabled and set up.")
         except Exception as e:
-            logger.error(f"Failed to set up MCP tools instrumentation: {e}", exc_info=True)
+            logger.error("Failed to set up MCP tools instrumentation: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
 
@@ -666,17 +603,18 @@ def setup_auto_instrumentation(config: OTelConfig):
     if config.enable_gpu_metrics:
         try:
             meter_provider = metrics.get_meter_provider()
-            gpu_collector = GPUMetricsCollector(
+            global _active_gpu_collector
+            _active_gpu_collector = GPUMetricsCollector(
                 meter_provider.get_meter("genai.gpu"),
                 config,
                 interval=config.gpu_collection_interval,
             )
-            gpu_collector.start()
+            _active_gpu_collector.start()
             logger.info(
-                f"GPU metrics collection started (interval: {config.gpu_collection_interval}s)."
+                "GPU metrics collection started (interval: %ss).", config.gpu_collection_interval
             )
         except Exception as e:
-            logger.error(f"Failed to start GPU metrics collection: {e}", exc_info=True)
+            logger.error("Failed to start GPU metrics collection: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
 
@@ -686,10 +624,11 @@ def setup_auto_instrumentation(config: OTelConfig):
         initialize_server_metrics(meter_provider.get_meter("genai.server"))
         logger.info("Server metrics collector initialized (KV cache, request queue)")
     except Exception as e:
-        logger.error(f"Failed to initialize server metrics: {e}", exc_info=True)
+        logger.error("Failed to initialize server metrics: %s", e, exc_info=True)
         if config.fail_on_error:
             raise
 
+    _INSTRUMENTATION_INITIALIZED = True
     logger.info("Auto-instrumentation setup complete")
 
 
@@ -711,3 +650,48 @@ def instrument(**kwargs):
 
     # Call the main setup function
     setup_auto_instrumentation(config)
+
+
+def uninstrument():
+    """Shut down OpenTelemetry providers and allow re-instrumentation.
+
+    Stops GPU metrics collection, flushes and shuts down the TracerProvider
+    and MeterProvider, and resets the initialization guard so that
+    ``instrument()`` can be called again.
+    """
+    global _INSTRUMENTATION_INITIALIZED, _active_tracer_provider
+    global _active_meter_provider, _active_gpu_collector
+
+    if not _INSTRUMENTATION_INITIALIZED:
+        logger.debug("Instrumentation not initialized, nothing to uninstrument")
+        return
+
+    # Stop GPU collector
+    if _active_gpu_collector is not None:
+        try:
+            _active_gpu_collector.stop()
+            logger.info("GPU metrics collector stopped")
+        except Exception as e:
+            logger.debug("Error stopping GPU collector: %s", e)
+        _active_gpu_collector = None
+
+    # Shut down TracerProvider (flushes pending spans)
+    if _active_tracer_provider is not None:
+        try:
+            _active_tracer_provider.shutdown()
+            logger.info("TracerProvider shut down")
+        except Exception as e:
+            logger.debug("Error shutting down TracerProvider: %s", e)
+        _active_tracer_provider = None
+
+    # Shut down MeterProvider (flushes pending metrics)
+    if _active_meter_provider is not None:
+        try:
+            _active_meter_provider.shutdown()
+            logger.info("MeterProvider shut down")
+        except Exception as e:
+            logger.debug("Error shutting down MeterProvider: %s", e)
+        _active_meter_provider = None
+
+    _INSTRUMENTATION_INITIALIZED = False
+    logger.info("Instrumentation teardown complete")

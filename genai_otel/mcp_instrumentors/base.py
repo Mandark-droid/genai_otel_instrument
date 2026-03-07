@@ -6,6 +6,7 @@ all MCP instrumentors (databases, APIs, vector DBs, etc.).
 """
 
 import logging
+import threading
 from typing import Optional
 
 from opentelemetry import metrics
@@ -13,16 +14,7 @@ from opentelemetry.metrics import Counter, Histogram
 
 logger = logging.getLogger(__name__)
 
-# Import semantic conventions
-try:
-    from openlit.semcov import SemanticConvention as SC
-except ImportError:
-    # Fallback if openlit not available
-    class SC:
-        MCP_REQUESTS = "mcp.requests"
-        MCP_CLIENT_OPERATION_DURATION_METRIC = "mcp.client.operation.duration"
-        MCP_REQUEST_SIZE = "mcp.request.size"
-        MCP_RESPONSE_SIZE_METRIC = "mcp.response.size"
+from ..semconv import SemanticConvention as SC
 
 
 class BaseMCPInstrumentor:
@@ -44,11 +36,13 @@ class BaseMCPInstrumentor:
     _shared_request_size_histogram: Optional[Histogram] = None
     _shared_response_size_histogram: Optional[Histogram] = None
     _metrics_initialized = False
+    _metrics_lock = threading.Lock()
 
     def __init__(self):
         """Initialize BaseMCPInstrumentor and create shared metrics if needed."""
-        if not BaseMCPInstrumentor._metrics_initialized:
-            self._create_shared_metrics()
+        with BaseMCPInstrumentor._metrics_lock:
+            if not BaseMCPInstrumentor._metrics_initialized:
+                self._create_shared_metrics()
 
         # Instance references to shared metrics
         self.mcp_request_counter = BaseMCPInstrumentor._shared_request_counter

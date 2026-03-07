@@ -68,7 +68,9 @@ class CostEnrichmentSpanProcessor(SpanProcessor):
 
             # Skip if cost attributes are already present (added by instrumentor)
             if "gen_ai.usage.cost.total" in attributes:
-                logger.debug(f"Span '{span.name}' already has cost attributes, skipping enrichment")
+                logger.debug(
+                    "Span '%s' already has cost attributes, skipping enrichment", span.name
+                )
                 return
 
             # Extract token usage - support GenAI, OpenInference, and legacy conventions

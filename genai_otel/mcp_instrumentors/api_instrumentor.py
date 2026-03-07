@@ -120,18 +120,17 @@ class APIInstrumentor(BaseInstrumentor):
                 parsed_url = urlparse(url)
                 if parsed_url.hostname:
                     attrs["net.peer.name"] = parsed_url.hostname
+                    hostname = parsed_url.hostname
+                    if hostname.endswith("openai.com"):
+                        attrs["gen_ai.system"] = "openai"
+                    elif hostname.endswith("anthropic.com"):
+                        attrs["gen_ai.system"] = "anthropic"
+                    elif hostname.endswith("google.com") or hostname.endswith("googleapis.com"):
+                        attrs["gen_ai.system"] = "google"
                 attrs["url.full"] = url
                 attrs["http.method"] = method
             except Exception as e:
                 logger.warning("Failed to parse URL '%s' for attributes: %s", url, e)
-
-        if url:
-            if "openai.com" in url:
-                attrs["gen_ai.system"] = "openai"
-            elif "anthropic.com" in url:
-                attrs["gen_ai.system"] = "anthropic"
-            elif "google.com" in url:
-                attrs["gen_ai.system"] = "google"
 
         return attrs
 

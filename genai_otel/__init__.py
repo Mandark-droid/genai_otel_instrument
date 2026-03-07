@@ -3,13 +3,15 @@
 This package provides a comprehensive solution for automatically instrumenting
 Generative AI (GenAI) and Large Language Model (LLM) applications with OpenTelemetry.
 It supports various LLM providers, frameworks, and common data stores (MCP tools).
+
+Heavy imports (instrumentors, OTel SDK, GPU metrics) are deferred until first access
+to keep ``import genai_otel`` fast.
 """
 
+import importlib
 import logging
 import os
 import warnings
-
-import httpx
 
 # Suppress known third-party library warnings that we cannot control
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pydantic")
@@ -23,37 +25,57 @@ __author__ = "Kshitij Thakkar"
 __email__ = "kshitijthakkar@rocketmail.com"
 __license__ = "AGPL-3.0-or-later"
 
-# Re-exporting key components for easier access
-from .auto_instrument import setup_auto_instrumentation  # Restoring direct import
-from .config import OTelConfig
-from .cost_calculator import CostCalculator
-from .gpu_metrics import GPUMetricsCollector
-
-# Import instrumentors conditionally to avoid errors if dependencies aren't installed
-from .instrumentors import (
-    AnthropicInstrumentor,
-    AnyscaleInstrumentor,
-    AWSBedrockInstrumentor,
-    AzureOpenAIInstrumentor,
-    CohereInstrumentor,
-    GoogleAIInstrumentor,
-    GroqInstrumentor,
-    HuggingFaceInstrumentor,
-    LangChainInstrumentor,
-    LlamaIndexInstrumentor,
-    MistralAIInstrumentor,
-    OllamaInstrumentor,
-    OpenAIInstrumentor,
-    ReplicateInstrumentor,
-    SarvamAIInstrumentor,
-    TogetherAIInstrumentor,
-    VertexAIInstrumentor,
-)
-from .mcp_instrumentors.manager import MCPInstrumentorManager
-from .server_metrics import ServerMetricsCollector, get_server_metrics
-from .tracing import trace_operation
-
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Lazy-loading registry: maps public name -> (module_path, attribute_name)
+# ---------------------------------------------------------------------------
+_LAZY_IMPORTS = {
+    # Core functions
+    "setup_auto_instrumentation": (".auto_instrument", "setup_auto_instrumentation"),
+    "uninstrument": (".auto_instrument", "uninstrument"),
+    # Configuration
+    "OTelConfig": (".config", "OTelConfig"),
+    # Utilities
+    "CostCalculator": (".cost_calculator", "CostCalculator"),
+    "GPUMetricsCollector": (".gpu_metrics", "GPUMetricsCollector"),
+    "ServerMetricsCollector": (".server_metrics", "ServerMetricsCollector"),
+    "get_server_metrics": (".server_metrics", "get_server_metrics"),
+    # Instrumentors
+    "OpenAIInstrumentor": (".instrumentors", "OpenAIInstrumentor"),
+    "AnthropicInstrumentor": (".instrumentors", "AnthropicInstrumentor"),
+    "GoogleAIInstrumentor": (".instrumentors", "GoogleAIInstrumentor"),
+    "AWSBedrockInstrumentor": (".instrumentors", "AWSBedrockInstrumentor"),
+    "AzureOpenAIInstrumentor": (".instrumentors", "AzureOpenAIInstrumentor"),
+    "CohereInstrumentor": (".instrumentors", "CohereInstrumentor"),
+    "MistralAIInstrumentor": (".instrumentors", "MistralAIInstrumentor"),
+    "TogetherAIInstrumentor": (".instrumentors", "TogetherAIInstrumentor"),
+    "GroqInstrumentor": (".instrumentors", "GroqInstrumentor"),
+    "LangChainInstrumentor": (".instrumentors", "LangChainInstrumentor"),
+    "LlamaIndexInstrumentor": (".instrumentors", "LlamaIndexInstrumentor"),
+    "HuggingFaceInstrumentor": (".instrumentors", "HuggingFaceInstrumentor"),
+    "OllamaInstrumentor": (".instrumentors", "OllamaInstrumentor"),
+    "VertexAIInstrumentor": (".instrumentors", "VertexAIInstrumentor"),
+    "ReplicateInstrumentor": (".instrumentors", "ReplicateInstrumentor"),
+    "AnyscaleInstrumentor": (".instrumentors", "AnyscaleInstrumentor"),
+    "SarvamAIInstrumentor": (".instrumentors", "SarvamAIInstrumentor"),
+    # MCP Manager
+    "MCPInstrumentorManager": (".mcp_instrumentors.manager", "MCPInstrumentorManager"),
+    # Tracing utilities
+    "trace_operation": (".tracing", "trace_operation"),
+}
+
+
+def __getattr__(name):
+    """Lazily import heavy modules on first attribute access."""
+    if name in _LAZY_IMPORTS:
+        module_path, attr_name = _LAZY_IMPORTS[name]
+        module = importlib.import_module(module_path, __package__)
+        value = getattr(module, attr_name)
+        # Cache on the module so __getattr__ is not called again
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def instrument(**kwargs):
@@ -81,6 +103,10 @@ def instrument(**kwargs):
         GENAI_LOG_LEVEL: Logging level (default: "INFO")
         GENAI_LOG_FILE: Log file path (optional)
     """
+    # Lazy imports - only loaded when instrument() is actually called
+    from .auto_instrument import setup_auto_instrumentation
+    from .config import OTelConfig
+
     try:
         # Create config object, allowing kwargs to override env vars
         config = OTelConfig(**kwargs)
@@ -104,7 +130,8 @@ __all__ = [
     "__license__",
     # Core functions
     "instrument",
-    "setup_auto_instrumentation",  # Re-added to __all__
+    "uninstrument",
+    "setup_auto_instrumentation",
     # Configuration
     "OTelConfig",
     # Utilities

@@ -154,7 +154,7 @@ class PIIDetector:
                 entities=entities,
                 entity_counts=entity_counts,
                 redacted_text=redacted_text,
-                original_text=text,
+                original_text=None if (has_pii and self.config.mode != PIIMode.DETECT) else text,
                 score=score,
                 blocked=blocked,
             )
@@ -304,7 +304,7 @@ class PIIDetector:
             entities=entities,
             entity_counts=entity_counts,
             redacted_text=redacted_text,
-            original_text=text,
+            original_text=None if (has_pii and self.config.mode != PIIMode.DETECT) else text,
             score=score,
             blocked=blocked,
         )

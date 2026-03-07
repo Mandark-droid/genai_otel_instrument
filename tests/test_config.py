@@ -86,3 +86,22 @@ def test_setup_tracing_exception_handling():
     finally:
         # Restore original function
         trace.set_tracer_provider = original_set_tracer_provider
+
+
+def test_sampling_rate_default():
+    """Test that sampling_rate defaults to 1.0."""
+    config = OTelConfig()
+    assert config.sampling_rate == 1.0
+
+
+def test_sampling_rate_from_env(monkeypatch):
+    """Test that sampling_rate loads from GENAI_SAMPLING_RATE env var."""
+    monkeypatch.setenv("GENAI_SAMPLING_RATE", "0.25")
+    config = OTelConfig()
+    assert config.sampling_rate == 0.25
+
+
+def test_sampling_rate_kwarg():
+    """Test that sampling_rate can be set via kwargs."""
+    config = OTelConfig(sampling_rate=0.5)
+    assert config.sampling_rate == 0.5

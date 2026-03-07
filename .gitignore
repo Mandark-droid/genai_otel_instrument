@@ -1,3 +1,6 @@
+# Private documents
+PRIVATE_ROADMAP.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -360,7 +363,7 @@ otel_traces.jsonl
 node_modules
 scripts/test_basic_openai.py
 CLAUDE.md
-.claude
+.claude/
 
 # setuptools-scm generated version file (auto-generated, do not track)
 genai_otel/__version__.py

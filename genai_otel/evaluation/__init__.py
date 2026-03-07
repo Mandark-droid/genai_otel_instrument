@@ -34,7 +34,6 @@ Requirements:
     ```
 """
 
-from .bias_detector import BiasDetectionResult, BiasDetector
 from .config import (
     BiasConfig,
     HallucinationConfig,
@@ -43,12 +42,35 @@ from .config import (
     RestrictedTopicsConfig,
     ToxicityConfig,
 )
-from .hallucination_detector import HallucinationDetector, HallucinationResult
-from .pii_detector import PIIDetectionResult, PIIDetector
-from .prompt_injection_detector import PromptInjectionDetector, PromptInjectionResult
-from .restricted_topics_detector import RestrictedTopicsDetector, RestrictedTopicsResult
-from .span_processor import EvaluationSpanProcessor
-from .toxicity_detector import ToxicityDetectionResult, ToxicityDetector
+
+# Lazy imports for detector classes and span processor - these pull in heavy ML
+# dependencies (spacy, torch, detoxify, presidio) that take 10-20s to import.
+# Only loaded when actually accessed, not at package import time.
+_LAZY_IMPORTS = {
+    "BiasDetector": ".bias_detector",
+    "BiasDetectionResult": ".bias_detector",
+    "HallucinationDetector": ".hallucination_detector",
+    "HallucinationResult": ".hallucination_detector",
+    "PIIDetector": ".pii_detector",
+    "PIIDetectionResult": ".pii_detector",
+    "PromptInjectionDetector": ".prompt_injection_detector",
+    "PromptInjectionResult": ".prompt_injection_detector",
+    "RestrictedTopicsDetector": ".restricted_topics_detector",
+    "RestrictedTopicsResult": ".restricted_topics_detector",
+    "ToxicityDetector": ".toxicity_detector",
+    "ToxicityDetectionResult": ".toxicity_detector",
+    "EvaluationSpanProcessor": ".span_processor",
+}
+
+
+def __getattr__(name):
+    if name in _LAZY_IMPORTS:
+        import importlib
+
+        module = importlib.import_module(_LAZY_IMPORTS[name], __package__)
+        return getattr(module, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Config classes
