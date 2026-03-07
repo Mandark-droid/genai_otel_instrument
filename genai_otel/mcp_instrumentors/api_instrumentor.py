@@ -10,9 +10,17 @@ import logging
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
-import httpx
-import requests
 import wrapt
+
+try:
+    import httpx
+except ImportError:
+    httpx = None
+
+try:
+    import requests
+except ImportError:
+    requests = None
 
 from genai_otel.instrumentors.base import BaseInstrumentor
 
