@@ -128,9 +128,10 @@ class TestAutoInstrumentation:
                         mock_metrics.get_meter_provider.return_value = mock_meter_provider_instance
                         setup_auto_instrumentation(config)
                         # Assertions
-                        mock_resource.create.assert_called_once_with(
-                            {"service.name": "test-service"}
-                        )
+                        resource_attrs = mock_resource.create.call_args[0][0]
+                        assert resource_attrs["service.name"] == "test-service"
+                        assert resource_attrs["telemetry.auto.name"] == "genai-otel-instrument"
+                        assert "telemetry.auto.version" in resource_attrs
                         mock_tracer_provider_class.assert_called_once_with(
                             resource=mock_resource_instance, sampler=None
                         )
