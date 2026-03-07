@@ -58,10 +58,11 @@ def test_instrument_all_libraries(vector_db_instrumentor, caplog):
         patch.object(vector_db_instrumentor, "_instrument_chroma", return_value=True),
         patch.object(vector_db_instrumentor, "_instrument_milvus", return_value=True),
         patch.object(vector_db_instrumentor, "_instrument_faiss", return_value=True),
+        patch.object(vector_db_instrumentor, "_instrument_lancedb", return_value=True),
     ):
 
         instrumented_count = vector_db_instrumentor.instrument()
-        assert instrumented_count == 6
+        assert instrumented_count == 7
 
 
 def test_instrument_no_libraries(vector_db_instrumentor, caplog):
@@ -73,6 +74,7 @@ def test_instrument_no_libraries(vector_db_instrumentor, caplog):
         patch.object(vector_db_instrumentor, "_instrument_chroma", return_value=False),
         patch.object(vector_db_instrumentor, "_instrument_milvus", return_value=False),
         patch.object(vector_db_instrumentor, "_instrument_faiss", return_value=False),
+        patch.object(vector_db_instrumentor, "_instrument_lancedb", return_value=False),
     ):
 
         instrumented_count = vector_db_instrumentor.instrument()
@@ -505,3 +507,79 @@ def test_faiss_search_execution(vector_db_instrumentor, mock_tracer):
         result = wrapped_search(mock_index_instance, [[1, 2, 3]], k=10)
 
         mock_tracer.start_as_current_span.assert_called_once_with("faiss.search")
+
+
+# --- Tests for _instrument_lancedb ---
+def test_instrument_lancedb_success(vector_db_instrumentor, caplog):
+    """Test successful LanceDB instrumentation."""
+    mock_lancedb = MagicMock()
+    mock_lancedb_table = MagicMock()
+    mock_lancedb_table.Table = MagicMock()
+    mock_lancedb_db = MagicMock()
+    mock_lancedb_db.DBConnection = MagicMock()
+
+    with patch.dict(
+        "sys.modules",
+        {
+            "lancedb": mock_lancedb,
+            "lancedb.table": mock_lancedb_table,
+            "lancedb.db": mock_lancedb_db,
+        },
+    ):
+        assert vector_db_instrumentor._instrument_lancedb() is True
+        assert "LanceDB instrumentation enabled" in caplog.text
+
+
+def test_instrument_lancedb_missing(vector_db_instrumentor, caplog):
+    """Test that missing LanceDB is handled gracefully."""
+    with patch.dict("sys.modules", {"lancedb": None}):
+        assert vector_db_instrumentor._instrument_lancedb() is False
+
+
+def test_instrument_lancedb_error(vector_db_instrumentor, caplog):
+    """Test that LanceDB instrumentation errors are logged."""
+    mock_lancedb = MagicMock()
+
+    with (
+        patch.dict("sys.modules", {"lancedb": mock_lancedb}),
+        patch(
+            "genai_otel.mcp_instrumentors.vector_db_instrumentor.wrapt.wrap_function_wrapper",
+            side_effect=Exception("Mock LanceDB error"),
+        ),
+    ):
+        assert vector_db_instrumentor._instrument_lancedb() is False
+        assert "Failed to instrument LanceDB" in caplog.text
+
+
+def test_lancedb_search_execution(vector_db_instrumentor, mock_tracer):
+    """Test that LanceDB wraps all expected methods."""
+    import sys
+
+    mock_lancedb = MagicMock()
+    mock_lancedb_table = MagicMock()
+    mock_lancedb_table.Table = MagicMock()
+    mock_lancedb_db = MagicMock()
+    mock_lancedb_db.DBConnection = MagicMock()
+
+    with (
+        patch.dict(
+            sys.modules,
+            {
+                "lancedb": mock_lancedb,
+                "lancedb.table": mock_lancedb_table,
+                "lancedb.db": mock_lancedb_db,
+            },
+        ),
+        patch(
+            "genai_otel.mcp_instrumentors.vector_db_instrumentor.wrapt.wrap_function_wrapper"
+        ) as mock_wrap,
+    ):
+        vector_db_instrumentor._instrument_lancedb()
+
+        # Verify wrapt.wrap_function_wrapper was called for all 4 operations
+        calls = mock_wrap.call_args_list
+        wrapped_targets = [(c[0][0], c[0][1]) for c in calls]
+        assert ("lancedb.table", "Table.search") in wrapped_targets
+        assert ("lancedb.table", "Table.add") in wrapped_targets
+        assert ("lancedb.db", "DBConnection.create_table") in wrapped_targets
+        assert ("lancedb.db", "DBConnection.drop_table") in wrapped_targets

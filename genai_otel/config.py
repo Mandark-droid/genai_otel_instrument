@@ -87,8 +87,8 @@ def _get_exporter_timeout() -> int:
         return int(timeout_str)
     except ValueError:
         logger.warning(
-            f"Invalid timeout value '{timeout_str}' in OTEL_EXPORTER_OTLP_TIMEOUT. "
-            f"Using default of 60 seconds."
+            "Invalid timeout value '%s' in OTEL_EXPORTER_OTLP_TIMEOUT. Using default of 60 seconds.",
+            timeout_str,
         )
         return 60
 
@@ -175,6 +175,12 @@ class OTelConfig:
     codecarbon_log_level: str = field(
         default_factory=lambda: os.getenv("GENAI_CODECARBON_LOG_LEVEL", "error")
     )  # Codecarbon log level: debug, info, warning, error (default: error to suppress warnings)
+
+    # Sampling rate for traces (0.0 to 1.0). 1.0 = trace everything (default).
+    # Use lower values in high-traffic production to reduce telemetry volume.
+    sampling_rate: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_SAMPLING_RATE", "1.0"))
+    )
 
     # OpenTelemetry semantic convention stability opt-in
     # Supports "gen_ai" for new conventions, "gen_ai/dup" for dual emission
@@ -304,8 +310,6 @@ class OTelConfig:
     session_id_extractor: Optional[Callable[[Any, Tuple, Dict], Optional[str]]] = None
     user_id_extractor: Optional[Callable[[Any, Tuple, Dict], Optional[str]]] = None
 
-
-import os
 
 from opentelemetry import trace
 from opentelemetry.sdk.resources import (  # noqa: F401

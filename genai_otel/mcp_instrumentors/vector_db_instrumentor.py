@@ -2,8 +2,8 @@
 
 This module provides the `VectorDBInstrumentor` class, which automatically
 instruments popular Python vector database libraries such as Pinecone, Weaviate,
-Qdrant, ChromaDB, Milvus, and FAISS, enabling tracing of vector search and
-related operations within GenAI applications.
+Qdrant, ChromaDB, Milvus, FAISS, and LanceDB, enabling tracing of vector search
+and related operations within GenAI applications.
 """
 
 import logging
@@ -40,6 +40,8 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
             instrumented_count += 1
         if self._instrument_faiss():
             instrumented_count += 1
+        if self._instrument_lancedb():
+            instrumented_count += 1
         return instrumented_count
 
     def _instrument_pinecone(self):
@@ -61,16 +63,14 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
             elif hasattr(pinecone, "Index"):
                 # Old API (2.x)
                 logger.info("Detected Pinecone 2.x API")
-                original_query = pinecone.Index.query
-                original_upsert = pinecone.Index.upsert
-                original_delete = pinecone.Index.delete
-
-                pinecone.Index.query = self._wrap_pinecone_method(original_query, "pinecone.query")
-                pinecone.Index.upsert = self._wrap_pinecone_method(
-                    original_upsert, "pinecone.upsert"
+                wrapt.wrap_function_wrapper(
+                    "pinecone", "Index.query", self._wrap_pinecone_wrapt("pinecone.query")
                 )
-                pinecone.Index.delete = self._wrap_pinecone_method(
-                    original_delete, "pinecone.delete"
+                wrapt.wrap_function_wrapper(
+                    "pinecone", "Index.upsert", self._wrap_pinecone_wrapt("pinecone.upsert")
+                )
+                wrapt.wrap_function_wrapper(
+                    "pinecone", "Index.delete", self._wrap_pinecone_wrapt("pinecone.delete")
                 )
             else:
                 logger.warning("Could not detect Pinecone API version. Skipping instrumentation.")
@@ -89,7 +89,7 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     e,
                 )
             else:
-                logger.error(f"Failed to instrument Pinecone: {e}", exc_info=True)
+                logger.error("Failed to instrument Pinecone: %s", e, exc_info=True)
             return False
 
     def _wrap_pinecone_init(self, wrapped, instance, args, kwargs):
@@ -117,6 +117,27 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
 
             instance.Index = traced_index(original_index)
         return result
+
+    def _wrap_pinecone_wrapt(self, operation_name):
+        """Create a wrapt callback for a Pinecone method."""
+
+        def callback(wrapped, instance, args, kwargs):
+            tracer = trace.get_tracer(__name__)
+            with tracer.start_as_current_span(
+                operation_name,
+                kind=SpanKind.CLIENT,
+                attributes={"db.system": "pinecone", "db.operation": operation_name.split(".")[-1]},
+            ) as span:
+                try:
+                    result = wrapped(*args, **kwargs)
+                    span.set_status(Status(StatusCode.OK))
+                    return result
+                except Exception as e:
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
+                    span.record_exception(e)
+                    raise
+
+        return callback
 
     def _wrap_pinecone_method(self, original_method, operation_name):
         """Wrap a Pinecone method with tracing"""
@@ -162,25 +183,19 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
     def _instrument_qdrant(self):
         """Instrument Qdrant"""
         try:
-            from qdrant_client import QdrantClient
+            tracer = self.tracer
 
-            original_search = QdrantClient.search
-
-            def wrapped_search(instance, *args, **kwargs):
-                with self.tracer.start_as_current_span("qdrant.search") as span:
+            def wrapped_search(wrapped, instance, args, kwargs):
+                with tracer.start_as_current_span("qdrant.search") as span:
                     span.set_attribute("db.system", "qdrant")
                     span.set_attribute("db.operation", "search")
-
                     collection = kwargs.get("collection_name", args[0] if args else "unknown")
                     span.set_attribute("vector.collection", collection)
-
                     limit = kwargs.get("limit", 10)
                     span.set_attribute("vector.limit", limit)
+                    return wrapped(*args, **kwargs)
 
-                    result = original_search(instance, *args, **kwargs)
-                    return result
-
-            QdrantClient.search = wrapped_search
+            wrapt.wrap_function_wrapper("qdrant_client", "QdrantClient.search", wrapped_search)
             logger.info("Qdrant instrumentation enabled")
             return True
 
@@ -190,23 +205,19 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
     def _instrument_chroma(self):
         """Instrument ChromaDB"""
         try:
-            import chromadb
+            tracer = self.tracer
 
-            original_query = chromadb.Collection.query
-
-            def wrapped_query(instance, *args, **kwargs):
-                with self.tracer.start_as_current_span("chroma.query") as span:
+            def wrapped_query(wrapped, instance, args, kwargs):
+                with tracer.start_as_current_span("chroma.query") as span:
                     span.set_attribute("db.system", "chromadb")
                     span.set_attribute("db.operation", "query")
-                    span.set_attribute("vector.collection", instance.name)
-
+                    if instance and hasattr(instance, "name"):
+                        span.set_attribute("vector.collection", instance.name)
                     n_results = kwargs.get("n_results", 10)
                     span.set_attribute("vector.n_results", n_results)
+                    return wrapped(*args, **kwargs)
 
-                    result = original_query(instance, *args, **kwargs)
-                    return result
-
-            chromadb.Collection.query = wrapped_query
+            wrapt.wrap_function_wrapper("chromadb", "Collection.query", wrapped_query)
             logger.info("ChromaDB instrumentation enabled")
             return True
 
@@ -216,23 +227,19 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
     def _instrument_milvus(self):
         """Instrument Milvus"""
         try:
-            from pymilvus import Collection
+            tracer = self.tracer
 
-            original_search = Collection.search
-
-            def wrapped_search(instance, *args, **kwargs):
-                with self.tracer.start_as_current_span("milvus.search") as span:
+            def wrapped_search(wrapped, instance, args, kwargs):
+                with tracer.start_as_current_span("milvus.search") as span:
                     span.set_attribute("db.system", "milvus")
                     span.set_attribute("db.operation", "search")
-                    span.set_attribute("vector.collection", instance.name)
-
+                    if instance and hasattr(instance, "name"):
+                        span.set_attribute("vector.collection", instance.name)
                     limit = kwargs.get("limit", 10)
                     span.set_attribute("vector.limit", limit)
+                    return wrapped(*args, **kwargs)
 
-                    result = original_search(instance, *args, **kwargs)
-                    return result
-
-            Collection.search = wrapped_search
+            wrapt.wrap_function_wrapper("pymilvus", "Collection.search", wrapped_search)
             logger.info("Milvus instrumentation enabled")
             return True
 
@@ -242,24 +249,73 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
     def _instrument_faiss(self):
         """Instrument FAISS"""
         try:
-            import faiss
+            tracer = self.tracer
 
-            original_search = faiss.Index.search
-
-            def wrapped_search(instance, *args, **kwargs):
-                with self.tracer.start_as_current_span("faiss.search") as span:
+            def wrapped_search(wrapped, instance, args, kwargs):
+                with tracer.start_as_current_span("faiss.search") as span:
                     span.set_attribute("db.system", "faiss")
                     span.set_attribute("db.operation", "search")
-
                     k = args[1] if len(args) > 1 else kwargs.get("k", 10)
                     span.set_attribute("vector.k", k)
+                    return wrapped(*args, **kwargs)
 
-                    result = original_search(instance, *args, **kwargs)
-                    return result
-
-            faiss.Index.search = wrapped_search
+            wrapt.wrap_function_wrapper("faiss", "Index.search", wrapped_search)
             logger.info("FAISS instrumentation enabled")
             return True
 
         except ImportError:
+            return False
+
+    def _instrument_lancedb(self):
+        """Instrument LanceDB"""
+        try:
+            import lancedb  # noqa: F401
+
+            tracer = self.tracer
+
+            def wrapped_search(wrapped, instance, args, kwargs):
+                with tracer.start_as_current_span("lancedb.search") as span:
+                    span.set_attribute("db.system", "lancedb")
+                    span.set_attribute("db.operation", "search")
+                    if instance and hasattr(instance, "name"):
+                        span.set_attribute("vector.table", instance.name)
+                    return wrapped(*args, **kwargs)
+
+            def wrapped_add(wrapped, instance, args, kwargs):
+                with tracer.start_as_current_span("lancedb.add") as span:
+                    span.set_attribute("db.system", "lancedb")
+                    span.set_attribute("db.operation", "add")
+                    if instance and hasattr(instance, "name"):
+                        span.set_attribute("vector.table", instance.name)
+                    return wrapped(*args, **kwargs)
+
+            def wrapped_create_table(wrapped, instance, args, kwargs):
+                with tracer.start_as_current_span("lancedb.create_table") as span:
+                    span.set_attribute("db.system", "lancedb")
+                    span.set_attribute("db.operation", "create_table")
+                    table_name = args[0] if args else kwargs.get("name", "unknown")
+                    span.set_attribute("vector.table", table_name)
+                    return wrapped(*args, **kwargs)
+
+            def wrapped_drop_table(wrapped, instance, args, kwargs):
+                with tracer.start_as_current_span("lancedb.drop_table") as span:
+                    span.set_attribute("db.system", "lancedb")
+                    span.set_attribute("db.operation", "drop_table")
+                    table_name = args[0] if args else kwargs.get("name", "unknown")
+                    span.set_attribute("vector.table", table_name)
+                    return wrapped(*args, **kwargs)
+
+            wrapt.wrap_function_wrapper("lancedb.table", "Table.search", wrapped_search)
+            wrapt.wrap_function_wrapper("lancedb.table", "Table.add", wrapped_add)
+            wrapt.wrap_function_wrapper(
+                "lancedb.db", "DBConnection.create_table", wrapped_create_table
+            )
+            wrapt.wrap_function_wrapper("lancedb.db", "DBConnection.drop_table", wrapped_drop_table)
+            logger.info("LanceDB instrumentation enabled")
+            return True
+
+        except ImportError:
+            return False
+        except Exception as e:
+            logger.error("Failed to instrument LanceDB: %s", e, exc_info=True)
             return False

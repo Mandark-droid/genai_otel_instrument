@@ -17,8 +17,13 @@ from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from ..config import OTelConfig
 from .api_instrumentor import APIInstrumentor
 from .database_instrumentor import DatabaseInstrumentor
+from .elasticsearch_instrumentor import ElasticsearchInstrumentor
 from .kafka_instrumentor import KafkaInstrumentor
+from .minio_instrumentor import MinIOInstrumentor
+from .opensearch_instrumentor import OpenSearchInstrumentor
+from .rabbitmq_instrumentor import RabbitMQInstrumentor
 from .redis_instrumentor import RedisInstrumentor
+from .timescaledb_instrumentor import TimescaleDBInstrumentor
 from .vector_db_instrumentor import VectorDBInstrumentor
 
 logger = logging.getLogger(__name__)
@@ -57,14 +62,16 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
                 HTTPXClientInstrumentor().instrument()
                 api_instrumentor = APIInstrumentor(self.config)
                 api_instrumentor.instrument(self.config)
-                logger.info("✓ HTTP/API instrumentation enabled (requests library excluded)")
+                logger.info("[OK] HTTP/API instrumentation enabled (requests library excluded)")
                 success_count += 1
             except ImportError as e:
                 failure_count += 1
-                logger.debug(f"✗ HTTP/API instrumentation skipped due to missing dependency: {e}")
+                logger.debug(
+                    "[SKIP] HTTP/API instrumentation skipped due to missing dependency: %s", e
+                )
             except Exception as e:
                 failure_count += 1
-                logger.error(f"✗ Failed to instrument HTTP/API: {e}", exc_info=True)
+                logger.error("[ERROR] Failed to instrument HTTP/API: %s", e, exc_info=True)
                 if fail_on_error:
                     raise
         else:
@@ -77,13 +84,65 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
             result = db_instrumentor.instrument()
             if result > 0:
                 success_count += 1
-                logger.info(f"✓ Database instrumentation enabled ({result} databases)")
+                logger.info("[OK] Database instrumentation enabled (%s databases)", result)
         except ImportError as e:
             failure_count += 1
-            logger.debug(f"✗ Database instrumentation skipped due to missing dependency: {e}")
+            logger.debug("[SKIP] Database instrumentation skipped due to missing dependency: %s", e)
         except Exception as e:
             failure_count += 1
-            logger.error(f"✗ Failed to instrument databases: {e}", exc_info=True)
+            logger.error("[ERROR] Failed to instrument databases: %s", e, exc_info=True)
+            if fail_on_error:
+                raise
+
+        # Elasticsearch instrumentation
+        try:
+            logger.info("Instrumenting Elasticsearch")
+            es_instrumentor = ElasticsearchInstrumentor(self.config)
+            es_instrumentor.instrument()
+            success_count += 1
+        except ImportError as e:
+            failure_count += 1
+            logger.debug(
+                "[SKIP] Elasticsearch instrumentation skipped due to missing dependency: %s", e
+            )
+        except Exception as e:
+            failure_count += 1
+            logger.error("[ERROR] Failed to instrument Elasticsearch: %s", e, exc_info=True)
+            if fail_on_error:
+                raise
+
+        # TimescaleDB instrumentation
+        try:
+            logger.info("Instrumenting TimescaleDB")
+            timescaledb_instrumentor = TimescaleDBInstrumentor(self.config)
+            if timescaledb_instrumentor.instrument():
+                success_count += 1
+                logger.info("[OK] TimescaleDB instrumentation enabled")
+        except ImportError as e:
+            failure_count += 1
+            logger.debug(
+                "[SKIP] TimescaleDB instrumentation skipped due to missing dependency: %s", e
+            )
+        except Exception as e:
+            failure_count += 1
+            logger.error("[ERROR] Failed to instrument TimescaleDB: %s", e, exc_info=True)
+            if fail_on_error:
+                raise
+
+        # OpenSearch instrumentation
+        try:
+            logger.info("Instrumenting OpenSearch")
+            opensearch_instrumentor = OpenSearchInstrumentor(self.config)
+            opensearch_instrumentor.instrument()
+            success_count += 1
+        except ImportError as e:
+            failure_count += 1
+            logger.debug(
+                "[SKIP] OpenSearch instrumentation skipped due to missing dependency: %s", e
+            )
+        except Exception as e:
+            failure_count += 1
+            logger.error("[ERROR] Failed to instrument OpenSearch: %s", e, exc_info=True)
             if fail_on_error:
                 raise
 
@@ -95,10 +154,10 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
             success_count += 1
         except ImportError as e:
             failure_count += 1
-            logger.debug(f"✗ Redis instrumentation skipped due to missing dependency: {e}")
+            logger.debug("[SKIP] Redis instrumentation skipped due to missing dependency: %s", e)
         except Exception as e:
             failure_count += 1
-            logger.error(f"✗ Failed to instrument Redis: {e}", exc_info=True)
+            logger.error("[ERROR] Failed to instrument Redis: %s", e, exc_info=True)
             if fail_on_error:
                 raise
 
@@ -110,10 +169,42 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
             success_count += 1
         except ImportError as e:
             failure_count += 1
-            logger.debug(f"✗ Kafka instrumentation skipped due to missing dependency: {e}")
+            logger.debug("[SKIP] Kafka instrumentation skipped due to missing dependency: %s", e)
         except Exception as e:
             failure_count += 1
-            logger.error(f"✗ Failed to instrument Kafka: {e}", exc_info=True)
+            logger.error("[ERROR] Failed to instrument Kafka: %s", e, exc_info=True)
+            if fail_on_error:
+                raise
+
+        # MinIO instrumentation
+        try:
+            logger.info("Instrumenting MinIO")
+            minio_instrumentor = MinIOInstrumentor(self.config)
+            if minio_instrumentor.instrument():
+                success_count += 1
+                logger.info("[OK] MinIO instrumentation enabled")
+        except ImportError as e:
+            failure_count += 1
+            logger.debug("[SKIP] MinIO instrumentation skipped due to missing dependency: %s", e)
+        except Exception as e:
+            failure_count += 1
+            logger.error("[ERROR] Failed to instrument MinIO: %s", e, exc_info=True)
+            if fail_on_error:
+                raise
+
+        # RabbitMQ instrumentation
+        try:
+            logger.info("Instrumenting RabbitMQ")
+            rabbitmq_instrumentor = RabbitMQInstrumentor(self.config)
+            if rabbitmq_instrumentor.instrument():
+                success_count += 1
+                logger.info("[OK] RabbitMQ instrumentation enabled")
+        except ImportError as e:
+            failure_count += 1
+            logger.debug("[SKIP] RabbitMQ instrumentation skipped due to missing dependency: %s", e)
+        except Exception as e:
+            failure_count += 1
+            logger.error("[ERROR] Failed to instrument RabbitMQ: %s", e, exc_info=True)
             if fail_on_error:
                 raise
 
@@ -124,16 +215,20 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
             result = vector_db_instrumentor.instrument()
             if result > 0:
                 success_count += 1
-                logger.info(f"✓ Vector DB instrumentation enabled ({result} databases)")
+                logger.info("[OK] Vector DB instrumentation enabled (%s databases)", result)
         except ImportError as e:
             failure_count += 1
-            logger.debug(f"✗ Vector DB instrumentation skipped due to missing dependency: {e}")
+            logger.debug(
+                "[SKIP] Vector DB instrumentation skipped due to missing dependency: %s", e
+            )
         except Exception as e:
             failure_count += 1
-            logger.error(f"✗ Failed to instrument Vector DBs: {e}", exc_info=True)
+            logger.error("[ERROR] Failed to instrument Vector DBs: %s", e, exc_info=True)
             if fail_on_error:
                 raise
 
         logger.info(
-            f"MCP instrumentation summary: {success_count} succeeded, " f"{failure_count} failed"
+            "MCP instrumentation summary: %s succeeded, %s failed",
+            success_count,
+            failure_count,
         )

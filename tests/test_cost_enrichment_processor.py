@@ -462,7 +462,7 @@ class TestCostEnrichmentSpanProcessor(unittest.TestCase):
 
             # Verify debug log was emitted
             mock_logger.debug.assert_called_with(
-                "Span 'test.span' already has cost attributes, skipping enrichment"
+                "Span '%s' already has cost attributes, skipping enrichment", "test.span"
             )
 
             # Verify set_attribute was NOT called on span

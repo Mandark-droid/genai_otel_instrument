@@ -31,21 +31,8 @@ from opentelemetry.trace import Status, StatusCode
 
 from ..config import OTelConfig
 from ..cost_calculator import CostCalculator
+from ..semconv import SemanticConvention as SC
 from ..server_metrics import get_server_metrics
-
-# Import semantic conventions
-try:
-    from openlit.semcov import SemanticConvention as SC
-except ImportError:
-    # Fallback if openlit not available
-    class SC:
-        GEN_AI_REQUESTS = "gen_ai.requests"
-        GEN_AI_CLIENT_TOKEN_USAGE = "gen_ai.client.token.usage"
-        GEN_AI_CLIENT_OPERATION_DURATION = "gen_ai.client.operation.duration"
-        GEN_AI_USAGE_COST = "gen_ai.usage.cost"
-        GEN_AI_SERVER_TTFT = "gen_ai.server.ttft"
-        GEN_AI_SERVER_TBT = "gen_ai.server.tbt"
-
 
 # Import histogram bucket definitions
 try:
@@ -290,15 +277,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         """Build a parseable first_message attribute from a messages list.
 
         Respects ``enable_content_capture`` and ``content_max_length`` config.
-        Truncates the *content* value before building the dict string so that
-        ``ast.literal_eval()`` in ``_run_evaluation_checks`` always receives
-        a syntactically valid Python dict.
+        Truncates the *content* value before serialising to JSON.
 
         When config is not set (e.g. during unit tests), defaults to capturing
         with a 200-char content limit.
 
         Returns:
-            A dict-string like ``"{'role': 'user', 'content': '...'}"`` or
+            A JSON string like ``'{"role": "user", "content": "..."}'`` or
             ``None`` if content capture is disabled or messages is empty.
         """
         if not messages:
@@ -322,7 +307,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         if max_len > 0:
             content = content[:max_len]
 
-        return str({"role": role, "content": content})
+        return json.dumps({"role": role, "content": content})
 
     def create_span_wrapper(
         self, span_name: str, extract_attributes: Optional[Callable[[Any, Any, Any], Dict]] = None
@@ -867,19 +852,30 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 value = attrs["gen_ai.request.first_message"]
                 logger.debug(f"Found gen_ai.request.first_message: {value[:100]}")
                 if isinstance(value, str):
-                    # Try ast.literal_eval first (works when dict-string is not truncated)
+                    # Try json.loads first (preferred format)
                     try:
-                        parsed = ast.literal_eval(value)
+                        parsed = json.loads(value)
                         if isinstance(parsed, dict) and "content" in parsed:
                             prompt = parsed["content"]
                             logger.info(
                                 f"Extracted prompt from dict for evaluation: {prompt[:100]}..."
                             )
-                    except (ValueError, SyntaxError):
-                        # Truncated dict-string - extract content with regex fallback
-                        match = re.search(r"'content':\s*'(.*)", value)
+                    except (json.JSONDecodeError, ValueError):
+                        # Fallback: try ast.literal_eval for legacy Python dict strings
+                        try:
+                            parsed = ast.literal_eval(value)
+                            if isinstance(parsed, dict) and "content" in parsed:
+                                prompt = parsed["content"]
+                                logger.info(
+                                    f"Extracted prompt from dict for evaluation: {prompt[:100]}..."
+                                )
+                        except (ValueError, SyntaxError):
+                            pass
+                    if prompt is None:
+                        # Truncated string - extract content with regex fallback
+                        match = re.search(r'"content":\s*"(.*)', value)
                         if not match:
-                            match = re.search(r'"content":\s*"(.*)', value)
+                            match = re.search(r"'content':\s*'(.*)", value)
                         if match:
                             prompt = match.group(1).rstrip("'\"}")
                             logger.info(
