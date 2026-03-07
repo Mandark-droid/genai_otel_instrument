@@ -930,19 +930,20 @@ def test_instrument_wrapper_function():
 
 def test_sampling_rate_applied(monkeypatch):
     """Test that sampling rate < 1.0 applies TraceIdRatioBased sampler."""
+    from contextlib import ExitStack
+
     # Reset the initialization guard
     monkeypatch.setattr(auto_instrument_module, "_INSTRUMENTATION_INITIALIZED", False)
     monkeypatch.setattr(auto_instrument_module, "_active_tracer_provider", None)
     monkeypatch.setattr(auto_instrument_module, "_active_meter_provider", None)
     monkeypatch.setattr(auto_instrument_module, "_active_gpu_collector", None)
 
-    with (
-        patch.object(auto_instrument_module, "TracerProvider") as mock_tp_cls,
-        patch.object(auto_instrument_module, "trace") as mock_trace,
-        patch.object(auto_instrument_module, "metrics") as mock_metrics,
-        patch.object(auto_instrument_module, "Resource") as mock_resource,
-        patch("genai_otel.auto_instrument._check_openinference"),
-    ):
+    with ExitStack() as stack:
+        mock_tp_cls = stack.enter_context(patch.object(auto_instrument_module, "TracerProvider"))
+        stack.enter_context(patch.object(auto_instrument_module, "trace"))
+        stack.enter_context(patch.object(auto_instrument_module, "metrics"))
+        mock_resource = stack.enter_context(patch.object(auto_instrument_module, "Resource"))
+        stack.enter_context(patch("genai_otel.auto_instrument._check_openinference"))
 
         mock_tp_instance = MagicMock()
         mock_tp_cls.return_value = mock_tp_instance
@@ -972,18 +973,19 @@ def test_sampling_rate_applied(monkeypatch):
 
 def test_sampling_rate_default_no_sampler(monkeypatch):
     """Test that sampling rate 1.0 (default) does not set a sampler."""
+    from contextlib import ExitStack
+
     monkeypatch.setattr(auto_instrument_module, "_INSTRUMENTATION_INITIALIZED", False)
     monkeypatch.setattr(auto_instrument_module, "_active_tracer_provider", None)
     monkeypatch.setattr(auto_instrument_module, "_active_meter_provider", None)
     monkeypatch.setattr(auto_instrument_module, "_active_gpu_collector", None)
 
-    with (
-        patch.object(auto_instrument_module, "TracerProvider") as mock_tp_cls,
-        patch.object(auto_instrument_module, "trace") as mock_trace,
-        patch.object(auto_instrument_module, "metrics") as mock_metrics,
-        patch.object(auto_instrument_module, "Resource") as mock_resource,
-        patch("genai_otel.auto_instrument._check_openinference"),
-    ):
+    with ExitStack() as stack:
+        mock_tp_cls = stack.enter_context(patch.object(auto_instrument_module, "TracerProvider"))
+        stack.enter_context(patch.object(auto_instrument_module, "trace"))
+        stack.enter_context(patch.object(auto_instrument_module, "metrics"))
+        mock_resource = stack.enter_context(patch.object(auto_instrument_module, "Resource"))
+        stack.enter_context(patch("genai_otel.auto_instrument._check_openinference"))
 
         mock_tp_instance = MagicMock()
         mock_tp_cls.return_value = mock_tp_instance
@@ -1008,6 +1010,7 @@ def test_sampling_rate_default_no_sampler(monkeypatch):
 def test_instrument_uninstrument_no_memory_leak(monkeypatch):
     """Test that repeated instrument/uninstrument cycles do not leak memory."""
     import tracemalloc
+    from contextlib import ExitStack
 
     monkeypatch.setattr(auto_instrument_module, "_INSTRUMENTATION_INITIALIZED", False)
     monkeypatch.setattr(auto_instrument_module, "_active_tracer_provider", None)
@@ -1022,13 +1025,14 @@ def test_instrument_uninstrument_no_memory_leak(monkeypatch):
         # Reset guard for each iteration
         monkeypatch.setattr(auto_instrument_module, "_INSTRUMENTATION_INITIALIZED", False)
 
-        with (
-            patch.object(auto_instrument_module, "TracerProvider") as mock_tp_cls,
-            patch.object(auto_instrument_module, "trace") as mock_trace,
-            patch.object(auto_instrument_module, "metrics") as mock_metrics,
-            patch.object(auto_instrument_module, "Resource") as mock_resource,
-            patch("genai_otel.auto_instrument._check_openinference"),
-        ):
+        with ExitStack() as stack:
+            mock_tp_cls = stack.enter_context(
+                patch.object(auto_instrument_module, "TracerProvider")
+            )
+            stack.enter_context(patch.object(auto_instrument_module, "trace"))
+            stack.enter_context(patch.object(auto_instrument_module, "metrics"))
+            mock_resource = stack.enter_context(patch.object(auto_instrument_module, "Resource"))
+            stack.enter_context(patch("genai_otel.auto_instrument._check_openinference"))
 
             mock_tp_instance = MagicMock()
             mock_tp_instance.shutdown = MagicMock()
