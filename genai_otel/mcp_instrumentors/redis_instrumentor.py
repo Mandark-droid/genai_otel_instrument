@@ -7,7 +7,10 @@ within GenAI applications.
 
 import logging
 
-from opentelemetry.instrumentation.redis import RedisInstrumentor as OTelRedisInstrumentor
+try:
+    from opentelemetry.instrumentation.redis import RedisInstrumentor as OTelRedisInstrumentor
+except ImportError:
+    OTelRedisInstrumentor = None
 
 from ..config import OTelConfig
 

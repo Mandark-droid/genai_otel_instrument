@@ -14,10 +14,26 @@ import logging
 import time
 
 import wrapt
-from opentelemetry.instrumentation.mysql import MySQLInstrumentor
-from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
-from opentelemetry.instrumentation.pymongo import PymongoInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+
+try:
+    from opentelemetry.instrumentation.mysql import MySQLInstrumentor
+except ImportError:
+    MySQLInstrumentor = None
+
+try:
+    from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
+except ImportError:
+    Psycopg2Instrumentor = None
+
+try:
+    from opentelemetry.instrumentation.pymongo import PymongoInstrumentor
+except ImportError:
+    PymongoInstrumentor = None
+
+try:
+    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+except ImportError:
+    SQLAlchemyInstrumentor = None
 
 from ..config import OTelConfig
 from .base import BaseMCPInstrumentor

@@ -7,7 +7,10 @@ queue operations within GenAI applications.
 
 import logging
 
-from opentelemetry.instrumentation.kafka import KafkaInstrumentor as OTelKafkaInstrumentor
+try:
+    from opentelemetry.instrumentation.kafka import KafkaInstrumentor as OTelKafkaInstrumentor
+except ImportError:
+    OTelKafkaInstrumentor = None
 
 from ..config import OTelConfig
 
