@@ -4,7 +4,7 @@
 repos:
   # Code formatting with black
   - repo: https://github.com/psf/black
-    rev: 24.10.0
+    rev: 26.3.0
     hooks:
       - id: black
         args: [--line-length=100]
