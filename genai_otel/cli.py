@@ -46,7 +46,7 @@ def main():
         # If GENAI_FAIL_ON_ERROR is true and setup fails, it will raise an exception.
         instrument()
     except Exception as e:
-        logger.error(f"Failed to initialize instrumentation: {e}", exc_info=True)
+        logger.error("Failed to initialize instrumentation: %s", e, exc_info=True)
         sys.exit(1)  # Exit if instrumentation setup fails and fail_on_error is true
 
     # Parse the command to extract the Python script and its arguments
@@ -72,7 +72,8 @@ def main():
         script_args = args.command[1:]
     else:
         logger.error(
-            f"Invalid command format. Expected 'python script.py' or 'script.py', got: {' '.join(args.command)}"
+            "Invalid command format. Expected 'python script.py' or 'script.py', got: %s",
+            " ".join(args.command),
         )
         sys.exit(1)
 
@@ -85,8 +86,8 @@ def main():
     try:
         runpy.run_path(script_path, run_name="__main__")
     except FileNotFoundError:
-        logger.error(f"Script not found: {script_path}")
+        logger.error("Script not found: %s", script_path)
         sys.exit(1)
     except Exception as e:
-        logger.error(f"Error running script {script_path}: {e}", exc_info=True)
+        logger.error("Error running script %s: %s", script_path, e, exc_info=True)
         sys.exit(1)

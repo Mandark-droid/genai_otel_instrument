@@ -39,7 +39,8 @@ class CostEnrichingSpanExporter(SpanExporter):
         self.wrapped_exporter = wrapped_exporter
         self.cost_calculator = cost_calculator or CostCalculator()
         logger.info(
-            f"CostEnrichingSpanExporter initialized, wrapping {type(wrapped_exporter).__name__}"
+            "CostEnrichingSpanExporter initialized, wrapping %s",
+            type(wrapped_exporter).__name__,
         )
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
@@ -62,7 +63,7 @@ class CostEnrichingSpanExporter(SpanExporter):
             return self.wrapped_exporter.export(enriched_spans)
 
         except Exception as e:
-            logger.error(f"Failed to export spans: {e}", exc_info=True)
+            logger.error("Failed to export spans: %s", e, exc_info=True)
             return SpanExportResult.FAILURE
 
     def _enrich_span(self, span: ReadableSpan) -> ReadableSpan:
@@ -92,7 +93,9 @@ class CostEnrichingSpanExporter(SpanExporter):
 
             # Skip if cost attributes are already present
             if "gen_ai.usage.cost.total" in attributes:
-                logger.debug(f"Span '{span.name}' already has cost attributes, skipping enrichment")
+                logger.debug(
+                    "Span '%s' already has cost attributes, skipping enrichment", span.name
+                )
                 return span
 
             # Extract token usage - support GenAI, OpenInference, and legacy conventions
@@ -158,8 +161,11 @@ class CostEnrichingSpanExporter(SpanExporter):
                     attributes["gen_ai.usage.cost.completion"] = cost_info["completion"]
 
                 logger.info(
-                    f"Enriched span '{span.name}' with cost: {cost_info['total']:.6f} USD "
-                    f"for model {model} ({usage['total_tokens']} tokens)"
+                    "Enriched span '%s' with cost: %.6f USD for model %s (%s tokens)",
+                    span.name,
+                    cost_info["total"],
+                    model,
+                    usage["total_tokens"],
                 )
 
                 # Create a new ReadableSpan with enriched attributes
@@ -184,7 +190,9 @@ class CostEnrichingSpanExporter(SpanExporter):
 
         except Exception as e:
             logger.warning(
-                f"Failed to enrich span '{getattr(span, 'name', 'unknown')}' with cost: {e}",
+                "Failed to enrich span '%s' with cost: %s",
+                getattr(span, "name", "unknown"),
+                e,
                 exc_info=True,
             )
 

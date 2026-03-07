@@ -138,6 +138,7 @@ class ToxicityConfig:
         }
     )
     block_on_detection: bool = False
+    api_timeout: int = 30
 
     def __post_init__(self):
         """Validate configuration."""

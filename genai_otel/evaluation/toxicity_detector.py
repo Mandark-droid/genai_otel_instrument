@@ -79,13 +79,24 @@ class ToxicityDetector:
                 if discovery is None:
                     raise ImportError("googleapiclient not installed")
 
-                self._perspective_client = discovery.build(
-                    "commentanalyzer",
-                    "v1alpha1",
-                    developerKey=self.config.perspective_api_key,
-                    discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
-                    static_discovery=False,
-                )
+                # Use httplib2 with timeout to prevent hanging API calls
+                build_kwargs = {
+                    "serviceName": "commentanalyzer",
+                    "version": "v1alpha1",
+                    "developerKey": self.config.perspective_api_key,
+                    "discoveryServiceUrl": "https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
+                    "static_discovery": False,
+                }
+                try:
+                    import httplib2
+
+                    build_kwargs["http"] = httplib2.Http(timeout=self.config.api_timeout)
+                except ImportError:
+                    logger.debug(
+                        "httplib2 not available, Perspective API calls will have no timeout"
+                    )
+
+                self._perspective_client = discovery.build(**build_kwargs)
                 self._perspective_available = True
                 logger.info("Google Perspective API initialized successfully")
             except ImportError as e:

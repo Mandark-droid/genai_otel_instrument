@@ -5,6 +5,7 @@ from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
+import genai_otel.auto_instrument as auto_instrument_module
 from genai_otel.auto_instrument import INSTRUMENTORS, setup_auto_instrumentation
 from genai_otel.config import OTelConfig
 from genai_otel.exceptions import InstrumentationError
@@ -41,7 +42,10 @@ MOCK_INSTRUMENTORS["mistralai"].return_value = mock_mistralai_instance
 
 @pytest.fixture(autouse=True)
 def reset_mocks():
-    """Reset all mocks before each test"""
+    """Reset all mocks and re-entrancy guard before each test"""
+    # Reset the re-entrancy guard so each test can call setup_auto_instrumentation
+    auto_instrument_module._INSTRUMENTATION_INITIALIZED = False
+
     # Reset the mock instances
     mock_openai_instance.reset_mock()
     mock_anthropic_instance.reset_mock()
@@ -128,7 +132,7 @@ class TestAutoInstrumentation:
                             {"service.name": "test-service"}
                         )
                         mock_tracer_provider_class.assert_called_once_with(
-                            resource=mock_resource_instance
+                            resource=mock_resource_instance, sampler=None
                         )
                         mock_trace.set_tracer_provider.assert_called_once_with(
                             mock_tracer_provider_instance
@@ -194,13 +198,14 @@ class TestAutoInstrumentation:
                             "OpenTelemetry metrics configured with OTLP endpoint:" in msg
                             for msg in log_calls
                         )
-                        mock_logger.info.assert_any_call("openai instrumentation enabled")
-                        mock_logger.info.assert_any_call("anthropic instrumentation enabled")
+                        mock_logger.info.assert_any_call("%s instrumentation enabled", "openai")
+                        mock_logger.info.assert_any_call("%s instrumentation enabled", "anthropic")
                         mock_logger.info.assert_any_call(
                             "MCP tools instrumentation enabled and set up."
                         )
                         mock_logger.info.assert_any_call(
-                            f"GPU metrics collection started (interval: {config.gpu_collection_interval}s)."
+                            "GPU metrics collection started (interval: %ss).",
+                            config.gpu_collection_interval,
                         )
                         mock_logger.info.assert_any_call("Auto-instrumentation setup complete")
 
@@ -305,9 +310,9 @@ class TestAutoInstrumentation:
                     mock_mistralai_instance.assert_not_called()
 
                     # Check log messages
-                    mock_logger.info.assert_any_call("openai instrumentation enabled")
-                    mock_logger.info.assert_any_call("anthropic instrumentation enabled")
-                    mock_logger.info.assert_any_call("cohere instrumentation enabled")
+                    mock_logger.info.assert_any_call("%s instrumentation enabled", "openai")
+                    mock_logger.info.assert_any_call("%s instrumentation enabled", "anthropic")
+                    mock_logger.info.assert_any_call("%s instrumentation enabled", "cohere")
 
     @patch("genai_otel.auto_instrument.OTLPMetricExporter")
     @patch("genai_otel.auto_instrument.OTLPSpanExporter")
@@ -417,7 +422,8 @@ class TestAutoInstrumentation:
                         )
                         mock_gpu_instance.start.assert_called_once()
                         mock_logger.info.assert_any_call(
-                            f"GPU metrics collection started (interval: {config.gpu_collection_interval}s)."
+                            "GPU metrics collection started (interval: %ss).",
+                            config.gpu_collection_interval,
                         )
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
@@ -454,10 +460,9 @@ class TestAutoInstrumentation:
 
             # Error should be logged but not raised
             mock_logger.error.assert_called_once()
-            assert (
-                "Failed to instrument openai: LLM instrumentor error"
-                in mock_logger.error.call_args[0][0]
-            )
+            assert mock_logger.error.call_args[0][0] == "Failed to instrument %s: %s"
+            assert mock_logger.error.call_args[0][1] == "openai"
+            assert str(mock_logger.error.call_args[0][2]) == "LLM instrumentor error"
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
     def test_setup_auto_instrumentation_llm_instrumentor_failure_with_fail_on_error(self):
@@ -520,11 +525,11 @@ class TestAutoInstrumentation:
                                 setup_auto_instrumentation(config)
 
                                 mock_logger.error.assert_called_once()
-                                error_message = mock_logger.error.call_args[0][0]
                                 assert (
-                                    "Failed to set up MCP tools instrumentation: MCP error"
-                                    in error_message
+                                    mock_logger.error.call_args[0][0]
+                                    == "Failed to set up MCP tools instrumentation: %s"
                                 )
+                                assert str(mock_logger.error.call_args[0][1]) == "MCP error"
 
     def test_setup_auto_instrumentation_mcp_instrumentation_failure_with_fail_on_error(self):
         """Test MCP instrumentation failure when fail_on_error is True."""
@@ -589,11 +594,11 @@ class TestAutoInstrumentation:
                                 setup_auto_instrumentation(config)
 
                                 mock_logger.error.assert_called_once()
-                                error_message = mock_logger.error.call_args[0][0]
                                 assert (
-                                    "Failed to start GPU metrics collection: GPU error"
-                                    in error_message
+                                    mock_logger.error.call_args[0][0]
+                                    == "Failed to start GPU metrics collection: %s"
                                 )
+                                assert str(mock_logger.error.call_args[0][1]) == "GPU error"
 
     def test_setup_auto_instrumentation_gpu_metrics_failure_with_fail_on_error(self):
         """Test GPU metrics failure when fail_on_error is True."""
@@ -670,7 +675,7 @@ class TestAutoInstrumentation:
                     mock_openai_instance.instrument.assert_called_once_with(config=config)
                     # Verify that a warning was logged for the unknown instrumentor
                     mock_logger.warning.assert_called_once_with(
-                        "Unknown instrumentor 'unknown_llm' requested."
+                        "Unknown instrumentor '%s' requested.", "unknown_llm"
                     )
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
@@ -714,8 +719,8 @@ class TestAutoInstrumentation:
                     mock_openai_instance.instrument.assert_called_once_with(config=config)
                     # Verify that warnings were logged for the unknown instrumentors
                     warning_calls = [
-                        call("Unknown instrumentor 'unknown1' requested."),
-                        call("Unknown instrumentor 'unknown2' requested."),
+                        call("Unknown instrumentor '%s' requested.", "unknown1"),
+                        call("Unknown instrumentor '%s' requested.", "unknown2"),
                     ]
                     mock_logger.warning.assert_has_calls(warning_calls, any_order=True)
                     assert mock_logger.warning.call_count == 2
@@ -750,7 +755,9 @@ class TestEdgeCases:
                             setup_auto_instrumentation(config)
 
             # Should log warning for unknown instrumentor since INSTRUMENTORS is empty
-            mock_logger.warning.assert_called_once_with("Unknown instrumentor 'openai' requested.")
+            mock_logger.warning.assert_called_once_with(
+                "Unknown instrumentor '%s' requested.", "openai"
+            )
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
     def test_setup_auto_instrumentation_empty_instrumentor_list(self):
@@ -890,8 +897,11 @@ class TestEdgeCases:
 
                 # Verify warning was logged about invalid timeout
                 mock_logger.warning.assert_called_once()
-                warning_msg = mock_logger.warning.call_args[0][0]
-                assert "Invalid timeout value 'invalid'" in warning_msg
+                assert (
+                    mock_logger.warning.call_args[0][0]
+                    == "Invalid timeout value '%s' in OTEL_EXPORTER_OTLP_TIMEOUT. Using default of 60 seconds."
+                )
+                assert mock_logger.warning.call_args[0][1] == "invalid"
 
                 # Verify config uses default timeout
                 assert config.exporter_timeout == 60
@@ -916,3 +926,134 @@ def test_instrument_wrapper_function():
 
             # Verify setup_auto_instrumentation was called with the config
             mock_setup.assert_called_once_with(mock_config_instance)
+
+
+def test_sampling_rate_applied(monkeypatch):
+    """Test that sampling rate < 1.0 applies TraceIdRatioBased sampler."""
+    # Reset the initialization guard
+    monkeypatch.setattr(auto_instrument_module, "_INSTRUMENTATION_INITIALIZED", False)
+    monkeypatch.setattr(auto_instrument_module, "_active_tracer_provider", None)
+    monkeypatch.setattr(auto_instrument_module, "_active_meter_provider", None)
+    monkeypatch.setattr(auto_instrument_module, "_active_gpu_collector", None)
+
+    with (
+        patch.object(auto_instrument_module, "TracerProvider") as mock_tp_cls,
+        patch.object(auto_instrument_module, "trace") as mock_trace,
+        patch.object(auto_instrument_module, "metrics") as mock_metrics,
+        patch.object(auto_instrument_module, "Resource") as mock_resource,
+        patch("genai_otel.auto_instrument._check_openinference"),
+    ):
+
+        mock_tp_instance = MagicMock()
+        mock_tp_cls.return_value = mock_tp_instance
+        mock_resource.create.return_value = MagicMock()
+
+        config = OTelConfig(
+            service_name="test",
+            endpoint="",
+            sampling_rate=0.25,
+            enable_gpu_metrics=False,
+            enable_mcp_instrumentation=False,
+            enabled_instrumentors=[],
+        )
+        setup_auto_instrumentation(config)
+
+        # Verify TracerProvider was called with a sampler
+        call_kwargs = mock_tp_cls.call_args
+        assert call_kwargs is not None
+        sampler = call_kwargs[1].get("sampler") or (
+            call_kwargs[0][1] if len(call_kwargs[0]) > 1 else None
+        )
+        # The sampler should be a TraceIdRatioBased instance
+        from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
+
+        assert isinstance(sampler, TraceIdRatioBased)
+
+
+def test_sampling_rate_default_no_sampler(monkeypatch):
+    """Test that sampling rate 1.0 (default) does not set a sampler."""
+    monkeypatch.setattr(auto_instrument_module, "_INSTRUMENTATION_INITIALIZED", False)
+    monkeypatch.setattr(auto_instrument_module, "_active_tracer_provider", None)
+    monkeypatch.setattr(auto_instrument_module, "_active_meter_provider", None)
+    monkeypatch.setattr(auto_instrument_module, "_active_gpu_collector", None)
+
+    with (
+        patch.object(auto_instrument_module, "TracerProvider") as mock_tp_cls,
+        patch.object(auto_instrument_module, "trace") as mock_trace,
+        patch.object(auto_instrument_module, "metrics") as mock_metrics,
+        patch.object(auto_instrument_module, "Resource") as mock_resource,
+        patch("genai_otel.auto_instrument._check_openinference"),
+    ):
+
+        mock_tp_instance = MagicMock()
+        mock_tp_cls.return_value = mock_tp_instance
+        mock_resource.create.return_value = MagicMock()
+
+        config = OTelConfig(
+            service_name="test",
+            endpoint="",
+            sampling_rate=1.0,
+            enable_gpu_metrics=False,
+            enable_mcp_instrumentation=False,
+            enabled_instrumentors=[],
+        )
+        setup_auto_instrumentation(config)
+
+        # Verify TracerProvider was called with sampler=None
+        call_kwargs = mock_tp_cls.call_args
+        sampler = call_kwargs[1].get("sampler")
+        assert sampler is None
+
+
+def test_instrument_uninstrument_no_memory_leak(monkeypatch):
+    """Test that repeated instrument/uninstrument cycles do not leak memory."""
+    import tracemalloc
+
+    monkeypatch.setattr(auto_instrument_module, "_INSTRUMENTATION_INITIALIZED", False)
+    monkeypatch.setattr(auto_instrument_module, "_active_tracer_provider", None)
+    monkeypatch.setattr(auto_instrument_module, "_active_meter_provider", None)
+    monkeypatch.setattr(auto_instrument_module, "_active_gpu_collector", None)
+
+    from genai_otel.auto_instrument import uninstrument
+
+    tracemalloc.start()
+
+    for i in range(5):
+        # Reset guard for each iteration
+        monkeypatch.setattr(auto_instrument_module, "_INSTRUMENTATION_INITIALIZED", False)
+
+        with (
+            patch.object(auto_instrument_module, "TracerProvider") as mock_tp_cls,
+            patch.object(auto_instrument_module, "trace") as mock_trace,
+            patch.object(auto_instrument_module, "metrics") as mock_metrics,
+            patch.object(auto_instrument_module, "Resource") as mock_resource,
+            patch("genai_otel.auto_instrument._check_openinference"),
+        ):
+
+            mock_tp_instance = MagicMock()
+            mock_tp_instance.shutdown = MagicMock()
+            mock_tp_cls.return_value = mock_tp_instance
+            mock_resource.create.return_value = MagicMock()
+
+            config = OTelConfig(
+                service_name="test",
+                endpoint="",
+                enable_gpu_metrics=False,
+                enable_mcp_instrumentation=False,
+                enabled_instrumentors=[],
+            )
+            setup_auto_instrumentation(config)
+            uninstrument()
+
+        if i == 0:
+            # Take snapshot after first cycle (baseline)
+            snapshot_start = tracemalloc.take_snapshot()
+
+    snapshot_end = tracemalloc.take_snapshot()
+    tracemalloc.stop()
+
+    # Compare memory: should not grow more than 5MB across 4 additional cycles
+    stats_start = sum(s.size for s in snapshot_start.statistics("filename"))
+    stats_end = sum(s.size for s in snapshot_end.statistics("filename"))
+    growth_mb = (stats_end - stats_start) / (1024 * 1024)
+    assert growth_mb < 5, f"Memory grew by {growth_mb:.1f}MB across instrument/uninstrument cycles"

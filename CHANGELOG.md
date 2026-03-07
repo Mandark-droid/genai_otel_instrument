@@ -6,6 +6,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Replaced `openlit` dependency with internal `semconv.py`** - Moved all semantic convention constants from `openlit/semcov.py` into `genai_otel/semconv.py` and removed the `openlit/` directory entirely
+- **Re-entrancy guard for auto-instrumentation** - Added `_INSTRUMENTATION_INITIALIZED` flag to prevent double-wrapping on repeated `instrument()` calls
+- **Lazy logging (f-string to %s formatting)** - Fixed 40+ logger calls across the codebase to use `%s` lazy formatting instead of eagerly-evaluated f-strings
+- **Security: PII original_text exposure** - `PIIDetectionResult` no longer stores `original_text` when PII is found in REDACT/BLOCK mode
+- **Thread-safe MCP metrics initialization** - Added `threading.Lock` to prevent race conditions in `mcp_instrumentors/base.py` shared metrics setup
+- **JSON serialization for first_message** - Changed `str(dict)` to `json.dumps()` in `_build_first_message()` for reliable cross-language parsing. Parser updated to try `json.loads` first with `ast.literal_eval` fallback
+- **Perspective API timeout** - Added `api_timeout` config (default 30s) to `ToxicityConfig`, applied via `httplib2.Http` to prevent hanging API calls
+- **Vector DB instrumentor safety** - Converted Qdrant, ChromaDB, Milvus, FAISS to use `wrapt.wrap_function_wrapper()` instead of direct class method replacement
+- **API instrumentor hostname detection** - Replaced string `in` checks with `hostname.endswith()` for more accurate provider detection in `api_instrumentor.py`
+- **GPU metrics tests synced to current code** - Fixed 5 GPU metrics tests (counter/gauge counts, codecarbon `stop_task`/`start_task` pattern)
+- **Google AI legacy SDK tests** - Fixed 3 tests to properly block `google-genai` when testing legacy `google-generativeai` paths
+- **Lazy imports for Elasticsearch/OpenSearch instrumentors** - Moved OTel instrumentor imports inside `instrument()` to prevent `ModuleNotFoundError`
+
+### Changed
+
+- **Reduced core dependencies** - Moved 12 DB/MQ dependencies to optional `[databases]`/`[messaging]` extras
+- **Removed eager imports** - Lazy-load evaluation detectors (spacy/torch/presidio) and httpx, reducing import time from ~24s to ~3.3s
+- **Deduplicated MeterProvider setup** - Extracted `_setup_meter_provider()` helper, eliminating ~120 lines of duplication
+- **Removed dead code** - Cleaned up unused `_OTLP_EXPORTER_SESSIONS`, duplicate imports, emoji log characters
+- **OpenInference version ranges** - Changed exact pins (`==0.1.31`) to ranges (`>=0.1.31,<1.0.0`)
+
+### Added
+
+- **Configurable trace sampling rate** - Added `GENAI_SAMPLING_RATE` env var (0.0-1.0, default 1.0) and `sampling_rate` config field. Applies `TraceIdRatioBased` sampler to reduce telemetry volume in high-traffic production
+- **Lazy imports in `__init__.py`** - Implemented `__getattr__`-based lazy loading. `import genai_otel` now takes ~16ms instead of ~7300ms (456x improvement). Heavy modules only load on first attribute access
+- **Package size CI check** - Added `tests/test_package_size.py` with package size (<5MB) and import time (<500ms) threshold tests
+- **Dependency compatibility tests** - Added `tests/test_dependency_compat.py` with 5 tests for graceful degradation with missing/incompatible dependencies
+- **Memory leak detection test** - Added `test_instrument_uninstrument_no_memory_leak` using `tracemalloc` across 5 instrument/uninstrument cycles
+- **Performance benchmarks** - Added `benchmarks/bench_instrumentation.py` measuring import time, span wrapper overhead (0.085ms/call), and cost calculation (0.015ms/call)
+- **Performance tuning guide** - Added `docs/PERFORMANCE_TUNING.md` covering sampling, batching, content capture, GPU metrics, and production checklist
+- **Python version compatibility matrix** - Added `docs/PYTHON_COMPATIBILITY.md` documenting Python 3.9-3.13 support
+- **Security assessment report** - Added `SECURITY.md` with SAST (bandit), SCA (pip-audit), PII handling, license compliance, and network security documentation
+- **`uninstrument()` function** - Clean teardown: stops GPU collector, shuts down TracerProvider/MeterProvider, resets initialization guard for re-instrumentation
+- **LanceDB vector DB instrumentation** - Added tracing for LanceDB search, add, create_table, and drop_table operations
+- **TimescaleDB instrumentation** - Added tracing for TimescaleDB-specific operations (create_hypertable, time_bucket queries, compression policies, retention policies, continuous aggregates, chunk management)
+- **MinIO object storage instrumentation** - Added tracing for MinIO S3-compatible operations (put_object, get_object, remove_object, list_objects, make_bucket, remove_bucket, list_buckets, stat_object, fput_object, fget_object)
+- **RabbitMQ message broker instrumentation** - Added tracing for RabbitMQ via pika (basic_publish, basic_consume, basic_get, queue_declare, queue_delete, exchange_declare, exchange_delete) with proper PRODUCER/CONSUMER/CLIENT span kinds
+- **OpenSearch instrumentation** - Added tracing for OpenSearch operations via opentelemetry-instrumentation-opensearch-py
+- **Elasticsearch instrumentation** - Added tracing for Elasticsearch operations via opentelemetry-instrumentation-elasticsearch
+
 ## [0.1.40] - 2026-02-19
 
 ### Fixed

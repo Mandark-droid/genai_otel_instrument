@@ -103,10 +103,10 @@ class TestGPUMetricsCollector:
         mock_pynvml_gpu_available.nvmlInit.side_effect = Exception("NVML init failed")
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(mock_meter, mock_otel_config)
         assert not collector.gpu_available
-        # Both CO2 and power cost counters are created (before GPU availability check)
-        assert mock_meter.create_counter.call_count == 2
-        # GPU gauges are created even if no GPUs available
-        assert mock_meter.create_observable_gauge.call_count == 5
+        # All 4 counters (co2, power_cost, energy, total_energy) are created before GPU check
+        assert mock_meter.create_counter.call_count == 4
+        # No observable gauges created since nvmlInit failed (device_count=0, no callbacks)
+        assert mock_meter.create_observable_gauge.call_count == 0
 
     @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", False)
     @patch("genai_otel.gpu_metrics.logger")
@@ -131,12 +131,10 @@ class TestGPUMetricsCollector:
         assert collector.gpu_available
         assert collector.device_count == 1
         mock_pynvml_gpu_available.nvmlInit.assert_called_once()
-        # Both CO2 and power cost counters are created
-        assert mock_meter.create_counter.call_count == 2
-        # All five metrics are now ObservableGauges
-        assert (
-            mock_meter.create_observable_gauge.call_count == 5
-        )  # utilization, memory used, memory total, temperature, power
+        # All 4 counters (co2, power_cost, energy, total_energy) are created
+        assert mock_meter.create_counter.call_count == 4
+        # All 22 observable gauges for NVIDIA (5 basic + 13 enhanced + 4 aggregate)
+        assert mock_meter.create_observable_gauge.call_count == 22
 
     @patch("genai_otel.gpu_metrics.logger")
     def test_init_metric_instrument_creation_fails(
@@ -852,29 +850,31 @@ class TestCodecarbonIntegration:
         mock_otel_config_with_codecarbon,
         mock_pynvml_gpu_available,
     ):
-        """Test collecting emissions from codecarbon."""
+        """Test collecting emissions from codecarbon via stop_task/start_task pattern."""
         import genai_otel.gpu_metrics
 
         mock_tracker = Mock()
-        mock_total_emissions = Mock()
-        mock_total_emissions.total = 0.001  # 0.001 kg = 1 gram
-        mock_tracker._total_emissions = mock_total_emissions
+        # stop_task returns an EmissionsData object
+        mock_emissions_data = Mock()
+        mock_emissions_data.emissions = 0.001  # 0.001 kg = 1 gram
+        mock_emissions_data.country_iso_code = "US"
+        mock_emissions_data.region = "california"
+        mock_tracker.stop_task.return_value = mock_emissions_data
         mock_offline_tracker_class.return_value = mock_tracker
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(
             mock_meter, mock_otel_config_with_codecarbon
         )
-        collector._last_emissions_kg = 0.0
 
         collector._collect_codecarbon_emissions()
 
-        mock_tracker.flush.assert_called_once()
+        mock_tracker.stop_task.assert_called_once_with("gpu_monitoring")
+        mock_tracker.start_task.assert_called_once_with("gpu_monitoring")
         # Should record 1 gram of emissions
         collector.co2_counter.add.assert_called_once()
         call_args = collector.co2_counter.add.call_args
         assert call_args[0][0] == pytest.approx(1.0)  # 0.001 kg * 1000 = 1 gram
         assert call_args[0][1]["source"] == "codecarbon"
-        assert collector._last_emissions_kg == 0.001
 
     @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
     @patch("genai_otel.gpu_metrics.OfflineEmissionsTracker")
@@ -917,21 +917,27 @@ class TestCodecarbonIntegration:
         import genai_otel.gpu_metrics
 
         mock_tracker = Mock()
+        # stop_task returns EmissionsData with remaining emissions
+        mock_task_emissions = Mock()
+        mock_task_emissions.emissions = 0.002  # 2 grams remaining
+        mock_task_emissions.country_iso_code = "US"
+        mock_task_emissions.region = "california"
+        mock_tracker.stop_task.return_value = mock_task_emissions
         mock_tracker.stop.return_value = 0.005  # 5 grams total
         mock_offline_tracker_class.return_value = mock_tracker
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(
             mock_meter, mock_otel_config_with_codecarbon
         )
-        collector._last_emissions_kg = 0.003  # 3 grams already recorded
 
         collector.stop()
 
+        mock_tracker.stop_task.assert_called_once_with("gpu_monitoring")
         mock_tracker.stop.assert_called_once()
-        # Should record remaining 2 grams
+        # Should record remaining task emissions (2 grams)
         collector.co2_counter.add.assert_called()
         call_args = collector.co2_counter.add.call_args
-        assert call_args[0][0] == pytest.approx(2.0)  # (0.005 - 0.003) * 1000 = 2 grams
+        assert call_args[0][0] == pytest.approx(2.0)  # 0.002 * 1000 = 2 grams
 
     @patch("genai_otel.gpu_metrics.time.time", return_value=1000.0)
     @patch("genai_otel.gpu_metrics.CODECARBON_AVAILABLE", True)
@@ -948,9 +954,12 @@ class TestCodecarbonIntegration:
         import genai_otel.gpu_metrics
 
         mock_tracker = Mock()
-        mock_total_emissions = Mock()
-        mock_total_emissions.total = 0.0
-        mock_tracker._total_emissions = mock_total_emissions
+        # stop_task returns EmissionsData with emissions
+        mock_emissions_data = Mock()
+        mock_emissions_data.emissions = 0.001
+        mock_emissions_data.country_iso_code = "US"
+        mock_emissions_data.region = "california"
+        mock_tracker.stop_task.return_value = mock_emissions_data
         mock_offline_tracker_class.return_value = mock_tracker
 
         collector = genai_otel.gpu_metrics.GPUMetricsCollector(
@@ -964,9 +973,8 @@ class TestCodecarbonIntegration:
 
         collector._collect_loop()
 
-        # Codecarbon flush should be called
-        mock_tracker.flush.assert_called()
-        # Manual CO2 calculation should NOT be called (co2_counter.add only from codecarbon)
+        # Codecarbon stop_task should be called (new pattern replaces flush)
+        mock_tracker.stop_task.assert_called()
         # The power_cost_counter should still be called
         collector.power_cost_counter.add.assert_called()
 

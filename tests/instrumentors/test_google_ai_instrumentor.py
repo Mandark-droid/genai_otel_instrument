@@ -1,8 +1,20 @@
+import types
 import unittest
 from unittest.mock import MagicMock, patch
 
 from genai_otel.config import OTelConfig
 from genai_otel.instrumentors.google_ai_instrumentor import GoogleAIInstrumentor
+
+
+def _make_legacy_sdk_modules(mock_genai_legacy=None):
+    """Create sys.modules dict that blocks new SDK but enables legacy SDK."""
+    mock_google_ns = types.ModuleType("google")
+    mock_google_ns.__path__ = []  # namespace package
+    return {
+        "google": mock_google_ns,
+        "google.genai": None,
+        "google.generativeai": mock_genai_legacy or MagicMock(),
+    }
 
 
 class TestGoogleAIInstrumentor(unittest.TestCase):
@@ -21,8 +33,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
 
     def test_init_with_legacy_sdk_available(self):
         """Test that __init__ detects legacy google.generativeai availability."""
-        # Only patch google.generativeai, not the google namespace package
-        with patch.dict("sys.modules", {"google.generativeai": MagicMock()}):
+        with patch.dict("sys.modules", _make_legacy_sdk_modules()):
             instrumentor = GoogleAIInstrumentor()
             self.assertTrue(instrumentor._google_available)
             self.assertFalse(instrumentor._using_new_sdk)
@@ -55,7 +66,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         mock_genai = MagicMock()
         mock_genai.GenerativeModel = MockGenerativeModel
 
-        with patch.dict("sys.modules", {"google.generativeai": mock_genai}):
+        with patch.dict("sys.modules", _make_legacy_sdk_modules(mock_genai)):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig()
 
@@ -124,7 +135,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         mock_genai = MagicMock()
         mock_genai.GenerativeModel = MagicMock(spec=[])  # Empty spec means no attributes
 
-        with patch.dict("sys.modules", {"google.generativeai": mock_genai}):
+        with patch.dict("sys.modules", _make_legacy_sdk_modules(mock_genai)):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig()
 
@@ -142,7 +153,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
             lambda self: (_ for _ in ()).throw(RuntimeError("Access failed"))
         )
 
-        with patch.dict("sys.modules", {"google.generativeai": mock_genai}):
+        with patch.dict("sys.modules", _make_legacy_sdk_modules(mock_genai)):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig(fail_on_error=False)
 
@@ -161,7 +172,7 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
         mock_genai = MagicMock()
         mock_genai.GenerativeModel = MockGenerativeModel
 
-        with patch.dict("sys.modules", {"google.generativeai": mock_genai}):
+        with patch.dict("sys.modules", _make_legacy_sdk_modules(mock_genai)):
             instrumentor = GoogleAIInstrumentor()
             config = OTelConfig(fail_on_error=True)
 
