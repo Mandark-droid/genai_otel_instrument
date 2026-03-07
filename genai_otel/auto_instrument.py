@@ -54,7 +54,6 @@ from .metrics import (
 
 from .semconv import SemanticConvention as SC
 
-
 # Import instrumentors - fix the import path based on your actual structure
 try:
     from .instrumentors import (
