@@ -77,6 +77,8 @@ class APIInstrumentor(BaseInstrumentor):
 
         try:
             # Wrap httpx.Client.request
+            if httpx is None:
+                raise ImportError("httpx is not installed")
             wrapt.wrap_function_wrapper(httpx.Client, "request", self._wrap_api_call)
             logger.info("httpx library instrumented for API calls.")
         except ImportError:

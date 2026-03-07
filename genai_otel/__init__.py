@@ -103,14 +103,14 @@ def instrument(**kwargs):
         GENAI_LOG_LEVEL: Logging level (default: "INFO")
         GENAI_LOG_FILE: Log file path (optional)
     """
-    # Lazy imports - only loaded when instrument() is actually called
-    from .auto_instrument import setup_auto_instrumentation
-    from .config import OTelConfig
+    # Import from sub-modules directly (patchable via "genai_otel.config.OTelConfig" etc.)
+    from . import auto_instrument as _auto_mod
+    from . import config as _config_mod
 
     try:
         # Create config object, allowing kwargs to override env vars
-        config = OTelConfig(**kwargs)
-        setup_auto_instrumentation(config)
+        config = _config_mod.OTelConfig(**kwargs)
+        _auto_mod.setup_auto_instrumentation(config)
         logger.info("GenAI OpenTelemetry instrumentation initialized successfully")
     except Exception as e:
         # Log the error and potentially re-raise based on fail_on_error
