@@ -284,7 +284,13 @@ def setup_auto_instrumentation(config: OTelConfig):
 
     service_instance_id = os.getenv("OTEL_SERVICE_INSTANCE_ID")
     environment = os.getenv("OTEL_ENVIRONMENT")
-    resource_attributes = {"service.name": config.service_name}
+    from .__version__ import __version__ as _pkg_version
+
+    resource_attributes = {
+        "service.name": config.service_name,
+        "telemetry.auto.name": "genai-otel-instrument",
+        "telemetry.auto.version": _pkg_version,
+    }
     if service_instance_id:
         resource_attributes["service.instance.id"] = service_instance_id
     if environment:
