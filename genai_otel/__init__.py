@@ -103,6 +103,14 @@ def instrument(**kwargs):
         GENAI_LOG_LEVEL: Logging level (default: "INFO")
         GENAI_LOG_FILE: Log file path (optional)
     """
+    # Auto-load .env file if python-dotenv is available
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+    except ImportError:
+        pass
+
     # Import from sub-modules directly (patchable via "genai_otel.config.OTelConfig" etc.)
     from . import auto_instrument as _auto_mod
     from . import config as _config_mod
