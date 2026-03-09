@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.42] - 2026-03-09
+
+### Fixed
+
+- **TimescaleDB instrumentor crash on psycopg2 C extension cursor** - `psycopg2.extensions.cursor` is an immutable C type; `wrapt` cannot monkey-patch `cursor.execute`. Switched to wrapping `psycopg2.connect` and injecting a cursor subclass with TimescaleDB-specific span creation
+- **CI pipeline failures** - Guarded all optional dependency imports (httpx, requests, OTel instrumentor libraries) with `try/except` in MCP instrumentors; pinned Black to 25.11.0 for Python 3.9 compatibility; converted parenthesized context managers to `contextlib.ExitStack`; fixed test mocking for lazy `__getattr__` import pattern
+
+### Added
+
+- **Auto-load `.env` file** - `instrument()` now calls `dotenv.load_dotenv()` if `python-dotenv` is installed, ensuring `OTEL_EXPORTER_OTLP_ENDPOINT` and other env vars from `.env` files are picked up automatically
+- **Package name and version in trace resource attributes** - Every span now includes `telemetry.auto.name` (`genai-otel-instrument`) and `telemetry.auto.version` resource attributes
+
+## [0.1.41] - 2026-03-07
+
 ### Fixed
 
 - **Replaced `openlit` dependency with internal `semconv.py`** - Moved all semantic convention constants from `openlit/semcov.py` into `genai_otel/semconv.py` and removed the `openlit/` directory entirely
