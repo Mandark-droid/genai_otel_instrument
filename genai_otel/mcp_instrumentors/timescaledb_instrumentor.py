@@ -25,37 +25,47 @@ class TimescaleDBInstrumentor:  # pylint: disable=R0903
         self.tracer = trace.get_tracer(__name__)
 
     def instrument(self):
-        """Instrument TimescaleDB operations via psycopg2 cursor wrapping"""
+        """Instrument TimescaleDB operations via psycopg2 connection wrapping.
+
+        Wraps ``psycopg2.connect`` so that every connection returned uses a
+        custom cursor subclass whose ``execute`` method creates TimescaleDB-
+        specific spans for recognised operations.
+        """
         try:
             import psycopg2  # noqa: F401
-            from psycopg2.extensions import cursor as Psycopg2Cursor  # noqa: F401
 
             tracer = self.tracer
 
-            def wrapped_execute(wrapped, instance, args, kwargs):
-                query = args[0] if args else kwargs.get("query", "")
-                query_upper = str(query).upper().strip()
+            class _TimescaleCursor(psycopg2.extensions.cursor):
+                """Cursor subclass that traces TimescaleDB-specific operations."""
 
-                # Detect TimescaleDB-specific operations
-                timescale_op = _detect_timescale_operation(query_upper)
+                def execute(self, query, vars=None):  # pylint: disable=W0622
+                    query_upper = str(query).upper().strip()
+                    timescale_op = _detect_timescale_operation(query_upper)
 
-                if timescale_op:
-                    span_name = f"timescaledb.{timescale_op}"
-                    with tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT) as span:
-                        span.set_attribute("db.system", "timescaledb")
-                        span.set_attribute("db.operation", timescale_op)
-                        try:
-                            result = wrapped(*args, **kwargs)
-                            span.set_status(Status(StatusCode.OK))
-                            return result
-                        except Exception as e:
-                            span.set_status(Status(StatusCode.ERROR, str(e)))
-                            span.record_exception(e)
-                            raise
-                else:
-                    return wrapped(*args, **kwargs)
+                    if timescale_op:
+                        span_name = f"timescaledb.{timescale_op}"
+                        with tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT) as span:
+                            span.set_attribute("db.system", "timescaledb")
+                            span.set_attribute("db.operation", timescale_op)
+                            try:
+                                result = super().execute(query, vars)
+                                span.set_status(Status(StatusCode.OK))
+                                return result
+                            except Exception as e:
+                                span.set_status(Status(StatusCode.ERROR, str(e)))
+                                span.record_exception(e)
+                                raise
+                    else:
+                        return super().execute(query, vars)
 
-            wrapt.wrap_function_wrapper("psycopg2.extensions", "cursor.execute", wrapped_execute)
+            def wrapped_connect(wrapped, instance, args, kwargs):
+                # Inject our cursor factory unless the caller specified one
+                if "cursor_factory" not in kwargs:
+                    kwargs["cursor_factory"] = _TimescaleCursor
+                return wrapped(*args, **kwargs)
+
+            wrapt.wrap_function_wrapper("psycopg2", "connect", wrapped_connect)
             logger.info("TimescaleDB instrumentation enabled")
             return True
 
