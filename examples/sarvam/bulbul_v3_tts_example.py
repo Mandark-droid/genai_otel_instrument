@@ -25,6 +25,10 @@ Environment variables:
 
 import base64
 import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
 import tempfile
 import time
 

@@ -26,6 +26,10 @@ Environment variables:
 """
 
 import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
 import time
 
 from genai_otel import instrument

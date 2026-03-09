@@ -35,6 +35,10 @@ Sarvam AI Drop Week (Feb 2026):
 
 import base64
 import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
 import tempfile
 import time
 
