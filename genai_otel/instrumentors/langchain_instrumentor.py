@@ -7,6 +7,7 @@ including chains, agents, and chat models, capturing relevant attributes for obs
 import asyncio
 import functools
 import logging
+import uuid
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
@@ -63,19 +64,62 @@ class LangChainInstrumentor(BaseInstrumentor):
         if self._langchain_core_available:
             self._instrument_chat_models()
 
+    def _resolve_session_id(self, instance, args, kwargs):
+        """Resolve session ID from various sources.
+
+        Priority:
+        1. kwargs session_id / session.id
+        2. Input dict session_id / session.id (first positional arg)
+        3. OTelConfig.session_id_extractor callable
+        4. Auto-generate UUID
+
+        Returns:
+            str: The resolved session ID.
+        """
+        session_id = None
+
+        # Priority 1: kwargs
+        session_id = kwargs.get("session_id") or kwargs.get("session.id")
+
+        # Priority 2: Input dict (first positional arg)
+        if not session_id and args:
+            first_arg = args[0]
+            if isinstance(first_arg, dict):
+                session_id = first_arg.get("session_id") or first_arg.get("session.id")
+
+        # Priority 3: OTelConfig.session_id_extractor callable
+        if not session_id and self.config and self.config.session_id_extractor:
+            try:
+                session_id = self.config.session_id_extractor(instance, args, kwargs)
+            except Exception as e:
+                logger.debug("Failed to extract session ID via extractor: %s", e)
+
+        # Priority 4: Auto-generate UUID
+        if not session_id:
+            session_id = str(uuid.uuid4())
+
+        return session_id
+
     def _instrument_chains_and_agents(self):
         """Instrument LangChain chains and agents."""
         try:
             from langchain.agents.agent import AgentExecutor
             from langchain.chains.base import Chain
 
+            instrumentor_ref = self
+
             # Instrument Chains
             original_call = Chain.__call__
 
             def wrapped_call(instance, *args, **kwargs):
                 chain_type = instance.__class__.__name__
-                with self.tracer.start_as_current_span(f"langchain.chain.{chain_type}") as span:
+                with instrumentor_ref.tracer.start_as_current_span(
+                    f"langchain.chain.{chain_type}"
+                ) as span:
                     span.set_attribute("langchain.chain.type", chain_type)
+                    session_id = instrumentor_ref._resolve_session_id(instance, args, kwargs)
+                    span.set_attribute("session.id", session_id)
+                    span.set_attribute("langchain.session.id", session_id)
                     result = original_call(instance, *args, **kwargs)
                     return result
 
@@ -85,9 +129,14 @@ class LangChainInstrumentor(BaseInstrumentor):
             original_agent_call = AgentExecutor.__call__
 
             def wrapped_agent_call(instance, *args, **kwargs):
-                with self.tracer.start_as_current_span("langchain.agent.execute") as span:
+                with instrumentor_ref.tracer.start_as_current_span(
+                    "langchain.agent.execute"
+                ) as span:
                     agent_name = getattr(instance, "agent", {}).get("name", "unknown")
                     span.set_attribute("langchain.agent.name", agent_name)
+                    session_id = instrumentor_ref._resolve_session_id(instance, args, kwargs)
+                    span.set_attribute("session.id", session_id)
+                    span.set_attribute("langchain.session.id", session_id)
                     result = original_agent_call(instance, *args, **kwargs)
                     return result
 
@@ -176,6 +225,11 @@ class LangChainInstrumentor(BaseInstrumentor):
                         batch_size = len(args[0]) if hasattr(args[0], "__len__") else 1
                         span.set_attribute("langchain.chat_model.batch_size", batch_size)
 
+                    # Set session.id
+                    session_id = self._resolve_session_id(instance, args, kwargs)
+                    span.set_attribute("session.id", session_id)
+                    span.set_attribute("langchain.session.id", session_id)
+
                     result = original_batch(instance, *args, **kwargs)
 
                     # Record metrics (though batch results may not have usage info)
@@ -214,6 +268,11 @@ class LangChainInstrumentor(BaseInstrumentor):
                     if args and len(args) > 0:
                         batch_size = len(args[0]) if hasattr(args[0], "__len__") else 1
                         span.set_attribute("langchain.chat_model.batch_size", batch_size)
+
+                    # Set session.id
+                    session_id = self._resolve_session_id(instance, args, kwargs)
+                    span.set_attribute("session.id", session_id)
+                    span.set_attribute("langchain.session.id", session_id)
 
                     result = await original_abatch(instance, *args, **kwargs)
 
@@ -268,6 +327,11 @@ class LangChainInstrumentor(BaseInstrumentor):
                 message_count = len(messages)
                 span.set_attribute("gen_ai.request.message_count", message_count)
                 span.set_attribute("langchain.chat_model.message_count", message_count)
+
+        # Set session.id on chat model spans
+        session_id = self._resolve_session_id(instance, args, kwargs)
+        span.set_attribute("session.id", session_id)
+        span.set_attribute("langchain.session.id", session_id)
 
     def _extract_provider(self, instance: Any) -> Optional[str]:
         """Extract provider name from chat model instance."""
