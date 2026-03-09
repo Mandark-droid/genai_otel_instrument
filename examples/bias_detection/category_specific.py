@@ -24,6 +24,10 @@ Environment Setup:
 
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from genai_otel import instrument
 
 # Configure specific bias categories to monitor

@@ -19,6 +19,10 @@ Environment Setup:
 
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from genai_otel import instrument
 
 # Enable all evaluation types
