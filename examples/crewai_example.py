@@ -192,8 +192,11 @@ research_crew = Crew(
     verbose=True,
 )
 
-# Execute with custom inputs
-inputs = {"topic": "Quantum Computing Applications"}
+# Execute with custom inputs and an app-level session_id.
+# When session_id is passed in inputs, the instrumentor uses it as
+# session.id on all crew/task/agent spans for TraceVerse aggregation.
+# If omitted, the instrumentor auto-generates a UUID per kickoff.
+inputs = {"topic": "Quantum Computing Applications", "session_id": "user-abc-session-001"}
 print(f"Researching topic: {inputs['topic']}")
 result = research_crew.kickoff(inputs=inputs)
 
@@ -220,6 +223,8 @@ TRACES (Spans with proper parent-child hierarchy):
 - Attributes:
   - gen_ai.system: "crewai"
   - gen_ai.operation.name: "crew.execution"
+  - session.id: Auto-generated or app-provided session ID
+  - crewai.session.id: Framework-specific session ID alias
   - crewai.crew.id: Unique crew identifier
   - crewai.crew.name: Crew name
   - crewai.process.type: "sequential" or "hierarchical"
@@ -233,6 +238,14 @@ TRACES (Spans with proper parent-child hierarchy):
   - crewai.inputs.*: Custom input parameters
   - crewai.output: Crew execution result
   - crewai.tasks_completed: Number of completed tasks
+
+SESSION ID PROPAGATION:
+  session.id is set on crew, task, and agent spans for session aggregation.
+  Priority order:
+  1. inputs["session_id"] or inputs["session.id"] passed to kickoff()
+  2. OTelConfig.session_id_extractor callable (if configured)
+  3. Crew instance ID (CrewAI assigns a UUID to each Crew)
+  4. Auto-generated UUID (fallback for every kickoff invocation)
 
 METRICS:
 - genai.requests: Crew execution count
@@ -258,6 +271,7 @@ Key Features Instrumented:
 - Process Types: Sequential and hierarchical coordination
 - Manager Agent: Tracks manager delegation in hierarchical mode
 - Custom Inputs: Captures parameterized crew executions
+- Session Tracking: Auto session.id on all spans for session aggregation
 - Multi-Agent Workflows: Complete observability of agent teams
 
 Crew Modes:

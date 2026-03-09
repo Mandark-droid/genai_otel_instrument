@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.43] - 2026-03-09
+
+### Added
+
+- **Auto session.id on CrewAI spans** - `crewai.crew.execution` span now sets `session.id` and `crewai.session.id` automatically. Session ID is resolved with priority: `inputs["session_id"]` > `OTelConfig.session_id_extractor` > Crew instance ID > auto-generated UUID. Child spans (`crewai.task.execution`, `crewai.agent.execution`) inherit `session.id` from the parent crew via `task.agent.crew` / `agent.crew` references
+- **Auto session.id on LangGraph spans** - `langgraph.graph.invoke`, `.stream`, `.ainvoke`, `.astream` spans now set `session.id` and `langgraph.session.id`. Priority: `input_state["session_id"]` > `config["configurable"]["thread_id"]` > `OTelConfig.session_id_extractor` > auto-generated UUID
+- **Auto session.id on LangChain spans** - Chain, agent, and chat model spans (`langchain.chain.*`, `langchain.agent.execute`, `langchain.chat_model.*`) now set `session.id` and `langchain.session.id`. Priority: `kwargs["session_id"]` > input dict `session_id` > `OTelConfig.session_id_extractor` > auto-generated UUID
+- **CrewAI in DEFAULT_INSTRUMENTORS** - `"crewai"` added to the default instrumentor list so it is enabled automatically when the library is installed, matching all other framework instrumentors
+
 ## [0.1.42] - 2026-03-09
 
 ### Fixed

@@ -56,6 +56,7 @@ DEFAULT_INSTRUMENTORS = [
     "pydantic_ai",
     "openai_agents",
     "bedrock_agents",
+    "crewai",
 ]
 
 # Add OpenInference instrumentors only for Python >= 3.10
