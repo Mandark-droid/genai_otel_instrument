@@ -35,6 +35,10 @@ Environment Setup (Windows):
 
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from genai_otel import instrument
 
 # Configuration entirely from environment variables

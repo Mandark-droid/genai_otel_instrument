@@ -25,6 +25,10 @@ Environment Setup:
 
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from genai_otel import instrument
 
 # Configure bias detection for hiring compliance
