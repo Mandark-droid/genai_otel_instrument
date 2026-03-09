@@ -15,6 +15,7 @@ the CREWAI_TELEMETRY_OPT_OUT environment variable to prevent conflicts.
 
 import logging
 import os
+import uuid
 from typing import Any, Dict, Optional
 
 from opentelemetry import context as otel_context
@@ -195,6 +196,18 @@ class CrewAIInstrumentor(BaseInstrumentor):
             if hasattr(instance, "id"):
                 attrs["crewai.task.id"] = str(instance.id)
 
+            # Propagate session.id from parent crew instance
+            # Task doesn't have a direct 'crew' attr, but task.agent.crew does
+            crew = getattr(instance, "crew", None)
+            if not crew:
+                agent = getattr(instance, "agent", None)
+                if agent:
+                    crew = getattr(agent, "crew", None)
+            if crew:
+                session_id = getattr(crew, "_genai_otel_session_id", None)
+                if session_id:
+                    attrs["session.id"] = session_id
+
         except Exception as e:
             logger.debug("Failed to extract task attributes: %s", e)
 
@@ -235,6 +248,13 @@ class CrewAIInstrumentor(BaseInstrumentor):
                 attrs["crewai.agent.llm_model"] = instance.llm.model_name
             elif hasattr(instance, "llm") and hasattr(instance.llm, "model"):
                 attrs["crewai.agent.llm_model"] = instance.llm.model
+
+            # Propagate session.id from parent crew instance
+            crew = getattr(instance, "crew", None)
+            if crew:
+                session_id = getattr(crew, "_genai_otel_session_id", None)
+                if session_id:
+                    attrs["session.id"] = session_id
 
         except Exception as e:
             logger.debug("Failed to extract agent attributes: %s", e)
@@ -363,6 +383,34 @@ class CrewAIInstrumentor(BaseInstrumentor):
                     attrs["crewai.manager.role"] = str(instance.manager_agent.role)[:100]
             except Exception as e:
                 logger.debug("Failed to extract manager agent: %s", e)
+
+        # --- Session ID extraction (required for TraceVerse session aggregation) ---
+        session_id = None
+
+        # Priority 1: App-provided session_id in kickoff inputs
+        if isinstance(inputs, dict):
+            session_id = inputs.get("session_id") or inputs.get("session.id")
+
+        # Priority 2: OTelConfig.session_id_extractor callable
+        if not session_id and self.config and self.config.session_id_extractor:
+            try:
+                session_id = self.config.session_id_extractor(instance, args, kwargs)
+            except Exception as e:
+                logger.debug("Failed to extract session ID via extractor: %s", e)
+
+        # Priority 3: Crew instance ID (CrewAI assigns a UUID to each Crew)
+        if not session_id and hasattr(instance, "id"):
+            session_id = str(instance.id)
+
+        # Priority 4: Auto-generate a new UUID for this kickoff
+        if not session_id:
+            session_id = str(uuid.uuid4())
+
+        attrs["session.id"] = session_id
+        attrs["crewai.session.id"] = session_id
+
+        # Store on instance for child span access (cross-thread safe)
+        instance._genai_otel_session_id = session_id
 
         return attrs
 

@@ -99,6 +99,8 @@ builder.add_edge("node_c", END)
 graph = builder.compile()
 
 # Run the graph
+# session.id is automatically set on spans. You can provide it explicitly
+# via input state or config thread_id. If omitted, a UUID is auto-generated.
 initial_state = {"messages": [], "count": 0}
 print("Running simple linear graph...")
 result = graph.invoke(initial_state)
@@ -254,9 +256,11 @@ streaming_builder.add_edge("step3", END)
 
 streaming_graph = streaming_builder.compile()
 
-# Stream the execution
+# Stream the execution with an explicit session_id in input state
 print("Streaming graph execution...")
-for i, chunk in enumerate(streaming_graph.stream({"steps": []})):
+for i, chunk in enumerate(
+    streaming_graph.stream({"steps": [], "session_id": "stream-session-001"})
+):
     print(f"  Chunk {i + 1}: {chunk}")
 
 print()
@@ -281,10 +285,20 @@ TRACES (Spans):
   - langgraph.input.*: Input state values (truncated)
   - langgraph.output.keys: Output state keys
   - langgraph.output.*: Output state values (truncated)
+  - session.id: Auto-generated or app-provided session ID
+  - langgraph.session.id: Framework-specific session ID alias
   - langgraph.thread_id: Thread ID for persistence (if using checkpoints)
   - langgraph.checkpoint_id: Checkpoint ID for resumability
   - langgraph.message_count: Message count (for conversational workflows)
   - langgraph.steps: Number of execution steps
+
+SESSION ID PROPAGATION:
+  session.id is set on all graph execution spans for session aggregation.
+  Priority order:
+  1. input_state["session_id"] or input_state["session.id"]
+  2. config["configurable"]["thread_id"] (LangGraph's native thread concept)
+  3. OTelConfig.session_id_extractor callable (if configured)
+  4. Auto-generated UUID (fallback for every invocation)
 
 METRICS:
 - genai.requests: Graph execution count
@@ -308,6 +322,7 @@ Key Features Instrumented:
 - Conditional Logic: Tracks branching and routing decisions
 - Streaming: Observability for streaming graph execution
 - Checkpoints: Monitors persistence and resumability
+- Session Tracking: Auto session.id on all spans for session aggregation
 - Async Support: Full support for async graph execution
 
 Graph Types:

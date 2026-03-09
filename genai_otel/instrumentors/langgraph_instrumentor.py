@@ -6,6 +6,7 @@ and checkpoints using the LangGraph stateful workflow framework.
 
 import json
 import logging
+import uuid
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
@@ -251,6 +252,33 @@ class LangGraphInstrumentor(BaseInstrumentor):
 
             except Exception as e:
                 logger.debug("Failed to extract config: %s", e)
+
+        # --- Session ID extraction (required for TraceVerse session aggregation) ---
+        session_id = None
+
+        # Priority 1: App-provided session_id in input state
+        if isinstance(input_state, dict):
+            session_id = input_state.get("session_id") or input_state.get("session.id")
+
+        # Priority 2: LangGraph thread_id from config (native session concept)
+        if not session_id and config and isinstance(config, dict):
+            configurable = config.get("configurable", {})
+            if isinstance(configurable, dict):
+                session_id = configurable.get("thread_id")
+
+        # Priority 3: OTelConfig.session_id_extractor callable
+        if not session_id and self.config and self.config.session_id_extractor:
+            try:
+                session_id = self.config.session_id_extractor(instance, args, kwargs)
+            except Exception as e:
+                logger.debug("Failed to extract session ID via extractor: %s", e)
+
+        # Priority 4: Auto-generate a new UUID for this invocation
+        if not session_id:
+            session_id = str(uuid.uuid4())
+
+        attrs["session.id"] = session_id
+        attrs["langgraph.session.id"] = session_id
 
         return attrs
 
