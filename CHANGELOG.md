@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.44] - 2026-03-13
+
+### Added
+
+- **FalkorDB graph database instrumentation** - New MCP instrumentor for FalkorDB that traces Cypher queries (`Graph.query`, `Graph.ro_query`), graph management operations (`Graph.delete`, `Graph.copy`), and graph selection (`FalkorDB.select_graph`) with span attributes for db.system, db.operation, db.name, and db.statement
+
 ## [0.1.43] - 2026-03-09
 
 ### Added
