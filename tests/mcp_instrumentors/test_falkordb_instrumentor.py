@@ -91,9 +91,7 @@ class TestFalkorDBInstrumentor:
         mock_falkordb = MagicMock()
         mock_tracer = MagicMock()
         mock_span = MagicMock()
-        mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock(
-            return_value=mock_span
-        )
+        mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock(return_value=mock_span)
         mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock(return_value=False)
 
         wrappers = {}
@@ -121,9 +119,7 @@ class TestFalkorDBInstrumentor:
         mock_wrapped = MagicMock(return_value="result")
         mock_instance = MagicMock()
         mock_instance.name = "social"
-        wrappers["Graph.query"](
-            mock_wrapped, mock_instance, ("MATCH (n) RETURN n",), {}
-        )
+        wrappers["Graph.query"](mock_wrapped, mock_instance, ("MATCH (n) RETURN n",), {})
 
         mock_span.set_attribute.assert_any_call("db.system", "falkordb")
         mock_span.set_attribute.assert_any_call("db.operation", "query")
@@ -135,9 +131,7 @@ class TestFalkorDBInstrumentor:
         mock_falkordb = MagicMock()
         mock_tracer = MagicMock()
         mock_span = MagicMock()
-        mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock(
-            return_value=mock_span
-        )
+        mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock(return_value=mock_span)
         mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock(return_value=False)
 
         wrappers = {}
@@ -177,9 +171,7 @@ class TestFalkorDBInstrumentor:
         mock_falkordb = MagicMock()
         mock_tracer = MagicMock()
         mock_span = MagicMock()
-        mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock(
-            return_value=mock_span
-        )
+        mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock(return_value=mock_span)
         mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock(return_value=False)
 
         wrappers = {}
@@ -204,9 +196,7 @@ class TestFalkorDBInstrumentor:
         assert "FalkorDB.select_graph" in wrappers
 
         mock_wrapped = MagicMock(return_value="graph_obj")
-        wrappers["FalkorDB.select_graph"](
-            mock_wrapped, None, ("social",), {}
-        )
+        wrappers["FalkorDB.select_graph"](mock_wrapped, None, ("social",), {})
 
         mock_span.set_attribute.assert_any_call("db.system", "falkordb")
         mock_span.set_attribute.assert_any_call("db.operation", "select_graph")
@@ -217,9 +207,7 @@ class TestFalkorDBInstrumentor:
         mock_falkordb = MagicMock()
         mock_tracer = MagicMock()
         mock_span = MagicMock()
-        mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock(
-            return_value=mock_span
-        )
+        mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock(return_value=mock_span)
         mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock(return_value=False)
 
         wrappers = {}
@@ -248,9 +236,7 @@ class TestFalkorDBInstrumentor:
         mock_wrapped = MagicMock(side_effect=test_error)
 
         with pytest.raises(ConnectionError, match="Connection refused"):
-            wrappers["Graph.query"](
-                mock_wrapped, None, ("MATCH (n) RETURN n",), {}
-            )
+            wrappers["Graph.query"](mock_wrapped, None, ("MATCH (n) RETURN n",), {})
 
         mock_span.record_exception.assert_called_once_with(test_error)
 
@@ -259,9 +245,7 @@ class TestFalkorDBInstrumentor:
         mock_falkordb = MagicMock()
         mock_tracer = MagicMock()
         mock_span = MagicMock()
-        mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock(
-            return_value=mock_span
-        )
+        mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock(return_value=mock_span)
         mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock(return_value=False)
 
         wrappers = {}
@@ -288,13 +272,9 @@ class TestFalkorDBInstrumentor:
         mock_wrapped = MagicMock(return_value="copied_graph")
         mock_instance = MagicMock()
         mock_instance.name = "social"
-        wrappers["Graph.copy"](
-            mock_wrapped, mock_instance, ("social_backup",), {}
-        )
+        wrappers["Graph.copy"](mock_wrapped, mock_instance, ("social_backup",), {})
 
         mock_span.set_attribute.assert_any_call("db.system", "falkordb")
         mock_span.set_attribute.assert_any_call("db.operation", "copy")
         mock_span.set_attribute.assert_any_call("db.name", "social")
-        mock_span.set_attribute.assert_any_call(
-            "falkordb.destination_graph", "social_backup"
-        )
+        mock_span.set_attribute.assert_any_call("falkordb.destination_graph", "social_backup")

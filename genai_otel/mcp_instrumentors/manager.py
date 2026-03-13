@@ -177,9 +177,7 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
                 logger.info("[OK] FalkorDB instrumentation enabled")
         except ImportError as e:
             failure_count += 1
-            logger.debug(
-                "[SKIP] FalkorDB instrumentation skipped due to missing dependency: %s", e
-            )
+            logger.debug("[SKIP] FalkorDB instrumentation skipped due to missing dependency: %s", e)
         except Exception as e:
             failure_count += 1
             logger.error("[ERROR] Failed to instrument FalkorDB: %s", e, exc_info=True)
