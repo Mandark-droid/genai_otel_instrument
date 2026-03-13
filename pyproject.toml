@@ -145,6 +145,9 @@ messaging = [
     "pika>=1.0.0",
 ]
 
+# Graph databases
+falkordb = ["falkordb>=1.0.0"]
+
 # Vector databases
 vector-dbs = [
     "pinecone>=3.0.0",
@@ -214,6 +217,7 @@ all-mcp = [
     "opentelemetry-instrumentation-opensearch-py>=0.41b0",
     "elasticsearch>=7.0.0",
     "opentelemetry-instrumentation-elasticsearch>=0.41b0",
+    "falkordb>=1.0.0",
 ]
 
 # Everything
@@ -289,6 +293,7 @@ all = [
     "opentelemetry-instrumentation-pymongo>=0.41b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
     "opentelemetry-instrumentation-kafka-python>=0.41b0",
+    "falkordb>=1.0.0",
 ]
 
 # Development dependencies
