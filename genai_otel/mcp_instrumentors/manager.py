@@ -24,6 +24,7 @@ from ..config import OTelConfig
 from .api_instrumentor import APIInstrumentor
 from .database_instrumentor import DatabaseInstrumentor
 from .elasticsearch_instrumentor import ElasticsearchInstrumentor
+from .falkordb_instrumentor import FalkorDBInstrumentor
 from .kafka_instrumentor import KafkaInstrumentor
 from .minio_instrumentor import MinIOInstrumentor
 from .opensearch_instrumentor import OpenSearchInstrumentor
@@ -164,6 +165,24 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
         except Exception as e:
             failure_count += 1
             logger.error("[ERROR] Failed to instrument Redis: %s", e, exc_info=True)
+            if fail_on_error:
+                raise
+
+        # FalkorDB instrumentation
+        try:
+            logger.info("Instrumenting FalkorDB")
+            falkordb_instrumentor = FalkorDBInstrumentor(self.config)
+            if falkordb_instrumentor.instrument():
+                success_count += 1
+                logger.info("[OK] FalkorDB instrumentation enabled")
+        except ImportError as e:
+            failure_count += 1
+            logger.debug(
+                "[SKIP] FalkorDB instrumentation skipped due to missing dependency: %s", e
+            )
+        except Exception as e:
+            failure_count += 1
+            logger.error("[ERROR] Failed to instrument FalkorDB: %s", e, exc_info=True)
             if fail_on_error:
                 raise
 
