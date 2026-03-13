@@ -33,9 +33,7 @@ class FalkorDBInstrumentor:  # pylint: disable=R0903
 
             # Instrument Graph.query
             def wrapped_query(wrapped, instance, args, kwargs):
-                with tracer.start_as_current_span(
-                    "falkordb.query", kind=SpanKind.CLIENT
-                ) as span:
+                with tracer.start_as_current_span("falkordb.query", kind=SpanKind.CLIENT) as span:
                     span.set_attribute("db.system", "falkordb")
                     span.set_attribute("db.operation", "query")
                     if instance and hasattr(instance, "name"):
@@ -77,9 +75,7 @@ class FalkorDBInstrumentor:  # pylint: disable=R0903
 
             # Instrument Graph.delete
             def wrapped_delete(wrapped, instance, args, kwargs):
-                with tracer.start_as_current_span(
-                    "falkordb.delete", kind=SpanKind.CLIENT
-                ) as span:
+                with tracer.start_as_current_span("falkordb.delete", kind=SpanKind.CLIENT) as span:
                     span.set_attribute("db.system", "falkordb")
                     span.set_attribute("db.operation", "delete")
                     if instance and hasattr(instance, "name"):
@@ -95,9 +91,7 @@ class FalkorDBInstrumentor:  # pylint: disable=R0903
 
             # Instrument Graph.copy
             def wrapped_copy(wrapped, instance, args, kwargs):
-                with tracer.start_as_current_span(
-                    "falkordb.copy", kind=SpanKind.CLIENT
-                ) as span:
+                with tracer.start_as_current_span("falkordb.copy", kind=SpanKind.CLIENT) as span:
                     span.set_attribute("db.system", "falkordb")
                     span.set_attribute("db.operation", "copy")
                     if instance and hasattr(instance, "name"):
@@ -140,9 +134,7 @@ class FalkorDBInstrumentor:  # pylint: disable=R0903
             wrapt.wrap_function_wrapper("falkordb", "Graph.ro_query", wrapped_ro_query)
             wrapt.wrap_function_wrapper("falkordb", "Graph.delete", wrapped_delete)
             wrapt.wrap_function_wrapper("falkordb", "Graph.copy", wrapped_copy)
-            wrapt.wrap_function_wrapper(
-                "falkordb", "FalkorDB.select_graph", wrapped_select_graph
-            )
+            wrapt.wrap_function_wrapper("falkordb", "FalkorDB.select_graph", wrapped_select_graph)
 
             logger.info("FalkorDB instrumentation enabled")
             return True
