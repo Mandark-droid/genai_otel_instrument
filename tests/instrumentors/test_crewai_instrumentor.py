@@ -333,12 +333,13 @@ class TestCrewAIInstrumentor(unittest.TestCase):
         with patch.dict("sys.modules", {"crewai": MagicMock()}):
             instrumentor = CrewAIInstrumentor()
 
-            # Create mock result with usage
+            # Create mock result with usage (mimics CrewAI UsageMetrics pydantic model)
             mock_result = MagicMock()
             mock_result.token_usage = MagicMock()
             mock_result.token_usage.prompt_tokens = 100
             mock_result.token_usage.completion_tokens = 50
             mock_result.token_usage.total_tokens = 150
+            mock_result.token_usage.cached_prompt_tokens = 0
 
             usage = instrumentor._extract_usage(mock_result)
 
