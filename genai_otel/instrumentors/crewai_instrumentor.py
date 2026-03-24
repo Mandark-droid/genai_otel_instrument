@@ -278,6 +278,15 @@ class CrewAIInstrumentor(BaseInstrumentor):
         attrs["gen_ai.system"] = "crewai"
         attrs["gen_ai.operation.name"] = "crew.execution"
 
+        # Extract LLM model from agents for cost enrichment.
+        # agent.llm can be a string (model name) or a BaseLLM/LLM object with .model attr.
+        try:
+            model_name = self._extract_model_from_crew(instance)
+            if model_name:
+                attrs["gen_ai.request.model"] = model_name
+        except Exception as e:
+            logger.debug("Failed to extract model from crew: %s", e)
+
         # Extract crew ID if available
         if hasattr(instance, "id"):
             attrs["crewai.crew.id"] = str(instance.id)
@@ -414,29 +423,75 @@ class CrewAIInstrumentor(BaseInstrumentor):
 
         return attrs
 
+    def _extract_model_from_crew(self, instance: Any) -> Optional[str]:
+        """Extract the LLM model name from a Crew instance.
+
+        Iterates over agents to find the first available model name.
+        agent.llm can be a string (model name) or a BaseLLM/LLM object with .model attr.
+
+        Args:
+            instance: The Crew instance.
+
+        Returns:
+            The model name string, or None if not found.
+        """
+        agents = getattr(instance, "agents", None) or []
+        for agent in agents:
+            llm = getattr(agent, "llm", None)
+            if llm is None:
+                continue
+            # agent.llm can be a plain string (e.g. "openai/gpt-4o")
+            if isinstance(llm, str):
+                return llm
+            # Or a BaseLLM / LLM object with a .model attribute
+            model = getattr(llm, "model", None)
+            if model:
+                return str(model)
+        # Fallback: check manager_agent (hierarchical process)
+        manager = getattr(instance, "manager_agent", None)
+        if manager:
+            llm = getattr(manager, "llm", None)
+            if isinstance(llm, str):
+                return llm
+            model = getattr(llm, "model", None) if llm else None
+            if model:
+                return str(model)
+        return None
+
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from crew execution result.
 
-        Note: CrewAI doesn't directly expose token usage in the result.
-        Token usage is captured by underlying LLM provider instrumentors.
+        CrewAI's CrewOutput.token_usage is a UsageMetrics pydantic model with:
+        total_tokens, prompt_tokens, cached_prompt_tokens, completion_tokens,
+        successful_requests. CrewAI aggregates these internally from each agent's
+        token_process, so usage is available even when individual LLM provider
+        responses don't include it.
 
         Args:
-            result: The crew execution result.
+            result: The crew execution result (CrewOutput).
 
         Returns:
             Optional[Dict[str, int]]: Dictionary with token counts or None.
         """
-        # CrewAI doesn't directly expose usage in the result
-        # Token usage is captured by LLM provider instrumentors (OpenAI, Anthropic, etc.)
-        # We could try to aggregate if CrewAI provides usage info in the future
         if hasattr(result, "token_usage"):
             try:
                 usage = result.token_usage
-                return {
-                    "prompt_tokens": getattr(usage, "prompt_tokens", 0),
-                    "completion_tokens": getattr(usage, "completion_tokens", 0),
-                    "total_tokens": getattr(usage, "total_tokens", 0),
-                }
+                prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
+                completion_tokens = getattr(usage, "completion_tokens", 0) or 0
+                total_tokens = getattr(usage, "total_tokens", 0) or 0
+                cached_prompt_tokens = getattr(usage, "cached_prompt_tokens", 0) or 0
+
+                # Only return if there are actual tokens recorded
+                if total_tokens > 0 or prompt_tokens > 0 or completion_tokens > 0:
+                    usage_dict = {
+                        "prompt_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens,
+                        "total_tokens": total_tokens,
+                    }
+                    # Include cached tokens for Anthropic cache cost calculation
+                    if cached_prompt_tokens > 0:
+                        usage_dict["cache_read_input_tokens"] = cached_prompt_tokens
+                    return usage_dict
             except Exception as e:
                 logger.debug("Failed to extract token usage: %s", e)
         return None

@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.45] - 2026-03-24
+
+### Fixed
+
+- **CrewAI cost enrichment** - CrewAI crew execution spans now include `gen_ai.request.model`, `gen_ai.usage.{prompt,completion,total}_tokens`, and `gen_ai.usage.cost.{total,prompt,completion}` attributes. Previously, cost enrichment was silently skipped because the instrumentor did not set `gen_ai.request.model` (required by `CostEnrichmentSpanProcessor`) and `_extract_usage()` did not properly extract token counts from CrewAI's `UsageMetrics` pydantic model
+- **CrewAI token usage extraction** - `_extract_usage()` now correctly handles `CrewOutput.token_usage` (a `UsageMetrics` pydantic model with `total_tokens`, `prompt_tokens`, `cached_prompt_tokens`, `completion_tokens`), includes `cached_prompt_tokens` for Anthropic cache cost calculation, and guards against zero-token results
+
+### Added
+
+- **`_extract_model_from_crew()` helper** - Extracts the LLM model name from a Crew instance by inspecting agents' `llm` attribute (supports both string model names and `BaseLLM`/`LLM` objects with `.model` attr), with fallback to `manager_agent` for hierarchical processes
+
 ## [0.1.44] - 2026-03-13
 
 ### Added
