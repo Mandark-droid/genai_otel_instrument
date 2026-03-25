@@ -302,30 +302,53 @@ class AutoGenInstrumentor(BaseInstrumentor):
         return None
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
-        """Extract token usage from conversation result.
+        """Extract token usage from AutoGen ChatResult.cost.
 
-        Note: AutoGen doesn't directly expose token usage in results.
-        Token usage is captured by underlying LLM provider instrumentors.
+        AutoGen's ChatResult has a `cost` field (CostDict) with:
+        - usage_including_cached_inference: {model: {prompt_tokens, completion_tokens, cost, ...}}
+        - usage_excluding_cached_inference: {model: {prompt_tokens, completion_tokens, cost, ...}}
 
         Args:
-            result: The conversation result.
+            result: The conversation result (ChatResult).
 
         Returns:
             Optional[Dict[str, int]]: Dictionary with token counts or None.
         """
-        # AutoGen doesn't expose usage directly
-        # Token usage is captured by LLM provider instrumentors (OpenAI, etc.)
-        # We could try to aggregate if AutoGen provides usage info in the future
-        if hasattr(result, "usage"):
-            try:
-                usage = result.usage
-                return {
-                    "prompt_tokens": getattr(usage, "prompt_tokens", 0),
-                    "completion_tokens": getattr(usage, "completion_tokens", 0),
-                    "total_tokens": getattr(usage, "total_tokens", 0),
-                }
-            except Exception as e:
-                logger.debug("Failed to extract token usage: %s", e)
+        try:
+            cost_dict = getattr(result, "cost", None)
+            if not cost_dict or not isinstance(cost_dict, dict):
+                return None
+
+            # Use usage_including_cached_inference for complete picture
+            usage_data = cost_dict.get("usage_including_cached_inference", {})
+            if not usage_data:
+                usage_data = cost_dict.get("usage_excluding_cached_inference", {})
+            if not usage_data:
+                return None
+
+            # Aggregate tokens across all models used in this conversation
+            total_prompt = 0
+            total_completion = 0
+            total_cost = 0.0
+
+            for model_name, model_usage in usage_data.items():
+                if not isinstance(model_usage, dict):
+                    continue
+                total_prompt += model_usage.get("prompt_tokens", 0)
+                total_completion += model_usage.get("completion_tokens", 0)
+                total_cost += model_usage.get("cost", 0.0)
+
+            if total_prompt == 0 and total_completion == 0:
+                return None
+
+            return {
+                "prompt_tokens": total_prompt,
+                "completion_tokens": total_completion,
+                "total_tokens": total_prompt + total_completion,
+            }
+
+        except Exception as e:
+            logger.debug("Failed to extract token usage from ChatResult: %s", e)
 
         return None
 
@@ -359,15 +382,19 @@ class AutoGenInstrumentor(BaseInstrumentor):
                         if "name" in last_message:
                             attrs["autogen.conversation.last_speaker"] = last_message["name"]
 
-            # Extract cost if available
+            # Extract cost from ChatResult.cost (CostDict)
             if hasattr(result, "cost"):
                 try:
-                    cost = result.cost
-                    if isinstance(cost, dict):
-                        for key, value in cost.items():
-                            attrs[f"autogen.cost.{key}"] = value
-                    else:
-                        attrs["autogen.cost"] = cost
+                    cost_dict = result.cost
+                    if isinstance(cost_dict, dict):
+                        # Calculate total cost across all models
+                        usage_data = cost_dict.get("usage_including_cached_inference", {})
+                        total_cost = 0.0
+                        for model_name, model_usage in usage_data.items():
+                            if isinstance(model_usage, dict):
+                                total_cost += model_usage.get("cost", 0.0)
+                        if total_cost > 0:
+                            attrs["gen_ai.usage.cost.total"] = total_cost
                 except Exception as e:
                     logger.debug("Failed to extract cost: %s", e)
 

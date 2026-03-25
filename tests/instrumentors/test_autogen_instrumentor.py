@@ -354,15 +354,22 @@ class TestAutoGenInstrumentor(unittest.TestCase):
             self.assertEqual(attrs["autogen.group_chat.selection_mode"], "round_robin")
 
     def test_extract_usage_with_usage_attribute(self):
-        """Test that _extract_usage extracts from usage attribute."""
+        """Test that _extract_usage extracts from ChatResult.cost CostDict."""
         with patch.dict("sys.modules", {"autogen": MagicMock()}):
             instrumentor = AutoGenInstrumentor()
 
-            # Create mock result with usage
+            # Create mock result with AutoGen CostDict format
             result = MagicMock()
-            result.usage.prompt_tokens = 100
-            result.usage.completion_tokens = 50
-            result.usage.total_tokens = 150
+            result.cost = {
+                "usage_including_cached_inference": {
+                    "gpt-4": {
+                        "prompt_tokens": 100,
+                        "completion_tokens": 50,
+                        "cost": 0.005,
+                    }
+                },
+                "usage_excluding_cached_inference": {},
+            }
 
             usage = instrumentor._extract_usage(result)
 
@@ -411,21 +418,33 @@ class TestAutoGenInstrumentor(unittest.TestCase):
             )
 
     def test_extract_response_attributes_with_cost(self):
-        """Test extraction of response attributes with cost."""
+        """Test extraction of response attributes with AutoGen CostDict."""
         with patch.dict("sys.modules", {"autogen": MagicMock()}):
             instrumentor = AutoGenInstrumentor()
 
-            # Create mock result with cost
+            # Create mock result with AutoGen CostDict format
             result = MagicMock()
             result.chat_history = []
-            result.cost = {"total": 0.05, "gpt-4": 0.03, "gpt-3.5": 0.02}
+            result.cost = {
+                "usage_including_cached_inference": {
+                    "gpt-4": {
+                        "prompt_tokens": 200,
+                        "completion_tokens": 100,
+                        "cost": 0.03,
+                    },
+                    "gpt-3.5-turbo": {
+                        "prompt_tokens": 150,
+                        "completion_tokens": 80,
+                        "cost": 0.02,
+                    },
+                },
+                "usage_excluding_cached_inference": {},
+            }
 
             attrs = instrumentor._extract_response_attributes(result)
 
-            # Assert
-            self.assertEqual(attrs["autogen.cost.total"], 0.05)
-            self.assertEqual(attrs["autogen.cost.gpt-4"], 0.03)
-            self.assertEqual(attrs["autogen.cost.gpt-3.5"], 0.02)
+            # Assert total cost is aggregated
+            self.assertAlmostEqual(attrs["gen_ai.usage.cost.total"], 0.05)
 
     def test_extract_finish_reason_with_chat_history(self):
         """Test extraction of finish reason with chat history."""

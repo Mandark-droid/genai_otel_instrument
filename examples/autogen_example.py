@@ -27,6 +27,13 @@ from genai_otel import instrument
 instrument(
     service_name="autogen-example",
     # endpoint="http://localhost:4318",  # OTLP endpoint
+    enable_cost_tracking=True,
+    # Uncomment to enable evaluation features:
+    # enable_pii_detection=True,
+    # enable_toxicity_detection=True,
+    # enable_bias_detection=True,
+    # enable_prompt_injection_detection=True,
+    # enable_hallucination_detection=True,
 )
 
 # Step 2: Import AutoGen after instrumentation is set up
