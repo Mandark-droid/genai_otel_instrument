@@ -74,13 +74,15 @@ nav:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
     - Configuration: getting-started/configuration.md
+    - Demo App: guides/demo-app.md
   - Guides:
     - LLM Providers: guides/llm-providers.md
     - Multi-Agent Frameworks: guides/multi-agent-frameworks.md
     - MCP Tools: guides/mcp-tools.md
     - Cost Tracking: guides/cost-tracking.md
-    - GPU Metrics: guides/gpu-metrics.md
+    - GPU Metrics & CO2: guides/gpu-metrics.md
     - Evaluation & Safety: guides/evaluation.md
+    - Sarvam AI: guides/sarvam-ai.md
   - Reference:
     - Performance Tuning: reference/performance-tuning.md
     - Python Compatibility: reference/python-compatibility.md
