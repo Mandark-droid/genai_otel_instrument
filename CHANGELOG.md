@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-03-25
+
+### Changed
+
+- **License changed from AGPL-3.0 to Apache-2.0** - Making the library enterprise-friendly for broader adoption
+- **Production-stable release** - Promoted from Beta to Production/Stable status after 45 releases and 5+ months of development
+- **Improved PyPI metadata** - Added comprehensive keywords, classifiers, and Python 3.13 support declaration
+- **README overhaul** - Unified branding (TraceVerde / genai-otel-instrument), added competitive comparison table, added Users section, removed placeholder content, updated community links
+
+### Added
+
+- **GitHub repository topics** - 20 topics for improved discoverability on GitHub
+- **Competitive comparison table** - Feature comparison vs OpenLIT, Traceloop, and Langfuse in README
+
+### Security
+
+- **LiteLLM version pinning** - Excluded compromised versions 1.82.7 and 1.82.8 (supply chain attack, March 2026)
+
 ## [0.1.45] - 2026-03-24
 
 ### Fixed

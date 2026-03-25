@@ -1,6 +1,10 @@
 # Private documents
 PRIVATE_ROADMAP.md
 
+# Private analytics scripts and data
+scripts/analytics/
+*_history.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -368,3 +372,4 @@ CLAUDE.md
 # setuptools-scm generated version file (auto-generated, do not track)
 genai_otel/__version__.py
 genai_otel/__version__.py
+.claude/settings.local.json

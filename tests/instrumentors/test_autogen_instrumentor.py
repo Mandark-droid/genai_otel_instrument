@@ -64,17 +64,16 @@ class TestAutoGenInstrumentor(unittest.TestCase):
             def initiate_chat(self, recipient, message=None, **kwargs):
                 return {"chat_history": [{"role": "assistant", "content": "response"}]}
 
+        original_initiate_chat = MockConversableAgent.initiate_chat
+
         # Create mock autogen module
         mock_autogen = MagicMock()
         mock_autogen.ConversableAgent = MockConversableAgent
-
-        mock_wrapt = MagicMock()
 
         with patch.dict(
             "sys.modules",
             {
                 "autogen": mock_autogen,
-                "wrapt": mock_wrapt,
             },
         ):
             instrumentor = AutoGenInstrumentor()
@@ -87,8 +86,8 @@ class TestAutoGenInstrumentor(unittest.TestCase):
             self.assertEqual(instrumentor.config, config)
             self.assertTrue(instrumentor._instrumented)
             mock_logger.info.assert_called_with("AutoGen instrumentation enabled")
-            # Verify FunctionWrapper was called
-            self.assertTrue(mock_wrapt.FunctionWrapper.called)
+            # Verify initiate_chat was replaced (no longer the original)
+            self.assertIsNot(MockConversableAgent.initiate_chat, original_initiate_chat)
 
     @patch("genai_otel.instrumentors.autogen_instrumentor.logger")
     def test_instrument_with_group_chat(self, mock_logger):
@@ -103,17 +102,16 @@ class TestAutoGenInstrumentor(unittest.TestCase):
             def select_speaker(self, last_speaker, selector):
                 return self.agents[0] if self.agents else None
 
+        original_select_speaker = MockGroupChat.select_speaker
+
         # Create mock autogen module
         mock_autogen = MagicMock()
         mock_autogen.GroupChat = MockGroupChat
-
-        mock_wrapt = MagicMock()
 
         with patch.dict(
             "sys.modules",
             {
                 "autogen": mock_autogen,
-                "wrapt": mock_wrapt,
             },
         ):
             instrumentor = AutoGenInstrumentor()
@@ -125,8 +123,8 @@ class TestAutoGenInstrumentor(unittest.TestCase):
             # Assert
             self.assertTrue(instrumentor._instrumented)
             mock_logger.info.assert_called_with("AutoGen instrumentation enabled")
-            # Verify FunctionWrapper was called
-            self.assertTrue(mock_wrapt.FunctionWrapper.called)
+            # Verify select_speaker was replaced
+            self.assertIsNot(MockGroupChat.select_speaker, original_select_speaker)
 
     @patch("genai_otel.instrumentors.autogen_instrumentor.logger")
     def test_instrument_with_group_chat_manager(self, mock_logger):
@@ -141,17 +139,16 @@ class TestAutoGenInstrumentor(unittest.TestCase):
             def run(self):
                 return {"result": "completed"}
 
+        original_run = MockGroupChatManager.run
+
         # Create mock autogen module
         mock_autogen = MagicMock()
         mock_autogen.GroupChatManager = MockGroupChatManager
-
-        mock_wrapt = MagicMock()
 
         with patch.dict(
             "sys.modules",
             {
                 "autogen": mock_autogen,
-                "wrapt": mock_wrapt,
             },
         ):
             instrumentor = AutoGenInstrumentor()
@@ -163,8 +160,8 @@ class TestAutoGenInstrumentor(unittest.TestCase):
             # Assert
             self.assertTrue(instrumentor._instrumented)
             mock_logger.info.assert_called_with("AutoGen instrumentation enabled")
-            # Verify FunctionWrapper was called
-            self.assertTrue(mock_wrapt.FunctionWrapper.called)
+            # Verify run was replaced
+            self.assertIsNot(MockGroupChatManager.run, original_run)
 
     @patch("genai_otel.instrumentors.autogen_instrumentor.logger")
     def test_instrument_exception_with_fail_on_error_false(self, mock_logger):
