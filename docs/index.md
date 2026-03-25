@@ -40,8 +40,22 @@ response = client.chat.completions.create(
 - [Installation](getting-started/installation.md) - Detailed installation options
 - [Quick Start](getting-started/quickstart.md) - Get up and running in minutes
 - [Configuration](getting-started/configuration.md) - Environment variables and options
-- [LLM Providers](guides/llm-providers.md) - Supported providers and setup
-- [Cost Tracking](guides/cost-tracking.md) - Automatic cost calculation
+- [LLM Providers](guides/llm-providers.md) - 19+ providers with code examples
+- [Multi-Agent Frameworks](guides/multi-agent-frameworks.md) - CrewAI, LangGraph, Google ADK, AutoGen, and more
+- [MCP Tools](guides/mcp-tools.md) - Databases, caches, vector DBs, message queues
+- [Cost Tracking](guides/cost-tracking.md) - Automatic cost calculation for 1,050+ models
+- [GPU Metrics](guides/gpu-metrics.md) - NVIDIA and AMD GPU monitoring
+- [Evaluation & Safety](guides/evaluation.md) - PII, toxicity, bias, prompt injection, hallucination detection
+
+## Examples
+
+90+ ready-to-run examples for every provider, framework, and evaluation feature:
+
+- [OpenAI](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openai/), [Anthropic](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/anthropic/), [Google AI](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_ai/), [Ollama](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/ollama/), [AWS Bedrock](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/aws_bedrock/)
+- [CrewAI](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/crewai_example.py), [LangGraph](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/langgraph_example.py), [Google ADK](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_adk_example.py), [AutoGen](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/autogen_example.py)
+- [PII Detection](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/), [Toxicity](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/toxicity_detection/), [Bias](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bias_detection/), [Prompt Injection](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/prompt_injection/)
+
+Browse all examples in the [examples/ directory](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples).
 
 ## Community
 
