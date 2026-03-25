@@ -68,6 +68,7 @@ class PIIDetector:
 
             self._analyzer = AnalyzerEngine()
             self._anonymizer = AnonymizerEngine()
+            self._register_india_recognizers()
             self._presidio_available = True
             logger.info("Presidio PII detection initialized successfully")
         except ImportError as e:
@@ -79,6 +80,77 @@ class PIIDetector:
         except Exception as e:
             logger.error("Failed to initialize Presidio: %s", e)
             self._presidio_available = False
+
+    def _register_india_recognizers(self):
+        """Register custom Presidio recognizers for India-specific PII types."""
+        try:
+            from presidio_analyzer import Pattern, PatternRecognizer
+
+            # Aadhaar: 12 digits in groups of 4 (XXXX XXXX XXXX)
+            aadhaar_recognizer = PatternRecognizer(
+                supported_entity="IN_AADHAAR",
+                name="Indian Aadhaar Recognizer",
+                patterns=[
+                    Pattern(
+                        name="aadhaar",
+                        regex=r"\b\d{4}\s?\d{4}\s?\d{4}\b",
+                        score=0.85,
+                    )
+                ],
+                supported_language="en",
+            )
+
+            # PAN: 5 uppercase letters + 4 digits + 1 uppercase letter (ABCDE1234F)
+            pan_recognizer = PatternRecognizer(
+                supported_entity="IN_PAN",
+                name="Indian PAN Recognizer",
+                patterns=[
+                    Pattern(
+                        name="pan",
+                        regex=r"\b[A-Z]{5}\d{4}[A-Z]\b",
+                        score=0.9,
+                    )
+                ],
+                supported_language="en",
+            )
+
+            # UPI: user@bankname (e.g., name@oksbi, name@paytm, name@ybl)
+            upi_recognizer = PatternRecognizer(
+                supported_entity="IN_UPI",
+                name="Indian UPI Address Recognizer",
+                patterns=[
+                    Pattern(
+                        name="upi",
+                        regex=r"\b[\w.+-]+@(?:ok(?:sbi|icici|axis|hdfc)|paytm|ybl|upi|apl|ibl|axl|barodampay|mahb|cnrb|pnb|sib|federal|kotak|indus|citi|rbl|idbi|aubank|dlb|kvb|csbpay|idfcfirst|freecharge|slice|jupiter|fi|gpay|oksbi)\b",
+                        score=0.9,
+                    )
+                ],
+                supported_language="en",
+            )
+
+            # Indian phone: +91/91/0 prefix, starts with 6-9
+            in_phone_recognizer = PatternRecognizer(
+                supported_entity="IN_PHONE",
+                name="Indian Phone Number Recognizer",
+                patterns=[
+                    Pattern(
+                        name="in_phone",
+                        regex=r"\b(?:\+91|91|0)?[6-9]\d{9}\b",
+                        score=0.8,
+                    )
+                ],
+                supported_language="en",
+            )
+
+            registry = self._analyzer.registry
+            registry.add_recognizer(aadhaar_recognizer)
+            registry.add_recognizer(pan_recognizer)
+            registry.add_recognizer(upi_recognizer)
+            registry.add_recognizer(in_phone_recognizer)
+            logger.debug("Registered India-specific PII recognizers (Aadhaar, PAN, UPI, Phone)")
+
+        except Exception as e:
+            logger.warning("Failed to register India PII recognizers: %s", e)
 
     def is_available(self) -> bool:
         """Check if PII detector is available.
@@ -284,6 +356,66 @@ class PIIDetector:
                     }
                 )
                 entity_counts["IP_ADDRESS"] = entity_counts.get("IP_ADDRESS", 0) + 1
+
+        # Aadhaar pattern (12 digits in groups of 4)
+        if PIIEntityType.IN_AADHAAR in self.config.entity_types:
+            aadhaar_pattern = r"\b\d{4}\s?\d{4}\s?\d{4}\b"
+            for match in re.finditer(aadhaar_pattern, text):
+                entities.append(
+                    {
+                        "type": "IN_AADHAAR",
+                        "start": match.start(),
+                        "end": match.end(),
+                        "score": 0.85,
+                        "text": match.group(),
+                    }
+                )
+                entity_counts["IN_AADHAAR"] = entity_counts.get("IN_AADHAAR", 0) + 1
+
+        # PAN pattern (ABCDE1234F)
+        if PIIEntityType.IN_PAN in self.config.entity_types:
+            pan_pattern = r"\b[A-Z]{5}\d{4}[A-Z]\b"
+            for match in re.finditer(pan_pattern, text):
+                entities.append(
+                    {
+                        "type": "IN_PAN",
+                        "start": match.start(),
+                        "end": match.end(),
+                        "score": 0.9,
+                        "text": match.group(),
+                    }
+                )
+                entity_counts["IN_PAN"] = entity_counts.get("IN_PAN", 0) + 1
+
+        # UPI address pattern (user@bankhandle)
+        if PIIEntityType.IN_UPI in self.config.entity_types:
+            upi_pattern = r"\b[\w.+-]+@(?:ok(?:sbi|icici|axis|hdfc)|paytm|ybl|upi|apl|ibl|axl|barodampay|mahb|cnrb|pnb|sib|federal|kotak|indus|citi|rbl|idbi|aubank|dlb|kvb|csbpay|idfcfirst|freecharge|slice|jupiter|fi|gpay|oksbi)\b"
+            for match in re.finditer(upi_pattern, text):
+                entities.append(
+                    {
+                        "type": "IN_UPI",
+                        "start": match.start(),
+                        "end": match.end(),
+                        "score": 0.9,
+                        "text": match.group(),
+                    }
+                )
+                entity_counts["IN_UPI"] = entity_counts.get("IN_UPI", 0) + 1
+
+        # Indian phone number pattern (+91/91/0 prefix, starts with 6-9)
+        if PIIEntityType.IN_PHONE in self.config.entity_types:
+            in_phone_pattern = r"\b(?:\+91|91|0)?[6-9]\d{9}\b"
+            for match in re.finditer(in_phone_pattern, text):
+                entities.append(
+                    {
+                        "type": "IN_PHONE",
+                        "start": match.start(),
+                        "end": match.end(),
+                        "score": 0.8,
+                        "text": match.group(),
+                    }
+                )
+                entity_counts["IN_PHONE"] = entity_counts.get("IN_PHONE", 0) + 1
 
         has_pii = len(entities) > 0
         score = max([e["score"] for e in entities], default=0.0)
