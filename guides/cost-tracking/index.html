@@ -643,10 +643,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pricing-models" class="md-nav__link">
+  <a href="#cost-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pricing Models
+        Cost Attributes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Providers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#special-pricing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Special Pricing
       
     </span>
   </a>
@@ -665,6 +687,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#openinference-cost-enrichment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenInference Cost Enrichment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#disable-cost-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -676,10 +709,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#openinference-cost-enrichment" class="md-nav__link">
+  <a href="#grafana-dashboard" class="md-nav__link">
     <span class="md-ellipsis">
       
-        OpenInference Cost Enrichment
+        Grafana Dashboard
       
     </span>
   </a>
@@ -1086,10 +1119,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pricing-models" class="md-nav__link">
+  <a href="#cost-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pricing Models
+        Cost Attributes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Providers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#special-pricing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Special Pricing
       
     </span>
   </a>
@@ -1108,6 +1163,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#openinference-cost-enrichment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenInference Cost Enrichment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#disable-cost-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1119,10 +1185,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#openinference-cost-enrichment" class="md-nav__link">
+  <a href="#grafana-dashboard" class="md-nav__link">
     <span class="md-ellipsis">
       
-        OpenInference Cost Enrichment
+        Grafana Dashboard
       
     </span>
   </a>
@@ -1150,37 +1216,218 @@
 
 
 <h1 id="cost-tracking">Cost Tracking<a class="headerlink" href="#cost-tracking" title="Permanent link">&para;</a></h1>
-<p>TraceVerde includes automatic cost tracking with pricing data for 1,050+ models across 30+ providers.</p>
+<p>TraceVerde includes automatic cost tracking with pricing data for <strong>1,050+ models</strong> across <strong>30+ providers</strong>. Every LLM call is enriched with per-request cost breakdown.</p>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
-<p>When cost tracking is enabled (default), every LLM call span is enriched with:</p>
+<p>Cost tracking is enabled by default. For every LLM call, TraceVerde:</p>
+<ol>
+<li>Reads the model name from the span attributes</li>
+<li>Looks up pricing in the built-in <code>llm_pricing.json</code> database</li>
+<li>Calculates cost from token usage (prompt + completion)</li>
+<li>Adds cost attributes to the span</li>
+</ol>
+<p>No configuration needed - just instrument and go.</p>
+<h2 id="cost-attributes">Cost Attributes<a class="headerlink" href="#cost-attributes" title="Permanent link">&para;</a></h2>
+<p>Every LLM span gets these attributes:</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gen_ai.usage.cost.total</code></td>
+<td>Total cost in USD</td>
+<td><code>0.003250</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.usage.cost.prompt</code></td>
+<td>Prompt token cost</td>
+<td><code>0.001250</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.usage.cost.completion</code></td>
+<td>Completion token cost</td>
+<td><code>0.002000</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="supported-providers">Supported Providers<a class="headerlink" href="#supported-providers" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Models</th>
+<th>Pricing Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI</td>
+<td>GPT-4o, GPT-4 Turbo, GPT-5.2, o1/o3, embeddings (50+)</td>
+<td>Per token (prompt/completion)</td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td>Claude Sonnet 4.6, Claude 3.5/3 series (15+)</td>
+<td>Per token + cache pricing</td>
+</tr>
+<tr>
+<td>Google AI</td>
+<td>Gemini 2.5/2.0 Pro/Flash, PaLM 2 (30+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>AWS Bedrock</td>
+<td>Titan, Claude, Llama, Mistral (25+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Azure OpenAI</td>
+<td>Same as OpenAI</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Cohere</td>
+<td>Command R/R+, Embed v4/v3, rerankers (15+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Mistral AI</td>
+<td>Large/Medium/Small, Mixtral, embeddings (20+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Together AI</td>
+<td>DeepSeek-R1, Llama 3.x, Qwen (25+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Groq</td>
+<td>Llama 3.x, Mixtral, Gemma (20+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td>All local models</td>
+<td>Token tracking (free)</td>
+</tr>
+<tr>
+<td>Vertex AI</td>
+<td>Gemini models</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Replicate</td>
+<td>All models</td>
+<td>Per second (hardware-based)</td>
+</tr>
+<tr>
+<td>HuggingFace</td>
+<td>Local models</td>
+<td>Estimated (parameter-based)</td>
+</tr>
+<tr>
+<td>Sarvam AI</td>
+<td>sarvam-m, Saarika, Bulbul (12+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Voyage AI</td>
+<td>voyage-4/3.5/3 series (15+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Jina AI</td>
+<td>jina-embeddings-v3, jina-clip-v2 (5+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Deepgram</td>
+<td>Nova-3/2, Aura, Whisper (20+)</td>
+<td>Per second/character</td>
+</tr>
+<tr>
+<td>AssemblyAI</td>
+<td>Universal-3, slam-1 (5+)</td>
+<td>Per second</td>
+</tr>
+<tr>
+<td>ElevenLabs</td>
+<td>Multilingual v2, Turbo v2 (8+)</td>
+<td>Per character</td>
+</tr>
+<tr>
+<td>IBM Granite</td>
+<td>Chat, vision, embeddings (10+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>DeepSeek</td>
+<td>V3, R1, VL (15+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Qwen/Alibaba</td>
+<td>Qwen 3.5, VL, embeddings (25+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>xAI</td>
+<td>Grok 4.20, Grok 4.1 (5+)</td>
+<td>Per token</td>
+</tr>
+</tbody>
+</table>
+<h2 id="special-pricing">Special Pricing<a class="headerlink" href="#special-pricing" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>gen_ai.usage.cost.total</code> - Total cost in USD</li>
-<li><code>gen_ai.usage.cost.prompt</code> - Cost for prompt/input tokens</li>
-<li><code>gen_ai.usage.cost.completion</code> - Cost for completion/output tokens</li>
-</ul>
-<p>Cost is calculated from token usage and model pricing stored in <code>llm_pricing.json</code>.</p>
-<h2 id="pricing-models">Pricing Models<a class="headerlink" href="#pricing-models" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Token-based</strong> - Most providers (separate prompt and completion rates)</li>
-<li><strong>Reasoning tokens</strong> - OpenAI o1/o3 series</li>
-<li><strong>Cache pricing</strong> - Anthropic prompt caching (read/write rates)</li>
-<li><strong>Hardware-based</strong> - Replicate ($/second of GPU time)</li>
-<li><strong>Estimated</strong> - HuggingFace local models (based on parameter count)</li>
+<li><strong>Reasoning tokens</strong>: OpenAI o1/o3 series have separate pricing for reasoning tokens</li>
+<li><strong>Cache pricing</strong>: Anthropic prompt caching costs (read/write rates)</li>
+<li><strong>Batch pricing</strong>: Some providers offer discounted batch pricing</li>
+<li><strong>Hardware pricing</strong>: Replicate charges per second of GPU/CPU time</li>
 </ul>
 <h2 id="custom-model-pricing">Custom Model Pricing<a class="headerlink" href="#custom-model-pricing" title="Permanent link">&para;</a></h2>
-<p>For models not in the pricing database, provide custom pricing via environment variable:</p>
+<p>For models not in the pricing database:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Chat models</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{&quot;chat&quot;:{&quot;my-model&quot;:{&quot;promptPrice&quot;:0.001,&quot;completionPrice&quot;:0.002}}}&#39;</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Embeddings</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{&quot;embeddings&quot;:{&quot;my-embed&quot;:0.00005}}&#39;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Multiple categories</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="s1">  &quot;chat&quot;: {</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="s1">    &quot;my-custom-chat&quot;: {&quot;promptPrice&quot;: 0.001, &quot;completionPrice&quot;: 0.002}</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="s1">  },</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="s1">  &quot;embeddings&quot;: {</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="s1">    &quot;my-custom-embed&quot;: 0.00005</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="s1">  }</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="s1">}&#39;</span>
 </code></pre></div>
-<p>Custom prices are merged with defaults. If you provide pricing for an existing model, the custom price overrides the default.</p>
+<p>Custom prices merge with defaults. If you provide pricing for an existing model, the custom price overrides the default.</p>
+<p><strong>Pricing format:</strong></p>
+<ul>
+<li><strong>Chat models</strong>: <code>{"promptPrice": &lt;$/1k tokens&gt;, "completionPrice": &lt;$/1k tokens&gt;}</code></li>
+<li><strong>Embeddings</strong>: Single number for price per 1k tokens</li>
+<li><strong>Audio</strong>: Price per 1k characters (TTS) or per second (STT)</li>
+</ul>
+<h2 id="openinference-cost-enrichment">OpenInference Cost Enrichment<a class="headerlink" href="#openinference-cost-enrichment" title="Permanent link">&para;</a></h2>
+<p>When using OpenInference instrumentors (LiteLLM, Smolagents, MCP), cost tracking is automatically applied via <code>CostEnrichmentSpanProcessor</code>. It reads OpenInference semantic conventions and adds cost attributes:</p>
+<ul>
+<li><code>llm.model_name</code> -&gt; model lookup</li>
+<li><code>llm.token_count.prompt</code> / <code>llm.token_count.completion</code> -&gt; cost calculation</li>
+<li><code>openinference.span.kind</code> -&gt; call type (LLM, EMBEDDING, etc.)</li>
+</ul>
 <h2 id="disable-cost-tracking">Disable Cost Tracking<a class="headerlink" href="#disable-cost-tracking" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_COST_TRACKING</span><span class="o">=</span><span class="nb">false</span>
 </code></pre></div>
-<h2 id="openinference-cost-enrichment">OpenInference Cost Enrichment<a class="headerlink" href="#openinference-cost-enrichment" title="Permanent link">&para;</a></h2>
-<p>When using OpenInference instrumentors (LiteLLM, Smolagents, MCP), cost tracking is automatically applied via <code>CostEnrichmentSpanProcessor</code>. It reads OpenInference semantic conventions (<code>llm.model_name</code>, <code>llm.token_count.*</code>) and adds cost attributes.</p>
+<p>Or programmatically:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span><span class="n">enable_cost_tracking</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="grafana-dashboard">Grafana Dashboard<a class="headerlink" href="#grafana-dashboard" title="Permanent link">&para;</a></h2>
+<p>Import the pre-built <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/dashboards/grafana/genai-overview.json">GenAI overview dashboard</a> to visualize costs over time by provider and model.</p>
 
 
 
