@@ -38,6 +38,11 @@ class PIIEntityType(str, Enum):
     URL = "URL"
     CRYPTO = "CRYPTO"  # Cryptocurrency wallet addresses
     UK_NHS = "UK_NHS"
+    # India-specific PII types
+    IN_AADHAAR = "IN_AADHAAR"  # 12-digit Aadhaar number (XXXX XXXX XXXX)
+    IN_PAN = "IN_PAN"  # Permanent Account Number (ABCDE1234F)
+    IN_UPI = "IN_UPI"  # UPI address (user@bankname)
+    IN_PHONE = "IN_PHONE"  # Indian phone number (+91/91/0 prefix, starts with 6-9)
 
 
 @dataclass
@@ -67,6 +72,10 @@ class PIIConfig:
             PIIEntityType.PERSON,
             PIIEntityType.PHONE_NUMBER,
             PIIEntityType.US_SSN,
+            PIIEntityType.IN_AADHAAR,
+            PIIEntityType.IN_PAN,
+            PIIEntityType.IN_UPI,
+            PIIEntityType.IN_PHONE,
         }
     )
     redaction_char: str = "*"

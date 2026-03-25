@@ -391,3 +391,152 @@ class TestPIIDetector:
         assert result.has_pii
         assert 0.0 <= result.score <= 1.0
         assert result.score > 0.0  # Should have confidence
+
+
+class TestIndiaPIIDetection:
+    """Tests for India-specific PII detection (Aadhaar, PAN, UPI, Phone)."""
+
+    def _make_detector(self):
+        """Create a detector with fallback mode (no Presidio)."""
+        config = PIIConfig(enabled=True, mode=PIIMode.DETECT)
+        detector = PIIDetector(config)
+        detector._presidio_available = False
+        return detector
+
+    def test_default_config_includes_india_entities(self):
+        """Test that India PII types are in the default entity set."""
+        config = PIIConfig()
+        assert PIIEntityType.IN_AADHAAR in config.entity_types
+        assert PIIEntityType.IN_PAN in config.entity_types
+        assert PIIEntityType.IN_UPI in config.entity_types
+        assert PIIEntityType.IN_PHONE in config.entity_types
+
+    def test_aadhaar_detection_with_spaces(self):
+        """Test Aadhaar number detection with spaces."""
+        detector = self._make_detector()
+        result = detector.detect("My Aadhaar is 2345 6789 0123")
+        assert result.has_pii
+        assert "IN_AADHAAR" in result.entity_counts
+
+    def test_aadhaar_detection_without_spaces(self):
+        """Test Aadhaar number detection without spaces."""
+        detector = self._make_detector()
+        result = detector.detect("Aadhaar: 234567890123")
+        assert result.has_pii
+        assert "IN_AADHAAR" in result.entity_counts
+
+    def test_pan_detection(self):
+        """Test PAN number detection."""
+        detector = self._make_detector()
+        result = detector.detect("My PAN is ABCDE1234F")
+        assert result.has_pii
+        assert "IN_PAN" in result.entity_counts
+
+    def test_pan_detection_realistic(self):
+        """Test PAN with realistic format."""
+        detector = self._make_detector()
+        result = detector.detect("PAN card number: BNZAA2318J")
+        assert result.has_pii
+        assert "IN_PAN" in result.entity_counts
+        assert result.entities[0]["text"] == "BNZAA2318J"
+
+    def test_upi_detection_paytm(self):
+        """Test UPI address detection for Paytm."""
+        detector = self._make_detector()
+        result = detector.detect("Send money to kshitij@paytm")
+        assert result.has_pii
+        assert "IN_UPI" in result.entity_counts
+
+    def test_upi_detection_oksbi(self):
+        """Test UPI address detection for SBI."""
+        detector = self._make_detector()
+        result = detector.detect("My UPI is user123@oksbi")
+        assert result.has_pii
+        assert "IN_UPI" in result.entity_counts
+
+    def test_upi_detection_ybl(self):
+        """Test UPI address detection for PhonePe (ybl)."""
+        detector = self._make_detector()
+        result = detector.detect("Pay me at myname@ybl")
+        assert result.has_pii
+        assert "IN_UPI" in result.entity_counts
+
+    def test_upi_detection_gpay(self):
+        """Test UPI address detection for GPay."""
+        detector = self._make_detector()
+        result = detector.detect("GPay ID: user@gpay")
+        assert result.has_pii
+        assert "IN_UPI" in result.entity_counts
+
+    def test_indian_phone_with_plus91(self):
+        """Test Indian phone number with +91 prefix."""
+        detector = self._make_detector()
+        result = detector.detect("Call me at +919876543210")
+        assert result.has_pii
+        assert "IN_PHONE" in result.entity_counts
+
+    def test_indian_phone_with_91(self):
+        """Test Indian phone number with 91 prefix."""
+        detector = self._make_detector()
+        result = detector.detect("Phone: 919876543210")
+        assert result.has_pii
+        assert "IN_PHONE" in result.entity_counts
+
+    def test_indian_phone_without_prefix(self):
+        """Test Indian phone number without prefix."""
+        detector = self._make_detector()
+        result = detector.detect("Mobile: 9876543210")
+        assert result.has_pii
+        assert "IN_PHONE" in result.entity_counts
+
+    def test_indian_phone_starts_with_6(self):
+        """Test Indian phone number starting with 6."""
+        detector = self._make_detector()
+        result = detector.detect("Number: 6123456789")
+        assert result.has_pii
+        assert "IN_PHONE" in result.entity_counts
+
+    def test_multiple_india_pii_in_one_text(self):
+        """Test detection of multiple India PII types in one text."""
+        detector = self._make_detector()
+        text = (
+            "Name: Kshitij, Aadhaar: 1234 5678 9012, "
+            "PAN: ABCDE1234F, UPI: kshitij@paytm, "
+            "Phone: +919876543210"
+        )
+        result = detector.detect(text)
+        assert result.has_pii
+        assert "IN_AADHAAR" in result.entity_counts
+        assert "IN_PAN" in result.entity_counts
+        assert "IN_UPI" in result.entity_counts
+        assert "IN_PHONE" in result.entity_counts
+
+    def test_india_pii_redaction(self):
+        """Test that India PII can be redacted."""
+        config = PIIConfig(enabled=True, mode=PIIMode.REDACT)
+        detector = PIIDetector(config)
+        detector._presidio_available = False
+
+        result = detector.detect("PAN: ABCDE1234F")
+        assert result.has_pii
+        assert result.redacted_text is not None
+        assert "ABCDE1234F" not in result.redacted_text
+
+    def test_india_pii_blocking(self):
+        """Test that India PII triggers blocking."""
+        config = PIIConfig(enabled=True, mode=PIIMode.BLOCK)
+        detector = PIIDetector(config)
+        detector._presidio_available = False
+
+        result = detector.detect("Aadhaar: 1234 5678 9012")
+        assert result.has_pii
+        assert result.blocked is True
+
+    def test_no_false_positive_on_regular_text(self):
+        """Test no false positives on normal text."""
+        detector = self._make_detector()
+        result = detector.detect("The weather is nice today in Mumbai")
+        # Should not detect India-specific PII in normal text
+        assert "IN_AADHAAR" not in result.entity_counts
+        assert "IN_PAN" not in result.entity_counts
+        assert "IN_UPI" not in result.entity_counts
