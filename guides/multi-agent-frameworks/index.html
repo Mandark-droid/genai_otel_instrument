@@ -609,6 +609,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#autogen-legacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AutoGen (Legacy)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#autogen-agentchat-v04" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -631,6 +642,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#aws-bedrock-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AWS Bedrock Agents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pydantic-ai" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -642,10 +664,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#langchain" class="md-nav__link">
+  <a href="#other-frameworks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        LangChain
+        Other Frameworks
       
     </span>
   </a>
@@ -653,10 +675,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#other-frameworks" class="md-nav__link">
+  <a href="#all-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Other Frameworks
+        All Examples
       
     </span>
   </a>
@@ -1141,6 +1163,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#autogen-legacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AutoGen (Legacy)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#autogen-agentchat-v04" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1163,6 +1196,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#aws-bedrock-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AWS Bedrock Agents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pydantic-ai" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1174,10 +1218,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#langchain" class="md-nav__link">
+  <a href="#other-frameworks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        LangChain
+        Other Frameworks
       
     </span>
   </a>
@@ -1185,10 +1229,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#other-frameworks" class="md-nav__link">
+  <a href="#all-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Other Frameworks
+        All Examples
       
     </span>
   </a>
@@ -1221,48 +1265,157 @@
 <p>Complete span hierarchy: Crew -&gt; Task -&gt; Agent -&gt; LLM calls.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>crewai<span class="o">]</span>
 </code></pre></div>
-<p><strong>Instrumented methods:</strong>
-- <code>Crew.kickoff()</code>, <code>kickoff_async()</code>, <code>akickoff()</code>, <code>kickoff_for_each()</code>
-- <code>Task.execute_sync()</code>, <code>Task.execute_async()</code>
-- <code>Agent.execute_task()</code></p>
-<p><strong>Span types:</strong>
-- <code>crewai.crew.execution</code> - crew-level attributes (process type, agent/task counts)
-- <code>crewai.task.execution</code> - task attributes (description, expected output)
-- <code>crewai.agent.execution</code> - agent attributes (role, goal, backstory, LLM model)</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;my-crewai-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;crewai&quot;</span><span class="p">,</span> <span class="s2">&quot;openai&quot;</span><span class="p">],</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">enable_cost_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">crewai</span><span class="w"> </span><span class="kn">import</span> <span class="n">Crew</span><span class="p">,</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">Task</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">researcher</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">(</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">role</span><span class="o">=</span><span class="s2">&quot;Senior Researcher&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">goal</span><span class="o">=</span><span class="s2">&quot;Research topics thoroughly&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="n">backstory</span><span class="o">=</span><span class="s2">&quot;Expert researcher with 10 years experience&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">llm</span><span class="o">=</span><span class="s2">&quot;gpt-4&quot;</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="p">)</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Research OpenTelemetry best practices&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="n">expected_output</span><span class="o">=</span><span class="s2">&quot;Comprehensive report&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="n">agent</span><span class="o">=</span><span class="n">researcher</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="p">)</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="n">crew</span> <span class="o">=</span> <span class="n">Crew</span><span class="p">(</span><span class="n">agents</span><span class="o">=</span><span class="p">[</span><span class="n">researcher</span><span class="p">],</span> <span class="n">tasks</span><span class="o">=</span><span class="p">[</span><span class="n">task</span><span class="p">],</span> <span class="n">process</span><span class="o">=</span><span class="s2">&quot;sequential&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="n">result</span> <span class="o">=</span> <span class="n">crew</span><span class="o">.</span><span class="n">kickoff</span><span class="p">()</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="c1"># Complete traces: Crew -&gt; Agent -&gt; Task -&gt; LLM calls</span>
+</code></pre></div>
+<p><strong>Instrumented methods:</strong></p>
+<ul>
+<li><code>Crew.kickoff()</code>, <code>kickoff_async()</code>, <code>akickoff()</code>, <code>kickoff_for_each()</code> and async batch variants</li>
+<li><code>Task.execute_sync()</code>, <code>Task.execute_async()</code></li>
+<li><code>Agent.execute_task()</code></li>
+</ul>
+<p><strong>Span types:</strong></p>
+<ul>
+<li><code>crewai.crew.execution</code> - crew-level attributes (process type, agent/task counts)</li>
+<li><code>crewai.task.execution</code> - task attributes (description, expected output)</li>
+<li><code>crewai.agent.execution</code> - agent attributes (role, goal, backstory, LLM model)</li>
+</ul>
 <p>Includes automatic <code>ThreadPoolExecutor</code> context propagation for worker threads.</p>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/crewai_example.py">CrewAI example</a>.</p>
 <h2 id="langgraph">LangGraph<a class="headerlink" href="#langgraph" title="Permanent link">&para;</a></h2>
 <p>Stateful workflows with graph-based orchestration.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>langgraph<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>langgraph<span class="o">]</span>
 </code></pre></div>
 <p>Instruments <code>invoke()</code>, <code>stream()</code>, <code>ainvoke()</code>, <code>astream()</code> with automatic session ID propagation.</p>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/langgraph_example.py">LangGraph example</a>.</p>
 <h2 id="google-adk">Google ADK<a class="headerlink" href="#google-adk" title="Permanent link">&para;</a></h2>
 <p>Google Agent Development Kit instrumentation.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>google-adk<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>google-adk<span class="o">]</span>
 </code></pre></div>
 <p>Instruments <code>Runner.run_async()</code> and <code>InMemoryRunner.run_debug()</code>. Captures agent name, model, tools, sub-agents, and session info.</p>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_adk_example.py">Google ADK example</a>.</p>
+<h2 id="autogen-legacy">AutoGen (Legacy)<a class="headerlink" href="#autogen-legacy" title="Permanent link">&para;</a></h2>
+<p>Microsoft multi-agent conversations with group chats.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>autogen<span class="o">]</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span><span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;autogen-example&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">autogen</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">assistant</span> <span class="o">=</span> <span class="n">autogen</span><span class="o">.</span><span class="n">AssistantAgent</span><span class="p">(</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">llm_config</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;config_list&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;gpt-4&quot;</span><span class="p">,</span> <span class="s2">&quot;api_key&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">}]},</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="p">)</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="n">user_proxy</span> <span class="o">=</span> <span class="n">autogen</span><span class="o">.</span><span class="n">UserProxyAgent</span><span class="p">(</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;user&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>    <span class="n">human_input_mode</span><span class="o">=</span><span class="s2">&quot;NEVER&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>    <span class="n">max_consecutive_auto_reply</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>    <span class="n">code_execution_config</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="p">)</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="n">user_proxy</span><span class="o">.</span><span class="n">initiate_chat</span><span class="p">(</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>    <span class="n">assistant</span><span class="p">,</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;What is the capital of France?&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>    <span class="n">max_turns</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="p">)</span>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="c1"># Traces: initiate_chat -&gt; OpenAI calls with cost tracking</span>
+</code></pre></div>
+<p><strong>Instrumented methods:</strong></p>
+<ul>
+<li><code>ConversableAgent.initiate_chat()</code> - agent-to-agent conversations</li>
+<li><code>GroupChat.select_speaker()</code> - speaker selection in group chats</li>
+<li><code>GroupChatManager.run()</code> - group chat orchestration</li>
+</ul>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/autogen_example.py">AutoGen example</a>.</p>
 <h2 id="autogen-agentchat-v04">AutoGen AgentChat (v0.4+)<a class="headerlink" href="#autogen-agentchat-v04" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>autogen-agentchat<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>autogen-agentchat<span class="o">]</span>
 </code></pre></div>
 <p>Instruments agent <code>run()</code>/<code>run_stream()</code> and team execution (RoundRobinGroupChat, SelectorGroupChat, Swarm). Captures participants, task content, and termination conditions.</p>
 <h2 id="openai-agents-sdk">OpenAI Agents SDK<a class="headerlink" href="#openai-agents-sdk" title="Permanent link">&para;</a></h2>
 <p>Agent orchestration with handoffs, sessions, and guardrails.</p>
 <p>Automatically instrumented when OpenAI SDK is installed.</p>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openai_agents_example.py">OpenAI Agents example</a>.</p>
+<h2 id="aws-bedrock-agents">AWS Bedrock Agents<a class="headerlink" href="#aws-bedrock-agents" title="Permanent link">&para;</a></h2>
+<p>Managed agent runtime with knowledge bases and RAG.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>aws<span class="o">]</span>
+</code></pre></div>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bedrock_agents_example.py">Bedrock Agents example</a>.</p>
 <h2 id="pydantic-ai">Pydantic AI<a class="headerlink" href="#pydantic-ai" title="Permanent link">&para;</a></h2>
 <p>Type-safe agents with Pydantic validation and multi-provider support.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>pydantic-ai<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>pydantic-ai<span class="o">]</span>
 </code></pre></div>
-<h2 id="langchain">LangChain<a class="headerlink" href="#langchain" title="Permanent link">&para;</a></h2>
-<p>Chains, agents, and tools.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>langchain<span class="o">]</span>
-</code></pre></div>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pydantic_ai_example.py">Pydantic AI example</a>.</p>
 <h2 id="other-frameworks">Other Frameworks<a class="headerlink" href="#other-frameworks" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>LlamaIndex</strong> - Query engines and indices (<code>[llamaindex]</code>)</li>
-<li><strong>Haystack</strong> - Modular NLP pipelines with RAG support (<code>[haystack]</code>)</li>
-<li><strong>DSPy</strong> - Declarative LM programming (<code>[dspy]</code>)</li>
-<li><strong>Instructor</strong> - Structured output extraction (<code>[instructor]</code>)</li>
-<li><strong>Guardrails AI</strong> - Input/output validation (<code>[guardrails]</code>)</li>
-</ul>
+<table>
+<thead>
+<tr>
+<th>Framework</th>
+<th>Description</th>
+<th>Install Extra</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LangChain</td>
+<td>Chains, agents, and tools</td>
+<td><code>[langchain]</code></td>
+<td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/langchain/example.py">example</a></td>
+</tr>
+<tr>
+<td>LlamaIndex</td>
+<td>Query engines and indices</td>
+<td><code>[llamaindex]</code></td>
+<td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/llamaindex/example.py">example</a></td>
+</tr>
+<tr>
+<td>Haystack</td>
+<td>Modular NLP pipelines with RAG</td>
+<td><code>[haystack]</code></td>
+<td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/haystack_example.py">example</a></td>
+</tr>
+<tr>
+<td>DSPy</td>
+<td>Declarative LM programming</td>
+<td><code>[dspy]</code></td>
+<td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/dspy_example.py">example</a></td>
+</tr>
+<tr>
+<td>Instructor</td>
+<td>Structured output extraction</td>
+<td><code>[instructor]</code></td>
+<td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/instructor_example.py">example</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="all-examples">All Examples<a class="headerlink" href="#all-examples" title="Permanent link">&para;</a></h2>
+<p>Browse all framework examples in the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples">examples/ directory</a>.</p>
 
 
 

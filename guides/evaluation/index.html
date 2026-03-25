@@ -754,10 +754,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#enable-all" class="md-nav__link">
+  <a href="#enable-all-evaluations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enable All
+        Enable All Evaluations
       
     </span>
   </a>
@@ -769,6 +769,17 @@
     <span class="md-ellipsis">
       
         Metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#all-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All Examples
       
     </span>
   </a>
@@ -1174,10 +1185,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#enable-all" class="md-nav__link">
+  <a href="#enable-all-evaluations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enable All
+        Enable All Evaluations
       
     </span>
   </a>
@@ -1189,6 +1200,17 @@
     <span class="md-ellipsis">
       
         Metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#all-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All Examples
       
     </span>
   </a>
@@ -1216,8 +1238,7 @@
 
 
 <h1 id="evaluation-and-safety">Evaluation and Safety<a class="headerlink" href="#evaluation-and-safety" title="Permanent link">&para;</a></h1>
-<p>TraceVerde includes 6 built-in evaluation detectors for monitoring LLM input/output quality and safety.</p>
-<p>All features are opt-in and can be enabled individually.</p>
+<p>TraceVerde includes 6 built-in evaluation detectors for monitoring LLM input/output quality and safety. All features are opt-in and can be enabled individually.</p>
 <h2 id="pii-detection">PII Detection<a class="headerlink" href="#pii-detection" title="Permanent link">&para;</a></h2>
 <p>Detect personally identifiable information using Microsoft Presidio.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
@@ -1230,6 +1251,22 @@
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
 </code></pre></div>
 <p>Detects 15+ entity types: email, phone, SSN, credit cards, IP addresses, and more.</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/basic_detect_mode.py">Basic detect mode</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/redaction_mode.py">Redaction mode</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/blocking_mode.py">Blocking mode</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/gdpr_compliance.py">GDPR compliance</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/hipaa_compliance.py">HIPAA compliance</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/pci_dss_compliance.py">PCI-DSS compliance</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/combined_compliance.py">Combined compliance</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/custom_threshold.py">Custom threshold</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/response_detection.py">Response detection</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/env_var_config.py">Env var config</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/anthropic/pii_detection_example.py">PII with Anthropic</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/ollama/pii_detection_example.py">PII with Ollama</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/huggingface/pii_example.py">PII with HuggingFace</a></li>
+</ul>
 <h2 id="toxicity-detection">Toxicity Detection<a class="headerlink" href="#toxicity-detection" title="Permanent link">&para;</a></h2>
 <p>Detect harmful content using Perspective API (cloud) or Detoxify (local).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
@@ -1238,6 +1275,19 @@
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">)</span>
 </code></pre></div>
 <p>Categories: toxicity, severe_toxicity, identity_attack, insult, profanity, threat.</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/toxicity_detection/basic_detoxify.py">Basic Detoxify (local)</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/toxicity_detection/perspective_api.py">Perspective API (cloud)</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/toxicity_detection/blocking_mode.py">Blocking mode</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/toxicity_detection/category_detection.py">Category detection</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/toxicity_detection/custom_threshold.py">Custom threshold</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/toxicity_detection/combined_with_pii.py">Combined with PII</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/toxicity_detection/response_detection.py">Response detection</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/anthropic/toxicity_detection_example.py">Toxicity with Anthropic</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/ollama/toxicity_detection_example.py">Toxicity with Ollama</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/huggingface/toxicity_example.py">Toxicity with HuggingFace</a></li>
+</ul>
 <h2 id="bias-detection">Bias Detection<a class="headerlink" href="#bias-detection" title="Permanent link">&para;</a></h2>
 <p>Identify demographic biases in prompts and responses.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
@@ -1246,6 +1296,18 @@
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">)</span>
 </code></pre></div>
 <p>8 bias types: gender, race, ethnicity, religion, age, disability, sexual_orientation, political.</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bias_detection/basic_detection.py">Basic detection</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bias_detection/blocking_mode.py">Blocking mode</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bias_detection/category_specific.py">Category-specific</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bias_detection/custom_threshold.py">Custom threshold</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bias_detection/hiring_compliance.py">Hiring compliance</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bias_detection/response_detection.py">Response detection</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bias_detection/multiple_evaluations.py">Multiple evaluations</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/ollama/bias_detection_example.py">Bias with Ollama</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/huggingface/bias_example.py">Bias with HuggingFace</a></li>
+</ul>
 <h2 id="prompt-injection-detection">Prompt Injection Detection<a class="headerlink" href="#prompt-injection-detection" title="Permanent link">&para;</a></h2>
 <p>Protect against prompt manipulation attacks.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
@@ -1254,6 +1316,15 @@
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">)</span>
 </code></pre></div>
 <p>6 injection types: instruction_override, role_playing, jailbreak, context_switching, system_extraction, encoding_obfuscation.</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/prompt_injection/basic_detection.py">Basic detection</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/prompt_injection/blocking_mode.py">Blocking mode</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/prompt_injection/system_override.py">System override</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/prompt_injection/jailbreak_techniques.py">Jailbreak techniques</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/prompt_injection/payload_injection.py">Payload injection</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/huggingface/prompt_injection_example.py">Prompt injection with HuggingFace</a></li>
+</ul>
 <h2 id="restricted-topics-detection">Restricted Topics Detection<a class="headerlink" href="#restricted-topics-detection" title="Permanent link">&para;</a></h2>
 <p>Monitor and block sensitive topics.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
@@ -1262,6 +1333,13 @@
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">restricted_topics_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">)</span>
 </code></pre></div>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/restricted_topics/basic_detection.py">Basic detection</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/restricted_topics/blocking_mode.py">Blocking mode</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/restricted_topics/content_policy.py">Content policy</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/restricted_topics/industry_compliance.py">Industry compliance</a></li>
+</ul>
 <h2 id="hallucination-detection">Hallucination Detection<a class="headerlink" href="#hallucination-detection" title="Permanent link">&para;</a></h2>
 <p>Track factual accuracy and groundedness.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
@@ -1270,7 +1348,16 @@
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">)</span>
 </code></pre></div>
 <p>Includes factual claim extraction, hedge word detection, citation tracking, and context contradiction detection.</p>
-<h2 id="enable-all">Enable All<a class="headerlink" href="#enable-all" title="Permanent link">&para;</a></h2>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/hallucination/basic_detection.py">Basic detection</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/hallucination/citation_verification.py">Citation verification</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/hallucination/rag_faithfulness.py">RAG faithfulness</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/ollama/hallucination_detection_example.py">Hallucination with Ollama</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/mistralai/hallucination_detection_example.py">Hallucination with Mistral</a></li>
+<li><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/huggingface/hallucination_example.py">Hallucination with HuggingFace</a></li>
+</ul>
+<h2 id="enable-all-evaluations">Enable All Evaluations<a class="headerlink" href="#enable-all-evaluations" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">enable_pii_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">enable_toxicity_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -1280,6 +1367,7 @@
 <a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="n">enable_hallucination_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="p">)</span>
 </code></pre></div>
+<p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/comprehensive_evaluation_example.py">comprehensive evaluation example</a> and <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/ollama/multiple_evaluations_detection_example.py">Ollama multiple evaluations</a>.</p>
 <h2 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h2>
 <p>Each detector records metrics for monitoring:</p>
 <ul>
@@ -1287,7 +1375,9 @@
 <li><code>genai.evaluation.&lt;detector&gt;.blocked</code> - Blocked requests</li>
 <li><code>genai.evaluation.&lt;detector&gt;.score</code> - Score distribution (histogram)</li>
 </ul>
-<p>See the README for the complete list of span attributes added by each detector.</p>
+<p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument#evaluation-features-v10">README</a> for the complete list of span attributes.</p>
+<h2 id="all-examples">All Examples<a class="headerlink" href="#all-examples" title="Permanent link">&para;</a></h2>
+<p>Browse all evaluation examples in the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples">examples/ directory</a>.</p>
 
 
 
