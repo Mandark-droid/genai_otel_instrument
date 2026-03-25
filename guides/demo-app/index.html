@@ -10,27 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://mandark-droid.github.io/genai_otel_instrument/PERFORMANCE_TUNING/">
+        <link rel="canonical" href="https://mandark-droid.github.io/genai_otel_instrument/guides/demo-app/">
       
       
+        <link rel="prev" href="../../getting-started/configuration/">
+      
+      
+        <link rel="next" href="../llm-providers/">
       
       
         
       
       
-      <link rel="icon" href="../assets/logo.jpg">
+      <link rel="icon" href="../../assets/logo.jpg">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Performance Tuning Guide - TraceVerde Documentation</title>
+        <title>Demo App - TraceVerde Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#performance-tuning-guide" class="md-skip">
+        <a href="#demo-application" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +96,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="TraceVerde Documentation" class="md-header__button md-logo" aria-label="TraceVerde Documentation" data-md-component="logo">
+    <a href="../.." title="TraceVerde Documentation" class="md-header__button md-logo" aria-label="TraceVerde Documentation" data-md-component="logo">
       
-  <img src="../assets/logo.jpg" alt="logo">
+  <img src="../../assets/logo.jpg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Performance Tuning Guide
+              Demo App
             
           </span>
         </div>
@@ -229,9 +233,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="TraceVerde Documentation" class="md-nav__button md-logo" aria-label="TraceVerde Documentation" data-md-component="logo">
+    <a href="../.." title="TraceVerde Documentation" class="md-nav__button md-logo" aria-label="TraceVerde Documentation" data-md-component="logo">
       
-  <img src="../assets/logo.jpg" alt="logo">
+  <img src="../../assets/logo.jpg" alt="logo">
 
     </a>
     TraceVerde Documentation
@@ -258,7 +262,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -282,8 +286,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -294,13 +300,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
@@ -321,7 +325,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -339,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   
@@ -367,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/quickstart/" class="md-nav__link">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
         
   
   
@@ -395,7 +399,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/configuration/" class="md-nav__link">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
         
   
   
@@ -420,10 +424,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../guides/demo-app/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demo App
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -439,6 +470,153 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-start-jaeger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Start Jaeger
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-set-api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Set API Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-install-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Install Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-run-the-demo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Run the Demo
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#expected-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Expected Output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#view-traces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        View Traces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#customizing-the-demo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Customizing the Demo
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source Code
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -512,7 +690,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/llm-providers/" class="md-nav__link">
+      <a href="../llm-providers/" class="md-nav__link">
         
   
   
@@ -540,7 +718,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/multi-agent-frameworks/" class="md-nav__link">
+      <a href="../multi-agent-frameworks/" class="md-nav__link">
         
   
   
@@ -568,7 +746,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/mcp-tools/" class="md-nav__link">
+      <a href="../mcp-tools/" class="md-nav__link">
         
   
   
@@ -596,7 +774,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/cost-tracking/" class="md-nav__link">
+      <a href="../cost-tracking/" class="md-nav__link">
         
   
   
@@ -624,7 +802,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/gpu-metrics/" class="md-nav__link">
+      <a href="../gpu-metrics/" class="md-nav__link">
         
   
   
@@ -652,7 +830,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/evaluation/" class="md-nav__link">
+      <a href="../evaluation/" class="md-nav__link">
         
   
   
@@ -680,7 +858,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/sarvam-ai/" class="md-nav__link">
+      <a href="../sarvam-ai/" class="md-nav__link">
         
   
   
@@ -769,7 +947,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/performance-tuning/" class="md-nav__link">
+      <a href="../../reference/performance-tuning/" class="md-nav__link">
         
   
   
@@ -797,7 +975,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/python-compatibility/" class="md-nav__link">
+      <a href="../../reference/python-compatibility/" class="md-nav__link">
         
   
   
@@ -825,7 +1003,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/server-metrics/" class="md-nav__link">
+      <a href="../../reference/server-metrics/" class="md-nav__link">
         
   
   
@@ -853,7 +1031,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/semantic-conventions/" class="md-nav__link">
+      <a href="../../reference/semantic-conventions/" class="md-nav__link">
         
   
   
@@ -942,7 +1120,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../community/contributing/" class="md-nav__link">
+      <a href="../../community/contributing/" class="md-nav__link">
         
   
   
@@ -970,7 +1148,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../community/changelog/" class="md-nav__link">
+      <a href="../../community/changelog/" class="md-nav__link">
         
   
   
@@ -1025,10 +1203,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#import-time" class="md-nav__link">
+  <a href="#what-it-does" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Import Time
+        What It Does
       
     </span>
   </a>
@@ -1036,10 +1214,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sampling-rate" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sampling Rate
+        Prerequisites
       
     </span>
   </a>
@@ -1047,10 +1225,71 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#batch-export-configuration" class="md-nav__link">
+  <a href="#setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Batch Export Configuration
+        Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-start-jaeger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Start Jaeger
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-set-api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Set API Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-install-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Install Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-run-the-demo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Run the Demo
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#expected-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Expected Output
       
     </span>
   </a>
@@ -1058,10 +1297,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#content-capture" class="md-nav__link">
+  <a href="#view-traces" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Content Capture
+        View Traces
       
     </span>
   </a>
@@ -1069,10 +1308,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#gpu-metrics" class="md-nav__link">
+  <a href="#customizing-the-demo" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GPU Metrics
+        Customizing the Demo
       
     </span>
   </a>
@@ -1080,65 +1319,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#cost-tracking" class="md-nav__link">
+  <a href="#source-code" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Cost Tracking
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mcp-instrumentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MCP Instrumentation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#selective-instrumentors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Selective Instrumentors
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#otlp-protocol" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        OTLP Protocol
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#otlp-timeout" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        OTLP Timeout
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#production-checklist" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Production Checklist
+        Source Code
       
     </span>
   </a>
@@ -1165,76 +1349,91 @@
   
 
 
-<h1 id="performance-tuning-guide">Performance Tuning Guide<a class="headerlink" href="#performance-tuning-guide" title="Permanent link">&para;</a></h1>
-<p>This guide covers configuration options for optimizing genai-otel-instrument in production.</p>
-<h2 id="import-time">Import Time<a class="headerlink" href="#import-time" title="Permanent link">&para;</a></h2>
-<p>The library uses lazy imports. <code>import genai_otel</code> loads in ~20ms. Heavy modules (OTel SDK, instrumentors, GPU metrics) are only loaded when you call <code>genai_otel.instrument()</code> or access specific classes.</p>
-<h2 id="sampling-rate">Sampling Rate<a class="headerlink" href="#sampling-rate" title="Permanent link">&para;</a></h2>
-<p>Reduce telemetry volume by sampling a fraction of traces:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Only trace 10% of requests</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_SAMPLING_RATE</span><span class="o">=</span><span class="m">0</span>.1
-</code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">genai_otel</span><span class="w"> </span><span class="kn">import</span> <span class="n">instrument</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">instrument</span><span class="p">(</span><span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>  <span class="c1"># 10% of traces</span>
-</code></pre></div>
-<p>A sampling rate of <code>1.0</code> (default) traces everything. Set to <code>0.0</code> to disable tracing entirely.</p>
-<h2 id="batch-export-configuration">Batch Export Configuration<a class="headerlink" href="#batch-export-configuration" title="Permanent link">&para;</a></h2>
-<p>The library uses <code>BatchSpanProcessor</code> and <code>PeriodicExportingMetricReader</code> for non-blocking export. OpenTelemetry environment variables control batching:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Spans: max batch size and export interval</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_BSP_MAX_EXPORT_BATCH_SIZE</span><span class="o">=</span><span class="m">512</span><span class="w">    </span><span class="c1"># default: 512</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_BSP_SCHEDULE_DELAY_MILLIS</span><span class="o">=</span><span class="m">5000</span><span class="w">   </span><span class="c1"># default: 5000ms</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_BSP_MAX_QUEUE_SIZE</span><span class="o">=</span><span class="m">2048</span><span class="w">          </span><span class="c1"># default: 2048</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Metrics: export interval</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_METRIC_EXPORT_INTERVAL</span><span class="o">=</span><span class="m">60000</span><span class="w">     </span><span class="c1"># default: 60000ms (1 min)</span>
-</code></pre></div>
-<p>For high-throughput applications, increase <code>MAX_QUEUE_SIZE</code> and <code>MAX_EXPORT_BATCH_SIZE</code>.</p>
-<h2 id="content-capture">Content Capture<a class="headerlink" href="#content-capture" title="Permanent link">&para;</a></h2>
-<p>Capturing prompt/response content adds overhead to span size and export bandwidth:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Disable content capture for lower overhead</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CONTENT_CAPTURE</span><span class="o">=</span><span class="nb">false</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Or limit content length (default: 1000 chars)</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CONTENT_MAX_LENGTH</span><span class="o">=</span><span class="m">200</span>
-</code></pre></div>
-<h2 id="gpu-metrics">GPU Metrics<a class="headerlink" href="#gpu-metrics" title="Permanent link">&para;</a></h2>
-<p>GPU metrics collection runs in a background thread. Disable if not needed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_GPU_METRICS</span><span class="o">=</span><span class="nb">false</span>
-</code></pre></div>
-<p>Or adjust collection interval:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_GPU_METRICS_INTERVAL</span><span class="o">=</span><span class="m">30</span><span class="w">  </span><span class="c1"># seconds (default: 15)</span>
-</code></pre></div>
-<h2 id="cost-tracking">Cost Tracking<a class="headerlink" href="#cost-tracking" title="Permanent link">&para;</a></h2>
-<p>Cost calculation adds minimal overhead but can be disabled:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_COST_TRACKING</span><span class="o">=</span><span class="nb">false</span>
-</code></pre></div>
-<h2 id="mcp-instrumentation">MCP Instrumentation<a class="headerlink" href="#mcp-instrumentation" title="Permanent link">&para;</a></h2>
-<p>Disable database/cache/API instrumentation if not needed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_MCP_INSTRUMENTATION</span><span class="o">=</span><span class="nb">false</span>
-</code></pre></div>
-<h2 id="selective-instrumentors">Selective Instrumentors<a class="headerlink" href="#selective-instrumentors" title="Permanent link">&para;</a></h2>
-<p>Only enable the instrumentors you need:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Only instrument OpenAI and Anthropic</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span>openai,anthropic
-</code></pre></div>
-<h2 id="otlp-protocol">OTLP Protocol<a class="headerlink" href="#otlp-protocol" title="Permanent link">&para;</a></h2>
-<p>HTTP (default) works for most setups. gRPC may offer better performance for high-throughput:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_PROTOCOL</span><span class="o">=</span>grpc
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span>http://localhost:4317
-</code></pre></div>
-<h2 id="otlp-timeout">OTLP Timeout<a class="headerlink" href="#otlp-timeout" title="Permanent link">&para;</a></h2>
-<p>Increase timeout for slow networks or reduce for faster failure:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_TIMEOUT</span><span class="o">=</span><span class="m">5</span><span class="w">  </span><span class="c1"># seconds (default: 10)</span>
-</code></pre></div>
-<h2 id="production-checklist">Production Checklist<a class="headerlink" href="#production-checklist" title="Permanent link">&para;</a></h2>
+<h1 id="demo-application">Demo Application<a class="headerlink" href="#demo-application" title="Permanent link">&para;</a></h1>
+<p>TraceVerde includes a demo application that showcases automatic instrumentation across multiple LLM providers in a single script.</p>
+<h2 id="what-it-does">What It Does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h2>
+<p>The demo runs three instrumented calls back-to-back:</p>
 <ol>
-<li>Set <code>GENAI_SAMPLING_RATE</code> to 0.1-0.5 for high-traffic services</li>
-<li>Disable <code>GENAI_ENABLE_CONTENT_CAPTURE</code> unless needed for debugging</li>
-<li>Set <code>GENAI_ENABLE_GPU_METRICS=false</code> if no GPUs are used</li>
-<li>Use <code>GENAI_ENABLED_INSTRUMENTORS</code> to limit to providers you actually use</li>
-<li>Set <code>GENAI_FAIL_ON_ERROR=false</code> (default) so instrumentation issues don't crash your app</li>
-<li>Configure <code>OTEL_BSP_MAX_QUEUE_SIZE</code> based on your request volume</li>
+<li><strong>OpenAI GPT-3.5 Turbo</strong> - Chat completion</li>
+<li><strong>Anthropic Claude</strong> - Chat completion</li>
+<li><strong>LangChain with OpenAI</strong> - Chain execution</li>
 </ol>
+<p>Each call is automatically traced with token usage, cost tracking, and latency metrics.</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<ol>
+<li>An OpenTelemetry backend (Jaeger recommended for quick start)</li>
+<li>API keys for the providers you want to test</li>
+</ol>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<h3 id="1-start-jaeger">1. Start Jaeger<a class="headerlink" href="#1-start-jaeger" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>jaeger<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>-p<span class="w"> </span><span class="m">16686</span>:16686<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>-p<span class="w"> </span><span class="m">4318</span>:4318<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>jaegertracing/all-in-one:latest
+</code></pre></div>
+<h3 id="2-set-api-keys">2. Set API Keys<a class="headerlink" href="#2-set-api-keys" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span>http://localhost:4318
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>your_openai_key
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span>your_anthropic_key<span class="w">  </span><span class="c1"># Optional</span>
+</code></pre></div>
+<h3 id="3-install-dependencies">3. Install Dependencies<a class="headerlink" href="#3-install-dependencies" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openai,anthropic<span class="o">]</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>pip<span class="w"> </span>install<span class="w"> </span>langchain<span class="w"> </span>langchain-openai
+</code></pre></div>
+<h3 id="4-run-the-demo">4. Run the Demo<a class="headerlink" href="#4-run-the-demo" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">cd</span><span class="w"> </span>examples/demo
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>python<span class="w"> </span>app.py
+</code></pre></div>
+<h2 id="expected-output">Expected Output<a class="headerlink" href="#expected-output" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Starting GenAI OTel Demo...
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Auto-instrumenting all LLM libraries...
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>Instrumentation enabled!
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>============================================================
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>DEMO 1: OpenAI GPT-3.5 Turbo
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>============================================================
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>OpenAI Response: OpenTelemetry is an open-source observability framework...
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>Tokens: 42
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>Estimated cost captured in metrics
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>============================================================
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>DEMO 2: Anthropic Claude
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>============================================================
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>Claude Response: Distributed tracing is a method...
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>Tokens: 38
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>Estimated cost captured in metrics
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>============================================================
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>DEMO 3: LangChain with OpenAI
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>============================================================
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>LangChain Response: Observability is the ability to...
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>Chain execution traced automatically
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>Demo Complete!
+</code></pre></div>
+<h2 id="view-traces">View Traces<a class="headerlink" href="#view-traces" title="Permanent link">&para;</a></h2>
+<p>Open Jaeger at <code>http://localhost:16686</code>:</p>
+<ol>
+<li>Select service <code>genai-app</code> from the dropdown</li>
+<li>Click "Find Traces"</li>
+<li>You'll see three traces - one for each provider call</li>
+<li>Click any trace to see span details including:</li>
+<li><code>gen_ai.system</code> - Provider name</li>
+<li><code>gen_ai.request.model</code> - Model used</li>
+<li><code>gen_ai.usage.prompt_tokens</code> / <code>gen_ai.usage.completion_tokens</code> - Token counts</li>
+<li><code>gen_ai.usage.cost.total</code> - Estimated cost in USD</li>
+</ol>
+<h2 id="customizing-the-demo">Customizing the Demo<a class="headerlink" href="#customizing-the-demo" title="Permanent link">&para;</a></h2>
+<p>The demo gracefully skips providers whose API keys are not set. You can run it with just OpenAI, just Anthropic, or all three.</p>
+<p>To add evaluation features:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Edit examples/demo/app.py, change the instrument() call:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">enable_pii_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">enable_toxicity_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">)</span>
+</code></pre></div>
+<h2 id="source-code">Source Code<a class="headerlink" href="#source-code" title="Permanent link">&para;</a></h2>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/demo/app.py">examples/demo/app.py</a>.</p>
 
 
 
@@ -1328,10 +1527,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

@@ -16,7 +16,7 @@
         <link rel="prev" href="../quickstart/">
       
       
-        <link rel="next" href="../../guides/llm-providers/">
+        <link rel="next" href="../../guides/demo-app/">
       
       
         
@@ -459,10 +459,264 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#environment-variables" class="md-nav__link">
+  <a href="#core-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment Variables
+        Core Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature-toggles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Toggles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#instrumentor-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instrumentor Selection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sampling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sampling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cost-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost Tracking
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gpu-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPU Metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#co2-emissions-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CO2 Emissions Tracking
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CO2 Emissions Tracking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#co2-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CO2 Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-co2-tracking-for-us-west-coast" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: CO2 Tracking for US West Coast
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-co2-tracking-on-aws" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: CO2 Tracking on AWS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-manual-carbon-intensity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Manual Carbon Intensity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#co2-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CO2 Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#content-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content Capture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#semantic-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ollama-server-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ollama Server Metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evaluation-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Evaluation Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pii-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PII Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toxicity-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Toxicity Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bias-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bias Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prompt-injection-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prompt Injection Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#restricted-topics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restricted Topics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hallucination-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hallucination Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#telemetry-opt-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telemetry (Opt-in)
       
     </span>
   </a>
@@ -481,10 +735,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#telemetry-opt-in" class="md-nav__link">
+  <a href="#session-and-user-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Telemetry (Opt-in)
+        Session and User Tracking
       
     </span>
   </a>
@@ -495,6 +749,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/demo-app/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demo App
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -687,7 +969,7 @@
   <span class="md-ellipsis">
     
   
-    GPU Metrics
+    GPU Metrics & CO2
   
 
     
@@ -716,6 +998,34 @@
     
   
     Evaluation & Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/sarvam-ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sarvam AI
   
 
     
@@ -1053,10 +1363,264 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#environment-variables" class="md-nav__link">
+  <a href="#core-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment Variables
+        Core Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature-toggles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Toggles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#instrumentor-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instrumentor Selection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sampling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sampling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cost-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost Tracking
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gpu-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPU Metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#co2-emissions-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CO2 Emissions Tracking
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CO2 Emissions Tracking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#co2-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CO2 Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-co2-tracking-for-us-west-coast" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: CO2 Tracking for US West Coast
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-co2-tracking-on-aws" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: CO2 Tracking on AWS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-manual-carbon-intensity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Manual Carbon Intensity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#co2-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CO2 Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#content-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content Capture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#semantic-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ollama-server-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ollama Server Metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evaluation-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Evaluation Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pii-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PII Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toxicity-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Toxicity Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bias-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bias Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prompt-injection-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prompt Injection Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#restricted-topics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restricted Topics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hallucination-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hallucination Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#telemetry-opt-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telemetry (Opt-in)
       
     </span>
   </a>
@@ -1075,10 +1639,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#telemetry-opt-in" class="md-nav__link">
+  <a href="#session-and-user-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Telemetry (Opt-in)
+        Session and User Tracking
       
     </span>
   </a>
@@ -1106,8 +1670,9 @@
 
 
 <h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
-<p>TraceVerde can be configured via environment variables or programmatically.</p>
-<h2 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
+<p>TraceVerde is configured via environment variables or programmatically. All settings have sensible defaults - most users only need to set <code>OTEL_SERVICE_NAME</code> and <code>OTEL_EXPORTER_OTLP_ENDPOINT</code>.</p>
+<p>A complete <code>sample.env</code> template is included in the repository.</p>
+<h2 id="core-settings">Core Settings<a class="headerlink" href="#core-settings" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -1120,12 +1685,12 @@
 <tr>
 <td><code>OTEL_SERVICE_NAME</code></td>
 <td><code>genai-app</code></td>
-<td>Service name for traces</td>
+<td>Service name for traces and metrics</td>
 </tr>
 <tr>
 <td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code></td>
 <td><code>http://localhost:4318</code></td>
-<td>OTLP endpoint URL</td>
+<td>OTLP endpoint URL. Leave empty for console output</td>
 </tr>
 <tr>
 <td><code>OTEL_EXPORTER_OTLP_HEADERS</code></td>
@@ -1134,89 +1699,635 @@
 </tr>
 <tr>
 <td><code>OTEL_EXPORTER_OTLP_TIMEOUT</code></td>
-<td><code>10.0</code></td>
+<td><code>60</code></td>
 <td>OTLP exporter timeout in seconds</td>
+</tr>
+<tr>
+<td><code>OTEL_EXPORTER_OTLP_PROTOCOL</code></td>
+<td><code>http/protobuf</code></td>
+<td>Protocol: <code>http/protobuf</code> (default) or <code>grpc</code></td>
 </tr>
 <tr>
 <td><code>OTEL_SERVICE_INSTANCE_ID</code></td>
 <td></td>
-<td>Service instance identifier</td>
+<td>Instance identifier (container ID, pod name)</td>
 </tr>
 <tr>
 <td><code>OTEL_ENVIRONMENT</code></td>
-<td></td>
-<td>Environment name (e.g., <code>production</code>)</td>
+<td><code>dev</code></td>
+<td>Deployment environment (dev, staging, production)</td>
 </tr>
+<tr>
+<td><code>GENAI_OTEL_LOG_LEVEL</code></td>
+<td><code>INFO</code></td>
+<td>Logging level (DEBUG, INFO, WARNING, ERROR)</td>
+</tr>
+<tr>
+<td><code>GENAI_FAIL_ON_ERROR</code></td>
+<td><code>false</code></td>
+<td>Raise exceptions on instrumentation errors</td>
+</tr>
+</tbody>
+</table>
+<h2 id="feature-toggles">Feature Toggles<a class="headerlink" href="#feature-toggles" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_COST_TRACKING</code></td>
+<td><code>true</code></td>
+<td>Automatic cost calculation for LLM calls</td>
+</tr>
+<tr>
+<td><code>GENAI_ENABLE_GPU_METRICS</code></td>
+<td><code>true</code></td>
+<td>GPU utilization, memory, temperature, power metrics</td>
+</tr>
+<tr>
+<td><code>GENAI_ENABLE_MCP_INSTRUMENTATION</code></td>
+<td><code>true</code></td>
+<td>Database, cache, vector DB, queue instrumentation</td>
+</tr>
+<tr>
+<td><code>GENAI_ENABLE_HTTP_INSTRUMENTATION</code></td>
+<td><code>false</code></td>
+<td>HTTP/API instrumentation (disabled to avoid OTLP conflicts)</td>
+</tr>
+<tr>
+<td><code>GENAI_ENABLE_CO2_TRACKING</code></td>
+<td><code>false</code></td>
+<td>CO2 emissions tracking from GPU power consumption</td>
+</tr>
+<tr>
+<td><code>GENAI_ENABLE_CONTENT_CAPTURE</code></td>
+<td><code>false</code></td>
+<td>Capture prompt/response content as span events</td>
+</tr>
+</tbody>
+</table>
+<h2 id="instrumentor-selection">Instrumentor Selection<a class="headerlink" href="#instrumentor-selection" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLED_INSTRUMENTORS</code></td>
+<td>all defaults</td>
+<td>Comma-separated list of instrumentors to enable</td>
+</tr>
+</tbody>
+</table>
+<p>Default instrumentors: <code>openai</code>, <code>openrouter</code>, <code>anthropic</code>, <code>google.generativeai</code>, <code>boto3</code>, <code>azure.ai.openai</code>, <code>cohere</code>, <code>mistralai</code>, <code>together</code>, <code>groq</code>, <code>ollama</code>, <code>vertexai</code>, <code>replicate</code>, <code>anyscale</code>, <code>sambanova</code>, <code>sarvamai</code>, <code>langchain</code>, <code>langgraph</code>, <code>llama_index</code>, <code>transformers</code>, <code>autogen</code>, <code>autogen_agentchat</code>, <code>google_adk</code>, <code>pydantic_ai</code>, <code>openai_agents</code>, <code>bedrock_agents</code>, <code>crewai</code>, <code>smolagents</code> (3.10+), <code>litellm</code> (3.10+)</p>
+<p>Example - enable only specific instrumentors:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span>openai,anthropic,crewai
+</code></pre></div>
+<h2 id="sampling">Sampling<a class="headerlink" href="#sampling" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_SAMPLING_RATE</code></td>
+<td><code>1.0</code></td>
+<td>Trace sampling rate (0.0-1.0). 1.0 = trace everything</td>
+</tr>
+</tbody>
+</table>
+<p>Use lower values in high-traffic production to reduce telemetry volume:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_SAMPLING_RATE</span><span class="o">=</span><span class="m">0</span>.1<span class="w">  </span><span class="c1"># Sample 10% of traces</span>
+</code></pre></div>
+<h2 id="cost-tracking">Cost Tracking<a class="headerlink" href="#cost-tracking" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_COST_TRACKING</code></td>
+<td><code>true</code></td>
+<td>Enable/disable cost tracking</td>
+</tr>
+<tr>
+<td><code>GENAI_CUSTOM_PRICING_JSON</code></td>
+<td></td>
+<td>Custom model pricing (see <a href="../../guides/cost-tracking/">Cost Tracking guide</a>)</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{&quot;chat&quot;:{&quot;my-model&quot;:{&quot;promptPrice&quot;:0.001,&quot;completionPrice&quot;:0.002}}}&#39;</span>
+</code></pre></div>
+<h2 id="gpu-metrics">GPU Metrics<a class="headerlink" href="#gpu-metrics" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td><code>GENAI_ENABLE_GPU_METRICS</code></td>
 <td><code>true</code></td>
 <td>Enable GPU metrics collection</td>
 </tr>
 <tr>
-<td><code>GENAI_ENABLE_COST_TRACKING</code></td>
-<td><code>true</code></td>
-<td>Enable automatic cost calculation</td>
+<td><code>GENAI_GPU_COLLECTION_INTERVAL</code></td>
+<td><code>5</code></td>
+<td>Collection interval in seconds</td>
 </tr>
 <tr>
-<td><code>GENAI_ENABLE_MCP_INSTRUMENTATION</code></td>
-<td><code>true</code></td>
-<td>Enable MCP tool instrumentation</td>
-</tr>
-<tr>
-<td><code>GENAI_FAIL_ON_ERROR</code></td>
-<td><code>false</code></td>
-<td>Fail on instrumentation errors</td>
-</tr>
-<tr>
-<td><code>GENAI_OTEL_LOG_LEVEL</code></td>
-<td><code>INFO</code></td>
-<td>Logging level</td>
-</tr>
-<tr>
-<td><code>GENAI_ENABLED_INSTRUMENTORS</code></td>
-<td>all defaults</td>
-<td>Comma-separated list of instrumentors</td>
-</tr>
-<tr>
-<td><code>GENAI_SAMPLING_RATE</code></td>
-<td><code>1.0</code></td>
-<td>Trace sampling rate (0.0-1.0)</td>
-</tr>
-<tr>
-<td><code>GENAI_CUSTOM_PRICING_JSON</code></td>
-<td></td>
-<td>Custom model pricing JSON</td>
+<td><code>GENAI_POWER_COST_PER_KWH</code></td>
+<td><code>0.12</code></td>
+<td>Electricity cost in USD per kWh</td>
 </tr>
 </tbody>
 </table>
-<h2 id="programmatic-configuration">Programmatic Configuration<a class="headerlink" href="#programmatic-configuration" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;my-app&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">endpoint</span><span class="o">=</span><span class="s2">&quot;http://localhost:4318&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">enable_gpu_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">enable_cost_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">enable_mcp_instrumentation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;openai&quot;</span><span class="p">,</span> <span class="s2">&quot;anthropic&quot;</span><span class="p">,</span> <span class="s2">&quot;crewai&quot;</span><span class="p">],</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">fail_on_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="c1"># Evaluation features</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">enable_pii_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">enable_toxicity_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">enable_bias_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="n">enable_prompt_injection_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="n">enable_restricted_topics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="n">enable_hallucination_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="p">)</span>
+<p>Common electricity rates: US average ~$0.12/kWh, Europe ~$0.20/kWh, Industrial ~$0.07/kWh.</p>
+<h2 id="co2-emissions-tracking">CO2 Emissions Tracking<a class="headerlink" href="#co2-emissions-tracking" title="Permanent link">&para;</a></h2>
+<p>TraceVerde can track CO2 emissions from GPU power consumption. Two modes are available:</p>
+<p><strong>Manual mode</strong>: Uses a fixed carbon intensity value you provide.
+<strong>Codecarbon mode</strong>: Uses <a href="https://github.com/mlco2/codecarbon">codecarbon</a> for automatic region-based carbon intensity lookup.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>co2<span class="o">]</span><span class="w">  </span><span class="c1"># Install codecarbon</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
+<h3 id="co2-configuration">CO2 Configuration<a class="headerlink" href="#co2-configuration" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_CO2_TRACKING</code></td>
+<td><code>false</code></td>
+<td>Enable CO2 emissions tracking</td>
+</tr>
+<tr>
+<td><code>GENAI_CARBON_INTENSITY</code></td>
+<td><code>475.0</code></td>
+<td>Carbon intensity in gCO2e/kWh (manual fallback)</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_USE_MANUAL</code></td>
+<td><code>false</code></td>
+<td>Force manual calculation even with codecarbon installed</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_COUNTRY_ISO_CODE</code></td>
+<td></td>
+<td>3-letter ISO country code (e.g., <code>USA</code>, <code>GBR</code>, <code>DEU</code>, <code>IND</code>)</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_REGION</code></td>
+<td></td>
+<td>Region/state within country (e.g., <code>california</code>, <code>texas</code>)</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_CLOUD_PROVIDER</code></td>
+<td></td>
+<td>Cloud provider: <code>aws</code>, <code>gcp</code>, <code>azure</code></td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_CLOUD_REGION</code></td>
+<td></td>
+<td>Cloud region (e.g., <code>us-east-1</code>, <code>europe-west1</code>)</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_OFFLINE_MODE</code></td>
+<td><code>true</code></td>
+<td>Run codecarbon without external API calls</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_TRACKING_MODE</code></td>
+<td><code>machine</code></td>
+<td><code>machine</code> (all processes) or <code>process</code> (current only)</td>
+</tr>
+<tr>
+<td><code>GENAI_CODECARBON_LOG_LEVEL</code></td>
+<td><code>error</code></td>
+<td>Codecarbon logging verbosity</td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-co2-tracking-for-us-west-coast">Example: CO2 Tracking for US West Coast<a class="headerlink" href="#example-co2-tracking-for-us-west-coast" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_COUNTRY_ISO_CODE</span><span class="o">=</span>USA
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_REGION</span><span class="o">=</span>california
+</code></pre></div>
+<h3 id="example-co2-tracking-on-aws">Example: CO2 Tracking on AWS<a class="headerlink" href="#example-co2-tracking-on-aws" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_CLOUD_PROVIDER</span><span class="o">=</span>aws
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_CLOUD_REGION</span><span class="o">=</span>us-east-1
+</code></pre></div>
+<h3 id="example-manual-carbon-intensity">Example: Manual Carbon Intensity<a class="headerlink" href="#example-manual-carbon-intensity" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_USE_MANUAL</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CARBON_INTENSITY</span><span class="o">=</span><span class="m">56</span>.0<span class="w">   </span><span class="c1"># France (mostly nuclear)</span>
+</code></pre></div>
+<p>Reference carbon intensity values (gCO2e/kWh):
+- France: ~56 (nuclear)
+- UK: ~233
+- Germany: ~350
+- US average: ~420
+- China: ~555
+- India: ~700</p>
+<h3 id="co2-metrics">CO2 Metrics<a class="headerlink" href="#co2-metrics" title="Permanent link">&para;</a></h3>
+<p>When enabled, these metrics are recorded:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Unit</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gen_ai.co2.emissions</code></td>
+<td>kgCO2e</td>
+<td>Cumulative CO2 emissions</td>
+</tr>
+<tr>
+<td><code>gen_ai.power.consumption</code></td>
+<td>kWh</td>
+<td>Cumulative power consumption</td>
+</tr>
+<tr>
+<td><code>gen_ai.power.cost</code></td>
+<td>USD</td>
+<td>Cumulative electricity cost</td>
+</tr>
+</tbody>
+</table>
+<h2 id="content-capture">Content Capture<a class="headerlink" href="#content-capture" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_CONTENT_CAPTURE</code></td>
+<td><code>false</code></td>
+<td>Capture prompt/response text in spans</td>
+</tr>
+<tr>
+<td><code>GENAI_CONTENT_MAX_LENGTH</code></td>
+<td><code>200</code></td>
+<td>Max characters to capture (0 = unlimited)</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Privacy</p>
+<p>Content capture records full prompts and responses. This may expose sensitive data. Ensure proper data handling and access controls before enabling in production.</p>
+</div>
+<h2 id="semantic-conventions">Semantic Conventions<a class="headerlink" href="#semantic-conventions" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OTEL_SEMCONV_STABILITY_OPT_IN</code></td>
+<td><code>gen_ai</code></td>
+<td>Semantic convention mode</td>
+</tr>
+</tbody>
+</table>
+<p>Options:</p>
+<ul>
+<li><code>gen_ai</code> - New conventions only (default): <code>gen_ai.usage.prompt_tokens</code>, <code>gen_ai.usage.completion_tokens</code></li>
+<li><code>gen_ai/dup</code> - Dual emission for migration: emits both new and old attribute names (<code>gen_ai.usage.input_tokens</code>, <code>gen_ai.usage.output_tokens</code>)</li>
+</ul>
+<h2 id="ollama-server-metrics">Ollama Server Metrics<a class="headerlink" href="#ollama-server-metrics" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_OLLAMA_SERVER_METRICS</code></td>
+<td><code>true</code></td>
+<td>Poll Ollama's <code>/api/ps</code> for VRAM usage</td>
+</tr>
+<tr>
+<td><code>OLLAMA_BASE_URL</code></td>
+<td><code>http://localhost:11434</code></td>
+<td>Ollama server URL</td>
+</tr>
+<tr>
+<td><code>GENAI_OLLAMA_METRICS_INTERVAL</code></td>
+<td><code>5.0</code></td>
+<td>Polling interval in seconds</td>
+</tr>
+<tr>
+<td><code>GENAI_OLLAMA_MAX_VRAM_GB</code></td>
+<td>auto-detected</td>
+<td>Override GPU VRAM size in GB</td>
+</tr>
+</tbody>
+</table>
+<h2 id="evaluation-features">Evaluation Features<a class="headerlink" href="#evaluation-features" title="Permanent link">&para;</a></h2>
+<p>All evaluation features are opt-in and disabled by default. See the <a href="../../guides/evaluation/">Evaluation guide</a> for detailed examples.</p>
+<h3 id="pii-detection">PII Detection<a class="headerlink" href="#pii-detection" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_PII_DETECTION</code></td>
+<td><code>false</code></td>
+<td>Enable PII detection</td>
+</tr>
+<tr>
+<td><code>GENAI_PII_MODE</code></td>
+<td><code>detect</code></td>
+<td>Mode: <code>detect</code>, <code>redact</code>, or <code>block</code></td>
+</tr>
+<tr>
+<td><code>GENAI_PII_THRESHOLD</code></td>
+<td><code>0.5</code></td>
+<td>Detection confidence threshold (0.0-1.0)</td>
+</tr>
+<tr>
+<td><code>GENAI_PII_GDPR_MODE</code></td>
+<td><code>false</code></td>
+<td>Add GDPR-specific entity types (IBAN, EU passports)</td>
+</tr>
+<tr>
+<td><code>GENAI_PII_HIPAA_MODE</code></td>
+<td><code>false</code></td>
+<td>Add HIPAA-specific entity types (medical records)</td>
+</tr>
+<tr>
+<td><code>GENAI_PII_PCI_DSS_MODE</code></td>
+<td><code>false</code></td>
+<td>Add PCI-DSS entity types (credit cards)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="toxicity-detection">Toxicity Detection<a class="headerlink" href="#toxicity-detection" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_TOXICITY_DETECTION</code></td>
+<td><code>false</code></td>
+<td>Enable toxicity detection</td>
+</tr>
+<tr>
+<td><code>GENAI_TOXICITY_THRESHOLD</code></td>
+<td><code>0.7</code></td>
+<td>Score threshold (0.0-1.0)</td>
+</tr>
+<tr>
+<td><code>GENAI_TOXICITY_USE_PERSPECTIVE_API</code></td>
+<td><code>false</code></td>
+<td>Use Google Perspective API (cloud) instead of Detoxify (local)</td>
+</tr>
+<tr>
+<td><code>GENAI_TOXICITY_PERSPECTIVE_API_KEY</code></td>
+<td></td>
+<td>Perspective API key (required if using Perspective)</td>
+</tr>
+<tr>
+<td><code>GENAI_TOXICITY_BLOCK_ON_DETECTION</code></td>
+<td><code>false</code></td>
+<td>Block requests with toxic content</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bias-detection">Bias Detection<a class="headerlink" href="#bias-detection" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_BIAS_DETECTION</code></td>
+<td><code>false</code></td>
+<td>Enable bias detection</td>
+</tr>
+<tr>
+<td><code>GENAI_BIAS_THRESHOLD</code></td>
+<td><code>0.4</code></td>
+<td>Detection threshold (0.0-1.0)</td>
+</tr>
+<tr>
+<td><code>GENAI_BIAS_BLOCK_ON_DETECTION</code></td>
+<td><code>false</code></td>
+<td>Block requests with detected bias</td>
+</tr>
+</tbody>
+</table>
+<h3 id="prompt-injection-detection">Prompt Injection Detection<a class="headerlink" href="#prompt-injection-detection" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_PROMPT_INJECTION_DETECTION</code></td>
+<td><code>false</code></td>
+<td>Enable prompt injection detection</td>
+</tr>
+<tr>
+<td><code>GENAI_PROMPT_INJECTION_THRESHOLD</code></td>
+<td><code>0.5</code></td>
+<td>Detection threshold (0.0-1.0)</td>
+</tr>
+<tr>
+<td><code>GENAI_PROMPT_INJECTION_BLOCK_ON_DETECTION</code></td>
+<td><code>false</code></td>
+<td>Block detected injection attempts</td>
+</tr>
+</tbody>
+</table>
+<h3 id="restricted-topics">Restricted Topics<a class="headerlink" href="#restricted-topics" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_RESTRICTED_TOPICS</code></td>
+<td><code>false</code></td>
+<td>Enable restricted topics detection</td>
+</tr>
+<tr>
+<td><code>GENAI_RESTRICTED_TOPICS_THRESHOLD</code></td>
+<td><code>0.5</code></td>
+<td>Detection threshold (0.0-1.0)</td>
+</tr>
+<tr>
+<td><code>GENAI_RESTRICTED_TOPICS_BLOCK_ON_DETECTION</code></td>
+<td><code>false</code></td>
+<td>Block restricted topic requests</td>
+</tr>
+</tbody>
+</table>
+<h3 id="hallucination-detection">Hallucination Detection<a class="headerlink" href="#hallucination-detection" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_HALLUCINATION_DETECTION</code></td>
+<td><code>false</code></td>
+<td>Enable hallucination detection</td>
+</tr>
+<tr>
+<td><code>GENAI_HALLUCINATION_THRESHOLD</code></td>
+<td><code>0.6</code></td>
+<td>Detection threshold (0.0-1.0)</td>
+</tr>
+</tbody>
+</table>
 <h2 id="telemetry-opt-in">Telemetry (Opt-in)<a class="headerlink" href="#telemetry-opt-in" title="Permanent link">&para;</a></h2>
-<p>Anonymous usage telemetry is disabled by default. To opt in:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TRACEVERDE_TELEMETRY</span><span class="o">=</span><span class="nb">true</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TRACEVERDE_TELEMETRY_URL</span><span class="o">=</span>https://your-endpoint.example.com/v1/telemetry
-</code></pre></div>
+<p>Anonymous usage telemetry is disabled by default.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TRACEVERDE_TELEMETRY</code></td>
+<td><code>false</code></td>
+<td>Enable anonymous usage reporting</td>
+</tr>
+<tr>
+<td><code>TRACEVERDE_TELEMETRY_URL</code></td>
+<td></td>
+<td>Telemetry endpoint URL</td>
+</tr>
+</tbody>
+</table>
 <p>See <code>genai_otel/telemetry.py</code> for details on what is collected.</p>
+<h2 id="programmatic-configuration">Programmatic Configuration<a class="headerlink" href="#programmatic-configuration" title="Permanent link">&para;</a></h2>
+<p>All environment variables can be set programmatically:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="c1"># Core</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;my-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">endpoint</span><span class="o">=</span><span class="s2">&quot;http://localhost:4318&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;openai&quot;</span><span class="p">,</span> <span class="s2">&quot;anthropic&quot;</span><span class="p">,</span> <span class="s2">&quot;crewai&quot;</span><span class="p">],</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="n">fail_on_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    <span class="c1"># Features</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="n">enable_gpu_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="n">enable_cost_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="n">enable_mcp_instrumentation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    <span class="n">enable_content_capture</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>    <span class="c1"># CO2 tracking</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>    <span class="n">enable_co2_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>    <span class="n">co2_country_iso_code</span><span class="o">=</span><span class="s2">&quot;USA&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>    <span class="n">co2_region</span><span class="o">=</span><span class="s2">&quot;california&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>    <span class="c1"># GPU</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>    <span class="n">gpu_collection_interval</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>    <span class="n">power_cost_per_kwh</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>
+<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>
+<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>    <span class="c1"># Evaluation</span>
+<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>    <span class="n">enable_pii_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a>    <span class="n">pii_mode</span><span class="o">=</span><span class="s2">&quot;redact&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a>    <span class="n">pii_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a>    <span class="n">pii_gdpr_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a>
+<a id="__codelineno-7-32" name="__codelineno-7-32" href="#__codelineno-7-32"></a>    <span class="n">enable_toxicity_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-33" name="__codelineno-7-33" href="#__codelineno-7-33"></a>    <span class="n">toxicity_threshold</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+<a id="__codelineno-7-34" name="__codelineno-7-34" href="#__codelineno-7-34"></a>
+<a id="__codelineno-7-35" name="__codelineno-7-35" href="#__codelineno-7-35"></a>    <span class="n">enable_bias_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-36" name="__codelineno-7-36" href="#__codelineno-7-36"></a>    <span class="n">bias_threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
+<a id="__codelineno-7-37" name="__codelineno-7-37" href="#__codelineno-7-37"></a>
+<a id="__codelineno-7-38" name="__codelineno-7-38" href="#__codelineno-7-38"></a>    <span class="n">enable_prompt_injection_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-39" name="__codelineno-7-39" href="#__codelineno-7-39"></a>    <span class="n">prompt_injection_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-7-40" name="__codelineno-7-40" href="#__codelineno-7-40"></a>
+<a id="__codelineno-7-41" name="__codelineno-7-41" href="#__codelineno-7-41"></a>    <span class="n">enable_restricted_topics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-42" name="__codelineno-7-42" href="#__codelineno-7-42"></a>    <span class="n">restricted_topics_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-7-43" name="__codelineno-7-43" href="#__codelineno-7-43"></a>
+<a id="__codelineno-7-44" name="__codelineno-7-44" href="#__codelineno-7-44"></a>    <span class="n">enable_hallucination_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-45" name="__codelineno-7-45" href="#__codelineno-7-45"></a>    <span class="n">hallucination_threshold</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+<a id="__codelineno-7-46" name="__codelineno-7-46" href="#__codelineno-7-46"></a><span class="p">)</span>
+</code></pre></div>
+<h2 id="session-and-user-tracking">Session and User Tracking<a class="headerlink" href="#session-and-user-tracking" title="Permanent link">&para;</a></h2>
+<p>For programmatic session/user tracking, provide extractor callables:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">session_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;session_id&quot;</span><span class="p">),</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">user_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">),</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="p">)</span>
+</code></pre></div>
+<p>CrewAI, LangGraph, and LangChain have built-in automatic session ID propagation. See the <a href="../../guides/multi-agent-frameworks/">Multi-Agent Frameworks guide</a> for details.</p>
 
 
 

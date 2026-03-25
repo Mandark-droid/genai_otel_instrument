@@ -10,11 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://mandark-droid.github.io/genai_otel_instrument/community/changelog/">
+        <link rel="canonical" href="https://mandark-droid.github.io/genai_otel_instrument/guides/sarvam-ai/">
       
       
-        <link rel="prev" href="../contributing/">
+        <link rel="prev" href="../evaluation/">
       
+      
+        <link rel="next" href="../../reference/performance-tuning/">
       
       
         
@@ -25,7 +27,7 @@
     
     
       
-        <title>Changelog - TraceVerde Documentation</title>
+        <title>Sarvam AI - TraceVerde Documentation</title>
       
     
     
@@ -78,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#changelog" class="md-skip">
+        <a href="#sarvam-ai" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog
+              Sarvam AI
             
           </span>
         </div>
@@ -425,7 +427,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/demo-app/" class="md-nav__link">
+      <a href="../demo-app/" class="md-nav__link">
         
   
   
@@ -457,8 +459,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -469,13 +473,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -496,7 +498,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -514,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/llm-providers/" class="md-nav__link">
+      <a href="../llm-providers/" class="md-nav__link">
         
   
   
@@ -542,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/multi-agent-frameworks/" class="md-nav__link">
+      <a href="../multi-agent-frameworks/" class="md-nav__link">
         
   
   
@@ -570,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/mcp-tools/" class="md-nav__link">
+      <a href="../mcp-tools/" class="md-nav__link">
         
   
   
@@ -598,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/cost-tracking/" class="md-nav__link">
+      <a href="../cost-tracking/" class="md-nav__link">
         
   
   
@@ -626,7 +628,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/gpu-metrics/" class="md-nav__link">
+      <a href="../gpu-metrics/" class="md-nav__link">
         
   
   
@@ -654,7 +656,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/evaluation/" class="md-nav__link">
+      <a href="../evaluation/" class="md-nav__link">
         
   
   
@@ -679,10 +681,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guides/sarvam-ai/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sarvam AI
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -698,6 +727,175 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-models-and-apis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Models and APIs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Supported Models and APIs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#chat-sarvam-m" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chat (sarvam-m)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#translation-mayura-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Translation (Mayura v1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text-to-speech-bulbul-v3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text-to-Speech (Bulbul v3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#speech-to-text-saarika" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Speech-to-Text (Saarika)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#language-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Language Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multilingual-pipeline-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multilingual Pipeline Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arya-agent-orchestration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arya Agent Orchestration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cost-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost Tracking
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#all-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -887,8 +1085,6 @@
       
   
   
-    
-  
   
   
     
@@ -901,11 +1097,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -926,7 +1124,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -944,7 +1142,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
+      <a href="../../community/contributing/" class="md-nav__link">
         
   
   
@@ -969,19 +1167,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../community/changelog/" class="md-nav__link">
         
   
   
@@ -997,7 +1186,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -1030,6 +1218,163 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-models-and-apis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Models and APIs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Supported Models and APIs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#chat-sarvam-m" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chat (sarvam-m)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#translation-mayura-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Translation (Mayura v1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text-to-speech-bulbul-v3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text-to-Speech (Bulbul v3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#speech-to-text-saarika" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Speech-to-Text (Saarika)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#language-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Language Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multilingual-pipeline-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multilingual Pipeline Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arya-agent-orchestration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arya Agent Orchestration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cost-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost Tracking
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#all-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1048,8 +1393,167 @@
   
 
 
-<h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
-<p>See the full changelog on GitHub: <a href="https://github.com/Mandark-droid/genai_otel_instrument/blob/main/CHANGELOG.md">CHANGELOG.md</a></p>
+<h1 id="sarvam-ai">Sarvam AI<a class="headerlink" href="#sarvam-ai" title="Permanent link">&para;</a></h1>
+<p>TraceVerde provides full instrumentation for <a href="https://www.sarvam.ai/">Sarvam AI</a>, India's sovereign AI platform for multi-modal Indian language processing.</p>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>sarvamai<span class="o">]</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>pip<span class="w"> </span>install<span class="w"> </span>sarvamai
+</code></pre></div>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span><span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;sarvam-app&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sarvamai</span><span class="w"> </span><span class="kn">import</span> <span class="n">SarvamAI</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">SarvamAI</span><span class="p">(</span><span class="n">api_subscription_key</span><span class="o">=</span><span class="s2">&quot;your_key&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Chat completion with sarvam-m</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;sarvam-m&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;What is AI?&quot;</span><span class="p">}],</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="p">)</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Traces, tokens, and costs captured automatically</span>
+</code></pre></div>
+<h2 id="supported-models-and-apis">Supported Models and APIs<a class="headerlink" href="#supported-models-and-apis" title="Permanent link">&para;</a></h2>
+<h3 id="chat-sarvam-m">Chat (sarvam-m)<a class="headerlink" href="#chat-sarvam-m" title="Permanent link">&para;</a></h3>
+<p>Sarvam's multilingual chat model with support for Indian languages.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;sarvam-m&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;You are a helpful assistant who speaks Hindi.&quot;</span><span class="p">},</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Tell me about India&#39;s space program&quot;</span><span class="p">},</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="p">],</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">)</span>
+</code></pre></div>
+<h3 id="translation-mayura-v1">Translation (Mayura v1)<a class="headerlink" href="#translation-mayura-v1" title="Permanent link">&para;</a></h3>
+<p>Translation across 22+ Indian languages with speaker gender adaptation.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">translation</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Hello, how are you?&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">source_language_code</span><span class="o">=</span><span class="s2">&quot;en-IN&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">target_language_code</span><span class="o">=</span><span class="s2">&quot;hi-IN&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;mayura:v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;classic-formal&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">speaker_gender</span><span class="o">=</span><span class="s2">&quot;female&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">)</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">translation</span><span class="o">.</span><span class="n">translated_text</span><span class="p">)</span>
+</code></pre></div>
+<p>Features:</p>
+<ul>
+<li>22+ Indian languages</li>
+<li><code>mayura:v1</code> (latest) and <code>sarvam-translate:v1</code> (legacy)</li>
+<li>Translation modes: <code>classic-formal</code>, <code>classic-colloquial</code></li>
+<li>Speaker gender adaptation</li>
+<li>Numerals format control (international vs native)</li>
+</ul>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/mayura_translate_example.py">Mayura translation example</a>.</p>
+<h3 id="text-to-speech-bulbul-v3">Text-to-Speech (Bulbul v3)<a class="headerlink" href="#text-to-speech-bulbul-v3" title="Permanent link">&para;</a></h3>
+<p>High-quality TTS with 48 speakers across 11 Indian languages.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">tts_response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">speech</span><span class="p">(</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Namaste, aap kaise hain?&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">target_language_code</span><span class="o">=</span><span class="s2">&quot;hi-IN&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;bulbul:v2&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">speaker</span><span class="o">=</span><span class="s2">&quot;meera&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">pace</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">pitch</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">loudness</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="p">)</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="c1"># tts_response.audios contains base64-encoded WAV audio</span>
+</code></pre></div>
+<p>Bulbul v3 features:</p>
+<ul>
+<li>48 speakers (male and female voices)</li>
+<li>11 Indian languages</li>
+<li>Pace control (0.5 to 2.0)</li>
+<li>Temperature control for expressiveness</li>
+<li>24000 Hz sample rate</li>
+<li>Max 2500 characters per request</li>
+</ul>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/bulbul_v3_tts_example.py">Bulbul v3 TTS example</a>.</p>
+<h3 id="speech-to-text-saarika">Speech-to-Text (Saarika)<a class="headerlink" href="#speech-to-text-saarika" title="Permanent link">&para;</a></h3>
+<p>Automatic speech recognition for Indian languages.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;audio.wav&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">transcript</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">speech</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;saarika:v2&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="n">language_code</span><span class="o">=</span><span class="s2">&quot;hi-IN&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="p">)</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">transcript</span><span class="o">.</span><span class="n">transcript</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="language-detection">Language Detection<a class="headerlink" href="#language-detection" title="Permanent link">&para;</a></h3>
+<p>Identify the language of input text.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">detection</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">detect_language</span><span class="p">(</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Namaste, kaise ho?&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="p">)</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">detection</span><span class="o">.</span><span class="n">language_code</span><span class="p">)</span>  <span class="c1"># &quot;hi-IN&quot;</span>
+</code></pre></div>
+<h2 id="multilingual-pipeline-example">Multilingual Pipeline Example<a class="headerlink" href="#multilingual-pipeline-example" title="Permanent link">&para;</a></h2>
+<p>A full production-style pipeline combining multiple Sarvam APIs:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Customer Query (any Indian language)
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  +-- Language Detection
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  +-- Translate to English
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  +-- sarvam-m Chat (generate response)
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  +-- Translate response back to customer&#39;s language
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>  +-- Bulbul v3 TTS (voice response)
+</code></pre></div>
+<p>All steps are automatically traced with cost breakdown per API call.</p>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/multilingual_pipeline_example.py">multilingual pipeline example</a>.</p>
+<h2 id="arya-agent-orchestration">Arya Agent Orchestration<a class="headerlink" href="#arya-agent-orchestration" title="Permanent link">&para;</a></h2>
+<p>Simulates a Sarvam Arya-style agentic workflow with:</p>
+<ul>
+<li>Voice/text input in any Indian language</li>
+<li>Multi-step reasoning pipeline</li>
+<li>Tool usage (translate, detect, search, synthesize)</li>
+<li>Immutable conversation state</li>
+<li>Localized voice+text output</li>
+</ul>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/arya_agent_example.py">Arya agent example</a>.</p>
+<h2 id="cost-tracking">Cost Tracking<a class="headerlink" href="#cost-tracking" title="Permanent link">&para;</a></h2>
+<p>TraceVerde includes pricing for all Sarvam AI models:</p>
+<ul>
+<li><strong>sarvam-m</strong>: Chat model with per-token pricing</li>
+<li><strong>Saarika/Saaras</strong>: STT models with per-second pricing</li>
+<li><strong>Bulbul</strong>: TTS with per-character pricing</li>
+<li><strong>Mayura/Sarvam Translate</strong>: Translation with per-token pricing</li>
+<li><strong>Vision</strong>: Image understanding models</li>
+</ul>
+<p>12+ models tracked in the pricing database.</p>
+<h2 id="environment-setup">Environment Setup<a class="headerlink" href="#environment-setup" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">SARVAM_API_KEY</span><span class="o">=</span>your_sarvam_api_key
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span>http://localhost:4318
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_SERVICE_NAME</span><span class="o">=</span>sarvam-app
+</code></pre></div>
+<h2 id="all-examples">All Examples<a class="headerlink" href="#all-examples" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/example.py">Basic usage</a></td>
+<td>Chat, translate, TTS, STT, language detection</td>
+</tr>
+<tr>
+<td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/arya_agent_example.py">Arya agent</a></td>
+<td>Agent orchestration pipeline</td>
+</tr>
+<tr>
+<td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/bulbul_v3_tts_example.py">Bulbul v3 TTS</a></td>
+<td>Text-to-speech with 48 speakers</td>
+</tr>
+<tr>
+<td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/mayura_translate_example.py">Mayura translate</a></td>
+<td>Translation with modes and gender adaptation</td>
+</tr>
+<tr>
+<td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/multilingual_pipeline_example.py">Multilingual pipeline</a></td>
+<td>Full customer support pipeline</td>
+</tr>
+</tbody>
+</table>
 
 
 

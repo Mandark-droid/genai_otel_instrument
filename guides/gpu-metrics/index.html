@@ -27,7 +27,7 @@
     
     
       
-        <title>GPU Metrics - TraceVerde Documentation</title>
+        <title>GPU Metrics & CO2 - TraceVerde Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#gpu-metrics" class="md-skip">
+        <a href="#gpu-metrics-and-co2-tracking" class="md-skip">
           Skip to content
         </a>
       
@@ -115,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              GPU Metrics
+              GPU Metrics & CO2
             
           </span>
         </div>
@@ -420,6 +420,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../demo-app/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demo App
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -616,7 +644,7 @@
   <span class="md-ellipsis">
     
   
-    GPU Metrics
+    GPU Metrics & CO2
   
 
     
@@ -634,7 +662,7 @@
   <span class="md-ellipsis">
     
   
-    GPU Metrics
+    GPU Metrics & CO2
   
 
     
@@ -671,17 +699,29 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#collected-metrics" class="md-nav__link">
+  <a href="#gpu-metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Collected Metrics
+        GPU Metrics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GPU Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#per-gpu-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-GPU Metrics
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#aggregate-metrics-multi-gpu" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -689,6 +729,11 @@
       
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -704,10 +749,93 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dashboard" class="md-nav__link">
+  <a href="#co2-emissions-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dashboard
+        CO2 Emissions Tracking
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CO2 Emissions Tracking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#codecarbon-mode-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codecarbon Mode (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manual-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#co2-configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CO2 Configuration Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#co2-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CO2 Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-full-gpu-co2-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Full GPU + CO2 Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#grafana-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grafana Dashboard
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ollama-server-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ollama Server Metrics
       
     </span>
   </a>
@@ -738,6 +866,34 @@
     
   
     Evaluation & Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sarvam-ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sarvam AI
   
 
     
@@ -1086,17 +1242,29 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#collected-metrics" class="md-nav__link">
+  <a href="#gpu-metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Collected Metrics
+        GPU Metrics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GPU Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#per-gpu-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-GPU Metrics
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#aggregate-metrics-multi-gpu" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1104,6 +1272,11 @@
       
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1119,10 +1292,93 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dashboard" class="md-nav__link">
+  <a href="#co2-emissions-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dashboard
+        CO2 Emissions Tracking
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CO2 Emissions Tracking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#codecarbon-mode-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codecarbon Mode (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manual-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#co2-configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CO2 Configuration Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#co2-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CO2 Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-full-gpu-co2-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Full GPU + CO2 Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#grafana-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grafana Dashboard
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ollama-server-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ollama Server Metrics
       
     </span>
   </a>
@@ -1149,8 +1405,8 @@
   
 
 
-<h1 id="gpu-metrics">GPU Metrics<a class="headerlink" href="#gpu-metrics" title="Permanent link">&para;</a></h1>
-<p>TraceVerde collects real-time GPU metrics for both NVIDIA and AMD GPUs.</p>
+<h1 id="gpu-metrics-and-co2-tracking">GPU Metrics and CO2 Tracking<a class="headerlink" href="#gpu-metrics-and-co2-tracking" title="Permanent link">&para;</a></h1>
+<p>TraceVerde collects real-time GPU metrics for both NVIDIA and AMD GPUs, with optional CO2 emissions and electricity cost tracking.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># NVIDIA GPUs</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>gpu<span class="o">]</span>
@@ -1160,8 +1416,12 @@
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Both</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>all-gpu<span class="o">]</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># CO2 tracking (adds codecarbon)</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>co2<span class="o">]</span>
 </code></pre></div>
-<h2 id="collected-metrics">Collected Metrics<a class="headerlink" href="#collected-metrics" title="Permanent link">&para;</a></h2>
+<h2 id="gpu-metrics">GPU Metrics<a class="headerlink" href="#gpu-metrics" title="Permanent link">&para;</a></h2>
+<h3 id="per-gpu-metrics">Per-GPU Metrics<a class="headerlink" href="#per-gpu-metrics" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -1224,7 +1484,7 @@
 <tr>
 <td><code>gen_ai.gpu.performance.state</code></td>
 <td>0-15</td>
-<td>P-state (0=highest)</td>
+<td>P-state (0=P0 highest, 15=P15 lowest)</td>
 </tr>
 <tr>
 <td><code>gen_ai.gpu.pcie.tx</code></td>
@@ -1239,12 +1499,17 @@
 <tr>
 <td><code>gen_ai.gpu.throttle.thermal</code></td>
 <td>0/1</td>
-<td>Thermal throttling</td>
+<td>Thermal throttling active</td>
 </tr>
 <tr>
 <td><code>gen_ai.gpu.throttle.power</code></td>
 <td>0/1</td>
-<td>Power throttling</td>
+<td>Power throttling active</td>
+</tr>
+<tr>
+<td><code>gen_ai.gpu.throttle.hw_slowdown</code></td>
+<td>0/1</td>
+<td>Hardware slowdown active</td>
 </tr>
 <tr>
 <td><code>gen_ai.gpu.ecc.errors.corrected</code></td>
@@ -1258,40 +1523,308 @@
 </tr>
 </tbody>
 </table>
-<h2 id="aggregate-metrics-multi-gpu">Aggregate Metrics (Multi-GPU)<a class="headerlink" href="#aggregate-metrics-multi-gpu" title="Permanent link">&para;</a></h2>
+<h3 id="aggregate-metrics-multi-gpu">Aggregate Metrics (Multi-GPU)<a class="headerlink" href="#aggregate-metrics-multi-gpu" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
 <th>Metric</th>
+<th>Unit</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>gen_ai.gpu.aggregate.mean_utilization</code></td>
-<td>Mean utilization across all GPUs (%)</td>
+<td>%</td>
+<td>Mean utilization across all GPUs</td>
 </tr>
 <tr>
 <td><code>gen_ai.gpu.aggregate.total_memory_used</code></td>
-<td>Total memory used across all GPUs (GiB)</td>
+<td>GiB</td>
+<td>Total memory used across all GPUs</td>
 </tr>
 <tr>
 <td><code>gen_ai.gpu.aggregate.total_power</code></td>
-<td>Total power across all GPUs (W)</td>
+<td>W</td>
+<td>Total power across all GPUs</td>
 </tr>
 <tr>
 <td><code>gen_ai.gpu.aggregate.max_temperature</code></td>
-<td>Maximum temperature across all GPUs (C)</td>
+<td>Celsius</td>
+<td>Maximum temperature across all GPUs</td>
 </tr>
 </tbody>
 </table>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<p>GPU metrics are enabled by default. To disable:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_GPU_METRICS</span><span class="o">=</span><span class="nb">false</span>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_GPU_METRICS</code></td>
+<td><code>true</code></td>
+<td>Enable GPU metrics collection</td>
+</tr>
+<tr>
+<td><code>GENAI_GPU_COLLECTION_INTERVAL</code></td>
+<td><code>5</code></td>
+<td>Collection interval in seconds</td>
+</tr>
+<tr>
+<td><code>GENAI_POWER_COST_PER_KWH</code></td>
+<td><code>0.12</code></td>
+<td>Electricity cost in USD per kWh</td>
+</tr>
+</tbody>
+</table>
+<p>Common electricity rates:
+- US average: ~$0.12/kWh
+- Europe average: ~$0.20/kWh
+- Industrial/datacenter: ~$0.07/kWh</p>
+<p>The collector runs in a background daemon thread and gracefully handles systems without GPUs.</p>
+<h2 id="co2-emissions-tracking">CO2 Emissions Tracking<a class="headerlink" href="#co2-emissions-tracking" title="Permanent link">&para;</a></h2>
+<p>Track the carbon footprint of your GPU workloads. Two calculation modes are available:</p>
+<h3 id="codecarbon-mode-recommended">Codecarbon Mode (Recommended)<a class="headerlink" href="#codecarbon-mode-recommended" title="Permanent link">&para;</a></h3>
+<p>Uses <a href="https://github.com/mlco2/codecarbon">codecarbon</a> for automatic region-specific carbon intensity lookup.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>co2<span class="o">]</span>
 </code></pre></div>
-<p>The collector runs in a background daemon thread with a configurable collection interval. It gracefully handles systems without GPUs.</p>
-<h2 id="dashboard">Dashboard<a class="headerlink" href="#dashboard" title="Permanent link">&para;</a></h2>
-<p>Import the Grafana GPU dashboard from <code>dashboards/grafana/gpu-metrics.json</code> for visualization.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">enable_co2_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">co2_country_iso_code</span><span class="o">=</span><span class="s2">&quot;USA&quot;</span><span class="p">,</span>    <span class="c1"># 3-letter ISO code</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">co2_region</span><span class="o">=</span><span class="s2">&quot;california&quot;</span><span class="p">,</span>       <span class="c1"># Optional: state/region</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">)</span>
+</code></pre></div>
+<p>Or for cloud environments:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">enable_co2_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">co2_cloud_provider</span><span class="o">=</span><span class="s2">&quot;aws&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">co2_cloud_region</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">)</span>
+</code></pre></div>
+<h3 id="manual-mode">Manual Mode<a class="headerlink" href="#manual-mode" title="Permanent link">&para;</a></h3>
+<p>Use a fixed carbon intensity value without codecarbon:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">enable_co2_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">co2_use_manual</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">carbon_intensity</span><span class="o">=</span><span class="mf">56.0</span><span class="p">,</span>  <span class="c1"># gCO2e/kWh (France - mostly nuclear)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">)</span>
+</code></pre></div>
+<p>Reference carbon intensity values (gCO2e/kWh):</p>
+<table>
+<thead>
+<tr>
+<th>Country/Region</th>
+<th>gCO2e/kWh</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>France</td>
+<td>~56</td>
+<td>Mostly nuclear</td>
+</tr>
+<tr>
+<td>Sweden</td>
+<td>~13</td>
+<td>Mostly hydro/wind</td>
+</tr>
+<tr>
+<td>UK</td>
+<td>~233</td>
+<td>Mix</td>
+</tr>
+<tr>
+<td>Germany</td>
+<td>~350</td>
+<td>Mix with coal</td>
+</tr>
+<tr>
+<td>US average</td>
+<td>~420</td>
+<td>Varies by state</td>
+</tr>
+<tr>
+<td>US (California)</td>
+<td>~210</td>
+<td>Renewables-heavy</td>
+</tr>
+<tr>
+<td>US (West Virginia)</td>
+<td>~860</td>
+<td>Coal-heavy</td>
+</tr>
+<tr>
+<td>China</td>
+<td>~555</td>
+<td>Coal-heavy</td>
+</tr>
+<tr>
+<td>India</td>
+<td>~700</td>
+<td>Coal-heavy</td>
+</tr>
+</tbody>
+</table>
+<h3 id="co2-configuration-reference">CO2 Configuration Reference<a class="headerlink" href="#co2-configuration-reference" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_CO2_TRACKING</code></td>
+<td><code>false</code></td>
+<td>Enable CO2 tracking</td>
+</tr>
+<tr>
+<td><code>GENAI_CARBON_INTENSITY</code></td>
+<td><code>475.0</code></td>
+<td>Manual carbon intensity (gCO2e/kWh)</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_USE_MANUAL</code></td>
+<td><code>false</code></td>
+<td>Force manual mode even with codecarbon</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_COUNTRY_ISO_CODE</code></td>
+<td></td>
+<td>ISO 3166-1 alpha-3 code (e.g., <code>USA</code>, <code>GBR</code>, <code>DEU</code>, <code>IND</code>)</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_REGION</code></td>
+<td></td>
+<td>Region/state (e.g., <code>california</code>, <code>texas</code>)</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_CLOUD_PROVIDER</code></td>
+<td></td>
+<td>Cloud provider: <code>aws</code>, <code>gcp</code>, <code>azure</code></td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_CLOUD_REGION</code></td>
+<td></td>
+<td>Cloud region (e.g., <code>us-east-1</code>, <code>europe-west1</code>)</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_OFFLINE_MODE</code></td>
+<td><code>true</code></td>
+<td>No external API calls (uses local data)</td>
+</tr>
+<tr>
+<td><code>GENAI_CO2_TRACKING_MODE</code></td>
+<td><code>machine</code></td>
+<td><code>machine</code> (all processes) or <code>process</code> (current only)</td>
+</tr>
+<tr>
+<td><code>GENAI_CODECARBON_LOG_LEVEL</code></td>
+<td><code>error</code></td>
+<td>Codecarbon verbosity</td>
+</tr>
+</tbody>
+</table>
+<h3 id="co2-metrics">CO2 Metrics<a class="headerlink" href="#co2-metrics" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Unit</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gen_ai.co2.emissions</code></td>
+<td>kgCO2e</td>
+<td>Cumulative CO2 emissions</td>
+</tr>
+<tr>
+<td><code>gen_ai.power.consumption</code></td>
+<td>kWh</td>
+<td>Cumulative power consumption</td>
+</tr>
+<tr>
+<td><code>gen_ai.power.cost</code></td>
+<td>USD</td>
+<td>Cumulative electricity cost (based on <code>GENAI_POWER_COST_PER_KWH</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-full-gpu-co2-setup">Example: Full GPU + CO2 Setup<a class="headerlink" href="#example-full-gpu-co2-setup" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_GPU_METRICS</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_GPU_COLLECTION_INTERVAL</span><span class="o">=</span><span class="m">10</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_COUNTRY_ISO_CODE</span><span class="o">=</span>USA
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_REGION</span><span class="o">=</span>california
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_POWER_COST_PER_KWH</span><span class="o">=</span><span class="m">0</span>.18
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;gpu-workload&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">enable_gpu_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">gpu_collection_interval</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="n">enable_co2_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">co2_country_iso_code</span><span class="o">=</span><span class="s2">&quot;USA&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="n">co2_region</span><span class="o">=</span><span class="s2">&quot;california&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="n">power_cost_per_kwh</span><span class="o">=</span><span class="mf">0.18</span><span class="p">,</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="p">)</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="c1"># Run your GPU workload</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="kn">import</span><span class="w"> </span><span class="nn">transformers</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="n">pipe</span> <span class="o">=</span> <span class="n">transformers</span><span class="o">.</span><span class="n">pipeline</span><span class="p">(</span><span class="s2">&quot;text-generation&quot;</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt2&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="n">result</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span><span class="s2">&quot;Hello world&quot;</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="c1"># GPU metrics, CO2 emissions, and electricity costs are all tracked automatically</span>
+</code></pre></div>
+<h2 id="grafana-dashboard">Grafana Dashboard<a class="headerlink" href="#grafana-dashboard" title="Permanent link">&para;</a></h2>
+<p>Import the pre-built GPU dashboard from <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/dashboards/grafana/gpu-metrics.json">dashboards/grafana/gpu-metrics.json</a>. Includes gauges for utilization, temperature, and power, plus time-series for historical trends.</p>
+<h2 id="ollama-server-metrics">Ollama Server Metrics<a class="headerlink" href="#ollama-server-metrics" title="Permanent link">&para;</a></h2>
+<p>When using Ollama, TraceVerde automatically polls the server for VRAM usage:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_ENABLE_OLLAMA_SERVER_METRICS</code></td>
+<td><code>true</code></td>
+<td>Poll Ollama <code>/api/ps</code> endpoint</td>
+</tr>
+<tr>
+<td><code>OLLAMA_BASE_URL</code></td>
+<td><code>http://localhost:11434</code></td>
+<td>Ollama server URL</td>
+</tr>
+<tr>
+<td><code>GENAI_OLLAMA_METRICS_INTERVAL</code></td>
+<td><code>5.0</code></td>
+<td>Polling interval in seconds</td>
+</tr>
+<tr>
+<td><code>GENAI_OLLAMA_MAX_VRAM_GB</code></td>
+<td>auto-detected</td>
+<td>Override GPU VRAM size (GB)</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="../../reference/server-metrics/">Server Metrics reference</a> for details.</p>
 
 
 
