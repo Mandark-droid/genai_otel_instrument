@@ -1,14 +1,18 @@
 # TraceVerde
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Mandark-droid/genai_otel_instrument/main/.github/images/Logo.jpg" alt="TraceVerde - GenAI OpenTelemetry Instrumentation Logo" width="400"/>
+  <img src="https://raw.githubusercontent.com/Mandark-droid/genai_otel_instrument/main/.github/images/Logo.jpg" alt="TraceVerde Logo" width="400"/>
+
+  **The most comprehensive OpenTelemetry auto-instrumentation library for LLM/GenAI applications**
+
+  `pip install genai-otel-instrument`
 </div>
 
 <br/>
 
 [![PyPI version](https://badge.fury.io/py/genai-otel-instrument.svg)](https://badge.fury.io/py/genai-otel-instrument)
 [![Python Versions](https://img.shields.io/pypi/pyversions/genai-otel-instrument.svg)](https://pypi.org/project/genai-otel-instrument/)
-[![License](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Downloads](https://static.pepy.tech/badge/genai-otel-instrument)](https://pepy.tech/project/genai-otel-instrument)
 [![Downloads/Month](https://static.pepy.tech/badge/genai-otel-instrument/month)](https://pepy.tech/project/genai-otel-instrument)
 
@@ -17,7 +21,7 @@
 [![GitHub Issues](https://img.shields.io/github/issues/Mandark-droid/genai_otel_instrument)](https://github.com/Mandark-droid/genai_otel_instrument/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Mandark-droid/genai_otel_instrument)](https://github.com/Mandark-droid/genai_otel_instrument/pulls)
 
-[![Code Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/Mandark-droid/genai_otel_instrument)
+[![Code Coverage](https://codecov.io/gh/Mandark-droid/genai_otel_instrument/branch/main/graph/badge.svg)](https://codecov.io/gh/Mandark-droid/genai_otel_instrument)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 [![Type Checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](http://mypy-lang.org/)
@@ -196,17 +200,6 @@ Real-time GPU utilization, memory, temperature, and power consumption metrics fo
 - **[OpenSearch Dashboard](.github/images/Screenshots/GENAI_OpenSearch_output.png)** - GenAI metrics visualization in OpenSearch/Kibana
 
 ---
-
-## Demo Video
-
-Watch a comprehensive walkthrough of GenAI OpenTelemetry Auto-Instrumentation in action, demonstrating setup, configuration, and real-time observability across multiple LLM providers.
-
-<div align="center">
-
-  **🎥 [Watch Demo Video](https://youtu.be/YOUR_VIDEO_ID_HERE)**
-  *(Coming Soon)*
-
-</div>
 
 ---
 
@@ -838,13 +831,9 @@ genai-otel-instrument/
         └── (other mcp files)
 ```
 
-## Roadmap
+## Evaluation Features (v1.0)
 
-### v0.2.0 Release (In Progress) - Q1 2026
-
-We're implementing significant enhancements for this release, focusing on evaluation metrics and safety guardrails alongside completing OpenTelemetry semantic convention compliance.
-
-**✅ Completed Features:**
+**All evaluation and safety features are production-ready:**
 - **PII Detection** - Automatic detection and handling of personally identifiable information with Microsoft Presidio
   - Three modes: detect, redact, or block
   - GDPR, HIPAA, and PCI-DSS compliance modes
@@ -1063,19 +1052,46 @@ genai_otel.instrument(
 See [Contributing.md](Contributing.md) for detailed contribution guidelines.
 
 **Join our Community:**
-- GitHub Discussions: [Share ideas and questions]
-- Discord: [Join our Discord](https://discord.gg/mgqXb76k)
-- Twitter/X: [@genai_otel]
-- Blog: [Technical deep-dives and updates]
+- Discord: [Join our Discord](https://discord.gg/6SVz6VKK)
+- GitHub Discussions: [Share ideas and questions](https://github.com/Mandark-droid/genai_otel_instrument/discussions)
+
+---
+
+## Who Uses TraceVerde?
+
+TraceVerde is used by developers and teams building production GenAI applications. If you're using TraceVerde, we'd love to hear from you! [Open an issue](https://github.com/Mandark-droid/genai_otel_instrument/issues/new?title=Add+my+company+to+users+list&labels=users) or [join our Discord](https://discord.gg/6SVz6VKK) to get listed here.
+
+<!-- Add your company/project logo and link here -->
+
+---
+
+## Why TraceVerde?
+
+| Feature | TraceVerde | OpenLIT | Traceloop/OpenLLMetry | Langfuse |
+|---------|-----------|---------|----------------------|----------|
+| Zero-code setup | Yes | Yes | Yes | SDK required |
+| LLM providers | 19+ | 25+ | 15+ | Via integrations |
+| Multi-agent frameworks | 8 (CrewAI, LangGraph, ADK, AutoGen, OpenAI Agents, Pydantic AI, etc.) | Limited | Limited | Limited |
+| Cost tracking | Automatic (1,050+ models) | Manual config | Manual config | Manual config |
+| GPU metrics (NVIDIA + AMD) | Yes | No | No | No |
+| MCP tool instrumentation | Yes (databases, caches, vector DBs, queues) | Limited | Limited | No |
+| Evaluation (PII, toxicity, bias, hallucination, prompt injection) | Built-in (6 detectors) | No | No | Separate service |
+| OpenTelemetry native | Yes | Yes | Yes | Partial |
+| License | Apache-2.0 | Apache-2.0 | Apache-2.0 | MIT |
 
 ---
 
 ## License
 
-TraceVerde is licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
+Copyright 2025 Kshitij Thakkar
 
-Copyright (C) 2025 Kshitij Thakkar
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+    http://www.apache.org/licenses/LICENSE-2.0
 
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the [LICENSE](LICENSE) file for the full license text.
