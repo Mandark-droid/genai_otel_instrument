@@ -5,6 +5,8 @@
 
   **The most comprehensive OpenTelemetry auto-instrumentation library for LLM/GenAI applications**
 
+  *Trace from OpenTelemetry traces. Verde meaning green - for sustainable, transparent AI observability.*
+
   [Documentation](https://mandark-droid.github.io/genai_otel_instrument/) | [Examples](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples) | [Discord](https://discord.gg/6SVz6VKK) | [PyPI](https://pypi.org/project/genai-otel-instrument/)
 </div>
 
