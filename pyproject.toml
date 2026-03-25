@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Comprehensive OpenTelemetry auto-instrumentation for LLM/GenAI applications"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "AGPL-3.0-or-later"}
+license = {text = "Apache-2.0"}
 authors = [
     {name = "Kshitij Thakkar", email = "kshitijthakkar@rocketmail.com"}
 ]
@@ -20,20 +20,36 @@ keywords = [
     "instrumentation",
     "tracing",
     "metrics",
-    "monitoring"
+    "monitoring",
+    "ai-agents",
+    "openai",
+    "anthropic",
+    "langchain",
+    "crewai",
+    "auto-instrumentation",
+    "cost-tracking",
+    "gpu-metrics",
+    "mcp",
+    "model-context-protocol",
+    "llm-observability",
+    "ai-observability",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Monitoring",
-    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
 ]
 
 dependencies = [
@@ -52,7 +68,7 @@ openinference = [
     "openinference-instrumentation-litellm>=0.1.19,<1.0.0",
     "openinference-instrumentation-mcp>=1.3.0,<2.0.0",
     "openinference-instrumentation-smolagents>=0.1.11,<1.0.0",
-    "litellm>=1.0.0"
+    "litellm>=1.0.0,!=1.82.7,!=1.82.8"
 ]
 
 # HTTP instrumentation
@@ -183,7 +199,7 @@ all-providers = [
     "langgraph>=0.1.0",
     "llama-index>=0.9.0",
     "transformers>=4.30.0",
-    "litellm>=1.0.0",
+    "litellm>=1.0.0,!=1.82.7,!=1.82.8",
     "crewai>=0.1.0",
     "pyautogen>=0.2.0",
     "autogen-agentchat>=0.4.0",
@@ -316,7 +332,7 @@ genai-instrument = "genai_otel.cli:main"
 [project.urls]
 Homepage = "https://github.com/Mandark-droid/genai_otel_instrument"
 Repository = "https://github.com/Mandark-droid/genai_otel_instrument"
-Documentation = "https://github.com/Mandark-droid/genai_otel_instrument#readme"
+Documentation = "https://mandark-droid.github.io/genai_otel_instrument/"
 Issues = "https://github.com/Mandark-droid/genai_otel_instrument/issues"
 Changelog = "https://github.com/Mandark-droid/genai_otel_instrument/blob/main/CHANGELOG.md"
 

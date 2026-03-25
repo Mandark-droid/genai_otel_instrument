@@ -1,0 +1,91 @@
+site_name: TraceVerde Documentation
+site_description: The most comprehensive OpenTelemetry auto-instrumentation library for LLM/GenAI applications
+site_url: https://mandark-droid.github.io/genai_otel_instrument/
+repo_url: https://github.com/Mandark-droid/genai_otel_instrument
+repo_name: Mandark-droid/genai_otel_instrument
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: green
+      accent: light green
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: green
+      accent: light green
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+  logo: assets/logo.jpg
+  favicon: assets/logo.jpg
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - tables
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Mandark-droid/genai_otel_instrument
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/6SVz6VKK
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/genai-otel-instrument/
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Configuration: getting-started/configuration.md
+  - Guides:
+    - LLM Providers: guides/llm-providers.md
+    - Multi-Agent Frameworks: guides/multi-agent-frameworks.md
+    - MCP Tools: guides/mcp-tools.md
+    - Cost Tracking: guides/cost-tracking.md
+    - GPU Metrics: guides/gpu-metrics.md
+    - Evaluation & Safety: guides/evaluation.md
+  - Reference:
+    - Performance Tuning: reference/performance-tuning.md
+    - Python Compatibility: reference/python-compatibility.md
+    - Server Metrics: reference/server-metrics.md
+    - Semantic Conventions: reference/semantic-conventions.md
+  - Community:
+    - Contributing: community/contributing.md
+    - Changelog: community/changelog.md

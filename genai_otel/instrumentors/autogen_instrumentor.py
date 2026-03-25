@@ -11,7 +11,6 @@ Requirements:
     pip install pyautogen  # or autogen (legacy package name)
 """
 
-import json
 import logging
 from typing import Any, Dict, Optional
 
@@ -66,38 +65,46 @@ class AutoGenInstrumentor(BaseInstrumentor):
         self.config = config
 
         try:
-            import wrapt
-
             # Try both package names
             try:
                 import autogen
             except ImportError:
                 import pyautogen as autogen
 
+            # Create span wrappers (same pattern as CrewAI - direct application)
+            chat_wrapper = self.create_span_wrapper(
+                span_name="autogen.initiate_chat",
+                extract_attributes=self._extract_chat_attributes,
+            )
+            select_speaker_wrapper = self.create_span_wrapper(
+                span_name="autogen.group_chat.select_speaker",
+                extract_attributes=self._extract_group_chat_attributes,
+            )
+            group_run_wrapper = self.create_span_wrapper(
+                span_name="autogen.group_chat.run",
+                extract_attributes=self._extract_group_chat_manager_attributes,
+            )
+
             # Instrument ConversableAgent.initiate_chat (main conversation method)
             if hasattr(autogen, "ConversableAgent"):
                 if hasattr(autogen.ConversableAgent, "initiate_chat"):
-                    original_initiate = autogen.ConversableAgent.initiate_chat
-                    autogen.ConversableAgent.initiate_chat = wrapt.FunctionWrapper(
-                        original_initiate, self._wrap_initiate_chat
-                    )
+                    original = autogen.ConversableAgent.initiate_chat
+                    autogen.ConversableAgent.initiate_chat = chat_wrapper(original)
+                    logger.debug("Instrumented ConversableAgent.initiate_chat()")
 
-            # Instrument GroupChat.run (group chat orchestration)
+            # Instrument GroupChat.select_speaker (agent selection)
             if hasattr(autogen, "GroupChat"):
-                # GroupChat typically has select_speaker method for agent selection
                 if hasattr(autogen.GroupChat, "select_speaker"):
-                    original_select = autogen.GroupChat.select_speaker
-                    autogen.GroupChat.select_speaker = wrapt.FunctionWrapper(
-                        original_select, self._wrap_select_speaker
-                    )
+                    original = autogen.GroupChat.select_speaker
+                    autogen.GroupChat.select_speaker = select_speaker_wrapper(original)
+                    logger.debug("Instrumented GroupChat.select_speaker()")
 
-            # Instrument GroupChatManager if available
+            # Instrument GroupChatManager.run if available
             if hasattr(autogen, "GroupChatManager"):
                 if hasattr(autogen.GroupChatManager, "run"):
-                    original_run = autogen.GroupChatManager.run
-                    autogen.GroupChatManager.run = wrapt.FunctionWrapper(
-                        original_run, self._wrap_group_chat_run
-                    )
+                    original = autogen.GroupChatManager.run
+                    autogen.GroupChatManager.run = group_run_wrapper(original)
+                    logger.debug("Instrumented GroupChatManager.run()")
 
             self._instrumented = True
             logger.info("AutoGen instrumentation enabled")
@@ -106,48 +113,6 @@ class AutoGenInstrumentor(BaseInstrumentor):
             logger.error("Failed to instrument AutoGen: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
-
-    def _wrap_initiate_chat(self, wrapped, instance, args, kwargs):
-        """Wrap ConversableAgent.initiate_chat method with span.
-
-        Args:
-            wrapped: The original method.
-            instance: The ConversableAgent instance.
-            args: Positional arguments.
-            kwargs: Keyword arguments.
-        """
-        return self.create_span_wrapper(
-            span_name="autogen.initiate_chat",
-            extract_attributes=self._extract_chat_attributes,
-        )(wrapped)(instance, *args, **kwargs)
-
-    def _wrap_select_speaker(self, wrapped, instance, args, kwargs):
-        """Wrap GroupChat.select_speaker method with span.
-
-        Args:
-            wrapped: The original method.
-            instance: The GroupChat instance.
-            args: Positional arguments.
-            kwargs: Keyword arguments.
-        """
-        return self.create_span_wrapper(
-            span_name="autogen.group_chat.select_speaker",
-            extract_attributes=self._extract_group_chat_attributes,
-        )(wrapped)(instance, *args, **kwargs)
-
-    def _wrap_group_chat_run(self, wrapped, instance, args, kwargs):
-        """Wrap GroupChatManager.run method with span.
-
-        Args:
-            wrapped: The original method.
-            instance: The GroupChatManager instance.
-            args: Positional arguments.
-            kwargs: Keyword arguments.
-        """
-        return self.create_span_wrapper(
-            span_name="autogen.group_chat.run",
-            extract_attributes=self._extract_group_chat_manager_attributes,
-        )(wrapped)(instance, *args, **kwargs)
 
     def _extract_chat_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from ConversableAgent.initiate_chat call.
@@ -175,12 +140,20 @@ class AutoGenInstrumentor(BaseInstrumentor):
         agent_type = type(instance).__name__
         attrs["autogen.agent.type"] = agent_type
 
-        # Extract recipient agent (first positional argument)
+        # Extract model from recipient's llm_config for cost enrichment
         recipient = None
         if len(args) > 0:
             recipient = args[0]
         else:
             recipient = kwargs.get("recipient")
+
+        # Try to extract model name from recipient (usually the LLM-backed agent)
+        model_name = self._extract_model_from_agent(recipient)
+        if not model_name:
+            # Fallback: try sender
+            model_name = self._extract_model_from_agent(instance)
+        if model_name:
+            attrs["gen_ai.request.model"] = model_name
 
         if recipient:
             if hasattr(recipient, "name"):
@@ -297,6 +270,36 @@ class AutoGenInstrumentor(BaseInstrumentor):
                 attrs["autogen.group_chat.selection_mode"] = groupchat.speaker_selection_method
 
         return attrs
+
+    def _extract_model_from_agent(self, agent) -> Optional[str]:
+        """Extract model name from an AutoGen agent's llm_config.
+
+        Args:
+            agent: An AutoGen agent instance.
+
+        Returns:
+            Optional[str]: The model name or None.
+        """
+        if agent is None:
+            return None
+        try:
+            llm_config = getattr(agent, "llm_config", None)
+            if not llm_config or not isinstance(llm_config, dict):
+                return None
+
+            # Direct model field
+            if "model" in llm_config:
+                return str(llm_config["model"])
+
+            # config_list[0]["model"]
+            config_list = llm_config.get("config_list")
+            if config_list and isinstance(config_list, list) and len(config_list) > 0:
+                first = config_list[0]
+                if isinstance(first, dict) and "model" in first:
+                    return str(first["model"])
+        except Exception:
+            pass
+        return None
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from conversation result.

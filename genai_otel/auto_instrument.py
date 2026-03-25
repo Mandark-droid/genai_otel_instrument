@@ -636,6 +636,14 @@ def setup_auto_instrumentation(config: OTelConfig):
     _INSTRUMENTATION_INITIALIZED = True
     logger.info("Auto-instrumentation setup complete")
 
+    # Report anonymous usage telemetry (opt-in only, see telemetry.py)
+    try:
+        from .telemetry import report_usage
+
+        report_usage(config)
+    except Exception:
+        pass  # Never let telemetry affect instrumentation
+
 
 def instrument(**kwargs):
     """
