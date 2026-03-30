@@ -52,9 +52,14 @@ class TestOpenAIInstrumentor(unittest.TestCase):
             def __init__(self):
                 pass
 
+        class MockAsyncOpenAI:
+            def __init__(self):
+                pass
+
         # Create mock OpenAI module
         mock_openai = MagicMock()
         mock_openai.OpenAI = MockOpenAI
+        mock_openai.AsyncOpenAI = MockAsyncOpenAI
 
         # Create a mock wrapt module
         mock_wrapt = MagicMock()
@@ -73,9 +78,10 @@ class TestOpenAIInstrumentor(unittest.TestCase):
             # Assert
             self.assertEqual(instrumentor.config, config)
             self.assertTrue(instrumentor._instrumented)
-            mock_logger.info.assert_called_with("OpenAI instrumentation enabled")
-            # Verify FunctionWrapper was called to wrap __init__
-            mock_wrapt.FunctionWrapper.assert_called_once()
+            mock_logger.info.assert_any_call("OpenAI instrumentation enabled")
+            mock_logger.info.assert_any_call("AsyncOpenAI instrumentation enabled")
+            # Verify FunctionWrapper was called for both sync and async
+            self.assertEqual(mock_wrapt.FunctionWrapper.call_count, 2)
 
     @patch("genai_otel.instrumentors.openai_instrumentor.logger")
     def test_instrument_exception_with_fail_on_error_false(self, mock_logger):
@@ -400,9 +406,14 @@ class TestOpenAIInstrumentor(unittest.TestCase):
             def __init__(self):
                 pass
 
+        class MockAsyncOpenAI:
+            def __init__(self):
+                pass
+
         # Create mock OpenAI module
         mock_openai = MagicMock()
         mock_openai.OpenAI = MockOpenAI
+        mock_openai.AsyncOpenAI = MockAsyncOpenAI
 
         # Create a mock wrapt module that actually executes wrapped functions
         import wrapt as real_wrapt
@@ -414,6 +425,8 @@ class TestOpenAIInstrumentor(unittest.TestCase):
             # Mock _instrument_client
             mock_instrument_client = MagicMock()
             instrumentor._instrument_client = mock_instrument_client
+            mock_instrument_async_client = MagicMock()
+            instrumentor._instrument_async_client = mock_instrument_async_client
 
             # Act - instrument the class
             instrumentor.instrument(config)
@@ -496,6 +509,110 @@ class TestOpenAIInstrumentor(unittest.TestCase):
             self.assertEqual(
                 attrs[f"{prefix}.tool_call.function.arguments"], '{"location": "San Francisco"}'
             )
+
+    @patch("genai_otel.instrumentors.openai_instrumentor.logger")
+    def test_instrument_with_async_openai_available(self, mock_logger):
+        """Test that instrument wraps AsyncOpenAI client when available."""
+
+        class MockAsyncOpenAI:
+            def __init__(self):
+                pass
+
+        mock_openai = MagicMock()
+        mock_openai.OpenAI = type("OpenAI", (), {"__init__": lambda self: None})
+        mock_openai.AsyncOpenAI = MockAsyncOpenAI
+
+        import wrapt as real_wrapt
+
+        with patch.dict("sys.modules", {"openai": mock_openai, "wrapt": real_wrapt}):
+            instrumentor = OpenAIInstrumentor()
+            config = MagicMock()
+
+            instrumentor._instrument_client = MagicMock()
+            instrumentor._instrument_async_client = MagicMock()
+
+            instrumentor.instrument(config)
+
+            self.assertTrue(instrumentor._instrumented)
+            mock_logger.info.assert_any_call("AsyncOpenAI instrumentation enabled")
+
+    @patch("genai_otel.instrumentors.openai_instrumentor.logger")
+    def test_wrapped_async_init_calls_instrument_async_client(self, mock_logger):
+        """Test that the wrapped AsyncOpenAI __init__ calls _instrument_async_client."""
+
+        class MockAsyncOpenAI:
+            def __init__(self):
+                pass
+
+        mock_openai = MagicMock()
+        mock_openai.OpenAI = type("OpenAI", (), {"__init__": lambda self: None})
+        mock_openai.AsyncOpenAI = MockAsyncOpenAI
+
+        import wrapt as real_wrapt
+
+        with patch.dict("sys.modules", {"openai": mock_openai, "wrapt": real_wrapt}):
+            instrumentor = OpenAIInstrumentor()
+            config = MagicMock()
+
+            mock_instrument_client = MagicMock()
+            mock_instrument_async_client = MagicMock()
+            instrumentor._instrument_client = mock_instrument_client
+            instrumentor._instrument_async_client = mock_instrument_async_client
+
+            instrumentor.instrument(config)
+
+            instance = mock_openai.AsyncOpenAI()
+            mock_instrument_async_client.assert_called_once_with(instance)
+
+    def test_instrument_async_client(self):
+        """Test that _instrument_async_client wraps async chat.completions.create."""
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+
+            mock_client = MagicMock()
+            original_create = MagicMock()
+            mock_client.chat.completions.create = original_create
+
+            mock_async_wrapper = MagicMock()
+            mock_decorator = MagicMock(return_value=mock_async_wrapper)
+            instrumentor._create_async_span_wrapper = MagicMock(return_value=mock_decorator)
+
+            instrumentor._instrument_async_client(mock_client)
+
+            instrumentor._create_async_span_wrapper.assert_called_once_with(
+                span_name="openai.chat.completion",
+                extract_attributes=instrumentor._extract_openai_attributes,
+            )
+            mock_decorator.assert_called_once_with(original_create)
+            self.assertEqual(mock_client.chat.completions.create, mock_async_wrapper)
+
+    def test_create_async_span_wrapper(self):
+        """Test that _create_async_span_wrapper creates a working async wrapper."""
+        import asyncio
+
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+
+            # Create a mock async function
+            mock_result = MagicMock()
+            mock_result.usage = None
+            mock_result.choices = []
+
+            async def mock_create(*args, **kwargs):
+                return mock_result
+
+            wrapper_decorator = instrumentor._create_async_span_wrapper(
+                span_name="openai.chat.completion",
+                extract_attributes=instrumentor._extract_openai_attributes,
+            )
+            wrapped = wrapper_decorator(mock_create)
+
+            # Run the async wrapper
+            result = asyncio.run(
+                wrapped(model="gpt-4", messages=[{"role": "user", "content": "hi"}])
+            )
+
+            self.assertEqual(result, mock_result)
 
 
 if __name__ == "__main__":
