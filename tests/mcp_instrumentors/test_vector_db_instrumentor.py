@@ -178,8 +178,32 @@ def test_instrument_weaviate_missing(vector_db_instrumentor, caplog):
 
 # --- Tests for _instrument_qdrant ---
 def test_instrument_qdrant_success(vector_db_instrumentor, caplog):
-    """Test successful Qdrant instrumentation."""
-    with patch.dict("sys.modules", {"qdrant_client": MagicMock(QdrantClient=MagicMock())}):
+    """Test successful Qdrant instrumentation with old API (search method)."""
+    mock_client = MagicMock()
+    mock_client.search = MagicMock()
+    mock_client.query_points = MagicMock()
+    mock_module = MagicMock(QdrantClient=mock_client)
+    with patch.dict("sys.modules", {"qdrant_client": mock_module}):
+        assert vector_db_instrumentor._instrument_qdrant() is True
+        assert "Qdrant instrumentation enabled" in caplog.text
+
+
+def test_instrument_qdrant_new_api_only(vector_db_instrumentor, caplog):
+    """Test Qdrant instrumentation with new API only (query_points, no search)."""
+    mock_client = MagicMock(spec=["query_points"])
+    mock_client.query_points = MagicMock()
+    mock_module = MagicMock(QdrantClient=mock_client)
+    with patch.dict("sys.modules", {"qdrant_client": mock_module}):
+        assert vector_db_instrumentor._instrument_qdrant() is True
+        assert "Qdrant instrumentation enabled" in caplog.text
+
+
+def test_instrument_qdrant_old_api_only(vector_db_instrumentor, caplog):
+    """Test Qdrant instrumentation with old API only (search, no query_points)."""
+    mock_client = MagicMock(spec=["search"])
+    mock_client.search = MagicMock()
+    mock_module = MagicMock(QdrantClient=mock_client)
+    with patch.dict("sys.modules", {"qdrant_client": mock_module}):
         assert vector_db_instrumentor._instrument_qdrant() is True
         assert "Qdrant instrumentation enabled" in caplog.text
 
@@ -367,7 +391,7 @@ def test_qdrant_search_execution(vector_db_instrumentor, mock_tracer):
     """Test that Qdrant search wrapper executes and creates spans with attributes."""
     from unittest.mock import MagicMock
 
-    # Create mock QdrantClient class
+    # Create mock QdrantClient class with search method (old API)
     mock_qdrant_client_class = MagicMock()
     original_search = MagicMock(return_value=[])
     mock_qdrant_client_class.search = original_search
@@ -401,6 +425,36 @@ def test_qdrant_search_execution(vector_db_instrumentor, mock_tracer):
         result = wrapped_search(mock_client_instance, "test_collection2", query_vector=[1, 2, 3])
 
         mock_tracer.start_as_current_span.assert_called_once_with("qdrant.search")
+
+
+def test_qdrant_query_points_execution(vector_db_instrumentor, mock_tracer):
+    """Test that Qdrant query_points wrapper executes and creates spans (new API)."""
+    from unittest.mock import MagicMock
+
+    # Create mock QdrantClient class with query_points but no search (new API)
+    mock_qdrant_client_class = MagicMock(spec=["query_points"])
+    original_query_points = MagicMock(return_value=[])
+    mock_qdrant_client_class.query_points = original_query_points
+
+    mock_qdrant_module = MagicMock()
+    mock_qdrant_module.QdrantClient = mock_qdrant_client_class
+
+    import sys
+
+    with patch.dict(sys.modules, {"qdrant_client": mock_qdrant_module}):
+        vector_db_instrumentor._instrument_qdrant()
+
+        wrapped_query = mock_qdrant_module.QdrantClient.query_points
+        mock_client_instance = MagicMock()
+
+        result = wrapped_query(
+            mock_client_instance,
+            collection_name="test_collection",
+            query=[1, 2, 3],
+            limit=5,
+        )
+
+        mock_tracer.start_as_current_span.assert_called_once_with("qdrant.query_points")
 
 
 def test_chroma_query_execution(vector_db_instrumentor, mock_tracer):

@@ -51,7 +51,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
             import openai
             import wrapt
 
-            # Instrument OpenAI client initialization
+            # Instrument sync OpenAI client initialization
             if hasattr(openai, "OpenAI"):
                 original_init = openai.OpenAI.__init__
 
@@ -63,6 +63,21 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 openai.OpenAI.__init__ = wrapt.FunctionWrapper(original_init, wrapped_init)
                 self._instrumented = True
                 logger.info("OpenAI instrumentation enabled")
+
+            # Instrument async OpenAI client initialization
+            if hasattr(openai, "AsyncOpenAI"):
+                original_async_init = openai.AsyncOpenAI.__init__
+
+                def wrapped_async_init(wrapped, instance, args, kwargs):
+                    result = wrapped(*args, **kwargs)
+                    self._instrument_async_client(instance)
+                    return result
+
+                openai.AsyncOpenAI.__init__ = wrapt.FunctionWrapper(
+                    original_async_init, wrapped_async_init
+                )
+                self._instrumented = True
+                logger.info("AsyncOpenAI instrumentation enabled")
 
         except Exception as e:
             logger.error("Failed to instrument OpenAI: %s", e, exc_info=True)
@@ -86,6 +101,79 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 extract_attributes=self._extract_openai_attributes,
             )(original_create)
             client.chat.completions.create = instrumented_create_method
+
+    def _instrument_async_client(self, client):
+        """Instrument AsyncOpenAI client methods.
+
+        Args:
+            client: The AsyncOpenAI client instance to instrument.
+        """
+        if (
+            hasattr(client, "chat")
+            and hasattr(client.chat, "completions")
+            and hasattr(client.chat.completions, "create")
+        ):
+            original_create = client.chat.completions.create
+            instrumented_create_method = self._create_async_span_wrapper(
+                span_name="openai.chat.completion",
+                extract_attributes=self._extract_openai_attributes,
+            )(original_create)
+            client.chat.completions.create = instrumented_create_method
+
+    def _create_async_span_wrapper(self, span_name, extract_attributes=None):
+        """Create an async wrapper that adds OpenTelemetry spans around async calls.
+
+        Args:
+            span_name: Name for the span.
+            extract_attributes: Optional callable to extract span attributes.
+
+        Returns:
+            A decorator function for async methods.
+        """
+        import asyncio
+        import time
+
+        from opentelemetry import trace
+        from opentelemetry.trace import SpanKind, Status, StatusCode
+
+        instrumentor = self
+
+        def decorator(func):
+            async def async_wrapper(*args, **kwargs):
+                tracer = trace.get_tracer(__name__)
+                with tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT) as span:
+                    if extract_attributes:
+                        attrs = extract_attributes(None, args, kwargs)
+                        for key, value in attrs.items():
+                            span.set_attribute(key, value)
+
+                    start_time = time.time()
+                    try:
+                        result = await func(*args, **kwargs)
+                        duration = time.time() - start_time
+                        span.set_attribute("gen_ai.latency", duration)
+
+                        # Extract response attributes
+                        response_attrs = instrumentor._extract_response_attributes(result)
+                        for key, value in response_attrs.items():
+                            span.set_attribute(key, value)
+
+                        # Record metrics
+                        instrumentor._record_result_metrics(result, span, kwargs, start_time)
+
+                        # Add content events
+                        instrumentor._add_content_events(span, result, kwargs)
+
+                        span.set_status(Status(StatusCode.OK))
+                        return result
+                    except Exception as e:
+                        span.set_status(Status(StatusCode.ERROR, str(e)))
+                        span.record_exception(e)
+                        raise
+
+            return async_wrapper
+
+        return decorator
 
     def _extract_openai_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from OpenAI API call.
