@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-03-30
+
+### Fixed
+
+- **AsyncOpenAI client spans not exported** - `OpenAIInstrumentor` now wraps `AsyncOpenAI.__init__` in addition to `OpenAI.__init__`, so async client calls produce spans that are exported to the OTLP collector. Added `_instrument_async_client()` and `_create_async_span_wrapper()` for proper async-aware span creation (fixes #4)
+- **Qdrant instrumentation crash on qdrant-client 1.16+** - `QdrantClient.search` was removed in qdrant-client 1.16 in favor of `query_points`. The Qdrant instrumentor now detects which API methods are available and instruments accordingly, supporting both old (`search`) and new (`query_points`) APIs
+
 ## [1.0.0] - 2026-03-25
 
 ### Changed

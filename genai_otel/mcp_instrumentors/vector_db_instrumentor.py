@@ -181,23 +181,55 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
             return False
 
     def _instrument_qdrant(self):
-        """Instrument Qdrant"""
+        """Instrument Qdrant, supporting both old (search) and new (query_points) APIs."""
         try:
+            import qdrant_client
+
             tracer = self.tracer
+            instrumented = False
 
-            def wrapped_search(wrapped, instance, args, kwargs):
-                with tracer.start_as_current_span("qdrant.search") as span:
-                    span.set_attribute("db.system", "qdrant")
-                    span.set_attribute("db.operation", "search")
-                    collection = kwargs.get("collection_name", args[0] if args else "unknown")
-                    span.set_attribute("vector.collection", collection)
-                    limit = kwargs.get("limit", 10)
-                    span.set_attribute("vector.limit", limit)
-                    return wrapped(*args, **kwargs)
+            # New API (qdrant-client 1.16+): query_points replaces search
+            if hasattr(qdrant_client.QdrantClient, "query_points"):
 
-            wrapt.wrap_function_wrapper("qdrant_client", "QdrantClient.search", wrapped_search)
-            logger.info("Qdrant instrumentation enabled")
-            return True
+                def wrapped_query_points(wrapped, instance, args, kwargs):
+                    with tracer.start_as_current_span("qdrant.query_points") as span:
+                        span.set_attribute("db.system", "qdrant")
+                        span.set_attribute("db.operation", "query_points")
+                        collection = kwargs.get("collection_name", args[0] if args else "unknown")
+                        span.set_attribute("vector.collection", collection)
+                        limit = kwargs.get("limit", 10)
+                        span.set_attribute("vector.limit", limit)
+                        return wrapped(*args, **kwargs)
+
+                wrapt.wrap_function_wrapper(
+                    "qdrant_client", "QdrantClient.query_points", wrapped_query_points
+                )
+                instrumented = True
+
+            # Old API (qdrant-client < 1.16): search method
+            if hasattr(qdrant_client.QdrantClient, "search"):
+
+                def wrapped_search(wrapped, instance, args, kwargs):
+                    with tracer.start_as_current_span("qdrant.search") as span:
+                        span.set_attribute("db.system", "qdrant")
+                        span.set_attribute("db.operation", "search")
+                        collection = kwargs.get("collection_name", args[0] if args else "unknown")
+                        span.set_attribute("vector.collection", collection)
+                        limit = kwargs.get("limit", 10)
+                        span.set_attribute("vector.limit", limit)
+                        return wrapped(*args, **kwargs)
+
+                wrapt.wrap_function_wrapper("qdrant_client", "QdrantClient.search", wrapped_search)
+                instrumented = True
+
+            if instrumented:
+                logger.info("Qdrant instrumentation enabled")
+                return True
+
+            logger.warning(
+                "Qdrant client detected but no supported API found (search or query_points)"
+            )
+            return False
 
         except ImportError:
             return False
