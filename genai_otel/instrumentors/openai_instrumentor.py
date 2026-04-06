@@ -159,7 +159,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
                             span.set_attribute(key, value)
 
                         # Record metrics
-                        instrumentor._record_result_metrics(result, span, kwargs, start_time)
+                        instrumentor._record_result_metrics(span, result, start_time, kwargs)
 
                         # Add content events
                         instrumentor._add_content_events(span, result, kwargs)
