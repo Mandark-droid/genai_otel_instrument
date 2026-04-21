@@ -3747,9 +3747,9 @@
       "note": "OpenAI GPT-5.2 Pro - premium tier, 200K context"
     },
     "grok-4.20": {
-      "promptPrice": 0.003,
-      "completionPrice": 0.015,
-      "note": "xAI Grok 4.20 - upcoming, pricing TBD (estimated based on Grok 4)"
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "xAI Grok 4.20 (Mar 2026) - 2M context, per docs.x.ai/docs/models"
     },
     "grok-4.1-fast": {
       "promptPrice": 0.0002,
@@ -3860,6 +3860,341 @@
       "promptPrice": 0.00003,
       "completionPrice": 0.0001,
       "note": "DeepSeek OCR 2 (Jan 2026) - open-source OCR model"
+    },
+    "claude-opus-4-7": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "Anthropic Claude Opus 4.7 (Apr 2026) - new tokenizer, ~35% more tokens vs 4.6"
+    },
+    "claude-opus-4.7": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "Anthropic Claude Opus 4.7 (Apr 2026)"
+    },
+    "claude-4-opus-4.7": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "Anthropic Claude Opus 4.7 (Apr 2026) alias"
+    },
+    "gpt-5.3": {
+      "promptPrice": 0.00175,
+      "completionPrice": 0.014,
+      "note": "OpenAI GPT-5.3 chat-latest snapshot (2026)"
+    },
+    "gpt-5.3-chat-latest": {
+      "promptPrice": 0.00175,
+      "completionPrice": 0.014,
+      "note": "OpenAI GPT-5.3 chat-latest snapshot"
+    },
+    "gpt-5.3-codex": {
+      "promptPrice": 0.00175,
+      "completionPrice": 0.014,
+      "note": "OpenAI GPT-5.3 Codex - coding-specialized snapshot"
+    },
+    "gpt-5.4": {
+      "promptPrice": 0.0025,
+      "completionPrice": 0.015,
+      "note": "OpenAI GPT-5.4 (Mar 2026) - flagship, cached input $0.25/1M"
+    },
+    "gpt-5.4-mini": {
+      "promptPrice": 0.00075,
+      "completionPrice": 0.0045,
+      "note": "OpenAI GPT-5.4 mini (Mar 2026) - cached input $0.075/1M"
+    },
+    "gpt-5.4-nano": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.00125,
+      "note": "OpenAI GPT-5.4 nano (Mar 2026) - cached input $0.02/1M"
+    },
+    "gpt-5.4-pro": {
+      "promptPrice": 0.03,
+      "completionPrice": 0.18,
+      "note": "OpenAI GPT-5.4 Pro - premium reasoning tier"
+    },
+    "gemini-3.1-flash-live-preview": {
+      "promptPrice": 0.00075,
+      "completionPrice": 0.0045,
+      "note": "Google Gemini 3.1 Flash Live Preview - realtime; audio in $3/1M, audio out $12/1M"
+    },
+    "gemini/gemini-3.1-flash-live-preview": {
+      "promptPrice": 0.00075,
+      "completionPrice": 0.0045,
+      "note": "Google Gemini 3.1 Flash Live Preview (Gemini provider prefix)"
+    },
+    "gemini-3.1-flash-lite-preview": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.0015,
+      "note": "Google Gemini 3.1 Flash-Lite Preview (Mar 2026)"
+    },
+    "grok-4.20-0309-reasoning": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "xAI Grok 4.20 reasoning snapshot (Mar 9, 2026) - 2M context, cached $0.20/1M"
+    },
+    "grok-4.20-0309-non-reasoning": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "xAI Grok 4.20 non-reasoning snapshot (Mar 9, 2026)"
+    },
+    "grok-4.20-multi-agent-0309": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "xAI Grok 4.20 multi-agent snapshot (Mar 9, 2026)"
+    },
+    "grok-4-1-fast-reasoning": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0005,
+      "note": "xAI Grok 4.1 Fast reasoning - budget model, cached $0.05/1M"
+    },
+    "grok-4-1-fast-non-reasoning": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0005,
+      "note": "xAI Grok 4.1 Fast non-reasoning - budget model"
+    },
+    "MiniMax-M2.7": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "note": "MiniMax M2.7 (2026) - per platform.minimax.io pricing"
+    },
+    "minimax-m2.7": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "note": "MiniMax M2.7 (2026)"
+    },
+    "MiniMax-M2.7-highspeed": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0024,
+      "note": "MiniMax M2.7 highspeed tier (2x base price)"
+    },
+    "MiniMax-M2.5-highspeed": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0024,
+      "note": "MiniMax M2.5 highspeed tier (2x base price)"
+    },
+    "glm-5-turbo": {
+      "promptPrice": 0.0012,
+      "completionPrice": 0.004,
+      "note": "Zhipu GLM-5-Turbo (2026) - per docs.z.ai/guides/overview/pricing"
+    },
+    "zai/glm-5-turbo": {
+      "promptPrice": 0.0012,
+      "completionPrice": 0.004,
+      "note": "Zhipu GLM-5-Turbo via Z.AI provider"
+    },
+    "glm-5.1": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0044,
+      "note": "Zhipu GLM-5.1 (2026) - per docs.z.ai/guides/overview/pricing"
+    },
+    "zai/glm-5.1": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0044,
+      "note": "Zhipu GLM-5.1 via Z.AI provider"
+    },
+    "THUDM/GLM-5.1": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0044,
+      "note": "Zhipu GLM-5.1 - HuggingFace repo format"
+    },
+    "kimi-k2.6": {
+      "promptPrice": 0.00095,
+      "completionPrice": 0.004,
+      "note": "Moonshot Kimi K2.6 (Apr 20, 2026) - Moonshot first-party API, cache hit $0.16/1M"
+    },
+    "kimi-k2-6-preview": {
+      "promptPrice": 0.00095,
+      "completionPrice": 0.004,
+      "note": "Moonshot Kimi K2.6 preview alias"
+    },
+    "moonshotai/kimi-k2.6": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0028,
+      "note": "Moonshot Kimi K2.6 via OpenRouter aggregate (third-party providers)"
+    },
+    "moonshotai/Kimi-K2.6": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0028,
+      "note": "Moonshot Kimi K2.6 - HuggingFace repo format"
+    },
+    "qwen3.5-plus": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0024,
+      "note": "Qwen 3.5 Plus (API-only, DashScope) - thinking-mode output $2.4/1M"
+    },
+    "qwen-qwen3.5-plus": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0024,
+      "note": "Qwen 3.5 Plus via OpenRouter provider prefix"
+    },
+    "dashscope/qwen3.5-plus": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0024,
+      "note": "Qwen 3.5 Plus via Alibaba Cloud DashScope"
+    },
+    "qwen3.6-plus": {
+      "promptPrice": 0.000325,
+      "completionPrice": 0.00195,
+      "note": "Qwen 3.6 Plus (Apr 2026) - 1M context, hybrid linear-attention + sparse MoE"
+    },
+    "qwen-qwen3.6-plus": {
+      "promptPrice": 0.000325,
+      "completionPrice": 0.00195,
+      "note": "Qwen 3.6 Plus via OpenRouter"
+    },
+    "dashscope/qwen3.6-plus": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.003,
+      "note": "Qwen 3.6 Plus via DashScope (>256K ctx tier bills higher)"
+    },
+    "qwen3.6-35b-a3b": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0024,
+      "note": "Qwen 3.6 35B MoE, 3B active (Apr 14, 2026) - estimated, no hosted pricing yet"
+    },
+    "Qwen/Qwen3.6-35B-A3B": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0024,
+      "note": "Qwen 3.6 35B-A3B open-weight - estimated by size/tier analog to Qwen3.5-35B-A3B"
+    },
+    "google/gemma-4-31B": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.001,
+      "note": "Google Gemma 4 31B dense (Apr 2026) - Apache-2.0, estimated by size vs gemma-2-27b"
+    },
+    "google/gemma-4-31B-it": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.001,
+      "note": "Google Gemma 4 31B instruct - estimated"
+    },
+    "google/gemma-4-26B-A4B": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0016,
+      "note": "Google Gemma 4 26B MoE, ~3.8B active (Apr 2026) - Apache-2.0, estimated"
+    },
+    "google/gemma-4-26B-A4B-it": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0016,
+      "note": "Google Gemma 4 26B-A4B instruct - estimated"
+    },
+    "google/gemma-4-E4B": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "Google Gemma 4 E4B effective-4B edge model (~8B real) - native audio input, estimated"
+    },
+    "google/gemma-4-E2B": {
+      "promptPrice": 0.00005,
+      "completionPrice": 0.0001,
+      "note": "Google Gemma 4 E2B effective-2B edge model (~5.1B real) - native audio input, estimated"
+    },
+    "gemma-4-31b-it": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.001,
+      "note": "Gemma 4 31B instruct - short-form alias"
+    },
+    "gemma-4-26b-a4b-it": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0016,
+      "note": "Gemma 4 26B MoE instruct - short-form alias"
+    },
+    "gemma-4-e4b": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "Gemma 4 E4B - short-form alias"
+    },
+    "gemma-4-e2b": {
+      "promptPrice": 0.00005,
+      "completionPrice": 0.0001,
+      "note": "Gemma 4 E2B - short-form alias"
+    },
+    "gemma4:31b": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.001,
+      "note": "Gemma 4 31B - Ollama tag"
+    },
+    "gemma4:26b": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0016,
+      "note": "Gemma 4 26B MoE - Ollama tag"
+    },
+    "gemma4:e4b": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "note": "Gemma 4 E4B - Ollama tag"
+    },
+    "gemma4:e2b": {
+      "promptPrice": 0.00005,
+      "completionPrice": 0.0001,
+      "note": "Gemma 4 E2B - Ollama tag"
+    },
+    "sarvam-30b": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Sarvam-30B (Feb 2026) - 32B MoE / 2.4B active, free on sarvam.ai/api-pricing, 22 Indic langs + en"
+    },
+    "sarvamai/sarvam-30b": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Sarvam-30B HuggingFace repo - Apache-2.0, free first-party API"
+    },
+    "sarvam-105b": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Sarvam-105B (Feb 2026) - 106B MoE / ~10.3B active, free on sarvam.ai/api-pricing, 128K context"
+    },
+    "sarvamai/sarvam-105b": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Sarvam-105B HuggingFace repo - Apache-2.0, free first-party API"
+    },
+    "LiquidAI/LFM2-24B-A2B": {
+      "promptPrice": 0.00003,
+      "completionPrice": 0.00012,
+      "note": "LiquidAI LFM2 24B MoE, 2B active (Feb 24, 2026) - per OpenRouter liquid/lfm-2-24b-a2b, 32K ctx"
+    },
+    "liquid/lfm-2-24b-a2b": {
+      "promptPrice": 0.00003,
+      "completionPrice": 0.00012,
+      "note": "LiquidAI LFM2-24B-A2B via OpenRouter"
+    },
+    "liquid/lfm-2-24b-a2b-20260224": {
+      "promptPrice": 0.00003,
+      "completionPrice": 0.00012,
+      "note": "LiquidAI LFM2-24B-A2B dated snapshot (Feb 24, 2026) via OpenRouter"
+    },
+    "lfm2-24b-a2b": {
+      "promptPrice": 0.00003,
+      "completionPrice": 0.00012,
+      "note": "LiquidAI LFM2-24B-A2B - short-form alias"
+    },
+    "lfm2:24b-a2b": {
+      "promptPrice": 0.00003,
+      "completionPrice": 0.00012,
+      "note": "LiquidAI LFM2-24B-A2B - Ollama/GGUF tag"
+    },
+    "LiquidAI/LFM2.5-350M": {
+      "promptPrice": 0.00003,
+      "completionPrice": 0.00003,
+      "note": "LiquidAI LFM2.5-350M instruct (Mar 31, 2026) - edge/on-device, self-host only, estimated"
+    },
+    "LiquidAI/LFM2.5-350M-Base": {
+      "promptPrice": 0.00003,
+      "completionPrice": 0.00003,
+      "note": "LiquidAI LFM2.5-350M base - estimated"
+    },
+    "LiquidAI/LFM2.5-350M-GGUF": {
+      "promptPrice": 0.00003,
+      "completionPrice": 0.00003,
+      "note": "LiquidAI LFM2.5-350M GGUF quant - estimated"
+    },
+    "lfm2.5-350m": {
+      "promptPrice": 0.00003,
+      "completionPrice": 0.00003,
+      "note": "LiquidAI LFM2.5-350M - short-form alias"
+    },
+    "lfm2.5:350m": {
+      "promptPrice": 0.00003,
+      "completionPrice": 0.00003,
+      "note": "LiquidAI LFM2.5-350M - Ollama tag"
     }
   },
   "speech_to_text": {

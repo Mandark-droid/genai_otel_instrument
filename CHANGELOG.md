@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-04-21
+
+### Added
+
+- **Pricing for 2026-Q2 model releases** - `genai_otel/llm_pricing.json` now covers models released since Feb 2026 across API, Hugging Face, and Ollama tag formats:
+  - **Anthropic**: Claude Opus 4.7 (`claude-opus-4-7`, `claude-opus-4.7`)
+  - **OpenAI**: GPT-5.3 family (`gpt-5.3`, `gpt-5.3-chat-latest`, `gpt-5.3-codex`) and GPT-5.4 family (`gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.4-pro`)
+  - **Google**: Gemini 3.1 Flash Live Preview and Flash-Lite Preview; Gemma 4 series (`google/gemma-4-31B`, `-26B-A4B`, `-E4B`, `-E2B`) with HF + short-form + Ollama aliases
+  - **xAI**: Grok 4.20 dated snapshots (`grok-4.20-0309-reasoning`, `-non-reasoning`, `-multi-agent-0309`) and Grok 4.1 Fast (`grok-4-1-fast-reasoning`, `-non-reasoning`)
+  - **MiniMax**: M2.7 (`MiniMax-M2.7`, `MiniMax-M2.7-highspeed`) and M2.5 highspeed tier
+  - **Zhipu / Z.ai**: GLM-5.1 and GLM-5-Turbo (with `zai/` and `THUDM/` aliases)
+  - **Moonshot**: Kimi K2.6 (`kimi-k2.6`, `moonshotai/Kimi-K2.6`) covering both Moonshot first-party and OpenRouter aggregate prices
+  - **Alibaba Qwen**: Qwen 3.5 Plus (`qwen3.5-plus`), Qwen 3.6 Plus (`qwen3.6-plus`), Qwen 3.6 35B MoE (`Qwen/Qwen3.6-35B-A3B`)
+  - **Sarvam AI**: Sarvam-30B and Sarvam-105B (free tier per sarvam.ai/api-pricing, 22 Indic + English)
+  - **Liquid AI**: LFM2-24B-A2B MoE (OpenRouter-verified pricing) and LFM2.5-350M edge model with HF, short-form, and Ollama tags
+
+### Fixed
+
+- **Grok 4.20 pricing correction** - `grok-4.20` prompt/completion prices corrected from the prior estimate ($3/$15 per 1M) to the xAI-documented $2/$6 per 1M tokens
+
+## [1.0.3] - 2026-04-06
+
+### Fixed
+
+- **AsyncOpenAI cost/token extraction regression** - `_record_result_metrics` argument order was swapped in the AsyncOpenAI path, causing cost and token counts to be dropped from async OpenAI spans. Restored the correct argument order so async calls once again emit `gen_ai.usage.*_tokens` and `gen_ai.cost.amount` attributes (116149f)
+
 ## [1.0.2] - 2026-03-30
 
 ### Fixed
