@@ -187,9 +187,10 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
 
             tracer = self.tracer
             instrumented = False
+            has_query_points = hasattr(qdrant_client.QdrantClient, "query_points")
 
-            # New API (qdrant-client 1.16+): query_points replaces search
-            if hasattr(qdrant_client.QdrantClient, "query_points"):
+            # New API (qdrant-client 1.10+): query_points replaces search
+            if has_query_points:
 
                 def wrapped_query_points(wrapped, instance, args, kwargs):
                     with tracer.start_as_current_span("qdrant.query_points") as span:
@@ -201,13 +202,18 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                         span.set_attribute("vector.limit", limit)
                         return wrapped(*args, **kwargs)
 
-                wrapt.wrap_function_wrapper(
-                    "qdrant_client", "QdrantClient.query_points", wrapped_query_points
-                )
-                instrumented = True
+                try:
+                    wrapt.wrap_function_wrapper(
+                        "qdrant_client", "QdrantClient.query_points", wrapped_query_points
+                    )
+                    instrumented = True
+                except (AttributeError, ImportError) as e:
+                    logger.debug("Failed to wrap QdrantClient.query_points: %s", e)
 
-            # Old API (qdrant-client < 1.16): search method
-            if hasattr(qdrant_client.QdrantClient, "search"):
+            # Legacy API: only wrap `search` when `query_points` is unavailable.
+            # `search` is deprecated in qdrant-client >=1.10 and removed in 1.16+;
+            # wrapping it when the new API exists causes deprecation noise / attribute errors.
+            elif hasattr(qdrant_client.QdrantClient, "search"):
 
                 def wrapped_search(wrapped, instance, args, kwargs):
                     with tracer.start_as_current_span("qdrant.search") as span:
@@ -219,8 +225,13 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                         span.set_attribute("vector.limit", limit)
                         return wrapped(*args, **kwargs)
 
-                wrapt.wrap_function_wrapper("qdrant_client", "QdrantClient.search", wrapped_search)
-                instrumented = True
+                try:
+                    wrapt.wrap_function_wrapper(
+                        "qdrant_client", "QdrantClient.search", wrapped_search
+                    )
+                    instrumented = True
+                except (AttributeError, ImportError) as e:
+                    logger.debug("Failed to wrap QdrantClient.search: %s", e)
 
             if instrumented:
                 logger.info("Qdrant instrumentation enabled")
