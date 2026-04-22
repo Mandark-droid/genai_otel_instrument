@@ -391,8 +391,8 @@ def test_qdrant_search_execution(vector_db_instrumentor, mock_tracer):
     """Test that Qdrant search wrapper executes and creates spans with attributes."""
     from unittest.mock import MagicMock
 
-    # Create mock QdrantClient class with search method (old API)
-    mock_qdrant_client_class = MagicMock()
+    # Create mock QdrantClient class with only `search` (legacy API, pre-1.10)
+    mock_qdrant_client_class = MagicMock(spec=["search"])
     original_search = MagicMock(return_value=[])
     mock_qdrant_client_class.search = original_search
 
@@ -455,6 +455,29 @@ def test_qdrant_query_points_execution(vector_db_instrumentor, mock_tracer):
         )
 
         mock_tracer.start_as_current_span.assert_called_once_with("qdrant.query_points")
+
+
+def test_qdrant_prefers_query_points_when_both_exist(vector_db_instrumentor, mock_tracer):
+    """When both APIs exist (qdrant-client 1.10-1.15), only query_points should be wrapped
+    to avoid triggering DeprecationWarnings from the legacy `search` method."""
+    from unittest.mock import MagicMock
+
+    mock_qdrant_client_class = MagicMock(spec=["search", "query_points"])
+    mock_qdrant_client_class.search = MagicMock(return_value=[])
+    mock_qdrant_client_class.query_points = MagicMock(return_value=[])
+
+    mock_qdrant_module = MagicMock()
+    mock_qdrant_module.QdrantClient = mock_qdrant_client_class
+
+    import sys
+
+    with patch.dict(sys.modules, {"qdrant_client": mock_qdrant_module}):
+        with patch("wrapt.wrap_function_wrapper") as mock_wrap:
+            vector_db_instrumentor._instrument_qdrant()
+
+            wrapped_targets = [call.args[1] for call in mock_wrap.call_args_list]
+            assert "QdrantClient.query_points" in wrapped_targets
+            assert "QdrantClient.search" not in wrapped_targets
 
 
 def test_chroma_query_execution(vector_db_instrumentor, mock_tracer):

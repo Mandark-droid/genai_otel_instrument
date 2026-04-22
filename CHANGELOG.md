@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-04-22
+
+### Fixed
+
+- **Qdrant instrumentor: avoid wrapping deprecated `search` method** - When both `query_points` (qdrant-client 1.10+) and the legacy `search` method exist, only `query_points` is wrapped. The legacy `search` method emits a `DeprecationWarning` on invocation and was removed entirely in qdrant-client 1.16+, which produced startup log noise for downstream applications. `search` is still wrapped as a fallback on older clients where `query_points` is unavailable. Wrap calls are additionally guarded against `AttributeError`/`ImportError` to survive future SDK changes silently. (`genai_otel/mcp_instrumentors/vector_db_instrumentor.py`)
+
 ## [1.0.4] - 2026-04-21
 
 ### Added
