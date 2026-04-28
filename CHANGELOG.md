@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-04-29
+
+### Security
+
+- **Bump `black` to `>=26.3.1` on Python 3.10+** to address
+  [GHSA-3936-cmfr-pm3m](https://github.com/advisories/GHSA-3936-cmfr-pm3m)
+  (high severity: arbitrary file writes from unsanitized user input in the
+  cache file name). Black is dev-only and not in the published wheel, so
+  this affects only contributor / CI environments. Python 3.9 dev
+  environments stay on the latest 3.9-compatible release (`<26`) since
+  the patched version dropped 3.9 support.
+
+### Fixed
+
+- CI matrix install on Python 3.9 — the previous unconditional
+  `black>=26.3.1` pin failed `pip install -e ".[dev]"` on 3.9 because the
+  fixed version requires 3.10+. Pin is now conditional on
+  `python_version`.
+
 ## [1.2.0] - 2026-04-29
 
 ### Added
