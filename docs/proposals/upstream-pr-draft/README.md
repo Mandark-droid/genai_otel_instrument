@@ -1,41 +1,45 @@
-# Upstream PR Draft — Multimodal Content-Part Attributes
+# Upstream PR Draft — Narrow Multimodal Additions
 
-This folder contains the draft artifacts to be committed to a fork of
-[`open-telemetry/semantic-conventions`](https://github.com/open-telemetry/semantic-conventions)
-once the working group signals the proposal shape is acceptable
-(see issue [#3672](https://github.com/open-telemetry/semantic-conventions/issues/3672)).
+> **Scope corrected (2026-04-28):** OTel's existing `gen-ai-input-messages.json` /
+> `gen-ai-output-messages.json` schemas already define `BlobPart`, `FilePart`, `UriPart` and a
+> `Modality` enum (`image`, `video`, `audio`). Our originally drafted "flat attribute namespace"
+> proposal duplicated work that was already done. This redraft narrows the upstream PR to the
+> three pieces that are genuinely missing.
 
-## Files
+## What this PR adds
 
-| File in this folder | Maps to in OTel repo | Purpose |
+1. **`document` value added to the `Modality` enum.** Needed for PDF / DOCX workloads (BFSI KYC
+   extraction is a real high-volume example).
+2. **Optional `byte_size` field added to `BlobPart`, `FilePart`, and `UriPart`.** Useful for
+   cost-of-capture telemetry and storage planning. Optional, additive.
+3. **New `StrippedPart` type** for fail-closed observability. Records that the instrumentor
+   detected a content part but intentionally did not capture its bytes (size cap exceeded,
+   modality disallowed by config, redactor failed, store unavailable). Without this, consumers
+   can't distinguish *"no media in this turn"* from *"media was deliberately stripped."*
+
+## Files in this folder
+
+| File | Maps to in OTel repo | Purpose |
 |---|---|---|
-| `registry.yaml.fragment` | `model/gen-ai/registry.yaml` (append) | New attribute definitions for the registry |
-| `spans.yaml.fragment` | `model/gen-ai/spans.yaml` (extend group) | Reference the new attributes from gen_ai spans |
-| `gen-ai-spans.md.fragment` | `docs/gen-ai/gen-ai-spans.md` (insert section) | Human-readable spec of the attribute namespace |
-| `chloggen-entry.yaml` | `.chloggen/<feature-slug>.yaml` | Changelog entry per repo policy |
+| `input-messages.json.diff` | `docs/gen-ai/gen-ai-input-messages.json` | Add `document` to Modality enum, `byte_size` field, `StrippedPart` definition |
+| `output-messages.json.diff` | `docs/gen-ai/gen-ai-output-messages.json` | Mirror of the above |
+| `chloggen-entry.yaml` | `.chloggen/gen-ai-multimodal-narrow.yaml` | Changelog entry |
+| `gen-ai-spans.md.fragment` | `docs/gen-ai/gen-ai-spans.md` (small note) | Brief mention of fail-closed semantics |
 
 ## Filing checklist (per `CONTRIBUTING.md`)
 
+- [x] Issue filed and refined: [#3672](https://github.com/open-telemetry/semantic-conventions/issues/3672)
 - [ ] CLA signed
-- [ ] Forked `open-telemetry/semantic-conventions` to your account
-- [ ] Created a feature branch (`gen-ai/multimodal-content-parts`)
-- [ ] Applied YAML fragments to `model/gen-ai/`
-- [ ] Updated `docs/gen-ai/gen-ai-spans.md`
-- [ ] Added `.chloggen/gen-ai-multimodal-content-parts.yaml`
-- [ ] Ran `make check` locally and it passes
-- [ ] PR description references issue #3672 with `Resolves #3672` (or `Refs #3672` if the WG wants the issue to stay open for follow-ups like tool-call multimodal)
+- [ ] Forked repo
+- [ ] Apply JSON-schema diffs
+- [ ] Add `.chloggen/*.yaml`
+- [ ] `make check` passing
+- [ ] PR description references #3672
 - [ ] Two code-owner approvals from `@open-telemetry/specs-semconv-approvers` or `@open-telemetry/semconv-genai-approvers`
-- [ ] No requested changes / no open discussions
-- [ ] Two working days elapsed since last modification
 
-## Stability tier
+## Why this is the right size
 
-All new attributes are proposed under `stability: development` (the OTel semconv equivalent of
-"experimental"). Promotion to `stable` would happen in a follow-up after real-world validation
-across multiple instrumentations.
-
-## Why these attributes are not redundant with `gen_ai.input.messages`
-
-`gen_ai.input.messages` is an opt-in serialized blob; the flat per-part attributes proposed here
-are queryable in any OTel backend without JSON parsing — see the issue for the full rationale.
-Both can be emitted together via the existing dual-emission pattern.
+The original PR plan (~480 lines of new attribute registry + spans references + markdown spec)
+duplicated existing OTel structure. The narrow PR is ~20–30 lines of JSON schema changes plus
+~10 lines of chloggen + a paragraph of markdown. Smaller diff, mirrors existing pattern, much
+more likely to merge cleanly without bouncing between revisions.
