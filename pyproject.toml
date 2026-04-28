@@ -180,6 +180,18 @@ object-storage = [
     "minio>=7.0.0",
 ]
 
+# Multimodal observability (v1.0.0)
+multimodal-images = ["Pillow>=10.0.0"]
+multimodal-pdf = ["pypdf>=4.0.0"]
+multimodal-faces = ["opencv-python-headless>=4.8.0"]
+multimodal-s3 = ["boto3>=1.28.0"]
+multimodal = [
+    "Pillow>=10.0.0",
+    "pypdf>=4.0.0",
+    "opencv-python-headless>=4.8.0",
+    "boto3>=1.28.0",
+]
+
 # All LLM providers
 all-providers = [
     "openai>=1.0.0",
@@ -337,7 +349,14 @@ Issues = "https://github.com/Mandark-droid/genai_otel_instrument/issues"
 Changelog = "https://github.com/Mandark-droid/genai_otel_instrument/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
-packages = ["genai_otel", "genai_otel.instrumentors", "genai_otel.mcp_instrumentors", "genai_otel.evaluation"]
+packages = [
+    "genai_otel",
+    "genai_otel.instrumentors",
+    "genai_otel.mcp_instrumentors",
+    "genai_otel.evaluation",
+    "genai_otel.media",
+    "genai_otel.media.stores",
+]
 
 [tool.setuptools.package-data]
 genai_otel = ["llm_pricing.json", "py.typed"]

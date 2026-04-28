@@ -1,0 +1,28 @@
+# Save this file to .chloggen/gen-ai-multimodal-content-parts.yaml in the
+# open-telemetry/semantic-conventions repo when filing the PR.
+
+change_type: enhancement
+
+component: gen-ai
+
+note: >
+  Add multimodal content-part attributes for image, audio, video, and document
+  content carried by GenAI requests and responses. The new attributes are
+  additive and emitted only when the instrumentor opts in via
+  OTEL_SEMCONV_STABILITY_OPT_IN.
+
+issues: [3672]
+
+subtext: |
+  New attributes:
+    - gen_ai.prompt.{n}.role
+    - gen_ai.prompt.{n}.content.{m}.type (enum: text|image|audio|video|document)
+    - gen_ai.prompt.{n}.content.{m}.text
+    - gen_ai.prompt.{n}.content.{m}.media_uri
+    - gen_ai.prompt.{n}.content.{m}.media_mime_type
+    - gen_ai.prompt.{n}.content.{m}.media_byte_size
+    - gen_ai.prompt.{n}.content.{m}.media_source
+      (enum: inline_offloaded|external_url|reference_only)
+    - gen_ai.media.stripped_reason
+      (enum: size_exceeded|modality_not_allowed|redactor_error|upload_error|no_data_or_store)
+    - Mirror namespace gen_ai.completion.* for generated content parts.

@@ -69,6 +69,10 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     and handling common instrumentation patterns.
     """
 
+    # Multimodal: subclasses that support content-part detection set this to one of
+    # "openai" | "anthropic" | "google" | "groq". Default None disables media capture.
+    MEDIA_PROVIDER: Optional[str] = None
+
     # Class-level shared metrics (created once, shared by all instances)
     _shared_request_counter = None
     _shared_token_counter = None
@@ -308,6 +312,125 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             content = content[:max_len]
 
         return json.dumps({"role": role, "content": content})
+
+    def _emit_media_attributes(self, span, request_kwargs: dict, result: Any) -> None:
+        """Emit multimodal content-part attributes on the span.
+
+        Walks the request messages (and, when available, the result) using the
+        media detector for the configured ``MEDIA_PROVIDER``, then offloads any
+        binary parts via the configured store. Each part contributes a small
+        set of ``gen_ai.prompt.{n}.content.{m}.*`` attributes.
+
+        Subclasses MAY override ``_extract_completion_parts`` to surface
+        provider-specific completion-side multimodal output (e.g. image
+        generation responses).
+        """
+        # Lazy import to avoid pulling media deps when feature is unused.
+        from ..media import detect_parts, get_store, offload_part  # noqa: WPS433
+
+        provider = self.MEDIA_PROVIDER
+        if provider is None:
+            return
+
+        store = None
+        try:
+            store = get_store(self.config)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Failed to initialize media store: %s", e)
+            store = None
+
+        # Trace ID for keying uploads
+        trace_id_hex = ""
+        try:
+            ctx = span.get_span_context()
+            if ctx and ctx.trace_id:
+                trace_id_hex = f"{ctx.trace_id:032x}"
+        except Exception:  # noqa: BLE001
+            pass
+
+        # Prompt side: walk messages
+        messages = (request_kwargs or {}).get("messages") or []
+        # Gemini uses "contents" rather than "messages"
+        if not messages and provider == "google":
+            messages = (request_kwargs or {}).get("contents") or []
+
+        for n, msg in enumerate(messages or []):
+            role = "user"
+            content: Any = msg
+            if isinstance(msg, dict):
+                role = msg.get("role", "user")
+                content = msg.get("content")
+                if provider == "google" and content is None:
+                    content = msg.get("parts")
+
+            parts = detect_parts(provider, content)
+            if not parts:
+                continue
+            span.set_attribute(SC.GEN_AI_PROMPT_ROLE.format(n=n), role)
+            for m, part in enumerate(parts):
+                try:
+                    offload_part(part, config=self.config, store=store, trace_id=trace_id_hex)
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("offload_part failed: %s", e)
+                self._set_part_attrs(span, "prompt", n, m, part)
+
+        # Completion side: best-effort. Subclasses can override.
+        try:
+            completion_parts = self._extract_completion_parts(result)
+        except Exception:  # noqa: BLE001
+            completion_parts = None
+        if completion_parts:
+            span.set_attribute(SC.GEN_AI_COMPLETION_ROLE.format(n=0), "assistant")
+            for m, part in enumerate(completion_parts):
+                try:
+                    offload_part(part, config=self.config, store=store, trace_id=trace_id_hex)
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("offload_part (completion) failed: %s", e)
+                self._set_part_attrs(span, "completion", 0, m, part)
+
+    def _set_part_attrs(self, span, side: str, n: int, m: int, part) -> None:
+        """Set the small fixed attribute set for a single content part."""
+        if side == "prompt":
+            tname = SC.GEN_AI_PROMPT_CONTENT_TYPE.format(n=n, m=m)
+            ttext = SC.GEN_AI_PROMPT_CONTENT_TEXT.format(n=n, m=m)
+            turi = SC.GEN_AI_PROMPT_CONTENT_MEDIA_URI.format(n=n, m=m)
+            tmime = SC.GEN_AI_PROMPT_CONTENT_MEDIA_MIME.format(n=n, m=m)
+            tsize = SC.GEN_AI_PROMPT_CONTENT_MEDIA_BYTES.format(n=n, m=m)
+            tsource = SC.GEN_AI_PROMPT_CONTENT_MEDIA_SOURCE.format(n=n, m=m)
+        else:
+            tname = SC.GEN_AI_COMPLETION_CONTENT_TYPE.format(n=n, m=m)
+            ttext = SC.GEN_AI_COMPLETION_CONTENT_TEXT.format(n=n, m=m)
+            turi = SC.GEN_AI_COMPLETION_CONTENT_MEDIA_URI.format(n=n, m=m)
+            tmime = SC.GEN_AI_COMPLETION_CONTENT_MEDIA_MIME.format(n=n, m=m)
+            tsize = SC.GEN_AI_COMPLETION_CONTENT_MEDIA_BYTES.format(n=n, m=m)
+            tsource = SC.GEN_AI_COMPLETION_CONTENT_MEDIA_SOURCE.format(n=n, m=m)
+
+        span.set_attribute(tname, part.type)
+        if part.type == "text" and part.text is not None:
+            # Apply the same content cap as text capture
+            max_len = (
+                self.config.content_max_length
+                if self.config and self.config.content_max_length
+                else 0
+            )
+            text = part.text[:max_len] if max_len > 0 else part.text
+            span.set_attribute(ttext, text)
+        else:
+            if part.media_uri:
+                span.set_attribute(turi, part.media_uri)
+            if part.media_mime_type:
+                span.set_attribute(tmime, part.media_mime_type)
+            if part.media_byte_size is not None:
+                span.set_attribute(tsize, int(part.media_byte_size))
+            if part.media_source:
+                span.set_attribute(tsource, part.media_source)
+            stripped = part.extra.get("stripped_reason") if part.extra else None
+            if stripped:
+                span.set_attribute(SC.GEN_AI_MEDIA_STRIPPED_REASON, stripped)
+
+    def _extract_completion_parts(self, result):  # noqa: D401
+        """Override in subclasses to return List[ContentPart] from a result."""
+        return None
 
     def create_span_wrapper(
         self, span_name: str, extract_attributes: Optional[Callable[[Any, Any, Any], Dict]] = None
@@ -628,6 +751,18 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 self._add_content_events(span, result, request_kwargs or {})
         except Exception as e:
             logger.warning("Failed to add content events for span '%s': %s", span.name, e)
+
+        # Multimodal content-part attributes (gated on MEDIA_PROVIDER + capture mode).
+        # Additive: when MEDIA_PROVIDER is None or capture_mode == "off", this is a no-op.
+        try:
+            if (
+                self.MEDIA_PROVIDER
+                and self.config
+                and getattr(self.config, "media_capture_mode", "off") != "off"
+            ):
+                self._emit_media_attributes(span, request_kwargs or {}, result)
+        except Exception as e:
+            logger.warning("Failed to emit media attributes for span '%s': %s", span.name, e)
 
         # Extract and record token usage and cost
         try:
