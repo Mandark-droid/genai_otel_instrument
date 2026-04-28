@@ -6,9 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-28
+
 ### Added
 
-- **Multimodal observability (v1.0 spec, Part A)** — first-class capture of image, audio, video, and document content parts on OpenAI, Anthropic, Google Gemini, and Groq spans. Defines the open standard for multimodal AI observability via an additive, OTel-compatible attribute namespace. Highlights:
+- **Multimodal observability** — first-class capture of image, audio, video, and document content parts on OpenAI, Anthropic, Google Gemini, and Groq spans. Defines the open standard for multimodal AI observability via an additive, OTel-compatible attribute namespace. Highlights:
   - New attribute namespace: `gen_ai.prompt.{n}.content.{m}.{type, text, media_uri, media_mime_type, media_byte_size, media_source}` plus `gen_ai.completion.*` mirror and `gen_ai.media.stripped_reason`.
   - Pluggable offload backends — `filesystem`, `s3`, `minio`, `http` — under `genai_otel/media/stores/`. Bytes never appear inline in span attributes.
   - Built-in redactors: `exif_stripper`, `face_blur`, `pdf_pii_redact` (lazy-imported, `multimodal-{images,faces,pdf}` extras).
