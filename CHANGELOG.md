@@ -6,6 +6,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-04-29
+
+### Added
+
+- **`genai_otel.cost_estimation` module — public API for token/cost estimation
+  in multimodal calls.** Exports `estimate_pipeline_usage`, `estimate_chat_usage`,
+  `count_images`, `audio_seconds`, `coerce_text`, `result_text`. Designed to be
+  imported by external custom providers (e.g. tracesense / chaos-lab providers
+  that bypass `transformers.pipeline` and the standard `ollama` entry points).
+- **Token / cost estimation for multimodal calls that omit usage data.**
+  - `BaseInstrumentor._estimate_usage(result, request_kwargs)` hook (default
+    returns `None`). When `_extract_usage` returns nothing, this fallback
+    fires and the resulting span is tagged with
+    `gen_ai.usage.token_count_estimated=true` so downstream tooling can
+    distinguish exact from estimated counts.
+  - `OllamaInstrumentor._estimate_usage`: char-count fallback (4 chars/token)
+    plus per-image token floor (256 tokens/image) for `/api/chat` and
+    `/api/generate` payloads. Fixes cost being zero on multimodal Ollama
+    spans whose responses omit `prompt_eval_count` / `eval_count`.
+  - `HuggingFaceInstrumentor._record_pipeline_usage_and_cost`: estimates
+    prompt/completion tokens for non-text pipelines including
+    `image-text-to-text`, `image-to-text`, `visual-question-answering`,
+    `image-classification`, `automatic-speech-recognition`,
+    `audio-classification`, `audio-to-audio`, `text-to-image`,
+    `text-to-speech`. Emits per-modality attributes
+    `gen_ai.usage.image_count` and `gen_ai.usage.audio_seconds` for
+    observability of multimodal cost drivers.
+- **New image-generation pricing entries:** `gpt-image-1`, `gpt-image-2`
+  (low/medium/high quality tiers), `black-forest-labs/FLUX.2-pro`,
+  `FLUX.2-max`, `FLUX.2-flex`, `FLUX.2-klein-4b`, `FLUX.2-klein-9b`,
+  `FLUX.2-dev`, plus a new `gemini-3-pro-image-preview` alias.
+
+### Changed
+
+- **Refined Gemini image pricing** to current 2026 rates: `nano-banana` /
+  `gemini-2-5-flash-image` updated from $0.03/MP to per-resolution
+  ($0.039 @ 1024×1024) and new `batch` quality tier (50% off).
+  `nano-banana-pro` / `gemini-3-pro-image-preview` updated to $0.134
+  for 1K-2K and $0.24 for 4K. `nano-banana-2` /
+  `gemini-3.1-flash-image` gain a `batch` tier.
+- Imagen 3.0 / 4.0 entries reshaped from scalar floats into the standard
+  `{quality: {dimension: price}}` shape so the cost calculator can
+  actually evaluate them.
+
+### Fixed
+
+- Non-chat call types (`image`, `audio`, `embedding`, ...) now also set
+  `gen_ai.usage.cost.total` on the span. Previously cost was added to the
+  metric counter but dropped from span attributes, so backends couldn't
+  aggregate cost per image-gen / audio span.
+
 ## [1.1.1] - 2026-04-28
 
 ### Added

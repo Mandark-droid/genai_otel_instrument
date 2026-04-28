@@ -789,10 +789,26 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         except Exception as e:
             logger.warning("Failed to emit media attributes for span '%s': %s", span.name, e)
 
-        # Extract and record token usage and cost
+        # Extract and record token usage and cost. If the provider response
+        # lacks usage data (common for Ollama multimodal and several HF
+        # transformers pipelines), fall back to a per-instrumentor estimate
+        # based on the request + result text/tokens. The estimate path tags
+        # the span with `gen_ai.usage.token_count_estimated=true` so downstream
+        # consumers can distinguish exact from estimated token counts.
         try:
             usage = self._extract_usage(result)
+            estimated = False
+            if not usage:
+                est = self._estimate_usage(result, request_kwargs or {})
+                if est:
+                    usage = est
+                    estimated = True
             if usage and isinstance(usage, dict):
+                if estimated:
+                    try:
+                        span.set_attribute("gen_ai.usage.token_count_estimated", True)
+                    except Exception:  # noqa: BLE001
+                        pass
                 prompt_tokens = usage.get("prompt_tokens", 0)
                 completion_tokens = usage.get("completion_tokens", 0)
                 total_tokens = usage.get("total_tokens", 0)
@@ -931,11 +947,16 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                     "gen_ai.usage.cost.cache_write", costs["cache_write"]
                                 )
                         else:
-                            # For non-chat requests, use simple cost calculation
+                            # For non-chat requests (image, audio, embedding,
+                            # speech_to_text, ...), use simple cost calculation
+                            # AND surface the result on the span so downstream
+                            # tooling can read `gen_ai.usage.cost.total` for
+                            # all call types, not only chat.
                             cost = self.cost_calculator.calculate_cost(model, usage, call_type)
                             if cost and cost > 0:
                                 if self.cost_counter:
                                     self.cost_counter.add(cost, {"model": str(model)})
+                                span.set_attribute("gen_ai.usage.cost.total", cost)
                     except Exception as e:
                         logger.warning("Failed to calculate cost for span '%s': %s", span.name, e)
 
@@ -1534,3 +1555,22 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         Returns:
             Optional[Dict[str, int]]: A dictionary with token counts, or None if usage cannot be extracted.
         """
+
+    def _estimate_usage(self, result: Any, request_kwargs: dict) -> Optional[Dict[str, int]]:
+        """Best-effort token estimate for providers whose response omits usage.
+
+        Default returns None (no estimate). Subclasses MAY override this to
+        approximate token counts from request/response text length, audio
+        duration, image dimensions, etc., when the canonical `_extract_usage`
+        path returns None. The base recorder will set
+        `gen_ai.usage.token_count_estimated=true` on the span when this path
+        is used, so consumers can distinguish exact from estimated counts.
+
+        Args:
+            result: The return value of the instrumented function.
+            request_kwargs: The original request kwargs.
+
+        Returns:
+            Optional[Dict[str, int]]: Estimated token counts, or None.
+        """
+        return None

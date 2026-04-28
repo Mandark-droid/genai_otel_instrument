@@ -200,6 +200,104 @@ class OllamaInstrumentor(BaseInstrumentor):
             logger.debug("Failed to extract usage from Ollama response: %s", e)
             return None
 
+    # Approx ratio of characters per token for English-language LLM tokenizers.
+    # Used only as a fallback when Ollama omits eval counts (typically for some
+    # multimodal / quantized GGUF servers). Tokens are tagged
+    # gen_ai.usage.token_count_estimated=true on the span when this is used.
+    _CHARS_PER_TOKEN = 4
+    # Per-image token estimate for Ollama multimodal models (Qwen-VL, llava,
+    # bakllava, llama3.2-vision, etc.). Real image-token rates vary 256..2048
+    # depending on the vision encoder; 256 is a conservative floor that gets
+    # cost > 0 without overstating.
+    _IMAGE_TOKEN_ESTIMATE = 256
+
+    def _estimate_usage(self, result: Any, request_kwargs: dict) -> Optional[Dict[str, int]]:
+        """Estimate token counts from request + response text/images when the
+        Ollama server response omits prompt_eval_count / eval_count.
+
+        Strategy:
+            * prompt_tokens ~= ceil(sum(len(text)) / 4) + 256 * len(images)
+            * completion_tokens ~= ceil(len(response_text) / 4)
+
+        Returns None if neither side has any extractable text/images so the
+        caller does not record zero-token spans.
+        """
+        try:
+            prompt_chars = 0
+            image_count = 0
+
+            # /api/generate uses a flat `prompt` (str) and optional `images`
+            prompt = request_kwargs.get("prompt") if request_kwargs else None
+            if isinstance(prompt, str):
+                prompt_chars += len(prompt)
+
+            # /api/chat uses messages: [{role, content, images?}, ...]
+            messages = request_kwargs.get("messages") if request_kwargs else None
+            if isinstance(messages, list):
+                for msg in messages:
+                    if not isinstance(msg, dict):
+                        continue
+                    content = msg.get("content")
+                    if isinstance(content, str):
+                        prompt_chars += len(content)
+                    elif isinstance(content, list):
+                        # Multimodal content array (text/image parts)
+                        for part in content:
+                            if isinstance(part, dict):
+                                t = part.get("text") or part.get("content")
+                                if isinstance(t, str):
+                                    prompt_chars += len(t)
+                                if part.get("type") in ("image", "image_url") or part.get(
+                                    "image_url"
+                                ):
+                                    image_count += 1
+                    imgs = msg.get("images")
+                    if isinstance(imgs, list):
+                        image_count += len(imgs)
+
+            # Top-level images for /api/generate
+            top_imgs = request_kwargs.get("images") if request_kwargs else None
+            if isinstance(top_imgs, list):
+                image_count += len(top_imgs)
+
+            response_text = ""
+            if isinstance(result, dict):
+                response_text = result.get("response") or ""
+                if not response_text:
+                    msg = result.get("message")
+                    if isinstance(msg, dict):
+                        c = msg.get("content")
+                        if isinstance(c, str):
+                            response_text = c
+            else:
+                response_text = getattr(result, "response", "") or ""
+                if not response_text:
+                    msg = getattr(result, "message", None)
+                    if msg is not None:
+                        c = getattr(msg, "content", None)
+                        if isinstance(c, str):
+                            response_text = c
+
+            if prompt_chars == 0 and image_count == 0 and not response_text:
+                return None
+
+            prompt_tokens = (
+                prompt_chars + self._CHARS_PER_TOKEN - 1
+            ) // self._CHARS_PER_TOKEN + image_count * self._IMAGE_TOKEN_ESTIMATE
+            completion_tokens = (
+                len(response_text) + self._CHARS_PER_TOKEN - 1
+            ) // self._CHARS_PER_TOKEN
+            if prompt_tokens == 0 and completion_tokens == 0:
+                return None
+            return {
+                "prompt_tokens": int(prompt_tokens),
+                "completion_tokens": int(completion_tokens),
+                "total_tokens": int(prompt_tokens + completion_tokens),
+            }
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Failed to estimate Ollama token usage: %s", e)
+            return None
+
     def _extract_response_attributes(self, result) -> Dict[str, Any]:
         """Extract response attributes from Ollama response.
 

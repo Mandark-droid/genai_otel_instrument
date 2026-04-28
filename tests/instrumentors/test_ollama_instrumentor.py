@@ -240,6 +240,56 @@ def test_extract_usage(instrumentor):
     assert instrumentor._extract_usage(result_zero) is None
 
 
+def test_estimate_usage_generate_text(instrumentor):
+    """Estimate falls back to character-count when /api/generate omits eval counts."""
+    result = {"response": "abcd" * 25}  # 100 chars -> 25 tokens at 4 chars/tok
+    request = {"prompt": "x" * 200}  # 200 chars -> 50 tokens
+    usage = instrumentor._estimate_usage(result, request)
+    assert usage is not None
+    assert usage["prompt_tokens"] == 50
+    assert usage["completion_tokens"] == 25
+    assert usage["total_tokens"] == 75
+
+
+def test_estimate_usage_chat_with_images(instrumentor):
+    """Estimate accounts for multimodal images via per-image token estimate."""
+    request = {
+        "messages": [
+            {"role": "user", "content": "describe this image", "images": ["b64data1", "b64data2"]}
+        ]
+    }
+    result = {"message": {"content": "a cat"}}  # 5 chars -> 2 tokens
+    usage = instrumentor._estimate_usage(result, request)
+    assert usage is not None
+    # 19 prompt chars / 4 = 5 (ceil), plus 2 images * 256 = 517
+    assert usage["prompt_tokens"] == 5 + 2 * 256
+    assert usage["completion_tokens"] == 2
+    assert usage["total_tokens"] == 5 + 2 * 256 + 2
+
+
+def test_estimate_usage_no_text_no_images(instrumentor):
+    """Estimate returns None when there's nothing to count."""
+    assert instrumentor._estimate_usage({}, {}) is None
+    assert instrumentor._estimate_usage(None, None) is None
+
+
+def test_estimate_usage_object_message(instrumentor):
+    """Estimate handles object-style /api/chat responses."""
+
+    class _Msg:
+        content = "hello world"
+
+    class _Resp:
+        message = _Msg()
+        response = ""
+
+    request = {"messages": [{"role": "user", "content": "hi"}]}
+    usage = instrumentor._estimate_usage(_Resp(), request)
+    assert usage is not None
+    assert usage["completion_tokens"] == 3  # "hello world" = 11 chars / 4 -> 3 ceil
+    assert usage["prompt_tokens"] == 1  # "hi" = 2 chars / 4 -> 1 ceil
+
+
 @skipif_poller_not_supported
 def test_instrument_starts_server_metrics_poller():
     """Test that instrumentation starts the server metrics poller by default."""

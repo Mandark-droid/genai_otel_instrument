@@ -75,9 +75,9 @@
     "azure_ai/embed-v-4-0": 0.00011999999999999999,
     "cohere.embed-english-v3": 9.999999999999999e-05,
     "cohere.embed-multilingual-v3": 9.999999999999999e-05,
-    "cohere.embed-v4:0": 0.00011999999999999999,
+    "cohere.embed-v4:0": 0.00012,
     "cohere.rerank-v3-5:0": 0.0,
-    "cohere/embed-v4.0": 0.00011999999999999999,
+    "cohere/embed-v4.0": 0.00012,
     "doubao-embedding": 0.0,
     "doubao-embedding-large": 0.0,
     "doubao-embedding-large-text-240915": 0.0,
@@ -104,7 +104,7 @@
     "rerank-multilingual-v3.0": 0.0,
     "rerank-v3.5": 0.0,
     "text-embedding-004": 9.999999999999999e-05,
-    "text-embedding-005": 9.999999999999999e-05,
+    "text-embedding-005": 0.0001,
     "text-embedding-ada-002-v2": 9.999999999999999e-05,
     "text-embedding-large-exp-03-07": 9.999999999999999e-05,
     "text-embedding-preview-0409": 6.2499999999999995e-06,
@@ -147,8 +147,6 @@
     "openai/text-embedding-3-small": 2e-05,
     "openai/text-embedding-3-large": 0.00013,
     "openai/text-embedding-ada-002": 0.0001,
-    "text-embedding-005": 0.0001,
-    "cohere/embed-v4.0": 0.00012,
     "embed-v4.0": 0.00012,
     "mistral/codestral-embed-latest": 0.00015,
     "codestral-embed": 0.00015,
@@ -167,8 +165,7 @@
     "alibaba/text-embedding-v4": 7e-05,
     "BAAI/bge-large-en-v1.5": 2e-05,
     "nomic-ai/nomic-embed-text-v1.5": 1.6e-05,
-    "amazon.titan-embed-text-v2:0": 0.00011,
-    "cohere.embed-v4:0": 0.00012
+    "amazon.titan-embed-text-v2:0": 0.00011
   },
   "images": {
     "dall-e-3": {
@@ -268,12 +265,54 @@
     },
     "azure_ai/FLUX-1.1-pro": 0.04,
     "azure_ai/FLUX.1-Kontext-pro": 0.04,
-    "gemini/imagen-3.0-fast-generate-001": 0.02,
-    "gemini/imagen-3.0-generate-001": 0.04,
-    "gemini/imagen-3.0-generate-002": 0.04,
-    "gemini/imagen-4.0-fast-generate-001": 0.02,
-    "gemini/imagen-4.0-generate-001": 0.04,
-    "gemini/imagen-4.0-ultra-generate-001": 0.06,
+    "gemini/imagen-3.0-fast-generate-001": {
+      "standard": {
+        "512x512": 0.01,
+        "1024x1024": 0.02,
+        "2048x2048": 0.08
+      },
+      "note": "Google Imagen flat per-image rate $0.02; previously stored as scalar."
+    },
+    "gemini/imagen-3.0-generate-001": {
+      "standard": {
+        "512x512": 0.02,
+        "1024x1024": 0.04,
+        "2048x2048": 0.16
+      },
+      "note": "Google Imagen flat per-image rate $0.04; previously stored as scalar."
+    },
+    "gemini/imagen-3.0-generate-002": {
+      "standard": {
+        "512x512": 0.02,
+        "1024x1024": 0.04,
+        "2048x2048": 0.16
+      },
+      "note": "Google Imagen flat per-image rate $0.04; previously stored as scalar."
+    },
+    "gemini/imagen-4.0-fast-generate-001": {
+      "standard": {
+        "512x512": 0.01,
+        "1024x1024": 0.02,
+        "2048x2048": 0.08
+      },
+      "note": "Google Imagen flat per-image rate $0.02; previously stored as scalar."
+    },
+    "gemini/imagen-4.0-generate-001": {
+      "standard": {
+        "512x512": 0.02,
+        "1024x1024": 0.04,
+        "2048x2048": 0.16
+      },
+      "note": "Google Imagen flat per-image rate $0.04; previously stored as scalar."
+    },
+    "gemini/imagen-4.0-ultra-generate-001": {
+      "standard": {
+        "512x512": 0.03,
+        "1024x1024": 0.06,
+        "2048x2048": 0.24
+      },
+      "note": "Google Imagen flat per-image rate $0.06; previously stored as scalar."
+    },
     "recraft/recraftv2": 0.022,
     "recraft/recraftv3": 0.04,
     "standard/1024-x-1024/dall-e-3": {
@@ -287,15 +326,33 @@
     },
     "gemini-2-5-flash-image": {
       "standard": {
-        "1000000": 0.03
+        "512x512": 0.0098,
+        "1024x1024": 0.039,
+        "2048x2048": 0.156,
+        "4096x4096": 0.624
       },
-      "note": "Google Gemini 2.5 Flash Image - token-based, $0.03/1K output tokens"
+      "batch": {
+        "512x512": 0.0049,
+        "1024x1024": 0.0195,
+        "2048x2048": 0.078,
+        "4096x4096": 0.312
+      },
+      "note": "Google Gemini 2.5 Flash Image (alias: nano-banana). $0.039 per 1024x1024 image."
     },
     "nano-banana": {
       "standard": {
-        "1000000": 0.03
+        "512x512": 0.0098,
+        "1024x1024": 0.039,
+        "2048x2048": 0.156,
+        "4096x4096": 0.624
       },
-      "note": "Google Nano Banana (Gemini 2.5 Flash Image alias)"
+      "batch": {
+        "512x512": 0.0049,
+        "1024x1024": 0.0195,
+        "2048x2048": 0.078,
+        "4096x4096": 0.312
+      },
+      "note": "Google Gemini 2.5 Flash Image / Nano Banana. 1024x1024 = $0.039 standard, $0.0195 batch. Underlying: 1290 output tokens at $30/M tokens."
     },
     "nano-banana-2": {
       "standard": {
@@ -304,16 +361,26 @@
         "2048x2048": 0.101,
         "4096x4096": 0.151
       },
-      "note": "Google Nano Banana 2 / Gemini 3.1 Flash Image (Feb 2026)"
+      "batch": {
+        "512x512": 0.0225,
+        "1024x1024": 0.0335,
+        "2048x2048": 0.0505,
+        "4096x4096": 0.0755
+      },
+      "note": "Google Nano Banana 2 / Gemini 3.1 Flash Image Preview (Feb 2026). Range: $0.045-$0.151 standard; 50% off batch."
     },
     "nano-banana-pro": {
       "standard": {
-        "512x512": 0.055,
-        "1024x1024": 0.085,
-        "2048x2048": 0.13,
-        "4096x4096": 0.2
+        "1024x1024": 0.134,
+        "2048x2048": 0.134,
+        "4096x4096": 0.24
       },
-      "note": "Google Nano Banana Pro - premium image generation"
+      "batch": {
+        "1024x1024": 0.067,
+        "2048x2048": 0.067,
+        "4096x4096": 0.12
+      },
+      "note": "Google Nano Banana Pro / Gemini 3 Pro Image Preview. $0.134 for 1K-2K, $0.24 for 4K (standard); 50% off via Batch API."
     },
     "gemini-3.1-flash-image": {
       "standard": {
@@ -322,7 +389,98 @@
         "2048x2048": 0.101,
         "4096x4096": 0.151
       },
-      "note": "Google Gemini 3.1 Flash Image / Nano Banana 2 (Feb 2026)"
+      "batch": {
+        "512x512": 0.0225,
+        "1024x1024": 0.0335,
+        "2048x2048": 0.0505,
+        "4096x4096": 0.0755
+      },
+      "note": "Google Gemini 3.1 Flash Image (alias: nano-banana-2). $0.045-$0.151 by resolution; 50% off batch."
+    },
+    "gpt-image-2": {
+      "low": {
+        "1024x1024": 0.006,
+        "1024x1536": 0.009,
+        "1536x1024": 0.009
+      },
+      "medium": {
+        "1024x1024": 0.053,
+        "1024x1536": 0.08,
+        "1536x1024": 0.08
+      },
+      "high": {
+        "1024x1024": 0.211,
+        "1024x1536": 0.317,
+        "1536x1024": 0.317
+      },
+      "note": "OpenAI gpt-image-2 (2026). Per-image prices for 1024x1024 are sourced; portrait/landscape derived from token-output ratio."
+    },
+    "gpt-image-1": {
+      "low": {
+        "1024x1024": 0.011,
+        "1024x1536": 0.016,
+        "1536x1024": 0.016
+      },
+      "medium": {
+        "1024x1024": 0.042,
+        "1024x1536": 0.063,
+        "1536x1024": 0.063
+      },
+      "high": {
+        "1024x1024": 0.167,
+        "1024x1536": 0.25,
+        "1536x1024": 0.25
+      },
+      "note": "OpenAI gpt-image-1 (2025). Estimated per-image; refine with official pricing table."
+    },
+    "black-forest-labs/FLUX.2-pro": {
+      "standard": {
+        "1000000": 0.03
+      },
+      "note": "FLUX.2 [pro]: $0.03 base per ~1MP output; editing variants ~$0.045."
+    },
+    "black-forest-labs/FLUX.2-max": {
+      "standard": {
+        "1000000": 0.07
+      },
+      "note": "FLUX.2 [max]: $0.07 base per ~1MP output."
+    },
+    "black-forest-labs/FLUX.2-flex": {
+      "standard": {
+        "1000000": 0.06
+      },
+      "note": "FLUX.2 [flex]: $0.06 base per ~1MP output."
+    },
+    "black-forest-labs/FLUX.2-klein-4b": {
+      "standard": {
+        "1000000": 0.014
+      },
+      "note": "FLUX.2 [klein] 4B: first MP $0.014, additional MP $0.001."
+    },
+    "black-forest-labs/FLUX.2-klein-9b": {
+      "standard": {
+        "1000000": 0.015
+      },
+      "note": "FLUX.2 [klein] 9B: first MP $0.015, additional MP $0.001."
+    },
+    "black-forest-labs/FLUX.2-dev": {
+      "standard": {
+        "1000000": 0.0
+      },
+      "note": "FLUX.2 [dev]: free per BFL self-hosted license."
+    },
+    "gemini-3-pro-image-preview": {
+      "standard": {
+        "1024x1024": 0.134,
+        "2048x2048": 0.134,
+        "4096x4096": 0.24
+      },
+      "batch": {
+        "1024x1024": 0.067,
+        "2048x2048": 0.067,
+        "4096x4096": 0.12
+      },
+      "note": "Google Gemini 3 Pro Image Preview (alias: nano-banana-pro). Premium image gen."
     }
   },
   "audio": {
@@ -390,11 +548,11 @@
     "gpt-4o-mini-tts": 0.0025,
     "gpt-4o-transcribe": 0.0025,
     "whisper-1": 0.006,
-    "voxtral-mini-transcribe-v2": 0.00005,
-    "voxtral-mini-2602": 0.00005,
+    "voxtral-mini-transcribe-v2": 5e-05,
+    "voxtral-mini-2602": 5e-05,
     "voxtral-realtime": 0.0001,
     "voxtral-mini-transcribe-realtime-2602": 0.0001,
-    "mistral/voxtral-mini-transcribe-v2": 0.00005,
+    "mistral/voxtral-mini-transcribe-v2": 5e-05,
     "mistral/voxtral-realtime": 0.0001,
     "mistralai/Voxtral-Mini-4B-Realtime-2602": 0.0001,
     "gemini-2.5-flash-preview-tts": 0.00015,
@@ -818,17 +976,17 @@
     "gemini-3-pro-preview": {
       "promptPrice": 0.002,
       "completionPrice": 0.012,
-      "note": "Gemini 3 Pro Preview - \u2264200k tokens. >200k: $0.004/$0.018"
+      "note": "Gemini 3 Pro Preview - ≤200k tokens. >200k: $0.004/$0.018"
     },
     "gemini-3-pro": {
       "promptPrice": 0.002,
       "completionPrice": 0.012,
-      "note": "Gemini 3 Pro - \u2264200k tokens. >200k: $0.004/$0.018"
+      "note": "Gemini 3 Pro - ≤200k tokens. >200k: $0.004/$0.018"
     },
     "gemini-2.5-computer-use-preview": {
       "promptPrice": 0.00125,
       "completionPrice": 0.01,
-      "note": "Gemini 2.5 Computer Use Preview - \u2264200k tokens. >200k: $0.0025/$0.015"
+      "note": "Gemini 2.5 Computer Use Preview - ≤200k tokens. >200k: $0.0025/$0.015"
     },
     "gemini-robotics-er-1.5-preview": {
       "promptPrice": 0.0003,
@@ -1034,7 +1192,7 @@
     "qwen3-max-2025-09-23": {
       "promptPrice": 0.00084,
       "completionPrice": 0.00336,
-      "note": "Qwen3 Max snapshot (Sept 2025) - Tiered: \u00a50.006-0.015/1K tokens input, \u00a50.024-0.06/1K output"
+      "note": "Qwen3 Max snapshot (Sept 2025) - Tiered: ¥0.006-0.015/1K tokens input, ¥0.024-0.06/1K output"
     },
     "qwen-plus-2025-12-01": {
       "promptPrice": 0.0006,
@@ -3877,7 +4035,7 @@
       "note": "IBM Granite Docling 258M - free open-source document conversion model"
     },
     "deepseek-ai/DeepSeek-OCR-2": {
-      "promptPrice": 0.00003,
+      "promptPrice": 3e-05,
       "completionPrice": 0.0001,
       "note": "DeepSeek OCR 2 (Jan 2026) - open-source OCR model"
     },
@@ -4107,7 +4265,7 @@
       "note": "Google Gemma 4 E4B effective-4B edge model (~8B real) - native audio input, estimated"
     },
     "google/gemma-4-E2B": {
-      "promptPrice": 0.00005,
+      "promptPrice": 5e-05,
       "completionPrice": 0.0001,
       "note": "Google Gemma 4 E2B effective-2B edge model (~5.1B real) - native audio input, estimated"
     },
@@ -4127,7 +4285,7 @@
       "note": "Gemma 4 E4B - short-form alias"
     },
     "gemma-4-e2b": {
-      "promptPrice": 0.00005,
+      "promptPrice": 5e-05,
       "completionPrice": 0.0001,
       "note": "Gemma 4 E2B - short-form alias"
     },
@@ -4147,7 +4305,7 @@
       "note": "Gemma 4 E4B - Ollama tag"
     },
     "gemma4:e2b": {
-      "promptPrice": 0.00005,
+      "promptPrice": 5e-05,
       "completionPrice": 0.0001,
       "note": "Gemma 4 E2B - Ollama tag"
     },
@@ -4172,53 +4330,53 @@
       "note": "Sarvam-105B HuggingFace repo - Apache-2.0, free first-party API"
     },
     "LiquidAI/LFM2-24B-A2B": {
-      "promptPrice": 0.00003,
+      "promptPrice": 3e-05,
       "completionPrice": 0.00012,
       "note": "LiquidAI LFM2 24B MoE, 2B active (Feb 24, 2026) - per OpenRouter liquid/lfm-2-24b-a2b, 32K ctx"
     },
     "liquid/lfm-2-24b-a2b": {
-      "promptPrice": 0.00003,
+      "promptPrice": 3e-05,
       "completionPrice": 0.00012,
       "note": "LiquidAI LFM2-24B-A2B via OpenRouter"
     },
     "liquid/lfm-2-24b-a2b-20260224": {
-      "promptPrice": 0.00003,
+      "promptPrice": 3e-05,
       "completionPrice": 0.00012,
       "note": "LiquidAI LFM2-24B-A2B dated snapshot (Feb 24, 2026) via OpenRouter"
     },
     "lfm2-24b-a2b": {
-      "promptPrice": 0.00003,
+      "promptPrice": 3e-05,
       "completionPrice": 0.00012,
       "note": "LiquidAI LFM2-24B-A2B - short-form alias"
     },
     "lfm2:24b-a2b": {
-      "promptPrice": 0.00003,
+      "promptPrice": 3e-05,
       "completionPrice": 0.00012,
       "note": "LiquidAI LFM2-24B-A2B - Ollama/GGUF tag"
     },
     "LiquidAI/LFM2.5-350M": {
-      "promptPrice": 0.00003,
-      "completionPrice": 0.00003,
+      "promptPrice": 3e-05,
+      "completionPrice": 3e-05,
       "note": "LiquidAI LFM2.5-350M instruct (Mar 31, 2026) - edge/on-device, self-host only, estimated"
     },
     "LiquidAI/LFM2.5-350M-Base": {
-      "promptPrice": 0.00003,
-      "completionPrice": 0.00003,
+      "promptPrice": 3e-05,
+      "completionPrice": 3e-05,
       "note": "LiquidAI LFM2.5-350M base - estimated"
     },
     "LiquidAI/LFM2.5-350M-GGUF": {
-      "promptPrice": 0.00003,
-      "completionPrice": 0.00003,
+      "promptPrice": 3e-05,
+      "completionPrice": 3e-05,
       "note": "LiquidAI LFM2.5-350M GGUF quant - estimated"
     },
     "lfm2.5-350m": {
-      "promptPrice": 0.00003,
-      "completionPrice": 0.00003,
+      "promptPrice": 3e-05,
+      "completionPrice": 3e-05,
       "note": "LiquidAI LFM2.5-350M - short-form alias"
     },
     "lfm2.5:350m": {
-      "promptPrice": 0.00003,
-      "completionPrice": 0.00003,
+      "promptPrice": 3e-05,
+      "completionPrice": 3e-05,
       "note": "LiquidAI LFM2.5-350M - Ollama tag"
     }
   },
@@ -4279,52 +4437,52 @@
       "note": "Sarvam AI - sarvam-m chat model (free tier)"
     },
     "sarvam-translate:v1": {
-      "promptPrice": 0.000024,
-      "completionPrice": 0.000024,
+      "promptPrice": 2.4e-05,
+      "completionPrice": 2.4e-05,
       "note": "Sarvam AI - Translation (22 Indic languages, ~INR 20/10K chars)"
     },
     "mayura:v1": {
-      "promptPrice": 0.000024,
-      "completionPrice": 0.000024,
+      "promptPrice": 2.4e-05,
+      "completionPrice": 2.4e-05,
       "note": "Sarvam AI - Mayura translation model (12 languages, ~INR 20/10K chars)"
     },
     "saarika:v2.5": {
-      "promptPrice": 0.000036,
+      "promptPrice": 3.6e-05,
       "completionPrice": 0.0,
       "note": "Sarvam AI - Speech-to-text (~INR 30/hour of audio)"
     },
     "saaras:v2.5": {
-      "promptPrice": 0.000036,
+      "promptPrice": 3.6e-05,
       "completionPrice": 0.0,
       "note": "Sarvam AI - Speech-to-text + translate (~INR 30/hour of audio)"
     },
     "bulbul-v3": {
-      "promptPrice": 0.000036,
+      "promptPrice": 3.6e-05,
       "completionPrice": 0.0,
       "note": "Sarvam AI - Text-to-speech Bulbul V3 (~INR 30/10K chars)"
     },
     "bulbul-v2": {
-      "promptPrice": 0.000018,
+      "promptPrice": 1.8e-05,
       "completionPrice": 0.0,
       "note": "Sarvam AI - Text-to-speech Bulbul V2 (~INR 15/10K chars)"
     },
     "saarika:v2.5-diarization": {
-      "promptPrice": 0.000054,
+      "promptPrice": 5.4e-05,
       "completionPrice": 0.0,
       "note": "Sarvam AI - STT + Diarization (~INR 45/hour of audio)"
     },
     "saaras:v2.5-diarization": {
-      "promptPrice": 0.000054,
+      "promptPrice": 5.4e-05,
       "completionPrice": 0.0,
       "note": "Sarvam AI - STT + Translate + Diarization (~INR 45/hour of audio)"
     },
     "sarvam-transliterate": {
-      "promptPrice": 0.000024,
+      "promptPrice": 2.4e-05,
       "completionPrice": 0.0,
       "note": "Sarvam AI - Transliteration (~INR 20/10K chars)"
     },
     "sarvam-detect-language": {
-      "promptPrice": 0.0000042,
+      "promptPrice": 4.2e-06,
       "completionPrice": 0.0,
       "note": "Sarvam AI - Language identification (~INR 3.50/10K chars)"
     },
@@ -4389,13 +4547,13 @@
       "note": "OpenRouter - Llama 3 70B Instruct"
     },
     "meta-llama/llama-3-8b-instruct": {
-      "promptPrice": 0.00005,
-      "completionPrice": 0.00005,
+      "promptPrice": 5e-05,
+      "completionPrice": 5e-05,
       "note": "OpenRouter - Llama 3 8B Instruct"
     },
     "mistralai/mistral-7b-instruct": {
-      "promptPrice": 0.00006,
-      "completionPrice": 0.00006,
+      "promptPrice": 6e-05,
+      "completionPrice": 6e-05,
       "note": "OpenRouter - Mistral 7B Instruct"
     },
     "mistralai/mixtral-8x7b-instruct": {

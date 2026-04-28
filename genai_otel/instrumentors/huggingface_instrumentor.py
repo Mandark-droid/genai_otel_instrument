@@ -151,7 +151,28 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                                     1, {"model": model, "provider": "huggingface"}
                                 )
 
+                            import time as _time
+
+                            start_time = _time.time()
                             result = self._original_pipe(*call_args, **call_kwargs)
+                            duration = _time.time() - start_time
+
+                            # Best-effort token usage estimation for non-text-only
+                            # pipelines. Token usage flowing through here makes
+                            # cost calculation work for vision / audio tasks.
+                            try:
+                                instrumentor._record_pipeline_usage_and_cost(
+                                    span=span,
+                                    task=str(task),
+                                    model=str(model),
+                                    call_args=call_args,
+                                    call_kwargs=call_kwargs,
+                                    result=result,
+                                    duration=duration,
+                                    pipe=self._original_pipe,
+                                )
+                            except Exception as e:  # noqa: BLE001
+                                logger.debug("HF pipeline usage/cost recording failed: %s", e)
 
                             # End span manually
                             span.end()
@@ -419,6 +440,96 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
             logger.debug(f"Could not import model classes for instrumentation: {e}")
         except Exception as e:
             raise  # Re-raise to be caught by instrument() method
+
+    def _record_pipeline_usage_and_cost(
+        self,
+        span,
+        task: str,
+        model: str,
+        call_args,
+        call_kwargs,
+        result,
+        duration: float,
+        pipe,
+    ):
+        """Estimate prompt / completion tokens for the pipeline call and emit
+        usage attributes + cost. No-op when nothing can be estimated.
+
+        Delegates the actual estimation to ``genai_otel.cost_estimation`` so
+        external callers (e.g. tracesense's custom providers that bypass
+        ``transformers.pipeline``) can reuse the same logic.
+        """
+        from .. import cost_estimation as _ce  # local import keeps deps lazy
+
+        usage = _ce.estimate_pipeline_usage(
+            task=task,
+            args=call_args,
+            kwargs=call_kwargs,
+            result=result,
+            pipe=pipe,
+        )
+        if not usage:
+            return
+
+        prompt_tokens = usage["prompt_tokens"]
+        completion_tokens = usage["completion_tokens"]
+        total_tokens = usage["total_tokens"]
+        image_count = usage.get("image_count", 0)
+        a_seconds = usage.get("audio_seconds", 0.0)
+
+        try:
+            if image_count:
+                span.set_attribute("gen_ai.usage.image_count", int(image_count))
+            if a_seconds and a_seconds > 0:
+                span.set_attribute("gen_ai.usage.audio_seconds", float(a_seconds))
+            if prompt_tokens:
+                span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
+            if completion_tokens:
+                span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
+            if total_tokens:
+                span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))
+            span.set_attribute("gen_ai.usage.token_count_estimated", True)
+        except Exception:  # noqa: BLE001
+            pass
+
+        # Metrics
+        try:
+            if self.token_counter:
+                if prompt_tokens:
+                    self.token_counter.add(
+                        prompt_tokens, {"token_type": "prompt", "operation": "huggingface.pipeline"}
+                    )
+                if completion_tokens:
+                    self.token_counter.add(
+                        completion_tokens,
+                        {"token_type": "completion", "operation": "huggingface.pipeline"},
+                    )
+            if self.latency_histogram:
+                self.latency_histogram.record(duration, {"operation": "huggingface.pipeline"})
+        except Exception:  # noqa: BLE001
+            pass
+
+        # Cost
+        try:
+            if self.config and self.config.enable_cost_tracking and total_tokens > 0:
+                usage = {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": total_tokens,
+                }
+                costs = self.cost_calculator.calculate_granular_cost(
+                    model=model, usage=usage, call_type="chat"
+                )
+                if costs.get("total", 0) > 0:
+                    if self.cost_counter:
+                        self.cost_counter.add(costs["total"], {"model": model})
+                    span.set_attribute("gen_ai.usage.cost.total", costs["total"])
+                    if costs.get("prompt", 0) > 0:
+                        span.set_attribute("gen_ai.usage.cost.prompt", costs["prompt"])
+                    if costs.get("completion", 0) > 0:
+                        span.set_attribute("gen_ai.usage.cost.completion", costs["completion"])
+        except Exception as e:  # noqa: BLE001
+            logger.debug("HF pipeline cost calculation failed: %s", e)
 
     def _extract_inference_client_attributes(self, instance, args, kwargs) -> Dict[str, str]:
         """Extract attributes from Inference API call."""

@@ -338,7 +338,9 @@ def test_record_result_metrics_success(instrumentor):
     )
     inst.cost_counter.add.assert_called_once_with(0.01, {"model": "test_model"})
     inst.latency_histogram.record.assert_called_once()
-    assert mock_span.set_attribute.call_count == 3
+    # 4 attributes: prompt_tokens, completion_tokens, total_tokens, cost.total
+    # (cost.total is now set for non-chat call_types too — previously dropped).
+    assert mock_span.set_attribute.call_count == 4
 
 
 def test_record_result_metrics_with_errors(instrumentor, caplog):
@@ -350,6 +352,44 @@ def test_record_result_metrics_with_errors(instrumentor, caplog):
     inst._record_result_metrics(mock_span, result, time.time() - 1)
 
     assert "Failed to extract or record usage metrics" in caplog.text
+
+
+def test_record_result_metrics_non_chat_sets_cost_attribute(instrumentor):
+    """Non-chat call types (image, audio, embedding) must also set
+    `gen_ai.usage.cost.total` on the span — previously cost was added to the
+    counter but never surfaced as a span attribute, so backends couldn't
+    aggregate cost for image-gen / audio / embedding spans.
+    """
+    inst, mock_span = instrumentor
+    # Make the span report a non-chat call type.
+    mock_span.attributes.get.side_effect = lambda key, default=None: {
+        "gen_ai.request.model": "dall-e-3",
+        "gen_ai.request.type": "image",
+    }.get(key, default)
+
+    inst.cost_calculator = MagicMock()
+    inst.cost_calculator.calculate_cost.return_value = 0.04
+    inst.cost_calculator.calculate_granular_cost.return_value = {
+        "total": 0.0,
+        "prompt": 0.0,
+        "completion": 0.0,
+        "reasoning": 0.0,
+        "cache_read": 0.0,
+        "cache_write": 0.0,
+    }
+
+    # Need positive token counts so the usage block runs.
+    result = {"usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10}}
+    inst._record_result_metrics(mock_span, result, time.time() - 0.1)
+
+    set_attr_calls = [
+        c
+        for c in mock_span.set_attribute.call_args_list
+        if c.args and c.args[0] == "gen_ai.usage.cost.total"
+    ]
+    assert set_attr_calls, "expected gen_ai.usage.cost.total to be set for non-chat call_type"
+    assert set_attr_calls[-1].args[1] == 0.04
+    inst.cost_counter.add.assert_called_with(0.04, {"model": "dall-e-3"})
 
 
 # --- Tests for instrumentation disabled ---

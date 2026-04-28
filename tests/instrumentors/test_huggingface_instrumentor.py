@@ -433,5 +433,100 @@ class TestHuggingFaceInstrumentor(unittest.TestCase):
 # are correctly captured in Jaeger traces for HuggingFace spans.
 
 
+class TestHuggingFacePipelineUsageEstimation(unittest.TestCase):
+    """Token / cost estimation for non-text-only transformers pipelines."""
+
+    def setUp(self):
+        self.instrumentor = HuggingFaceInstrumentor()
+        self.instrumentor.config = MagicMock()
+        self.instrumentor.config.enable_cost_tracking = True
+        self.instrumentor.cost_calculator = MagicMock()
+        self.instrumentor.cost_calculator.calculate_granular_cost = MagicMock(
+            return_value={"total": 0.0, "prompt": 0.0, "completion": 0.0}
+        )
+        self.instrumentor.token_counter = MagicMock()
+        self.instrumentor.cost_counter = MagicMock()
+        self.instrumentor.latency_histogram = MagicMock()
+        self.span = MagicMock()
+        self.span.set_attribute = MagicMock()
+
+    def _attrs_set(self):
+        return {c.args[0]: c.args[1] for c in self.span.set_attribute.call_args_list}
+
+    # Helpers (count_images, audio_seconds, coerce_text, etc.) live in the
+    # public `genai_otel.cost_estimation` module — see tests/test_cost_estimation.py
+    # for unit tests. The tests below are integration-style: they exercise
+    # `_record_pipeline_usage_and_cost` end-to-end.
+
+    def test_record_pipeline_usage_text_to_text(self):
+        self.instrumentor._record_pipeline_usage_and_cost(
+            span=self.span,
+            task="summarization",
+            model="t5-base",
+            call_args=("a" * 400,),
+            call_kwargs={},
+            result=[{"summary_text": "b" * 40}],
+            duration=0.1,
+            pipe=MagicMock(),
+        )
+        attrs = self._attrs_set()
+        self.assertEqual(attrs["gen_ai.usage.prompt_tokens"], 100)
+        self.assertEqual(attrs["gen_ai.usage.completion_tokens"], 10)
+        self.assertEqual(attrs["gen_ai.usage.total_tokens"], 110)
+        self.assertTrue(attrs["gen_ai.usage.token_count_estimated"])
+
+    def test_record_pipeline_usage_image_text_to_text(self):
+        class _PIL:
+            size = (224, 224)
+            mode = "RGB"
+
+        self.instrumentor._record_pipeline_usage_and_cost(
+            span=self.span,
+            task="image-text-to-text",
+            model="Qwen/Qwen3-VL-2B-Instruct",
+            call_args=(),
+            call_kwargs={"images": [_PIL()], "inputs": "describe"},
+            result=[{"generated_text": "a cat"}],
+            duration=0.5,
+            pipe=MagicMock(),
+        )
+        attrs = self._attrs_set()
+        self.assertEqual(attrs["gen_ai.usage.image_count"], 1)
+        self.assertEqual(attrs["gen_ai.usage.prompt_tokens"], 258)
+        self.assertEqual(attrs["gen_ai.usage.completion_tokens"], 2)
+        self.assertTrue(attrs["gen_ai.usage.token_count_estimated"])
+
+    def test_record_pipeline_usage_asr(self):
+        pipe = MagicMock()
+        pipe.feature_extractor.sampling_rate = 16000
+        self.instrumentor._record_pipeline_usage_and_cost(
+            span=self.span,
+            task="automatic-speech-recognition",
+            model="openai/whisper-tiny",
+            call_args=({"array": list(range(16000 * 3)), "sampling_rate": 16000},),
+            call_kwargs={},
+            result={"text": "hello world"},
+            duration=0.3,
+            pipe=pipe,
+        )
+        attrs = self._attrs_set()
+        self.assertAlmostEqual(attrs["gen_ai.usage.audio_seconds"], 3.0)
+        self.assertEqual(attrs["gen_ai.usage.prompt_tokens"], 150)
+        self.assertEqual(attrs["gen_ai.usage.completion_tokens"], 3)
+
+    def test_record_pipeline_usage_no_input_no_output(self):
+        self.instrumentor._record_pipeline_usage_and_cost(
+            span=self.span,
+            task="image-classification",
+            model="m",
+            call_args=(),
+            call_kwargs={},
+            result=None,
+            duration=0.0,
+            pipe=MagicMock(),
+        )
+        self.assertFalse(self.span.set_attribute.called)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
