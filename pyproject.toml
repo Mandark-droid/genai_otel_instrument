@@ -330,7 +330,12 @@ dev = [
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
     "pytest-asyncio>=0.21.0",
-    "black>=26.3.1",
+    # Patched version (GHSA-3936-cmfr-pm3m) requires Python 3.10+; keep
+    # 3.9 dev environments on the latest 3.9-compatible release. Black is
+    # dev-only and not in the published wheel, so the residual exposure
+    # on 3.9 dev machines is acceptable.
+    "black>=26.3.1; python_version >= '3.10'",
+    "black>=25.11.0,<26; python_version < '3.10'",
     "isort>=5.12.0",
     "pylint>=2.17.0",
     "mypy>=1.0.0",
