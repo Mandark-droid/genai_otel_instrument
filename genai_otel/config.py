@@ -304,6 +304,47 @@ class OTelConfig:
         default_factory=lambda: float(os.getenv("GENAI_HALLUCINATION_THRESHOLD", "0.6"))
     )
 
+    # Multimodal Observability (v1.0.0)
+    # Capture mode controls whether multimodal content (images, audio, documents)
+    # is captured at all. Defaults to "off" for safety / BFSI compliance.
+    # - "off": no multimodal attributes emitted
+    # - "reference_only": modality + MIME + byte_size captured; bytes NOT stored
+    # - "full": redact -> upload to configured store -> reference by URI
+    media_capture_mode: str = field(
+        default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_CAPTURE_MODE", "off")
+    )
+    media_store: str = field(
+        default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_STORE", "none")
+    )  # none | filesystem | s3 | minio | http
+    media_store_endpoint: Optional[str] = field(
+        default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_STORE_ENDPOINT")
+    )
+    media_store_bucket: str = field(
+        default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_STORE_BUCKET", "genai-otel-media")
+    )
+    media_store_prefix: str = field(
+        default_factory=lambda: os.getenv(
+            "GENAI_OTEL_MEDIA_STORE_PREFIX", "traces/{date}/{trace_id}/"
+        )
+    )
+    media_store_access_key: Optional[str] = field(
+        default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_STORE_ACCESS_KEY")
+    )
+    media_store_secret_key: Optional[str] = field(
+        default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_STORE_SECRET_KEY")
+    )
+    media_max_bytes: int = field(
+        default_factory=lambda: int(os.getenv("GENAI_OTEL_MEDIA_MAX_BYTES", str(10 * 1024 * 1024)))
+    )  # 10 MiB
+    media_allowed_modalities: str = field(
+        default_factory=lambda: os.getenv(
+            "GENAI_OTEL_MEDIA_ALLOWED_MODALITIES", "image,audio,video,document"
+        )
+    )
+    media_redactor: Optional[str] = field(
+        default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_REDACTOR")
+    )  # dotted path to callable
+
     # Session and user tracking (Phase 4.1)
     # Optional callable functions to extract session_id and user_id from requests
     # Signature: (instance, args, kwargs) -> Optional[str]

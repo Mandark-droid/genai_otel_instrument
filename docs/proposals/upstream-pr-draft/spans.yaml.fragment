@@ -1,0 +1,27 @@
+# In model/gen-ai/spans.yaml, find the existing `gen_ai.client` (or equivalent)
+# group and add the following references under its `attributes` list. These are
+# `recommended` so emitters opt in via OTEL_SEMCONV_STABILITY_OPT_IN; default
+# behaviour for emitters that don't recognize multimodal parts is unchanged.
+
+      - ref: gen_ai.prompt.role
+        requirement_level: recommended
+      - ref: gen_ai.prompt.content.type
+        requirement_level: recommended
+      - ref: gen_ai.prompt.content.text
+        requirement_level:
+          conditionally_required: when content type is `text`
+      - ref: gen_ai.prompt.content.media_uri
+        requirement_level:
+          conditionally_required: when content type is non-text and bytes captured
+      - ref: gen_ai.prompt.content.media_mime_type
+        requirement_level:
+          conditionally_required: when content type is non-text
+      - ref: gen_ai.prompt.content.media_byte_size
+        requirement_level:
+          conditionally_required: when content type is non-text
+      - ref: gen_ai.prompt.content.media_source
+        requirement_level:
+          conditionally_required: when content type is non-text
+      - ref: gen_ai.media.stripped_reason
+        requirement_level:
+          conditionally_required: when bytes were intentionally not captured

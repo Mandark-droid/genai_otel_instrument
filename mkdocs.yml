@@ -82,12 +82,14 @@ nav:
     - Cost Tracking: guides/cost-tracking.md
     - GPU Metrics & CO2: guides/gpu-metrics.md
     - Evaluation & Safety: guides/evaluation.md
+    - Multimodal Observability: guides/multimodal.md
     - Sarvam AI: guides/sarvam-ai.md
   - Reference:
     - Performance Tuning: reference/performance-tuning.md
     - Python Compatibility: reference/python-compatibility.md
     - Server Metrics: reference/server-metrics.md
     - Semantic Conventions: reference/semantic-conventions.md
+    - Multimodal Proposal (OTel): proposals/otel_genai_multimodal_content_parts.md
   - Community:
     - Contributing: community/contributing.md
     - Changelog: community/changelog.md

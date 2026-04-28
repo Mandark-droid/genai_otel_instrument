@@ -25,6 +25,8 @@ class GoogleAIInstrumentor(BaseInstrumentor):
     - New SDK: google-genai (pip install google-genai)
     """
 
+    MEDIA_PROVIDER = "google"
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()

@@ -1,0 +1,147 @@
+# Append the following attributes inside the existing
+# `groups[id=registry.gen_ai].attributes` list in
+# model/gen-ai/registry.yaml.
+
+      # ---- Multimodal content parts (#3672) ----
+
+      - id: gen_ai.prompt.role
+        stability: development
+        type: string
+        brief: >
+          The role of the message author for the n-th input message.
+        examples: ["user", "system", "assistant", "tool"]
+        note: >
+          Used as the `gen_ai.prompt.{n}.role` attribute family on spans, where
+          `{n}` is the zero-based index of the message in the prompt.
+
+      - id: gen_ai.prompt.content.type
+        stability: development
+        type:
+          members:
+            - id: text
+              stability: development
+              value: "text"
+              brief: 'Plain text content'
+            - id: image
+              stability: development
+              value: "image"
+              brief: 'A static image (PNG, JPEG, WebP, etc.)'
+            - id: audio
+              stability: development
+              value: "audio"
+              brief: 'An audio clip (WAV, MP3, OGG, etc.)'
+            - id: video
+              stability: development
+              value: "video"
+              brief: 'A video clip (MP4, WebM, MOV, etc.)'
+            - id: document
+              stability: development
+              value: "document"
+              brief: 'A document (PDF, DOCX, etc.)'
+        brief: >
+          The kind of content carried by the m-th part of the n-th input message.
+        note: >
+          Emitted on spans as `gen_ai.prompt.{n}.content.{m}.type`.
+
+      - id: gen_ai.prompt.content.text
+        stability: development
+        type: string
+        brief: >
+          The text content of a content part of `type=text`.
+        examples: ["Describe this image."]
+        note: >
+          Emitted on spans as `gen_ai.prompt.{n}.content.{m}.text`. Only
+          present when the content part type is `text`.
+
+      - id: gen_ai.prompt.content.media_uri
+        stability: development
+        type: string
+        brief: >
+          A URI from which the bytes of the multimodal content part can be retrieved.
+        examples: ["s3://bucket/key", "https://gateway/uuid"]
+        note: >
+          Emitted on spans as `gen_ai.prompt.{n}.content.{m}.media_uri`. Only
+          present when the content part type is non-text and bytes have been
+          captured (either offloaded by the instrumentor or referenced
+          externally by the caller).
+
+      - id: gen_ai.prompt.content.media_mime_type
+        stability: development
+        type: string
+        brief: >
+          The IANA MIME type of a non-text content part.
+        examples: ["image/png", "audio/wav", "video/mp4", "application/pdf"]
+        note: >
+          Emitted on spans as `gen_ai.prompt.{n}.content.{m}.media_mime_type`.
+
+      - id: gen_ai.prompt.content.media_byte_size
+        stability: development
+        type: int
+        brief: >
+          The size in bytes of a non-text content part as observed by the
+          instrumentor at capture time.
+        examples: [123456]
+        note: >
+          Emitted on spans as `gen_ai.prompt.{n}.content.{m}.media_byte_size`.
+
+      - id: gen_ai.prompt.content.media_source
+        stability: development
+        type:
+          members:
+            - id: inline_offloaded
+              stability: development
+              value: "inline_offloaded"
+              brief: >
+                The caller sent bytes inline (e.g. base64) and the
+                instrumentor uploaded them to a configured store.
+                `media_uri` resolves to that copy.
+            - id: external_url
+              stability: development
+              value: "external_url"
+              brief: >
+                The caller already provided a URL the model fetched directly;
+                the instrumentor did not re-host it. `media_uri` is the
+                original URL.
+            - id: reference_only
+              stability: development
+              value: "reference_only"
+              brief: >
+                Bytes were detected but intentionally not stored
+                (compliance / cost). Only modality, MIME type, and size are
+                recorded.
+        brief: >
+          The provenance of a non-text content part as captured by the instrumentor.
+
+      - id: gen_ai.media.stripped_reason
+        stability: development
+        type:
+          members:
+            - id: size_exceeded
+              stability: development
+              value: "size_exceeded"
+              brief: 'The part exceeded the configured maximum byte size.'
+            - id: modality_not_allowed
+              stability: development
+              value: "modality_not_allowed"
+              brief: 'The instrumentor was configured to skip this modality.'
+            - id: redactor_error
+              stability: development
+              value: "redactor_error"
+              brief: 'The configured redactor raised; bytes were dropped fail-closed.'
+            - id: upload_error
+              stability: development
+              value: "upload_error"
+              brief: 'Upload to the configured store failed; bytes were dropped.'
+            - id: no_data_or_store
+              stability: development
+              value: "no_data_or_store"
+              brief: 'Capture was requested in `full` mode but no store / no bytes were available.'
+        brief: >
+          Reason why the bytes of a non-text content part were intentionally
+          not captured. Set on the span when at least one part was stripped.
+
+      # The same six attributes also exist mirrored under `gen_ai.completion.*`
+      # for generated content parts (image generation, TTS output, etc.).
+      # We only enumerate `gen_ai.prompt.*` here because the registry uses one
+      # ID per attribute family; the `completion.*` variant is documented in
+      # docs/gen-ai/gen-ai-spans.md and shares the same enum members.

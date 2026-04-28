@@ -25,6 +25,24 @@ class SemanticConvention:
     DB_CLIENT_OPERATION_DURATION = "db.client.operation.duration"
     DB_REQUESTS = "db.requests"
 
+    # GenAI multimodal content-part attributes (additive; not yet in upstream OTel
+    # semconv as of April 2026). Templates take .format(n=<msg_idx>, m=<part_idx>).
+    GEN_AI_PROMPT_ROLE = "gen_ai.prompt.{n}.role"
+    GEN_AI_PROMPT_CONTENT_TYPE = "gen_ai.prompt.{n}.content.{m}.type"
+    GEN_AI_PROMPT_CONTENT_TEXT = "gen_ai.prompt.{n}.content.{m}.text"
+    GEN_AI_PROMPT_CONTENT_MEDIA_URI = "gen_ai.prompt.{n}.content.{m}.media_uri"
+    GEN_AI_PROMPT_CONTENT_MEDIA_MIME = "gen_ai.prompt.{n}.content.{m}.media_mime_type"
+    GEN_AI_PROMPT_CONTENT_MEDIA_BYTES = "gen_ai.prompt.{n}.content.{m}.media_byte_size"
+    GEN_AI_PROMPT_CONTENT_MEDIA_SOURCE = "gen_ai.prompt.{n}.content.{m}.media_source"
+    GEN_AI_COMPLETION_ROLE = "gen_ai.completion.{n}.role"
+    GEN_AI_COMPLETION_CONTENT_TYPE = "gen_ai.completion.{n}.content.{m}.type"
+    GEN_AI_COMPLETION_CONTENT_TEXT = "gen_ai.completion.{n}.content.{m}.text"
+    GEN_AI_COMPLETION_CONTENT_MEDIA_URI = "gen_ai.completion.{n}.content.{m}.media_uri"
+    GEN_AI_COMPLETION_CONTENT_MEDIA_MIME = "gen_ai.completion.{n}.content.{m}.media_mime_type"
+    GEN_AI_COMPLETION_CONTENT_MEDIA_BYTES = "gen_ai.completion.{n}.content.{m}.media_byte_size"
+    GEN_AI_COMPLETION_CONTENT_MEDIA_SOURCE = "gen_ai.completion.{n}.content.{m}.media_source"
+    GEN_AI_MEDIA_STRIPPED_REASON = "gen_ai.media.stripped_reason"
+
     # MCP metrics
     MCP_REQUESTS = "mcp.requests"
     MCP_CLIENT_OPERATION_DURATION_METRIC = "mcp.client.operation.duration"

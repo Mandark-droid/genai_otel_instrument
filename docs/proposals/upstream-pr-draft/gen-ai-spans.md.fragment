@@ -1,0 +1,61 @@
+<!--
+Insert this section into docs/gen-ai/gen-ai-spans.md after the existing
+"GenAI attributes" overview and before the per-system sections.
+-->
+
+## Multimodal content parts
+
+GenAI requests increasingly carry non-text content — images, audio clips, video,
+and documents — alongside text. To represent these on spans without inlining
+binary data, this convention defines a per-part attribute family with offload
+support.
+
+> **Status:** development. The attributes below are additive; emitters that
+> don't recognize them MUST NOT fail. Existing text-only traces produce
+> byte-identical attributes to releases prior to this addition.
+
+For a request with `N` messages, each carrying `M` content parts, an emitter
+SHOULD set:
+
+| Attribute | Type | Description |
+|---|---|---|
+| [`gen_ai.prompt.{n}.role`](/docs/attributes-registry/gen-ai.md#gen_ai-prompt-role) | string | Role of the n-th message author. |
+| [`gen_ai.prompt.{n}.content.{m}.type`](/docs/attributes-registry/gen-ai.md#gen_ai-prompt-content-type) | enum | One of `text`, `image`, `audio`, `video`, `document`. |
+| [`gen_ai.prompt.{n}.content.{m}.text`](/docs/attributes-registry/gen-ai.md#gen_ai-prompt-content-text) | string | Text payload (only when `type=text`). |
+| [`gen_ai.prompt.{n}.content.{m}.media_uri`](/docs/attributes-registry/gen-ai.md#gen_ai-prompt-content-media_uri) | string | URI from which the bytes can be retrieved. |
+| [`gen_ai.prompt.{n}.content.{m}.media_mime_type`](/docs/attributes-registry/gen-ai.md#gen_ai-prompt-content-media_mime_type) | string | IANA MIME type of the part. |
+| [`gen_ai.prompt.{n}.content.{m}.media_byte_size`](/docs/attributes-registry/gen-ai.md#gen_ai-prompt-content-media_byte_size) | int | Size in bytes at capture time. |
+| [`gen_ai.prompt.{n}.content.{m}.media_source`](/docs/attributes-registry/gen-ai.md#gen_ai-prompt-content-media_source) | enum | `inline_offloaded`, `external_url`, or `reference_only`. |
+| [`gen_ai.media.stripped_reason`](/docs/attributes-registry/gen-ai.md#gen_ai-media-stripped_reason) | enum | Set on the span when at least one part's bytes were intentionally not captured. |
+
+The `gen_ai.completion.*` namespace mirrors the same attributes for generated
+content (e.g. an image generation result, a TTS audio response).
+
+### `media_source` semantics
+
+- `inline_offloaded` — The caller sent bytes inline (e.g. as a base64
+  payload). The instrumentor uploaded them to a configured object store and
+  `media_uri` resolves to that copy.
+- `external_url` — The caller already provided a URL the model fetched
+  directly. The instrumentor did not re-host it. `media_uri` is the original
+  URL exactly as supplied by the caller.
+- `reference_only` — Bytes were detected but intentionally not stored (for
+  compliance or cost reasons). Only the modality, MIME type, and byte size are
+  recorded.
+
+### Relationship to `gen_ai.input.messages`
+
+The structured opt-in `gen_ai.input.messages` blob and the flat per-part
+attributes are not redundant. The flat attributes are queryable in any OTel
+backend without JSON parsing (suitable for dashboards and alerting), while the
+JSON blob preserves arbitrary nesting and provider-specific fields the flat
+attributes don't model. Emitters MAY emit either or both, controlled by
+`OTEL_SEMCONV_STABILITY_OPT_IN` (existing dual-emission pattern).
+
+### Bytes never appear inline
+
+Binary content MUST NOT be encoded into span attribute values. Emitters that
+want to capture bytes MUST upload to a store the deployment owns and reference
+the result by URI in `media_uri`. This keeps span size predictable and avoids
+exfiltrating sensitive content into telemetry pipelines that are not configured
+to handle it.

@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Multimodal observability (v1.0 spec, Part A)** — first-class capture of image, audio, video, and document content parts on OpenAI, Anthropic, Google Gemini, and Groq spans. Defines the open standard for multimodal AI observability via an additive, OTel-compatible attribute namespace. Highlights:
+  - New attribute namespace: `gen_ai.prompt.{n}.content.{m}.{type, text, media_uri, media_mime_type, media_byte_size, media_source}` plus `gen_ai.completion.*` mirror and `gen_ai.media.stripped_reason`.
+  - Pluggable offload backends — `filesystem`, `s3`, `minio`, `http` — under `genai_otel/media/stores/`. Bytes never appear inline in span attributes.
+  - Built-in redactors: `exif_stripper`, `face_blur`, `pdf_pii_redact` (lazy-imported, `multimodal-{images,faces,pdf}` extras).
+  - New env vars: `GENAI_OTEL_MEDIA_CAPTURE_MODE` (default `off`), `GENAI_OTEL_MEDIA_STORE`, `GENAI_OTEL_MEDIA_STORE_{ENDPOINT,BUCKET,PREFIX,ACCESS_KEY,SECRET_KEY}`, `GENAI_OTEL_MEDIA_MAX_BYTES`, `GENAI_OTEL_MEDIA_ALLOWED_MODALITIES`, `GENAI_OTEL_MEDIA_REDACTOR`.
+  - Default `media_capture_mode=off` keeps text-only behaviour byte-identical for existing users.
+  - 41 new unit tests covering provider×modality detection matrix, offload pipeline gating, store backends, redactor graceful-degrade, and per-instrumentor wiring.
+  - Live MinIO integration test (skipped unless credentials provided).
+  - New examples under `examples/multimodal/` (vision, audio, document, face-blur).
+  - New docs: `docs/guides/multimodal.md`, `docs/proposals/otel_genai_multimodal_content_parts.md` (upstream OTel semconv proposal draft).
+  - New extras: `multimodal-images`, `multimodal-pdf`, `multimodal-faces`, `multimodal-s3`, umbrella `multimodal`.
+
 ## [1.0.5] - 2026-04-22
 
 ### Fixed

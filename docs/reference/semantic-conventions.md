@@ -61,3 +61,23 @@ See [GPU Metrics Guide](../guides/gpu-metrics.md) for the complete list.
 ### Evaluation Metrics
 
 See [Evaluation Guide](../guides/evaluation.md) for detector-specific metrics.
+
+### Multimodal Content-Part Attributes (v1.0.0)
+
+Emitted only when `GENAI_OTEL_MEDIA_CAPTURE_MODE` is set to `reference_only` or `full`.
+Default behaviour (`off`) emits nothing additional.
+
+| Attribute | Type | Notes |
+|---|---|---|
+| `gen_ai.prompt.{n}.role` | string | `user`, `system`, `assistant`, `tool` |
+| `gen_ai.prompt.{n}.content.{m}.type` | enum | `text` \| `image` \| `audio` \| `video` \| `document` |
+| `gen_ai.prompt.{n}.content.{m}.text` | string | text parts only |
+| `gen_ai.prompt.{n}.content.{m}.media_uri` | string | URI returned by the configured store |
+| `gen_ai.prompt.{n}.content.{m}.media_mime_type` | string | e.g. `image/png` |
+| `gen_ai.prompt.{n}.content.{m}.media_byte_size` | int | size of the captured payload |
+| `gen_ai.prompt.{n}.content.{m}.media_source` | enum | `inline_offloaded` \| `external_url` \| `reference_only` |
+| `gen_ai.completion.{n}.*` | — | mirror namespace for generated content |
+| `gen_ai.media.stripped_reason` | enum | `size_exceeded`, `modality_not_allowed`, `redactor_error`, `upload_error` |
+
+Not yet part of upstream OTel GenAI semconv. See
+[the proposal](../proposals/otel_genai_multimodal_content_parts.md) for the upstream contribution we plan to file.
