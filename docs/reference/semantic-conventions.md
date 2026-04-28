@@ -15,6 +15,9 @@ TraceVerde follows OpenTelemetry semantic conventions for GenAI with additional 
 | `gen_ai.usage.prompt_tokens` | int | Input token count |
 | `gen_ai.usage.completion_tokens` | int | Output token count |
 | `gen_ai.usage.total_tokens` | int | Total token count |
+| `gen_ai.usage.token_count_estimated` | bool | `true` when prompt/completion token counts came from a fallback estimate (e.g. multimodal Ollama responses lacking `prompt_eval_count`, or HuggingFace vision/audio pipelines that don't surface usage). Absent on spans whose tokens come from the provider response. |
+| `gen_ai.usage.image_count` | int | Number of input images counted by the instrumentor for multimodal calls (vision pipelines). |
+| `gen_ai.usage.audio_seconds` | float | Total input audio duration in seconds for ASR / audio pipelines. |
 | `gen_ai.cost.amount` | float | Estimated cost in USD |
 
 ### Cost Attributes
