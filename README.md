@@ -156,6 +156,31 @@ Crew Execution
               +-- ollama.chat (tokens: 890, cost: $0.00)
 ```
 
+### Multimodal Observability (v1.1.0)
+
+First-class capture of image, audio, video, and document content parts on
+OpenAI, Anthropic, Google Gemini, and Groq spans. Bytes are offloaded to your
+configured object store (MinIO / S3 / filesystem / HTTP) and referenced from
+spans by URI — they never appear inline in span attributes.
+
+```bash
+# Opt in (default is off — text-only behaviour is byte-identical to 1.0.x)
+export GENAI_OTEL_MEDIA_CAPTURE_MODE=full
+export GENAI_OTEL_MEDIA_STORE=minio
+export GENAI_OTEL_MEDIA_STORE_ENDPOINT=http://localhost:9000
+export GENAI_OTEL_MEDIA_STORE_ACCESS_KEY=...
+export GENAI_OTEL_MEDIA_STORE_SECRET_KEY=...
+# Optional: plug in a redactor before upload
+export GENAI_OTEL_MEDIA_REDACTOR=genai_otel.media.redactors.face_blur
+```
+
+Spans get a flat, queryable attribute namespace —
+`gen_ai.prompt.{n}.content.{m}.{type, media_uri, media_mime_type, media_byte_size, media_source}` —
+that is being proposed upstream to OpenTelemetry semantic-conventions
+([issue #3672](https://github.com/open-telemetry/semantic-conventions/issues/3672)).
+
+[Multimodal guide >>](https://mandark-droid.github.io/genai_otel_instrument/guides/multimodal/)
+
 ### Safety & Evaluation
 
 ```python
