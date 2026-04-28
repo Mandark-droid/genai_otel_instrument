@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 class OpenAIInstrumentor(BaseInstrumentor):
     """Instrumentor for OpenAI SDK"""
 
+    MEDIA_PROVIDER = "openai"
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()

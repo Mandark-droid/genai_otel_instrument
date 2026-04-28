@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 class AnthropicInstrumentor(BaseInstrumentor):
     """Instrumentor for Anthropic Claude SDK"""
 
+    MEDIA_PROVIDER = "anthropic"
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()

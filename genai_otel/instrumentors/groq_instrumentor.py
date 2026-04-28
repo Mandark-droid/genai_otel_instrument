@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 class GroqInstrumentor(BaseInstrumentor):
     """Instrumentor for Groq"""
 
+    MEDIA_PROVIDER = "groq"
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()

@@ -8,6 +8,22 @@ pip install genai-otel-instrument
 
 This installs the core library with OpenTelemetry SDK and basic instrumentation support.
 
+## Multimodal extras (v1.0.0)
+
+```bash
+# Everything for multimodal capture (Pillow + pypdf + opencv + boto3)
+pip install 'genai-otel-instrument[multimodal]'
+
+# Pick-and-mix
+pip install 'genai-otel-instrument[multimodal-images]'   # Pillow (EXIF stripping)
+pip install 'genai-otel-instrument[multimodal-pdf]'      # pypdf (PDF redaction)
+pip install 'genai-otel-instrument[multimodal-faces]'    # opencv (face blur)
+pip install 'genai-otel-instrument[multimodal-s3]'       # boto3 (S3/MinIO offload)
+```
+
+See the [Multimodal Observability guide](../guides/multimodal.md) for capture-mode
+configuration and the redactor / store backends.
+
 ## Optional Extras
 
 Install additional capabilities as needed:

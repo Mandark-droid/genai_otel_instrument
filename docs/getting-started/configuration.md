@@ -295,6 +295,26 @@ genai_otel.instrument(
 )
 ```
 
+## Multimodal Observability
+
+Capture image/audio/document content parts on spans. See the
+[Multimodal Observability guide](../guides/multimodal.md) for full details.
+
+| Env var | Default | Notes |
+|---|---|---|
+| `GENAI_OTEL_MEDIA_CAPTURE_MODE` | `off` | `off` \| `reference_only` \| `full` |
+| `GENAI_OTEL_MEDIA_STORE` | `none` | `none` \| `filesystem` \| `s3` \| `minio` \| `http` |
+| `GENAI_OTEL_MEDIA_STORE_ENDPOINT` | — | URL or local path |
+| `GENAI_OTEL_MEDIA_STORE_BUCKET` | `genai-otel-media` | |
+| `GENAI_OTEL_MEDIA_STORE_PREFIX` | `traces/{date}/{trace_id}/` | template |
+| `GENAI_OTEL_MEDIA_STORE_ACCESS_KEY` | — | for s3/minio |
+| `GENAI_OTEL_MEDIA_STORE_SECRET_KEY` | — | for s3/minio |
+| `GENAI_OTEL_MEDIA_MAX_BYTES` | `10485760` (10 MiB) | per-blob cap |
+| `GENAI_OTEL_MEDIA_ALLOWED_MODALITIES` | `image,audio,video,document` | comma-separated |
+| `GENAI_OTEL_MEDIA_REDACTOR` | — | dotted path to callable applied before upload |
+
+The default `off` keeps text-only behaviour byte-identical with pre-1.0.0.
+
 ## Session and User Tracking
 
 For programmatic session/user tracking, provide extractor callables:
