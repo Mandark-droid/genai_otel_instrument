@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Pricing for newly released models** — `genai_otel/llm_pricing.json` now covers:
+  - **OpenAI GPT-5.5** (Apr 2026) — input $5/1M, output $30/1M
+  - **DeepSeek V4 Flash** — input $0.14/1M, output $0.28/1M
+  - **DeepSeek V4 Pro** — input $0.435/1M, output $0.87/1M (75% promotional rate until 2026-05-31; standard $1.74/$3.48 per 1M)
 - **Multimodal observability** — first-class capture of image, audio, video, and document content parts on OpenAI, Anthropic, Google Gemini, and Groq spans. Defines the open standard for multimodal AI observability via an additive, OTel-compatible attribute namespace. Highlights:
   - New attribute namespace: `gen_ai.prompt.{n}.content.{m}.{type, text, media_uri, media_mime_type, media_byte_size, media_source}` plus `gen_ai.completion.*` mirror and `gen_ai.media.stripped_reason`.
   - Pluggable offload backends — `filesystem`, `s3`, `minio`, `http` — under `genai_otel/media/stores/`. Bytes never appear inline in span attributes.

@@ -1400,6 +1400,26 @@
       "promptPrice": 0.00056,
       "completionPrice": 0.00168
     },
+    "deepseek-v4-flash": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "note": "DeepSeek V4 Flash - input $0.14/1M, output $0.28/1M (cache miss). Source: api-docs.deepseek.com/quick_start/pricing"
+    },
+    "deepseek/v4-flash": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "note": "Alias for deepseek-v4-flash"
+    },
+    "deepseek-v4-pro": {
+      "promptPrice": 0.000435,
+      "completionPrice": 0.00087,
+      "note": "DeepSeek V4 Pro (75% promotional discount until 2026-05-31). Standard rate: $1.74/1M input, $3.48/1M output. Source: api-docs.deepseek.com/quick_start/pricing"
+    },
+    "deepseek/v4-pro": {
+      "promptPrice": 0.000435,
+      "completionPrice": 0.00087,
+      "note": "Alias for deepseek-v4-pro"
+    },
     "sarvam-m": {
       "promptPrice": 0,
       "completionPrice": 0
@@ -3895,6 +3915,11 @@
       "promptPrice": 0.0025,
       "completionPrice": 0.015,
       "note": "OpenAI GPT-5.4 (Mar 2026) - flagship, cached input $0.25/1M"
+    },
+    "gpt-5.5": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.03,
+      "note": "OpenAI GPT-5.5 (Apr 2026) - input $5/1M, output $30/1M"
     },
     "gpt-5.4-mini": {
       "promptPrice": 0.00075,
