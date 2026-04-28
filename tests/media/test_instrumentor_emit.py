@@ -165,6 +165,50 @@ def test_off_mode_emits_nothing_via_record_path(fake_span):
     assert cfg.media_capture_mode == "off"
 
 
+def test_canonical_messages_emitted_when_opt_in(fake_span):
+    """v1.1.1 dual emission: gen_ai.input.messages JSON appears alongside flat attrs."""
+    import json
+
+    from genai_otel.instrumentors.openai_instrumentor import OpenAIInstrumentor
+
+    inst = OpenAIInstrumentor()
+    inst.config = _Cfg(semconv_stability_opt_in="gen_ai")
+    inst._emit_media_attributes(
+        fake_span,
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "describe"},
+                        {"type": "image_url", "image_url": {"url": "https://x/y.png"}},
+                    ],
+                }
+            ]
+        },
+        result=None,
+    )
+    canonical = json.loads(fake_span.attributes["gen_ai.input.messages"])
+    assert canonical[0]["role"] == "user"
+    assert canonical[0]["parts"][0] == {"type": "text", "content": "describe"}
+    assert canonical[0]["parts"][1]["type"] == "uri"
+    assert canonical[0]["parts"][1]["modality"] == "image"
+    assert canonical[0]["parts"][1]["uri"] == "https://x/y.png"
+
+
+def test_canonical_not_emitted_when_opt_out(fake_span):
+    from genai_otel.instrumentors.openai_instrumentor import OpenAIInstrumentor
+
+    inst = OpenAIInstrumentor()
+    inst.config = _Cfg(semconv_stability_opt_in="")
+    inst._emit_media_attributes(
+        fake_span,
+        {"messages": [{"role": "user", "content": [{"type": "text", "text": "hi"}]}]},
+        result=None,
+    )
+    assert "gen_ai.input.messages" not in fake_span.attributes
+
+
 def test_full_mode_with_filesystem_store_uploads(fake_span, tmp_path):
     from genai_otel.instrumentors.openai_instrumentor import OpenAIInstrumentor
 

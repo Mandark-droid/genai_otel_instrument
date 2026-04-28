@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-04-28
+
+### Added
+
+- **Dual-emission of OTel-canonical `gen_ai.input.messages` / `gen_ai.output.messages`**
+  alongside the existing flat `gen_ai.prompt.{n}.content.{m}.*` attributes. When
+  `OTEL_SEMCONV_STABILITY_OPT_IN` includes `gen_ai`, multimodal content parts are
+  also serialized as a JSON blob using the upstream OTel schema's
+  `BlobPart` / `FilePart` / `UriPart` / `StrippedPart` shapes
+  (`docs/gen-ai/gen-ai-input-messages.json`). New module:
+  `genai_otel/media/canonical.py` (public function `build_canonical_messages`).
+- 9 new tests covering the canonical mapping + dual-emission gating.
+
+### Changed
+
+- The flat attribute namespace shipped in v1.1.0 is now documented as a
+  library-specific convenience for query-friendly backends. The canonical
+  upstream shape is the portable form. Both can be emitted simultaneously.
+
+### Documentation
+
+- `docs/proposals/upstream-pr-draft/` redrafted around the actual gap discovered
+  by reading the OTel JSON schemas: the upstream already has `BlobPart` /
+  `FilePart` / `UriPart` and a `Modality` enum. The narrowed proposal adds:
+  - `document` value to the `Modality` enum
+  - Optional `byte_size` field on Blob/File/UriPart (cost-of-capture telemetry)
+  - New `StrippedPart` type for fail-closed observability
+- Issue #3672 updated with the corrected scope.
+
 ## [1.1.0] - 2026-04-28
 
 ### Added
