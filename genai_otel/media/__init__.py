@@ -7,8 +7,15 @@ Public API:
 - get_store: build a MediaStore from OTelConfig
 """
 
+from .canonical import build_canonical_messages
 from .detector import ContentPart, detect_parts
 from .offload import offload_part
 from .stores import get_store
 
-__all__ = ["ContentPart", "detect_parts", "offload_part", "get_store"]
+__all__ = [
+    "ContentPart",
+    "detect_parts",
+    "offload_part",
+    "get_store",
+    "build_canonical_messages",
+]

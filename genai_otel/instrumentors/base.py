@@ -327,6 +327,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         """
         # Lazy import to avoid pulling media deps when feature is unused.
         from ..media import detect_parts, get_store, offload_part  # noqa: WPS433
+        from ..media.canonical import build_canonical_messages  # noqa: WPS433
 
         provider = self.MEDIA_PROVIDER
         if provider is None:
@@ -354,6 +355,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         if not messages and provider == "google":
             messages = (request_kwargs or {}).get("contents") or []
 
+        prompt_messages_for_canonical = []  # [(role, [ContentPart])] for canonical emit
         for n, msg in enumerate(messages or []):
             role = "user"
             content: Any = msg
@@ -373,12 +375,14 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 except Exception as e:  # noqa: BLE001
                     logger.warning("offload_part failed: %s", e)
                 self._set_part_attrs(span, "prompt", n, m, part)
+            prompt_messages_for_canonical.append((role, parts))
 
         # Completion side: best-effort. Subclasses can override.
         try:
             completion_parts = self._extract_completion_parts(result)
         except Exception:  # noqa: BLE001
             completion_parts = None
+        completion_messages_for_canonical = []
         if completion_parts:
             span.set_attribute(SC.GEN_AI_COMPLETION_ROLE.format(n=0), "assistant")
             for m, part in enumerate(completion_parts):
@@ -387,6 +391,27 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 except Exception as e:  # noqa: BLE001
                     logger.warning("offload_part (completion) failed: %s", e)
                 self._set_part_attrs(span, "completion", 0, m, part)
+            completion_messages_for_canonical.append(("assistant", completion_parts))
+
+        # Dual-emission: also write OTel-canonical gen_ai.input.messages /
+        # gen_ai.output.messages JSON when the user has opted into the new
+        # GenAI semconv stability tier ("gen_ai" or "gen_ai/dup").
+        # See docs/proposals/upstream-pr-draft/ for the canonical schema.
+        opt_in = (self.config.semconv_stability_opt_in if self.config else "") or ""
+        if "gen_ai" in opt_in and (
+            prompt_messages_for_canonical or completion_messages_for_canonical
+        ):
+            try:
+                import json as _json  # noqa: WPS433
+
+                if prompt_messages_for_canonical:
+                    canonical_input = build_canonical_messages(prompt_messages_for_canonical)
+                    span.set_attribute("gen_ai.input.messages", _json.dumps(canonical_input))
+                if completion_messages_for_canonical:
+                    canonical_output = build_canonical_messages(completion_messages_for_canonical)
+                    span.set_attribute("gen_ai.output.messages", _json.dumps(canonical_output))
+            except Exception as e:  # noqa: BLE001
+                logger.warning("Failed to emit canonical gen_ai.input/output.messages: %s", e)
 
     def _set_part_attrs(self, span, side: str, n: int, m: int, part) -> None:
         """Set the small fixed attribute set for a single content part."""

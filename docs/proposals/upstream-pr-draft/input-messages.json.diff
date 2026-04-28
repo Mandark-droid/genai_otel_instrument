@@ -1,0 +1,118 @@
+# Diff to be applied to docs/gen-ai/gen-ai-input-messages.json
+# (and a parallel mirror to gen-ai-output-messages.json)
+
+# 1) Modality enum gains "document":
+
+         "Modality": {
+             "enum": [
+                 "image",
+                 "video",
+-                "audio"
++                "audio",
++                "document"
+             ],
+             "title": "Modality",
+             "type": "string"
+         },
+
+# 2) BlobPart, FilePart, UriPart each gain an optional `byte_size`:
+
+         "BlobPart": {
+             ...
+             "properties": {
+                 ...
+                 "modality": { ... },
+                 "content": { ... },
++                "byte_size": {
++                    "anyOf": [
++                        {"type": "integer", "minimum": 0},
++                        {"type": "null"}
++                    ],
++                    "default": null,
++                    "description": "Size of the captured payload in bytes, as observed by the instrumentation at capture time. Useful for cost-of-capture telemetry and storage planning.",
++                    "title": "Byte Size"
++                }
+             },
+             ...
+         }
+# (repeat the byte_size addition under FilePart and UriPart properties.)
+
+# 3) New StrippedPart type for fail-closed observability:
+
++        "StrippedPart": {
++            "additionalProperties": true,
++            "description": "Represents a content part that was detected by the instrumentor but whose bytes were intentionally NOT captured. Allows consumers to distinguish 'no media in this turn' from 'media was deliberately stripped' (e.g. by a size cap, modality allow-list, redactor failure, or store unavailability). Bytes are not present and cannot be retrieved post-hoc.",
++            "properties": {
++                "type": {
++                    "const": "stripped",
++                    "description": "The type of the content captured in this part.",
++                    "title": "Type",
++                    "type": "string"
++                },
++                "modality": {
++                    "anyOf": [
++                        {"$ref": "#/$defs/Modality"},
++                        {"type": "string"}
++                    ],
++                    "description": "The general modality of the stripped content if it was determinable.",
++                    "title": "Modality"
++                },
++                "mime_type": {
++                    "anyOf": [
++                        {"type": "string"},
++                        {"type": "null"}
++                    ],
++                    "default": null,
++                    "description": "The IANA MIME type of the stripped data, if known.",
++                    "title": "Mime Type"
++                },
++                "byte_size": {
++                    "anyOf": [
++                        {"type": "integer", "minimum": 0},
++                        {"type": "null"}
++                    ],
++                    "default": null,
++                    "description": "Size of the stripped payload in bytes, as observed before stripping.",
++                    "title": "Byte Size"
++                },
++                "stripped_reason": {
++                    "enum": [
++                        "size_exceeded",
++                        "modality_not_allowed",
++                        "redactor_error",
++                        "upload_error",
++                        "no_store_configured"
++                    ],
++                    "description": "The reason the bytes were not captured.",
++                    "title": "Stripped Reason",
++                    "type": "string"
++                }
++            },
++            "required": ["type", "stripped_reason"],
++            "title": "StrippedPart",
++            "type": "object"
++        },
+
+# 4) ChatMessage.parts.items.anyOf gains a $ref to StrippedPart:
+
+         "ChatMessage": {
+             ...
+             "parts": {
+                 ...
+                 "items": {
+                     "anyOf": [
+                         {"$ref": "#/$defs/TextPart"},
+                         {"$ref": "#/$defs/ToolCallRequestPart"},
+                         {"$ref": "#/$defs/ToolCallResponsePart"},
+                         {"$ref": "#/$defs/ServerToolCallPart"},
+                         {"$ref": "#/$defs/ServerToolCallResponsePart"},
+                         {"$ref": "#/$defs/BlobPart"},
+                         {"$ref": "#/$defs/FilePart"},
+                         {"$ref": "#/$defs/UriPart"},
+                         {"$ref": "#/$defs/ReasoningPart"},
++                        {"$ref": "#/$defs/StrippedPart"},
+                         {"$ref": "#/$defs/GenericPart"}
+                     ]
+                 }
+             }
+         }
