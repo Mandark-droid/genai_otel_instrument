@@ -4134,6 +4134,16 @@
       "completionPrice": 0.0005,
       "note": "xAI Grok 4.1 Fast non-reasoning - budget model"
     },
+    "grok-4.3": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.0025,
+      "note": "xAI Grok 4.3 - 1M context, input $1.25/1M, output $2.50/1M per docs.x.ai/developers/models"
+    },
+    "xai/grok-4.3": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.0025,
+      "note": "xAI Grok 4.3 (xai provider prefix) - 1M context"
+    },
     "MiniMax-M2.7": {
       "promptPrice": 0.0003,
       "completionPrice": 0.0012,
