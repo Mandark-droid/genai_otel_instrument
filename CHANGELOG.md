@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-05-07
+
+### Added
+
+- **Grok 4.3 pricing** in `genai_otel/llm_pricing.json` (input $1.25/1M,
+  output $2.50/1M, 1M context). Registered under both `grok-4.3` and
+  `xai/grok-4.3` keys, per `docs.x.ai/developers/models`.
+
 ## [1.2.1] - 2026-04-29
 
 ### Security
