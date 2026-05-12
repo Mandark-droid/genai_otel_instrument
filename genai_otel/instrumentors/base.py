@@ -866,6 +866,29 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 if isinstance(total_tokens, (int, float)) and total_tokens > 0:
                     span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))
 
+                # Record detailed token-usage breakdowns when the provider
+                # supplies them. Attribute names align with upstream
+                # `semantic-conventions-genai#76` (detailed token usage:
+                # cache + reasoning).
+                #   - Anthropic populates cache_read_input_tokens /
+                #     cache_creation_input_tokens at top level of usage_dict.
+                #   - OpenAI populates completion_tokens_details.reasoning_tokens
+                #     (o1/o3-style models) and prompt_tokens_details.cached_tokens
+                #     (prompt caching).
+                cache_read = usage.get("cache_read_input_tokens")
+                if isinstance(cache_read, (int, float)) and cache_read > 0:
+                    span.set_attribute("gen_ai.usage.cache_read.input_tokens", int(cache_read))
+                cache_creation = usage.get("cache_creation_input_tokens")
+                if isinstance(cache_creation, (int, float)) and cache_creation > 0:
+                    span.set_attribute(
+                        "gen_ai.usage.cache_creation.input_tokens", int(cache_creation)
+                    )
+                completion_details = usage.get("completion_tokens_details")
+                if isinstance(completion_details, dict):
+                    reasoning = completion_details.get("reasoning_tokens")
+                    if isinstance(reasoning, (int, float)) and reasoning > 0:
+                        span.set_attribute("gen_ai.usage.reasoning_tokens", int(reasoning))
+
                 # Calculate and record cost if enabled and applicable
                 logger.debug(
                     f"Cost tracking check: config={self.config is not None}, "
