@@ -39,6 +39,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   query logic. Reference impl for upstream
   `semantic-conventions-genai#91` (proposal to standardise
   `gen_ai.agent.name`).
+- **Harmonized cross-backend vector DB attribution: `db.collection.name`
+  and `db.vector.top_k`** are now co-emitted on every vector DB
+  instrumentor that previously used backend-historical names. Five
+  spellings collapse to one canonical pair while preserving back-compat:
+  - `vector.collection` (Weaviate/Qdrant/Chroma/Milvus) → also
+    `db.collection.name`
+  - `vector.table` (LanceDB) → also `db.collection.name`
+  - `vector.limit` (Qdrant/Milvus) → also `db.vector.top_k`
+  - `vector.n_results` (Chroma) → also `db.vector.top_k`
+  - `vector.k` (FAISS) → also `db.vector.top_k`
+
+  Reference impl for upstream `semantic-conventions-genai#5` (VectorDB
+  semantic conventions). The library is positioned as the most-complete
+  real-world vector-DB OTel coverage (7 backends) and the
+  `db.vector.top_k` attribute is library-original, intended for upstream
+  standardisation.
 
 ## [1.2.2] - 2026-05-07
 

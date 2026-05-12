@@ -4,6 +4,26 @@ This module provides the `VectorDBInstrumentor` class, which automatically
 instruments popular Python vector database libraries such as Pinecone, Weaviate,
 Qdrant, ChromaDB, Milvus, FAISS, and LanceDB, enabling tracing of vector search
 and related operations within GenAI applications.
+
+Attribute naming
+----------------
+
+Each backend wrapper emits a small canonical set of attributes for cross-backend
+queryability, alongside backend-specific historical names retained for
+back-compat:
+
+- `db.system`               — backend identifier (`pinecone`, `qdrant`, ...).
+- `db.operation`            — operation verb (`query`, `search`, `upsert`, ...).
+- `db.collection.name`      — index / collection / namespace / table name. Co-emitted
+                              with the older `vector.collection` / `vector.table`
+                              names. Matches the OTel `db.*` semconv shape.
+- `db.vector.top_k`         — requested number of nearest-neighbour results on a
+                              query. Co-emitted with backend-historical names
+                              (`vector.limit` / `vector.n_results` / `vector.k`).
+                              No upstream OTel attribute exists yet for this
+                              concept; this library is the reference implementation
+                              for a proposed addition to
+                              `open-telemetry/semantic-conventions-genai`.
 """
 
 import logging
@@ -198,8 +218,10 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                         span.set_attribute("db.operation", "query_points")
                         collection = kwargs.get("collection_name", args[0] if args else "unknown")
                         span.set_attribute("vector.collection", collection)
+                        span.set_attribute("db.collection.name", collection)
                         limit = kwargs.get("limit", 10)
                         span.set_attribute("vector.limit", limit)
+                        span.set_attribute("db.vector.top_k", limit)
                         return wrapped(*args, **kwargs)
 
                 try:
@@ -221,8 +243,10 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                         span.set_attribute("db.operation", "search")
                         collection = kwargs.get("collection_name", args[0] if args else "unknown")
                         span.set_attribute("vector.collection", collection)
+                        span.set_attribute("db.collection.name", collection)
                         limit = kwargs.get("limit", 10)
                         span.set_attribute("vector.limit", limit)
+                        span.set_attribute("db.vector.top_k", limit)
                         return wrapped(*args, **kwargs)
 
                 try:
@@ -256,8 +280,10 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     span.set_attribute("db.operation", "query")
                     if instance and hasattr(instance, "name"):
                         span.set_attribute("vector.collection", instance.name)
+                        span.set_attribute("db.collection.name", instance.name)
                     n_results = kwargs.get("n_results", 10)
                     span.set_attribute("vector.n_results", n_results)
+                    span.set_attribute("db.vector.top_k", n_results)
                     return wrapped(*args, **kwargs)
 
             wrapt.wrap_function_wrapper("chromadb", "Collection.query", wrapped_query)
@@ -278,8 +304,10 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     span.set_attribute("db.operation", "search")
                     if instance and hasattr(instance, "name"):
                         span.set_attribute("vector.collection", instance.name)
+                        span.set_attribute("db.collection.name", instance.name)
                     limit = kwargs.get("limit", 10)
                     span.set_attribute("vector.limit", limit)
+                    span.set_attribute("db.vector.top_k", limit)
                     return wrapped(*args, **kwargs)
 
             wrapt.wrap_function_wrapper("pymilvus", "Collection.search", wrapped_search)
@@ -300,6 +328,7 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     span.set_attribute("db.operation", "search")
                     k = args[1] if len(args) > 1 else kwargs.get("k", 10)
                     span.set_attribute("vector.k", k)
+                    span.set_attribute("db.vector.top_k", k)
                     return wrapped(*args, **kwargs)
 
             wrapt.wrap_function_wrapper("faiss", "Index.search", wrapped_search)
@@ -322,6 +351,7 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     span.set_attribute("db.operation", "search")
                     if instance and hasattr(instance, "name"):
                         span.set_attribute("vector.table", instance.name)
+                        span.set_attribute("db.collection.name", instance.name)
                     return wrapped(*args, **kwargs)
 
             def wrapped_add(wrapped, instance, args, kwargs):
@@ -330,6 +360,7 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     span.set_attribute("db.operation", "add")
                     if instance and hasattr(instance, "name"):
                         span.set_attribute("vector.table", instance.name)
+                        span.set_attribute("db.collection.name", instance.name)
                     return wrapped(*args, **kwargs)
 
             def wrapped_create_table(wrapped, instance, args, kwargs):
@@ -338,6 +369,7 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     span.set_attribute("db.operation", "create_table")
                     table_name = args[0] if args else kwargs.get("name", "unknown")
                     span.set_attribute("vector.table", table_name)
+                    span.set_attribute("db.collection.name", table_name)
                     return wrapped(*args, **kwargs)
 
             def wrapped_drop_table(wrapped, instance, args, kwargs):
@@ -346,6 +378,7 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     span.set_attribute("db.operation", "drop_table")
                     table_name = args[0] if args else kwargs.get("name", "unknown")
                     span.set_attribute("vector.table", table_name)
+                    span.set_attribute("db.collection.name", table_name)
                     return wrapped(*args, **kwargs)
 
             wrapt.wrap_function_wrapper("lancedb.table", "Table.search", wrapped_search)
