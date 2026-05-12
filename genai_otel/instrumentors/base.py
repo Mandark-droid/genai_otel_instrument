@@ -509,6 +509,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             session_id = self.config.session_id_extractor(instance, args, kwargs)
                             if session_id:
                                 span.set_attribute("session.id", session_id)
+                                # Cross-framework conversation correlation per upstream
+                                # proposal semantic-conventions-genai#145.
+                                span.set_attribute("gen_ai.conversation.id", session_id)
                                 logger.debug("Set session.id: %s", session_id)
                         except Exception as e:
                             logger.debug("Failed to extract session ID: %s", e)

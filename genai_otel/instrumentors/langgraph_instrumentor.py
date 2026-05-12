@@ -279,6 +279,11 @@ class LangGraphInstrumentor(BaseInstrumentor):
 
         attrs["session.id"] = session_id
         attrs["langgraph.session.id"] = session_id
+        # Cross-framework conversation correlation per upstream proposal
+        # semantic-conventions-genai#145. For LangGraph this is the
+        # innermost conversation primitive (thread_id when the app
+        # supplied one; falls through to session_id otherwise).
+        attrs["gen_ai.conversation.id"] = session_id
 
         return attrs
 

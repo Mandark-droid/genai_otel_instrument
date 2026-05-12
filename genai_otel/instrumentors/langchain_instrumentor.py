@@ -120,6 +120,9 @@ class LangChainInstrumentor(BaseInstrumentor):
                     session_id = instrumentor_ref._resolve_session_id(instance, args, kwargs)
                     span.set_attribute("session.id", session_id)
                     span.set_attribute("langchain.session.id", session_id)
+                    # Cross-framework conversation correlation per upstream
+                    # proposal semantic-conventions-genai#145.
+                    span.set_attribute("gen_ai.conversation.id", session_id)
                     result = original_call(instance, *args, **kwargs)
                     return result
 
@@ -140,6 +143,9 @@ class LangChainInstrumentor(BaseInstrumentor):
                     session_id = instrumentor_ref._resolve_session_id(instance, args, kwargs)
                     span.set_attribute("session.id", session_id)
                     span.set_attribute("langchain.session.id", session_id)
+                    # Cross-framework conversation correlation per upstream
+                    # proposal semantic-conventions-genai#145.
+                    span.set_attribute("gen_ai.conversation.id", session_id)
                     result = original_agent_call(instance, *args, **kwargs)
                     return result
 
