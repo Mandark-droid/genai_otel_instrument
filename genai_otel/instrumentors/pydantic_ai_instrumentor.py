@@ -143,6 +143,9 @@ class PydanticAIInstrumentor(BaseInstrumentor):
         # Extract agent name if available
         if hasattr(instance, "name") and instance.name:
             attrs["pydantic_ai.agent.name"] = instance.name
+            # Cross-framework agent attribution per upstream proposal
+            # semantic-conventions-genai#91.
+            attrs["gen_ai.agent.name"] = instance.name
 
         # Extract model information
         if hasattr(instance, "model") and instance.model:

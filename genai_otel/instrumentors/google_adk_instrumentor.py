@@ -119,6 +119,9 @@ class GoogleADKInstrumentor(BaseInstrumentor):
             agent = instance.agent
             if hasattr(agent, "name"):
                 attrs["google_adk.agent.name"] = str(agent.name)
+                # Cross-framework agent attribution per upstream proposal
+                # semantic-conventions-genai#91.
+                attrs["gen_ai.agent.name"] = str(agent.name)
             if hasattr(agent, "model"):
                 attrs["gen_ai.request.model"] = str(agent.model)
             if hasattr(agent, "description") and agent.description:
@@ -193,6 +196,9 @@ class GoogleADKInstrumentor(BaseInstrumentor):
             agent = instance.agent
             if hasattr(agent, "name"):
                 attrs["google_adk.agent.name"] = str(agent.name)
+                # Cross-framework agent attribution per upstream proposal
+                # semantic-conventions-genai#91.
+                attrs["gen_ai.agent.name"] = str(agent.name)
             if hasattr(agent, "model"):
                 attrs["gen_ai.request.model"] = str(agent.model)
 

@@ -216,7 +216,7 @@ def main() -> int:
                     p
                     for m in canonical_parsed
                     for p in m["parts"]
-                    if p.get("type") in ("uri", "blob", "stripped")
+                    if p.get("type") in ("uri", "blob")
                 ),
                 None,
             )

@@ -134,6 +134,9 @@ class AutoGenInstrumentor(BaseInstrumentor):
         # Extract sender agent name
         if hasattr(instance, "name"):
             attrs["autogen.agent.name"] = instance.name
+            # Cross-framework agent attribution per upstream proposal
+            # semantic-conventions-genai#91.
+            attrs["gen_ai.agent.name"] = instance.name
             attrs["autogen.conversation.sender"] = instance.name
 
         # Extract sender agent type

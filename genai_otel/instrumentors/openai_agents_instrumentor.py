@@ -101,6 +101,9 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
             # Agent attributes
             if hasattr(agent, "name"):
                 attrs["openai.agent.name"] = agent.name
+                # Cross-framework agent attribution per upstream proposal
+                # semantic-conventions-genai#91.
+                attrs["gen_ai.agent.name"] = agent.name
                 attrs["gen_ai.request.model"] = agent.name  # Use agent name as "model"
 
             if hasattr(agent, "model"):
