@@ -15,7 +15,11 @@ class SemanticConvention:
     GEN_AI_USAGE_COST = "gen_ai.usage.cost"
     GEN_AI_USAGE_INPUT_TOKENS = "gen_ai.usage.input_tokens"
     GEN_AI_USAGE_OUTPUT_TOKENS = "gen_ai.usage.output_tokens"
-    GEN_AI_USAGE_REASONING_TOKENS = "gen_ai.usage.reasoning_tokens"
+    # Upstream-standardised name (in registry at Development stability since
+    # open-telemetry/semantic-conventions#3194; migrated to
+    # semantic-conventions-genai). The value SHOULD also be included in
+    # `gen_ai.usage.output_tokens`.
+    GEN_AI_USAGE_REASONING_TOKENS = "gen_ai.usage.reasoning.output_tokens"
 
     # GenAI Server metrics (streaming)
     GEN_AI_SERVER_TTFT = "gen_ai.server.ttft"

@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the corresponding data, LLM-call spans now emit
   `gen_ai.usage.cache_read.input_tokens`,
   `gen_ai.usage.cache_creation.input_tokens`, and
-  `gen_ai.usage.reasoning_tokens`. Sources:
+  `gen_ai.usage.reasoning.output_tokens`. Sources:
   - **Anthropic**: `usage.cache_read_input_tokens` and
     `usage.cache_creation_input_tokens` (prompt-caching feature) were
     already extracted by the Anthropic instrumentor for cost
