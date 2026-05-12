@@ -242,6 +242,11 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
                     for key in ["run_id", "agent_id", "session_id"]:
                         if key in metadata:
                             attrs[f"openai.agent.metadata.{key}"] = metadata[key]
+                    # Cross-framework conversation correlation per upstream
+                    # proposal semantic-conventions-genai#145.
+                    if "session_id" in metadata:
+                        attrs["session.id"] = str(metadata["session_id"])
+                        attrs["gen_ai.conversation.id"] = str(metadata["session_id"])
             except Exception as e:
                 logger.debug("Failed to extract result metadata: %s", e)
 

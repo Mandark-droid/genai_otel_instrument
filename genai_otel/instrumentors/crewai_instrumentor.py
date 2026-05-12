@@ -211,6 +211,9 @@ class CrewAIInstrumentor(BaseInstrumentor):
                 session_id = getattr(crew, "_genai_otel_session_id", None)
                 if session_id:
                     attrs["session.id"] = session_id
+                    # Cross-framework conversation correlation per upstream
+                    # proposal semantic-conventions-genai#145.
+                    attrs["gen_ai.conversation.id"] = session_id
 
         except Exception as e:
             logger.debug("Failed to extract task attributes: %s", e)
@@ -259,6 +262,9 @@ class CrewAIInstrumentor(BaseInstrumentor):
                 session_id = getattr(crew, "_genai_otel_session_id", None)
                 if session_id:
                     attrs["session.id"] = session_id
+                    # Cross-framework conversation correlation per upstream
+                    # proposal semantic-conventions-genai#145.
+                    attrs["gen_ai.conversation.id"] = session_id
 
         except Exception as e:
             logger.debug("Failed to extract agent attributes: %s", e)
@@ -421,6 +427,9 @@ class CrewAIInstrumentor(BaseInstrumentor):
 
         attrs["session.id"] = session_id
         attrs["crewai.session.id"] = session_id
+        # Cross-framework conversation correlation per upstream proposal
+        # semantic-conventions-genai#145.
+        attrs["gen_ai.conversation.id"] = session_id
 
         # Store on instance for child span access (cross-thread safe)
         instance._genai_otel_session_id = session_id

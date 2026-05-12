@@ -157,6 +157,10 @@ class BedrockAgentsInstrumentor(BaseInstrumentor):
             # Extract session information
             if "sessionId" in body:
                 attrs["bedrock.agent.session_id"] = body["sessionId"]
+                attrs["session.id"] = body["sessionId"]
+                # Cross-framework conversation correlation per upstream
+                # proposal semantic-conventions-genai#145.
+                attrs["gen_ai.conversation.id"] = body["sessionId"]
 
             # Extract input text
             if "inputText" in body:
@@ -269,6 +273,10 @@ class BedrockAgentsInstrumentor(BaseInstrumentor):
             # Extract session ID
             if "sessionId" in body:
                 attrs["bedrock.rag.session_id"] = body["sessionId"]
+                attrs["session.id"] = body["sessionId"]
+                # Cross-framework conversation correlation per upstream
+                # proposal semantic-conventions-genai#145.
+                attrs["gen_ai.conversation.id"] = body["sessionId"]
 
             # Extract retrieve and generate configuration
             if "retrieveAndGenerateConfiguration" in body:
@@ -336,6 +344,10 @@ class BedrockAgentsInstrumentor(BaseInstrumentor):
                 # Extract session ID
                 if "sessionId" in result:
                     attrs["bedrock.agent.response.session_id"] = result["sessionId"]
+                    attrs["session.id"] = result["sessionId"]
+                    # Cross-framework conversation correlation per upstream
+                    # proposal semantic-conventions-genai#145.
+                    attrs["gen_ai.conversation.id"] = result["sessionId"]
 
                 # Extract content type
                 if "contentType" in result:
