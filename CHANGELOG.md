@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Detailed token-usage span attributes**: when the provider supplies
+  the corresponding data, LLM-call spans now emit
+  `gen_ai.usage.cache_read.input_tokens`,
+  `gen_ai.usage.cache_creation.input_tokens`, and
+  `gen_ai.usage.reasoning_tokens`. Sources:
+  - **Anthropic**: `usage.cache_read_input_tokens` and
+    `usage.cache_creation_input_tokens` (prompt-caching feature) were
+    already extracted by the Anthropic instrumentor for cost
+    calculation; now also surfaced as span attributes.
+  - **OpenAI**: `usage.prompt_tokens_details.cached_tokens` (prompt
+    caching on chat completions) is surfaced under the same canonical
+    `cache_read.input_tokens` attribute. `usage.completion_tokens_details
+    .reasoning_tokens` (o1/o3-style models) is surfaced as
+    `gen_ai.usage.reasoning_tokens`.
+
+  Attribute names align with the upstream proposal at
+  `semantic-conventions-genai#76` (detailed token usage: cache,
+  reasoning). Zero / missing values are not emitted to avoid noisy
+  zero-valued attributes on every span.
+
 ## [1.3.0] - 2026-05-12
 
 ### Changed
