@@ -380,7 +380,7 @@ def test_record_result_metrics_emits_cache_and_reasoning_tokens(instrumentor):
     set_attr_calls = {c.args[0]: c.args[1] for c in mock_span.set_attribute.call_args_list}
     assert set_attr_calls["gen_ai.usage.cache_read.input_tokens"] == 30
     assert set_attr_calls["gen_ai.usage.cache_creation.input_tokens"] == 20
-    assert set_attr_calls["gen_ai.usage.reasoning_tokens"] == 15
+    assert set_attr_calls["gen_ai.usage.reasoning.output_tokens"] == 15
 
 
 def test_record_result_metrics_skips_zero_cache_and_reasoning(instrumentor):
@@ -405,7 +405,7 @@ def test_record_result_metrics_skips_zero_cache_and_reasoning(instrumentor):
     attrs_set = {c.args[0] for c in mock_span.set_attribute.call_args_list}
     assert "gen_ai.usage.cache_read.input_tokens" not in attrs_set
     assert "gen_ai.usage.cache_creation.input_tokens" not in attrs_set
-    assert "gen_ai.usage.reasoning_tokens" not in attrs_set
+    assert "gen_ai.usage.reasoning.output_tokens" not in attrs_set
 
 
 def test_record_result_metrics_non_chat_sets_cost_attribute(instrumentor):

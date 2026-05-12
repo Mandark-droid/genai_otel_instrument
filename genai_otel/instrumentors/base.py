@@ -887,7 +887,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 if isinstance(completion_details, dict):
                     reasoning = completion_details.get("reasoning_tokens")
                     if isinstance(reasoning, (int, float)) and reasoning > 0:
-                        span.set_attribute("gen_ai.usage.reasoning_tokens", int(reasoning))
+                        # Upstream-standardised name (in registry at Development
+                        # stability since open-telemetry/semantic-conventions#3194,
+                        # migrated to semantic-conventions-genai). The value
+                        # is also included in `gen_ai.usage.output_tokens`.
+                        span.set_attribute("gen_ai.usage.reasoning.output_tokens", int(reasoning))
 
                 # Calculate and record cost if enabled and applicable
                 logger.debug(
