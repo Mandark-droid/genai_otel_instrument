@@ -174,10 +174,10 @@ export GENAI_OTEL_MEDIA_STORE_SECRET_KEY=...
 export GENAI_OTEL_MEDIA_REDACTOR=genai_otel.media.redactors.face_blur
 ```
 
-Spans get a flat, queryable attribute namespace —
-`gen_ai.prompt.{n}.content.{m}.{type, media_uri, media_mime_type, media_byte_size, media_source}` —
-that is being proposed upstream to OpenTelemetry semantic-conventions
-([issue #3672](https://github.com/open-telemetry/semantic-conventions/issues/3672)).
+Spans get two co-emitted representations of the same multimodal content:
+
+- A **flat, queryable attribute namespace** — `gen_ai.prompt.{n}.content.{m}.{type, media_uri, media_mime_type, media_byte_size, media_source}` plus a `gen_ai.completion.*` mirror — for backends that index on flat attributes.
+- The **upstream-canonical `gen_ai.input.messages` / `gen_ai.output.messages` JSON** conforming to the [gen-ai message schemas](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/gen-ai-input-messages.json) in the dedicated `semantic-conventions-genai` repo, including the `document` modality, optional `byte_size`, and `stripped_reason` shape standardised by our upstream PRs #142 / #143 / #144 (see [Standards Contributions](#opentelemetry-standards-contributions) below).
 
 [Multimodal guide >>](https://mandark-droid.github.io/genai_otel_instrument/guides/multimodal/)
 
@@ -242,6 +242,20 @@ examples/
 ```
 
 [Browse all examples >>](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples)
+
+## OpenTelemetry Standards Contributions
+
+TraceVerde isn't only a consumer of OpenTelemetry GenAI semantic conventions — production gaps surfaced by the library are being upstreamed back into the spec. Active proposals on [`open-telemetry/semantic-conventions-genai`](https://github.com/open-telemetry/semantic-conventions-genai):
+
+| PR | Proposal | Status |
+|---|---|---|
+| [**#142**](https://github.com/open-telemetry/semantic-conventions-genai/pull/142) | Add `document` to the `Modality` enum on `BlobPart` / `FilePart` / `UriPart` — PDFs, DOCX, and other non-image/video/audio payloads currently fall through to the free-form `string` branch. BFSI KYC extraction is a high-volume real example. | Approved (@MikeGoldsmith) |
+| [**#143**](https://github.com/open-telemetry/semantic-conventions-genai/pull/143) | Add optional `byte_size` on the three media-part types so consumers get a uniform handle on payload size whether the content was carried inline, by URI, or by provider file id — useful for cost-of-capture telemetry and storage planning. Pydantic `ge=0` → JSON schema `"minimum": 0`. | Under review |
+| [**#144**](https://github.com/open-telemetry/semantic-conventions-genai/pull/144) | Make `content` / `file_id` / `uri` optional and add a free-form `stripped_reason` (`size_exceeded`, `modality_not_allowed`, `redactor_error`, `upload_error`, `no_store_configured`) so an instrumentation can fail-closed — record that it observed a media part but intentionally did not capture its bytes — while preserving the original part `type` and `modality`. Enforced via a top-level `anyOf` so structurally-empty parts cannot validate. | Under review |
+
+All three were migrated from the closed [`open-telemetry/semantic-conventions#3673`](https://github.com/open-telemetry/semantic-conventions/pull/3673) after the GenAI conventions split into the dedicated repo on 2026-05-05. Each PR ships under the new repo's V2 Weaver schema with the corresponding `models.ipynb` updates and `make check-policies` / `make generate-all` validation.
+
+TraceVerde v1.1.1 already emits the proposed shape on the wire via dual-emission (`OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai`), providing the reference implementation for these conventions.
 
 ## Who Uses TraceVerde?
 

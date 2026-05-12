@@ -134,6 +134,9 @@ class LangChainInstrumentor(BaseInstrumentor):
                 ) as span:
                     agent_name = getattr(instance, "agent", {}).get("name", "unknown")
                     span.set_attribute("langchain.agent.name", agent_name)
+                    # Cross-framework agent attribution per upstream proposal
+                    # semantic-conventions-genai#91.
+                    span.set_attribute("gen_ai.agent.name", agent_name)
                     session_id = instrumentor_ref._resolve_session_id(instance, args, kwargs)
                     span.set_attribute("session.id", session_id)
                     span.set_attribute("langchain.session.id", session_id)

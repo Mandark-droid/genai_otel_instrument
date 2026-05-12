@@ -141,6 +141,9 @@ class AutoGenAgentChatInstrumentor(BaseInstrumentor):
         # Extract agent name and type
         if hasattr(instance, "name"):
             attrs["autogen_agentchat.agent.name"] = str(instance.name)
+            # Cross-framework agent attribution per upstream proposal
+            # semantic-conventions-genai#91.
+            attrs["gen_ai.agent.name"] = str(instance.name)
         attrs["autogen_agentchat.agent.type"] = type(instance).__name__
 
         # Extract model info if available
@@ -197,6 +200,9 @@ class AutoGenAgentChatInstrumentor(BaseInstrumentor):
         # Extract agent info
         if hasattr(instance, "name"):
             attrs["autogen_agentchat.agent.name"] = str(instance.name)
+            # Cross-framework agent attribution per upstream proposal
+            # semantic-conventions-genai#91.
+            attrs["gen_ai.agent.name"] = str(instance.name)
         attrs["autogen_agentchat.agent.type"] = type(instance).__name__
 
         # Extract message count
