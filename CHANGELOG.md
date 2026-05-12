@@ -39,6 +39,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   query logic. Reference impl for upstream
   `semantic-conventions-genai#91` (proposal to standardise
   `gen_ai.agent.name`).
+- **Cross-framework conversation correlation: `gen_ai.conversation.id`**
+  is now co-emitted alongside the existing `session.id` (and the
+  framework-prefixed `crewai.session.id` / `langgraph.session.id` /
+  `langchain.session.id` / `bedrock.agent.session_id` /
+  `bedrock.rag.session_id` / `bedrock.agent.response.session_id` /
+  `google_adk.session_id` / `openai.agent.metadata.session_id`) on every
+  framework instrumentor that derives a stable conversation identifier
+  from the framework's native primitive:
+  - CrewAI: `Crew.id` / kickoff-input session_id, propagated to task +
+    agent child spans.
+  - LangGraph: `RunnableConfig.configurable.thread_id` (or app-supplied
+    session_id).
+  - LangChain: resolved via the existing `_resolve_session_id` priority
+    chain (kwargs / input dict / `OTelConfig.session_id_extractor`).
+  - Bedrock Agents: `InvokeAgent.sessionId` (request + response sides)
+    and `RetrieveAndGenerate.sessionId`. Also adds the generic
+    `session.id` to these spans for consistency.
+  - Google ADK: `Runner.run` `session_id` kwarg. Also adds generic
+    `session.id`.
+  - OpenAI Agents: `metadata.session_id` if the agent run surfaces one.
+  - `BaseInstrumentor`: the `OTelConfig.session_id_extractor` callback
+    (used by provider instrumentors) co-emits `gen_ai.conversation.id`
+    in addition to `session.id`.
+
+  AutoGen and PydanticAI are deliberately not touched — neither exposes
+  a stable conversation primitive on the SDK boundary today (AutoGen's
+  `GroupChat.messages[0].id` is not stable across replays; PydanticAI's
+  `Agent.run(usage_id=...)` is app-supplied only). Reference impl for
+  upstream `semantic-conventions-genai#145` (proposal to document how
+  applications correlate sessions via `gen_ai.conversation.id`).
+
 - **Harmonized cross-backend vector DB attribution: `db.collection.name`
   and `db.vector.top_k`** are now co-emitted on every vector DB
   instrumentor that previously used backend-historical names. Five

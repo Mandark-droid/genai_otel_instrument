@@ -155,6 +155,10 @@ class GoogleADKInstrumentor(BaseInstrumentor):
         session_id = kwargs.get("session_id")
         if session_id:
             attrs["google_adk.session_id"] = str(session_id)
+            attrs["session.id"] = str(session_id)
+            # Cross-framework conversation correlation per upstream proposal
+            # semantic-conventions-genai#145.
+            attrs["gen_ai.conversation.id"] = str(session_id)
 
         # Extract message content (from new_message kwarg)
         new_message = kwargs.get("new_message")
