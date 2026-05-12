@@ -240,12 +240,25 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 "total_tokens": getattr(usage, "total_tokens", 0),
             }
 
-            # Extract reasoning tokens for o1 models (Phase 3.2)
+            # Extract reasoning tokens for o1/o3 models (Phase 3.2). Surfaced
+            # to base.py as `gen_ai.usage.reasoning_tokens` (upstream
+            # semantic-conventions-genai#76).
             if hasattr(usage, "completion_tokens_details") and usage.completion_tokens_details:
                 details = usage.completion_tokens_details
                 usage_dict["completion_tokens_details"] = {
                     "reasoning_tokens": getattr(details, "reasoning_tokens", 0)
                 }
+
+            # Extract OpenAI prompt-cache reads. The Chat Completions API
+            # reports cached prompt tokens under prompt_tokens_details.
+            # cached_tokens; conceptually identical to Anthropic's
+            # cache_read_input_tokens, so surface it under the same canonical
+            # key for base.py to emit as
+            # `gen_ai.usage.cache_read.input_tokens`.
+            if hasattr(usage, "prompt_tokens_details") and usage.prompt_tokens_details:
+                cached_tokens = getattr(usage.prompt_tokens_details, "cached_tokens", None)
+                if cached_tokens:
+                    usage_dict["cache_read_input_tokens"] = cached_tokens
 
             return usage_dict
         return None

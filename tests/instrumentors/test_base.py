@@ -354,6 +354,60 @@ def test_record_result_metrics_with_errors(instrumentor, caplog):
     assert "Failed to extract or record usage metrics" in caplog.text
 
 
+def test_record_result_metrics_emits_cache_and_reasoning_tokens(instrumentor):
+    """Anthropic cache_read/cache_creation tokens (top-level) and OpenAI
+    reasoning_tokens (nested under completion_tokens_details) surface as
+    `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_creation.input_tokens`,
+    and `gen_ai.usage.reasoning_tokens` per upstream
+    semantic-conventions-genai#76.
+    """
+    inst, mock_span = instrumentor
+    mock_span.attributes.get.return_value = "claude-sonnet-4"
+    result = {
+        "usage": {
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+            "total_tokens": 200,
+            # Anthropic top-level cache attribution
+            "cache_read_input_tokens": 30,
+            "cache_creation_input_tokens": 20,
+            # OpenAI o1/o3-style reasoning attribution
+            "completion_tokens_details": {"reasoning_tokens": 15},
+        }
+    }
+    inst._record_result_metrics(mock_span, result, time.time() - 0.1)
+
+    set_attr_calls = {c.args[0]: c.args[1] for c in mock_span.set_attribute.call_args_list}
+    assert set_attr_calls["gen_ai.usage.cache_read.input_tokens"] == 30
+    assert set_attr_calls["gen_ai.usage.cache_creation.input_tokens"] == 20
+    assert set_attr_calls["gen_ai.usage.reasoning_tokens"] == 15
+
+
+def test_record_result_metrics_skips_zero_cache_and_reasoning(instrumentor):
+    """Zero / missing cache and reasoning fields must NOT be emitted as
+    span attributes (avoid noisy zero-valued attrs on every span).
+    """
+    inst, mock_span = instrumentor
+    mock_span.attributes.get.return_value = "gpt-4o-mini"
+    result = {
+        "usage": {
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+            "total_tokens": 150,
+            # Zero / missing cache + reasoning
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+        }
+    }
+    inst._record_result_metrics(mock_span, result, time.time() - 0.1)
+
+    attrs_set = {c.args[0] for c in mock_span.set_attribute.call_args_list}
+    assert "gen_ai.usage.cache_read.input_tokens" not in attrs_set
+    assert "gen_ai.usage.cache_creation.input_tokens" not in attrs_set
+    assert "gen_ai.usage.reasoning_tokens" not in attrs_set
+
+
 def test_record_result_metrics_non_chat_sets_cost_attribute(instrumentor):
     """Non-chat call types (image, audio, embedding) must also set
     `gen_ai.usage.cost.total` on the span — previously cost was added to the
