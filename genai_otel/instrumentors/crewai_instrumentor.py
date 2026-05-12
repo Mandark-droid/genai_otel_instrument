@@ -191,6 +191,10 @@ class CrewAIInstrumentor(BaseInstrumentor):
             # Extract assigned agent role if available
             if hasattr(instance, "agent") and hasattr(instance.agent, "role"):
                 attrs["crewai.task.agent_role"] = str(instance.agent.role)
+                # CrewAI agents are identified by `role` (no separate `name`
+                # attribute in v0.x). Cross-framework attribution per
+                # semantic-conventions-genai#91 uses role as the canonical name.
+                attrs["gen_ai.agent.name"] = str(instance.agent.role)
 
             # Extract task ID if available
             if hasattr(instance, "id"):

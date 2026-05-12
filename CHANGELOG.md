@@ -6,6 +6,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Multimodal canonical JSON: align stripped-part shape with upstream
+  `semantic-conventions-genai` PR #144's design pivot.** Stripped media
+  parts (instrumentation observed bytes but intentionally did not capture
+  them — size cap exceeded, modality not allowed, redactor failure, etc.)
+  no longer emit as a separate `{"type": "stripped", ...}` shape. Instead
+  they keep the original part type (`blob` / `uri` / `file`) and `modality`,
+  omit the content-bearing field (`content` / `uri` / `file_id`), and set
+  `stripped_reason`. The flat `gen_ai.prompt.{n}.content.{m}.*` namespace
+  is unchanged.
+  - Affects `gen_ai.input.messages` / `gen_ai.output.messages` span JSON
+    only; opt-in capture must be on for any consumer to see this shape.
+  - Wire-format example before:
+    `{"type": "stripped", "modality": "image", "stripped_reason": "size_exceeded", "byte_size": 2000000}`
+  - Wire-format example after:
+    `{"type": "blob", "modality": "image", "mime_type": "image/png", "byte_size": 2000000, "stripped_reason": "size_exceeded"}`
+  - Companion change: `genai_otel.semconv` comment updated to reflect that
+    the multimodal shape is now in active upstream review (PRs #142
+    approved, #143/#144 under review).
+
+### Added
+
+- **Harmonized cross-framework agent attribution: `gen_ai.agent.name`** is
+  now co-emitted alongside the framework-prefixed names (`crewai.*`,
+  `autogen.agent.name`, `google_adk.agent.name`, `langchain.agent.name`,
+  `openai.agent.name`, `pydantic_ai.agent.name`,
+  `autogen_agentchat.agent.name`) on every multi-agent framework
+  instrumentor that already attributes spans to a specific agent.
+  Enables cross-framework "spans by agent" rollups without framework-aware
+  query logic. Reference impl for upstream
+  `semantic-conventions-genai#91` (proposal to standardise
+  `gen_ai.agent.name`).
+
 ## [1.2.2] - 2026-05-07
 
 ### Added

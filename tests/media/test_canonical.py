@@ -41,7 +41,13 @@ def test_image_with_inline_bytes_becomes_blob_part():
     assert p["byte_size"] == 4
 
 
-def test_reference_only_becomes_stripped_part():
+def test_reference_only_keeps_original_part_type_with_stripped_reason():
+    """Per upstream PR #144 (design pivot from a separate StrippedPart type):
+    a stripped media part keeps its original `type` (blob/file/uri) and
+    `modality`, omits the content-bearing field, and sets `stripped_reason`.
+    TraceVerde's strips originate from inline data we chose not to upload,
+    so they emit as BlobPart with `content` omitted.
+    """
     part = ContentPart(
         type="image",
         media_mime_type="image/png",
@@ -51,14 +57,17 @@ def test_reference_only_becomes_stripped_part():
     )
     msgs = build_canonical_messages([("user", [part])])
     p = msgs[0]["parts"][0]
-    assert p["type"] == "stripped"
+    assert p["type"] == "blob"
     assert p["modality"] == "image"
-    assert p["stripped_reason"] == "size_exceeded"
+    assert p["mime_type"] == "image/png"
     assert p["byte_size"] == 2_000_000
+    assert p["stripped_reason"] == "size_exceeded"
+    # content-bearing field is omitted on a stripped part
+    assert "content" not in p
 
 
-def test_document_modality_emitted_as_string():
-    """`document` is a proposed addition; current schema accepts free-form strings."""
+def test_document_modality_emitted_as_first_class_enum_value():
+    """`document` was added to the Modality enum in upstream PR #142 (approved)."""
     part = ContentPart(
         type="document",
         media_uri="s3://bucket/k.pdf",
