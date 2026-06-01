@@ -753,6 +753,16 @@
       "promptPrice": 0.015,
       "completionPrice": 0.075
     },
+    "claude-opus-4-8": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "Anthropic Claude Opus 4.8 (2026) - input $5/1M, output $25/1M (standard mode); fast mode 2x. Source: platform.claude.com/docs pricing"
+    },
+    "claude-opus-4.8": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.025,
+      "note": "Anthropic Claude Opus 4.8 (2026) - dotted alias"
+    },
     "claude-3-sonnet-20240229": {
       "promptPrice": 0.003,
       "completionPrice": 0.015
@@ -4079,6 +4089,21 @@
       "completionPrice": 0.03,
       "note": "OpenAI GPT-5.5 (Apr 2026) - input $5/1M, output $30/1M"
     },
+    "gpt-5.5-mini": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.0016,
+      "note": "OpenAI GPT-5.5 mini (Apr 2026) - input $0.40/1M, output $1.60/1M; cached input 90% off"
+    },
+    "gpt-5.5-nano": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0004,
+      "note": "OpenAI GPT-5.5 nano (Apr 2026) - input $0.10/1M, output $0.40/1M"
+    },
+    "gpt-5.5-pro": {
+      "promptPrice": 0.03,
+      "completionPrice": 0.18,
+      "note": "OpenAI GPT-5.5 Pro (Apr 2026) - premium reasoning tier, input $30/1M, output $180/1M"
+    },
     "gpt-5.4-mini": {
       "promptPrice": 0.00075,
       "completionPrice": 0.0045,
@@ -4108,6 +4133,16 @@
       "promptPrice": 0.00025,
       "completionPrice": 0.0015,
       "note": "Google Gemini 3.1 Flash-Lite Preview (Mar 2026)"
+    },
+    "gemini-3.5-flash": {
+      "promptPrice": 0.0015,
+      "completionPrice": 0.009,
+      "note": "Google Gemini 3.5 Flash (May 19, 2026) - input $1.50/1M, output $9.00/1M, cached input $0.15/1M. Source: ai.google.dev/gemini-api/docs/pricing"
+    },
+    "gemini/gemini-3.5-flash": {
+      "promptPrice": 0.0015,
+      "completionPrice": 0.009,
+      "note": "Google Gemini 3.5 Flash (gemini provider prefix)"
     },
     "grok-4.20-0309-reasoning": {
       "promptPrice": 0.002,
@@ -4163,6 +4198,21 @@
       "promptPrice": 0.0006,
       "completionPrice": 0.0024,
       "note": "MiniMax M2.5 highspeed tier (2x base price)"
+    },
+    "MiniMax-M3": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "note": "MiniMax M3 (2026) - input $0.30/1M, output $1.20/1M, 1M context. Source: platform.minimax.io pricing"
+    },
+    "minimax-m3": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "note": "MiniMax M3 (2026) - lowercase alias"
+    },
+    "MiniMax-M3-highspeed": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0024,
+      "note": "MiniMax M3 highspeed tier (2x base price)"
     },
     "glm-5-turbo": {
       "promptPrice": 0.0012,
