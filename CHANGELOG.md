@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-06-01
+
+### Added
+
+- **New model pricing entries** in `genai_otel/llm_pricing.json` for recently
+  released flagship models, so cost tracking resolves them out of the box:
+  - **Anthropic Claude Opus 4.8** (`claude-opus-4-8`, `claude-opus-4.8`):
+    $5/1M input, $25/1M output (standard mode).
+  - **Google Gemini 3.5 Flash** (`gemini-3.5-flash`,
+    `gemini/gemini-3.5-flash`): $1.50/1M input, $9.00/1M output
+    (released May 19, 2026).
+  - **MiniMax M3** (`MiniMax-M3`, `minimax-m3`, plus the `-highspeed` tier):
+    $0.30/1M input, $1.20/1M output, 1M context.
+  - **OpenAI GPT-5.5 series** (`gpt-5.5-mini` $0.40/$1.60, `gpt-5.5-nano`
+    $0.10/$0.40, `gpt-5.5-pro` $30/$180 per 1M); the `gpt-5.5` flagship was
+    already present.
+- **Regression test** `tests/test_pricing_new_models.py` that loads the
+  shipped pricing file and asserts the new entries resolve to the expected
+  cost, including dated/preview snapshot aliases routing to the correct
+  variant via the longest-substring lookup.
+
 ## [1.3.1] - 2026-05-12
 
 ### Added
