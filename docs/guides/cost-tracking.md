@@ -28,7 +28,7 @@ Every LLM span gets these attributes:
 | Provider | Models | Pricing Type |
 |----------|--------|--------------|
 | OpenAI | GPT-5.5 series, GPT-4o, GPT-4 Turbo, o1/o3, embeddings (50+) | Per token (prompt/completion) |
-| Anthropic | Claude Opus 4.8, Claude Sonnet 4.6, Claude 3.5/3 series (15+) | Per token + cache pricing |
+| Anthropic | Claude Fable 5, Claude Opus 4.8, Claude Sonnet 4.6, Claude 3.5/3 series (15+) | Per token + cache pricing |
 | Google AI | Gemini 3.5 Flash, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (30+) | Per token |
 | AWS Bedrock | Titan, Claude, Llama, Mistral (25+) | Per token |
 | Azure OpenAI | Same as OpenAI | Per token |
