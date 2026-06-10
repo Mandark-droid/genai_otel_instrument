@@ -763,6 +763,11 @@
       "completionPrice": 0.025,
       "note": "Anthropic Claude Opus 4.8 (2026) - dotted alias"
     },
+    "claude-fable-5": {
+      "promptPrice": 0.01,
+      "completionPrice": 0.05,
+      "note": "Anthropic Claude Fable 5 (2026) - input $10/1M, output $50/1M; new tier above Opus. Source: platform.claude.com/docs pricing"
+    },
     "claude-3-sonnet-20240229": {
       "promptPrice": 0.003,
       "completionPrice": 0.015
