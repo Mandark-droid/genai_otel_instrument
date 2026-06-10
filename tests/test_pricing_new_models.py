@@ -22,6 +22,7 @@ def calc():
 NEW_CHAT_MODELS = [
     ("claude-opus-4-8", 0.005, 0.025),
     ("claude-opus-4.8", 0.005, 0.025),
+    ("claude-fable-5", 0.01, 0.05),
     ("gpt-5.5-mini", 0.0004, 0.0016),
     ("gpt-5.5-nano", 0.0001, 0.0004),
     ("gpt-5.5-pro", 0.03, 0.18),
@@ -50,6 +51,8 @@ SNAPSHOT_ROUTING = [
     ("gpt-5.5-nano-2026-04-01", "gpt-5.5-nano"),
     ("gpt-5.5-2026-04-01", "gpt-5.5"),
     ("claude-opus-4-8-20260514", "claude-opus-4-8"),
+    ("claude-fable-5-20260601", "claude-fable-5"),
+    ("claude-fable-5[1m]", "claude-fable-5"),
     ("gemini-3.5-flash-preview-05-19", "gemini-3.5-flash"),
 ]
 

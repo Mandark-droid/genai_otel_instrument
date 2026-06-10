@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-06-11
+
+### Added
+
+- **New model pricing entry** in `genai_otel/llm_pricing.json`:
+  - **Anthropic Claude Fable 5** (`claude-fable-5`): $10/1M input,
+    $50/1M output. Anthropic's new top tier above Opus; dated snapshots
+    and the `[1m]` long-context variant resolve to the same entry via
+    the longest-substring lookup.
+- **Regression test rows** in `tests/test_pricing_new_models.py` covering
+  the new entry's pricing and snapshot/variant alias routing.
+
 ## [1.3.2] - 2026-06-01
 
 ### Added
