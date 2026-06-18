@@ -257,6 +257,14 @@ All three were migrated from the closed [`open-telemetry/semantic-conventions#36
 
 TraceVerde v1.1.1 already emits the proposed shape on the wire via dual-emission (`OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai`), providing the reference implementation for these conventions.
 
+## Ecosystem & Framework Contributions
+
+Beyond the spec, `genai_otel` is being upstreamed **into agent frameworks** as their native OpenTelemetry observability layer — demonstrating the library powering real third-party agents, not just first-party services:
+
+| PR | Framework | Contribution | Status |
+|---|---|---|---|
+| [**hermes-agent #48184**](https://github.com/NousResearch/hermes-agent/pull/48184) | [NousResearch Hermes](https://github.com/NousResearch/hermes-agent) | A bundled `observability/otel` plugin exporting Hermes turns / LLM calls / tool calls as OTel GenAI spans **and** dashboard log records, with no changes to Hermes core. When `genai-otel-instrument` is installed it additionally unlocks on-prem **GPU / energy / CO2 metrics**, **local-model cost** (parameter-size pricing for Ollama / HF / vLLM), and an inline **eval / guardrail suite** (PII, toxicity, bias, prompt-injection, restricted-topics, hallucination) scored on prompt **and** response — signals no vanilla OTel SDK or other GenAI instrumentor emits. | Open |
+
 ## Who Uses TraceVerde?
 
 TraceVerde is used by developers and teams building production GenAI applications. If you're using TraceVerde, we'd love to hear from you!
