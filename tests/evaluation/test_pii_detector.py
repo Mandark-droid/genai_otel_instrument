@@ -591,3 +591,71 @@ class TestIFSCAndCustomPII:
 
         assert OTelConfig().pii_custom_patterns == {}
         assert OTelConfig(pii_custom_patterns={"X": r"\d+"}).pii_custom_patterns == {"X": r"\d+"}
+
+
+class TestPromptFromEvents:
+    """#7 regression: prompt-side PII must consider USER messages (span events), not only first_message."""
+
+    class _Event:
+        def __init__(self, name, attributes):
+            self.name = name
+            self.attributes = attributes
+
+    class _Span:
+        def __init__(self, attributes, events):
+            self.attributes = attributes
+            self.events = events
+            self._attributes = dict(attributes)
+
+        def set_attribute(self, key, value):
+            self._attributes[key] = value
+
+    def _processor(self, **kw):
+        from genai_otel.evaluation.span_processor import EvaluationSpanProcessor
+
+        return EvaluationSpanProcessor(**kw)
+
+    def test_extract_prompt_from_events_includes_user_messages(self):
+        proc = self._processor(pii_config=PIIConfig(enabled=False))
+        span = self._Span(
+            attributes={
+                "gen_ai.request.first_message": '{"role": "system", "content": "You are a bank bot"}'
+            },
+            events=[
+                self._Event("gen_ai.prompt.0", {"gen_ai.prompt.content": "You are a bank bot"}),
+                self._Event(
+                    "gen_ai.prompt.1", {"gen_ai.prompt.content": "My Aadhaar is 2341 2345 6783"}
+                ),
+                self._Event(
+                    "gen_ai.completion.0", {"gen_ai.completion.content": "should be ignored"}
+                ),
+            ],
+        )
+        prompt = proc._extract_prompt_from_events(span)
+        assert "2341 2345 6783" in prompt
+        assert "bank bot" in prompt
+        assert "ignored" not in prompt
+
+    def test_extract_prompt_from_events_none_without_prompt_events(self):
+        proc = self._processor(pii_config=PIIConfig(enabled=False))
+        span = self._Span(attributes={}, events=[self._Event("other.event", {"x": "y"})])
+        assert proc._extract_prompt_from_events(span) is None
+
+    def test_on_end_flags_pii_in_user_message(self):
+        proc = self._processor(pii_config=PIIConfig(enabled=True, mode=PIIMode.DETECT))
+        assert proc.pii_detector is not None
+        proc.pii_detector._presidio_available = False  # fallback (CI has no presidio)
+        span = self._Span(
+            attributes={
+                "gen_ai.request.first_message": '{"role": "system", "content": "You are a helpful bank bot"}'
+            },
+            events=[
+                self._Event(
+                    "gen_ai.prompt.0", {"gen_ai.prompt.content": "You are a helpful bank bot"}
+                ),
+                self._Event("gen_ai.prompt.1", {"gen_ai.prompt.content": "My PAN is ABCPK1234M"}),
+            ],
+        )
+        proc.on_end(span)
+        # Without the #7 fix the prompt would be only the system first_message (no PII) -> False.
+        assert span._attributes.get("evaluation.pii.prompt.detected") is True
