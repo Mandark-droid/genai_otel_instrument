@@ -462,6 +462,37 @@ class PIIDetector:
                 )
                 entity_counts["IN_PHONE"] = entity_counts.get("IN_PHONE", 0) + 1
 
+        # IFSC pattern (bank branch code, e.g. HDFC0001234)
+        if PIIEntityType.IN_IFSC in self.config.entity_types:
+            ifsc_pattern = r"\b[A-Z]{4}0[A-Z0-9]{6}\b"
+            for match in re.finditer(ifsc_pattern, text):
+                entities.append(
+                    {
+                        "type": "IN_IFSC",
+                        "start": match.start(),
+                        "end": match.end(),
+                        "score": 0.9,
+                        "text": match.group(),
+                    }
+                )
+                entity_counts["IN_IFSC"] = entity_counts.get("IN_IFSC", 0) + 1
+
+        # Custom recognizers (config.custom_patterns) — mirror the Presidio path
+        for _entity, _spec in (self.config.custom_patterns or {}).items():
+            _regex = _spec["regex"] if isinstance(_spec, dict) else _spec
+            _score = _spec.get("score", 0.8) if isinstance(_spec, dict) else 0.8
+            for match in re.finditer(_regex, text):
+                entities.append(
+                    {
+                        "type": _entity,
+                        "start": match.start(),
+                        "end": match.end(),
+                        "score": _score,
+                        "text": match.group(),
+                    }
+                )
+                entity_counts[_entity] = entity_counts.get(_entity, 0) + 1
+
         has_pii = len(entities) > 0
         score = max([e["score"] for e in entities], default=0.0)
 

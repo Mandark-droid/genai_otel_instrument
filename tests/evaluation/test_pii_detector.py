@@ -540,3 +540,54 @@ class TestIndiaPIIDetection:
         assert "IN_AADHAAR" not in result.entity_counts
         assert "IN_PAN" not in result.entity_counts
         assert "IN_UPI" not in result.entity_counts
+
+
+class TestIFSCAndCustomPII:
+    """IFSC recognizer, the UPI okhdfcbank fix, and custom_patterns (fallback path; no Presidio needed)."""
+
+    def _make_detector(self, custom_patterns=None):
+        config = PIIConfig(enabled=True, mode=PIIMode.DETECT, custom_patterns=custom_patterns)
+        detector = PIIDetector(config)
+        detector._presidio_available = False  # exercise the no-Presidio fallback
+        return detector
+
+    def test_ifsc_entity_type_and_default(self):
+        assert PIIEntityType.IN_IFSC == "IN_IFSC"
+        assert PIIEntityType.IN_IFSC in PIIConfig().entity_types
+
+    def test_ifsc_detected(self):
+        result = self._make_detector().detect("Branch IFSC HDFC0001234 for the transfer")
+        assert result.has_pii
+        assert "IN_IFSC" in result.entity_counts
+
+    def test_upi_okhdfcbank_detected(self):
+        # Regression: the UPI handle set previously used "okhdfc" and missed "okhdfcbank".
+        result = self._make_detector().detect("Pay rajesh.kumar@okhdfcbank")
+        assert "IN_UPI" in result.entity_counts
+
+    def test_generic_email_not_flagged_as_upi(self):
+        result = self._make_detector().detect("Contact user@gmail.com")
+        assert "IN_UPI" not in result.entity_counts
+
+    def test_custom_pattern_string_spec(self):
+        det = self._make_detector(custom_patterns={"CUSTOMER_ID": r"\bCUST-\d{8}\b"})
+        result = det.detect("internal ref CUST-40028111 here")
+        assert result.has_pii
+        assert "CUSTOMER_ID" in result.entity_counts
+
+    def test_custom_pattern_dict_spec_with_score(self):
+        det = self._make_detector(
+            custom_patterns={"POLICY_NO": {"regex": r"\bPOL\d{6}\b", "score": 0.95}}
+        )
+        result = det.detect("policy POL123456 issued")
+        assert "POLICY_NO" in result.entity_counts
+
+    def test_config_stores_custom_patterns(self):
+        cfg = PIIConfig(custom_patterns={"X": r"\bX\d+\b"})
+        assert cfg.custom_patterns == {"X": r"\bX\d+\b"}
+
+    def test_otel_config_pii_custom_patterns(self):
+        from genai_otel.config import OTelConfig
+
+        assert OTelConfig().pii_custom_patterns == {}
+        assert OTelConfig(pii_custom_patterns={"X": r"\d+"}).pii_custom_patterns == {"X": r"\d+"}
