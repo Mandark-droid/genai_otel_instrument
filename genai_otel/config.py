@@ -230,6 +230,8 @@ class OTelConfig:
     pii_pci_dss_mode: bool = field(
         default_factory=lambda: os.getenv("GENAI_PII_PCI_DSS_MODE", "false").lower() == "true"
     )
+    # Custom PII recognizers: {entity_label: regex} or {entity_label: {"regex":..., "score":0.8}}
+    pii_custom_patterns: Optional[dict] = field(default_factory=dict)
 
     # Toxicity Detection
     enable_toxicity_detection: bool = field(

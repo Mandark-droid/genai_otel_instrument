@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **IFSC bank-code PII recognizer** (`IN_IFSC`) added to the India recognizer set
+  in `PIIDetector._register_india_recognizers` and to `PIIConfig` default
+  `entity_types` (regex `\b[A-Z]{4}0[A-Z0-9]{6}\b`, score 0.9). Indian bank branch
+  codes (e.g. `HDFC0001234`) are now detected out of the box.
+- **Custom PII recognizers via `pii_custom_patterns`.** `genai_otel.instrument(...)`
+  now accepts `pii_custom_patterns={"ENTITY": r"regex"}` (or
+  `{"ENTITY": {"regex": ..., "score": 0.8}}`), wired through `OTelConfig` →
+  `PIIConfig.custom_patterns` → a new `PIIDetector._register_custom_recognizers`.
+  Registered entity labels are tracked and included in `detect()` analysis, so
+  customers can add their own PII/BFSI classes (e.g. internal customer-reference
+  numbers) with no code changes. (Previously `PIIConfig.custom_patterns` existed
+  but was never consumed.)
+
+### Fixed
+
+- **UPI VPA recognizer NPCI handles.** The `IN_UPI` pattern used `okhdfc`, which
+  failed to match real handles like `name@okhdfcbank` (word boundary after the
+  truncated PSP). Corrected to the actual NPCI set
+  (`ok(?:hdfcbank|axis|icici|sbi|bizaxis)`), so HDFC/Axis/ICICI/SBI UPI addresses
+  are detected. Applied to both the Presidio recognizer and the no-Presidio fallback.
+
 ## [1.3.3] - 2026-06-11
 
 ### Added
