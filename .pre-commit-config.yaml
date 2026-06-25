@@ -47,7 +47,9 @@ repos:
 
   # Security checks
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.10
+    # 1.8+ uses the importlib.metadata entry_points API; 1.7.10 loaded zero test
+    # plugins on Python 3.12+ ("Unknown test found in profile: B105").
+    rev: 1.8.6
     hooks:
       - id: bandit
         args: [-c, pyproject.toml]
