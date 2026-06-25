@@ -360,7 +360,7 @@ class EvaluationSpanProcessor(SpanProcessor):
             # Extract prompt and response from span attributes
             attributes = dict(span.attributes) if span.attributes else {}
 
-            prompt = self._extract_prompt(attributes)
+            prompt = self._extract_prompt_from_events(span) or self._extract_prompt(attributes)
             response = self._extract_response(attributes)
 
             # Run PII detection
@@ -389,6 +389,31 @@ class EvaluationSpanProcessor(SpanProcessor):
 
         except Exception as e:
             logger.error("Error in evaluation span processor: %s", e, exc_info=True)
+
+    def _extract_prompt_from_events(self, span) -> Optional[str]:
+        """Reconstruct the full prompt from per-message span events.
+
+        Instrumentors emit each input message as a ``gen_ai.prompt.{idx}`` span
+        event carrying a ``gen_ai.prompt.content`` attribute, so the complete
+        prompt (including USER messages, not only the system/first message that
+        is exposed as a span attribute) lives in events. Concatenating these
+        ensures PII / toxicity / bias in user messages is evaluated. Returns None
+        when there are no such events (callers fall back to _extract_prompt).
+        """
+        try:
+            events = getattr(span, "events", None) or ()
+        except Exception:  # pragma: no cover - defensive
+            return None
+        parts = []
+        for event in events:
+            name = getattr(event, "name", "") or ""
+            if not name.startswith("gen_ai.prompt"):
+                continue
+            attrs = dict(getattr(event, "attributes", {}) or {})
+            content = attrs.get("gen_ai.prompt.content")
+            if content:
+                parts.append(str(content))
+        return chr(10).join(parts) if parts else None
 
     def _extract_prompt(self, attributes: dict) -> Optional[str]:
         """Extract prompt text from span attributes.
