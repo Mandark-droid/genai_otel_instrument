@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-06-25
+
 ### Added
 
 - **IFSC bank-code PII recognizer** (`IN_IFSC`) added to the India recognizer set
@@ -20,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   customers can add their own PII/BFSI classes (e.g. internal customer-reference
   numbers) with no code changes. (Previously `PIIConfig.custom_patterns` existed
   but was never consumed.)
+- Unit tests (`tests/evaluation/test_pii_detector.py`) for IFSC, the UPI `okhdfcbank` fix, and `custom_patterns`; the IFSC + custom recognizers also work in the no-Presidio regex fallback (parity with the other India classes).
 
 ### Fixed
 
