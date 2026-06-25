@@ -388,6 +388,7 @@ def setup_auto_instrumentation(config: OTelConfig):
                     gdpr_mode=config.pii_gdpr_mode,
                     hipaa_mode=config.pii_hipaa_mode,
                     pci_dss_mode=config.pii_pci_dss_mode,
+                    custom_patterns=config.pii_custom_patterns,
                 )
 
             # Build Toxicity config

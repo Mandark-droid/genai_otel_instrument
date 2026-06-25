@@ -58,6 +58,7 @@ class PIIDetector:
         self._analyzer = None
         self._anonymizer = None
         self._presidio_available = False
+        self._custom_entities: list = []
         self._check_availability()
 
     def _check_availability(self):
@@ -69,6 +70,7 @@ class PIIDetector:
             self._analyzer = AnalyzerEngine()
             self._anonymizer = AnonymizerEngine()
             self._register_india_recognizers()
+            self._register_custom_recognizers()
             self._presidio_available = True
             logger.info("Presidio PII detection initialized successfully")
         except ImportError as e:
@@ -121,7 +123,7 @@ class PIIDetector:
                 patterns=[
                     Pattern(
                         name="upi",
-                        regex=r"\b[\w.+-]+@(?:ok(?:sbi|icici|axis|hdfc)|paytm|ybl|upi|apl|ibl|axl|barodampay|mahb|cnrb|pnb|sib|federal|kotak|indus|citi|rbl|idbi|aubank|dlb|kvb|csbpay|idfcfirst|freecharge|slice|jupiter|fi|gpay|oksbi)\b",
+                        regex=r"\b[\w.+-]+@(?:ok(?:hdfcbank|axis|icici|sbi|bizaxis)|paytm|ybl|upi|apl|ibl|axl|barodampay|mahb|cnrb|pnb|sib|federal|kotak|indus|citi|rbl|idbi|aubank|dlb|kvb|csbpay|idfcfirst|freecharge|slice|jupiter|fi|gpay|oksbi)\b",
                         score=0.9,
                     )
                 ],
@@ -142,8 +144,15 @@ class PIIDetector:
                 supported_language="en",
             )
 
+            ifsc_recognizer = PatternRecognizer(
+                supported_entity="IN_IFSC",
+                name="Indian IFSC Recognizer",
+                patterns=[Pattern(name="ifsc", regex=r"\b[A-Z]{4}0[A-Z0-9]{6}\b", score=0.9)],
+                supported_language="en",
+            )
             registry = self._analyzer.registry
             registry.add_recognizer(aadhaar_recognizer)
+            registry.add_recognizer(ifsc_recognizer)
             registry.add_recognizer(pan_recognizer)
             registry.add_recognizer(upi_recognizer)
             registry.add_recognizer(in_phone_recognizer)
@@ -151,6 +160,40 @@ class PIIDetector:
 
         except Exception as e:
             logger.warning("Failed to register India PII recognizers: %s", e)
+
+    def _register_custom_recognizers(self):
+        """Register custom Presidio recognizers from ``config.custom_patterns``.
+
+        ``custom_patterns`` maps an entity label to either a regex string or a
+        dict ``{"regex": ..., "score": 0.8}`` — letting customers add their own
+        PII / BFSI classes (e.g. an internal customer-reference number) with no
+        code changes. Registered entity labels are tracked so :meth:`detect`
+        includes them in the analysis.
+        """
+        patterns = self.config.custom_patterns or {}
+        if not patterns:
+            return
+        try:
+            from presidio_analyzer import Pattern, PatternRecognizer
+
+            registry = self._analyzer.registry
+            for entity, spec in patterns.items():
+                regex = spec["regex"] if isinstance(spec, dict) else spec
+                score = spec.get("score", 0.8) if isinstance(spec, dict) else 0.8
+                registry.add_recognizer(
+                    PatternRecognizer(
+                        supported_entity=entity,
+                        name=f"Custom {entity} Recognizer",
+                        patterns=[Pattern(name=entity.lower(), regex=regex, score=score)],
+                        supported_language="en",
+                    )
+                )
+                self._custom_entities.append(entity)
+            logger.debug(
+                "Registered %d custom PII recognizer(s): %s", len(patterns), list(patterns)
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Failed to register custom PII recognizers: %s", e)
 
     def is_available(self) -> bool:
         """Check if PII detector is available.
@@ -179,7 +222,9 @@ class PIIDetector:
 
         try:
             # Convert entity types to Presidio format
-            entity_types = [entity.value for entity in self.config.entity_types]
+            entity_types = [
+                entity.value for entity in self.config.entity_types
+            ] + self._custom_entities
 
             # Analyze text
             results = self._analyzer.analyze(
@@ -389,7 +434,7 @@ class PIIDetector:
 
         # UPI address pattern (user@bankhandle)
         if PIIEntityType.IN_UPI in self.config.entity_types:
-            upi_pattern = r"\b[\w.+-]+@(?:ok(?:sbi|icici|axis|hdfc)|paytm|ybl|upi|apl|ibl|axl|barodampay|mahb|cnrb|pnb|sib|federal|kotak|indus|citi|rbl|idbi|aubank|dlb|kvb|csbpay|idfcfirst|freecharge|slice|jupiter|fi|gpay|oksbi)\b"
+            upi_pattern = r"\b[\w.+-]+@(?:ok(?:hdfcbank|axis|icici|sbi|bizaxis)|paytm|ybl|upi|apl|ibl|axl|barodampay|mahb|cnrb|pnb|sib|federal|kotak|indus|citi|rbl|idbi|aubank|dlb|kvb|csbpay|idfcfirst|freecharge|slice|jupiter|fi|gpay|oksbi)\b"
             for match in re.finditer(upi_pattern, text):
                 entities.append(
                     {

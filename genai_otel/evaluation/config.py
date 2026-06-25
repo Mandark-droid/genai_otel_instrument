@@ -43,6 +43,7 @@ class PIIEntityType(str, Enum):
     IN_PAN = "IN_PAN"  # Permanent Account Number (ABCDE1234F)
     IN_UPI = "IN_UPI"  # UPI address (user@bankname)
     IN_PHONE = "IN_PHONE"  # Indian phone number (+91/91/0 prefix, starts with 6-9)
+    IN_IFSC = "IN_IFSC"  # IFSC bank branch code (e.g. HDFC0001234)
 
 
 @dataclass
@@ -76,6 +77,7 @@ class PIIConfig:
             PIIEntityType.IN_PAN,
             PIIEntityType.IN_UPI,
             PIIEntityType.IN_PHONE,
+            PIIEntityType.IN_IFSC,
         }
     )
     redaction_char: str = "*"
