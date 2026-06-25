@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Prompt-side PII / toxicity / bias now evaluate the full message list, not just the system prompt.** `EvaluationSpanProcessor` reconstructs the prompt from the per-message `gen_ai.prompt.{idx}` span events (new `_extract_prompt_from_events`), and `BaseInstrumentor._run_evaluation_checks` reads `kwargs["messages"]`, so `evaluation.pii.prompt.detected` (and toxicity/bias) flag content in USER messages — previously only the system / first message (`gen_ai.request.first_message`) was checked.
+
 ## [1.4.0] - 2026-06-25
 
 ### Added

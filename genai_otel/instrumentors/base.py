@@ -1059,7 +1059,20 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
             # Extract prompt from dict-string format
             prompt = None
-            if "gen_ai.request.first_message" in attrs:
+            # Prefer the FULL message list so PII/toxicity/bias in USER messages
+            # (not only the system/first message) is evaluated.
+            _msgs = kwargs.get("messages")
+            if _msgs and isinstance(_msgs, list):
+                _parts = []
+                for _m in _msgs:
+                    _c = _m.get("content") if isinstance(_m, dict) else getattr(_m, "content", None)
+                    if isinstance(_c, str):
+                        _parts.append(_c)
+                    elif isinstance(_c, list):
+                        _parts.extend(blk.get("text", "") for blk in _c if isinstance(blk, dict))
+                if _parts:
+                    prompt = chr(10).join(p for p in _parts if p)
+            if prompt is None and "gen_ai.request.first_message" in attrs:
                 value = attrs["gen_ai.request.first_message"]
                 logger.debug(f"Found gen_ai.request.first_message: {value[:100]}")
                 if isinstance(value, str):
