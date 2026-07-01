@@ -768,6 +768,21 @@
       "completionPrice": 0.05,
       "note": "Anthropic Claude Fable 5 (2026) - input $10/1M, output $50/1M; new tier above Opus. Source: platform.claude.com/docs pricing"
     },
+    "claude-sonnet-5": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "note": "Anthropic Claude Sonnet 5 (Jun 30, 2026) - intro discount input $2/1M, output $10/1M through Sep 2026; reverts to standard $5/1M input, $15/1M output after. 1M context; cache read $0.20/1M, cache write $2.50/1M. Source: platform.claude.com/docs pricing + models.dev"
+    },
+    "claude-sonnet-5-20260630": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "note": "Claude Sonnet 5 dated snapshot; same intro pricing as claude-sonnet-5"
+    },
+    "anthropic.claude-sonnet-5": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "note": "Claude Sonnet 5 - AWS Bedrock id"
+    },
     "claude-3-sonnet-20240229": {
       "promptPrice": 0.003,
       "completionPrice": 0.015
@@ -839,6 +854,21 @@
     "command-a": {
       "promptPrice": 0.0025,
       "completionPrice": 0.01
+    },
+    "north-mini-code-1-0": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Cohere North Mini Code (Jun 9, 2026) - free open-weight coding model; no per-token charge. 256K context. Source: models.dev + OpenRouter (north-mini-code:free)"
+    },
+    "north-mini-code": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Cohere North Mini Code - short alias (free)"
+    },
+    "cohere/north-mini-code": {
+      "promptPrice": 0.0,
+      "completionPrice": 0.0,
+      "note": "Cohere North Mini Code via provider prefix (free)"
     },
     "open-mistral-7b": {
       "promptPrice": 0.00025,
@@ -1586,7 +1616,7 @@
     "deepseek-v4-pro": {
       "promptPrice": 0.000435,
       "completionPrice": 0.00087,
-      "note": "DeepSeek V4 Pro (75% promotional discount until 2026-05-31). Standard rate: $1.74/1M input, $3.48/1M output. Source: api-docs.deepseek.com/quick_start/pricing"
+      "note": "DeepSeek V4 Pro - promotional discount still in effect as of 2026-07-01 (input $0.435/1M, output $0.87/1M), re-verified against api-docs.deepseek.com/quick_start/pricing. Standard rate (when promo ends): $1.74/1M input, $3.48/1M output."
     },
     "deepseek/v4-pro": {
       "promptPrice": 0.000435,
@@ -1787,6 +1817,16 @@
     "nvidia/nemotron-4-340b-instruct": {
       "promptPrice": 0.003,
       "completionPrice": 0.009
+    },
+    "nvidia/nemotron-3-ultra-550b-a55b": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0025,
+      "note": "Nvidia Nemotron 3 Ultra 550B A55B (Jun 4, 2026) - input $0.50/1M, output $2.50/1M, cache read $0.15/1M, 1M context, open weights. Source: models.dev"
+    },
+    "nemotron-3-ultra-550b-a55b": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0025,
+      "note": "Nvidia Nemotron 3 Ultra 550B A55B - bare alias"
     },
     "nvidia-nemotron-mini": {
       "promptPrice": 0.0002,
@@ -4244,6 +4284,21 @@
       "completionPrice": 0.0044,
       "note": "Zhipu GLM-5.1 - HuggingFace repo format"
     },
+    "glm-5.2": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0044,
+      "note": "Zhipu GLM-5.2 (Jun 13, 2026) - input $1.40/1M, output $4.40/1M, cache read $0.26/1M, 1M context. Source: docs.z.ai/guides/overview/pricing + models.dev"
+    },
+    "zai/glm-5.2": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0044,
+      "note": "Zhipu GLM-5.2 via Z.AI provider"
+    },
+    "THUDM/GLM-5.2": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0044,
+      "note": "Zhipu GLM-5.2 - HuggingFace repo format"
+    },
     "kimi-k2.6": {
       "promptPrice": 0.00095,
       "completionPrice": 0.004,
@@ -4264,6 +4319,26 @@
       "completionPrice": 0.0028,
       "note": "Moonshot Kimi K2.6 - HuggingFace repo format"
     },
+    "kimi-k2.7-code": {
+      "promptPrice": 0.00095,
+      "completionPrice": 0.004,
+      "note": "Moonshot Kimi K2.7 Code (Jun 12, 2026) - input $0.95/1M, output $4/1M, cache hit $0.19/1M, 256K context, open weights. Source: platform.moonshot.ai + models.dev"
+    },
+    "kimi-k2.7-code-highspeed": {
+      "promptPrice": 0.0019,
+      "completionPrice": 0.008,
+      "note": "Moonshot Kimi K2.7 Code HighSpeed tier (2x base) - input $1.90/1M, output $8/1M. Source: models.dev"
+    },
+    "moonshotai/kimi-k2.7-code": {
+      "promptPrice": 0.00095,
+      "completionPrice": 0.004,
+      "note": "Moonshot Kimi K2.7 Code via provider prefix"
+    },
+    "moonshotai/Kimi-K2.7-Code": {
+      "promptPrice": 0.00095,
+      "completionPrice": 0.004,
+      "note": "Moonshot Kimi K2.7 Code - HuggingFace repo format"
+    },
     "qwen3.5-plus": {
       "promptPrice": 0.0004,
       "completionPrice": 0.0024,
@@ -4273,6 +4348,121 @@
       "promptPrice": 0.0004,
       "completionPrice": 0.0024,
       "note": "Qwen 3.5 Plus via OpenRouter provider prefix"
+    },
+    "qwen3.7-plus": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.003,
+      "note": "Alibaba Qwen3.7 Plus (Jun 2, 2026) - input $0.50/1M, output $3/1M, cache read $0.05/1M, cache write $0.625/1M, 1M context. Source: DashScope + models.dev"
+    },
+    "qwen-qwen3.7-plus": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.003,
+      "note": "Qwen 3.7 Plus via OpenRouter provider prefix"
+    },
+    "dashscope/qwen3.7-plus": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.003,
+      "note": "Qwen 3.7 Plus via DashScope provider prefix"
+    },
+    "mimo-v2-flash": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "note": "Xiaomi MiMo-V2-Flash (Dec 16, 2025) - input $0.14/1M, output $0.28/1M, cache hit $0.0028/1M, 256K context, open weights. Source: platform.xiaomimimo.com + models.dev"
+    },
+    "xiaomi/mimo-v2-flash": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "note": "Xiaomi MiMo-V2-Flash via provider prefix"
+    },
+    "mimo-v2-omni": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "note": "Xiaomi MiMo-V2-Omni (Mar 18, 2026) - multimodal, input $0.14/1M, output $0.28/1M, 256K context. Source: platform.xiaomimimo.com + models.dev"
+    },
+    "xiaomi/mimo-v2-omni": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "note": "Xiaomi MiMo-V2-Omni via provider prefix"
+    },
+    "mimo-v2-pro": {
+      "promptPrice": 0.000435,
+      "completionPrice": 0.00087,
+      "note": "Xiaomi MiMo-V2-Pro (Mar 18, 2026) - input $0.435/1M, output $0.87/1M, cache hit $0.0036/1M, 1M context. Source: platform.xiaomimimo.com + models.dev"
+    },
+    "xiaomi/mimo-v2-pro": {
+      "promptPrice": 0.000435,
+      "completionPrice": 0.00087,
+      "note": "Xiaomi MiMo-V2-Pro via provider prefix"
+    },
+    "mimo-v2.5": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "note": "Xiaomi MiMo-V2.5 (Apr 22, 2026) - input $0.14/1M, output $0.28/1M, cache hit $0.0028/1M, 1M context, open weights. Source: platform.xiaomimimo.com + models.dev"
+    },
+    "xiaomi/mimo-v2.5": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "note": "Xiaomi MiMo-V2.5 via provider prefix"
+    },
+    "mimo-v2.5-pro": {
+      "promptPrice": 0.000435,
+      "completionPrice": 0.00087,
+      "note": "Xiaomi MiMo-V2.5-Pro (Apr 22, 2026) - input $0.435/1M, output $0.87/1M, cache hit $0.0036/1M, 1M context, open weights. Source: platform.xiaomimimo.com + models.dev"
+    },
+    "xiaomi/mimo-v2.5-pro": {
+      "promptPrice": 0.000435,
+      "completionPrice": 0.00087,
+      "note": "Xiaomi MiMo-V2.5-Pro via provider prefix"
+    },
+    "mimo-v2.5-pro-ultraspeed": {
+      "promptPrice": 0.001305,
+      "completionPrice": 0.00261,
+      "note": "Xiaomi MiMo-V2.5-Pro-UltraSpeed (Jun 8, 2026) - low-latency tier, input $1.305/1M, output $2.61/1M, cache hit $0.0108/1M, 1M context. Source: platform.xiaomimimo.com + models.dev"
+    },
+    "xiaomi/mimo-v2.5-pro-ultraspeed": {
+      "promptPrice": 0.001305,
+      "completionPrice": 0.00261,
+      "note": "Xiaomi MiMo-V2.5-Pro-UltraSpeed via provider prefix"
+    },
+    "longcat-2.0": {
+      "promptPrice": 0.00075,
+      "completionPrice": 0.00295,
+      "note": "Meituan LongCat-2.0 (Jun 2026, 1.6T MoE, open weights) - standard input $0.75/1M, output $2.95/1M, context-cache hits free; limited-time promo $0.30/$1.20 per 1M. Source: pricepertoken.com + longcatai.org"
+    },
+    "longcat-2": {
+      "promptPrice": 0.00075,
+      "completionPrice": 0.00295,
+      "note": "Meituan LongCat-2.0 - short alias"
+    },
+    "meituan/longcat-2.0": {
+      "promptPrice": 0.00075,
+      "completionPrice": 0.00295,
+      "note": "Meituan LongCat-2.0 via provider prefix"
+    },
+    "longcat-flash-chat": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0008,
+      "note": "Meituan LongCat Flash Chat - input $0.20/1M, output $0.80/1M. Source: pricepertoken.com"
+    },
+    "meituan/longcat-flash-chat": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0008,
+      "note": "Meituan LongCat Flash Chat via provider prefix"
+    },
+    "fugu-ultra": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.03,
+      "note": "Sakana AI Fugu Ultra (Jun 15, 2026) - input $5/1M, output $30/1M, cache read $0.50/1M, 1M context. Source: models.dev"
+    },
+    "sakana/fugu-ultra": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.03,
+      "note": "Sakana AI Fugu Ultra via provider prefix"
+    },
+    "fugu-ultra-20260615": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.03,
+      "note": "Sakana AI Fugu Ultra dated snapshot"
     },
     "dashscope/qwen3.5-plus": {
       "promptPrice": 0.0004,
