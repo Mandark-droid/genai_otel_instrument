@@ -6,6 +6,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-07-01
+
+### Added
+
+- **June 2026 model pricing sweep** in `genai_otel/llm_pricing.json`, covering
+  new closed- and open-weight releases across all supported providers so cost
+  tracking resolves them out of the box (prices per 1M tokens; stored per 1k):
+  - **Anthropic Claude Sonnet 5** (`claude-sonnet-5`, dated + `anthropic.` Bedrock
+    aliases): intro discount **$2 in / $10 out** through Sep 2026; reverts to
+    standard **$5 / $15** afterward. 1M context.
+  - **Moonshot Kimi K2.7 Code** (`kimi-k2.7-code`, `-highspeed`, `moonshotai/`
+    prefixes): **$0.95 / $4** (HighSpeed **$1.90 / $8**). Open weights, 256K ctx.
+  - **Cohere North Mini Code** (`north-mini-code-1-0`, `north-mini-code`,
+    `cohere/north-mini-code`): free open-weight coding model (**$0 / $0**).
+  - **Nvidia Nemotron 3 Ultra 550B A55B** (`nvidia/nemotron-3-ultra-550b-a55b`):
+    **$0.50 / $2.50**. Open weights, 1M context.
+  - **Xiaomi MiMo family** (previously absent entirely): `mimo-v2-flash` &
+    `mimo-v2-omni` & `mimo-v2.5` at **$0.14 / $0.28**; `mimo-v2-pro` &
+    `mimo-v2.5-pro` at **$0.435 / $0.87**; `mimo-v2.5-pro-ultraspeed` (Jun 8) at
+    **$1.305 / $2.61**. All with `xiaomi/` prefixed aliases.
+  - **Sakana AI Fugu Ultra** (`fugu-ultra`, `sakana/fugu-ultra`, dated): **$5 / $30**.
+  - **Zhipu / Z.AI GLM-5.2** (`glm-5.2`, `zai/glm-5.2`, `THUDM/GLM-5.2`):
+    **$1.40 / $4.40**. 1M context.
+  - **Alibaba Qwen3.7 Plus** (`qwen3.7-plus`, `qwen-qwen3.7-plus`,
+    `dashscope/qwen3.7-plus`): **$0.50 / $3**. 1M context.
+  - **Meituan LongCat-2.0** (`longcat-2.0`, `meituan/longcat-2.0`) at standard
+    **$0.75 / $2.95** (limited-time promo $0.30 / $1.20), and **LongCat Flash Chat**
+    (`longcat-flash-chat`) at **$0.20 / $0.80**. Open weights.
+- **`models.dev` added as a pricing data source** (see "Pricing data sources"
+  below). Its structured `api.json` (per-model `cost`, `release_date`,
+  `open_weights`) is now the primary cross-source for the monthly refresh.
+- **Regression tests** extended in `tests/test_pricing_new_models.py`: one row per
+  new model plus novel-snapshot routing rows asserting Sonnet 5 does not collapse
+  onto Sonnet 4.5 and the MiMo UltraSpeed tier does not collapse onto `mimo-v2.5-pro`.
+
+### Changed
+
+- **DeepSeek V4 Pro** note refreshed: the 75% promotional discount
+  (**$0.435 / $0.87**) remains in effect as of 2026-07-01, re-verified against
+  `api-docs.deepseek.com/quick_start/pricing`; price unchanged.
+
+### Deferred
+
+- **DeepReinforce Ornith 1.0** (`Ornith-1.0-9B/31B/35B-MoE/397B-MoE`, MIT, Jun 25)
+  intentionally NOT added: no first-party API pricing is published yet and no
+  aggregator lists a rate. Adding a $0 or guessed price would make the cost
+  tracker under-report, so the entry waits until an official rate exists.
+
+### Pricing data sources
+
+The `genai_otel/llm_pricing.json` database is refreshed monthly from the sources
+below (maintained here per the update routine). Later sources are cross-checks;
+first-party vendor pricing always wins on conflict.
+
+- **First-party provider docs**: Anthropic (`platform.claude.com`), OpenAI,
+  Google (`ai.google.dev`), Moonshot AI (`platform.moonshot.ai`), Xiaomi
+  (`platform.xiaomimimo.com`), Zhipu / Z.AI (`docs.z.ai`), Alibaba DashScope,
+  DeepSeek (`api-docs.deepseek.com`), MiniMax (`platform.minimax.io`), xAI
+  (`docs.x.ai`), Cohere, Nvidia, Sakana AI, Meituan LongCat (`longcatai.org`).
+- **Hyperscalers**: AWS Bedrock, Azure AI Foundry, Google Vertex AI.
+- **Aggregators / cross-checks**: OpenRouter, LiteLLM, Artificial Analysis.
+- **models.dev** (`https://models.dev/models/`, `api.json`) - added 2026-07-01.
+
 ## [1.4.1] - 2026-06-26
 
 ### Fixed
