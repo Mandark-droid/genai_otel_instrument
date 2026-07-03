@@ -57,6 +57,9 @@ NEW_CHAT_MODELS = [
     ("longcat-flash-chat", 0.0002, 0.0008),
     ("fugu-ultra", 0.005, 0.03),
     ("sakana/fugu-ultra", 0.005, 0.03),
+    # --- June 2026 alias gap-fill (missed in initial sweep) ---
+    ("claude-fable-5-20260609", 0.01, 0.05),
+    ("anthropic.claude-fable-5", 0.01, 0.05),
 ]
 
 
@@ -78,6 +81,7 @@ SNAPSHOT_ROUTING = [
     ("gpt-5.5-2026-04-01", "gpt-5.5"),
     ("claude-opus-4-8-20260514", "claude-opus-4-8"),
     ("claude-fable-5-20260601", "claude-fable-5"),
+    ("claude-fable-5-20260609", "claude-fable-5-20260609"),
     ("claude-fable-5[1m]", "claude-fable-5"),
     ("gemini-3.5-flash-preview-05-19", "gemini-3.5-flash"),
     # June 2026 sweep: novel snapshots must route to the new family, not a

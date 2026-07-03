@@ -766,7 +766,17 @@
     "claude-fable-5": {
       "promptPrice": 0.01,
       "completionPrice": 0.05,
-      "note": "Anthropic Claude Fable 5 (2026) - input $10/1M, output $50/1M; new tier above Opus. Source: platform.claude.com/docs pricing"
+      "note": "Anthropic Claude Fable 5 (2026) - input $10/1M, output $50/1M; cache read $1/1M, cache write $12.50/1M. Source: platform.claude.com/docs pricing + models.dev"
+    },
+    "claude-fable-5-20260609": {
+      "promptPrice": 0.01,
+      "completionPrice": 0.05,
+      "note": "Claude Fable 5 dated snapshot (Jun 9, 2026); same pricing as claude-fable-5"
+    },
+    "anthropic.claude-fable-5": {
+      "promptPrice": 0.01,
+      "completionPrice": 0.05,
+      "note": "Claude Fable 5 - AWS Bedrock model id"
     },
     "claude-sonnet-5": {
       "promptPrice": 0.002,

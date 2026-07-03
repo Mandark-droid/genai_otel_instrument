@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-07-03
+
+### Added
+
+- **Claude Fable 5 alias gap-fill** in `genai_otel/llm_pricing.json`: two entries
+  missed in the 1.4.2 June sweep are now present so callers using the canonical
+  Bedrock id or the dated-snapshot key resolve correctly:
+  - `claude-fable-5-20260609` (dated snapshot, released Jun 9 2026) at **$10 in /
+    $50 out** per 1M tokens, matching the base `claude-fable-5` entry.
+  - `anthropic.claude-fable-5` (AWS Bedrock model id) at same pricing, mirroring
+    the existing `anthropic.claude-sonnet-5` Bedrock alias pattern.
+
+### Deferred
+
+- **Sakana AI Fugu** (base model, `fugu` / `fugu-20260615`, Jun 15 2026): no
+  first-party published API price found in models.dev or sakana.ai docs. Only
+  `fugu-ultra` (already in 1.4.2) has confirmed pricing. Will add `fugu` when
+  pricing is published.
+
+### Pricing data sources
+
+(unchanged from 1.4.2 - see that section)
+
 ## [1.4.2] - 2026-07-01
 
 ### Added
