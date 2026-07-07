@@ -65,6 +65,7 @@ try:
         AzureOpenAIInstrumentor,
         BedrockAgentsInstrumentor,
         CohereInstrumentor,
+        CometAPIInstrumentor,
         CrewAIInstrumentor,
         DSPyInstrumentor,
         GoogleADKInstrumentor,
@@ -101,6 +102,7 @@ except ImportError:
         AzureOpenAIInstrumentor,
         BedrockAgentsInstrumentor,
         CohereInstrumentor,
+        CometAPIInstrumentor,
         CrewAIInstrumentor,
         DSPyInstrumentor,
         GoogleADKInstrumentor,
@@ -172,6 +174,7 @@ INSTRUMENTORS = {
     "agents": OpenAIAgentsInstrumentor,  # OpenAI Agents SDK
     "openai_agents": OpenAIAgentsInstrumentor,  # OpenAI Agents SDK (alias)
     "openrouter": OpenRouterInstrumentor,  # OpenRouter unified API aggregator
+    "cometapi": CometAPIInstrumentor,  # CometAPI all-in-one API aggregator (500+ models)
     "anthropic": AnthropicInstrumentor,
     "google.generativeai": GoogleAIInstrumentor,
     "google_adk": GoogleADKInstrumentor,  # Google Agent Development Kit

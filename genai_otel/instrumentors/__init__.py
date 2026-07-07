@@ -16,6 +16,7 @@ from .aws_bedrock_instrumentor import AWSBedrockInstrumentor
 from .azure_openai_instrumentor import AzureOpenAIInstrumentor
 from .bedrock_agents_instrumentor import BedrockAgentsInstrumentor
 from .cohere_instrumentor import CohereInstrumentor
+from .cometapi_instrumentor import CometAPIInstrumentor
 from .crewai_instrumentor import CrewAIInstrumentor
 from .dspy_instrumentor import DSPyInstrumentor
 from .google_adk_instrumentor import GoogleADKInstrumentor
@@ -56,6 +57,7 @@ __all__ = [
     "AutoGenInstrumentor",
     "BedrockAgentsInstrumentor",
     "CohereInstrumentor",
+    "CometAPIInstrumentor",
     "CrewAIInstrumentor",
     "DSPyInstrumentor",
     "MistralAIInstrumentor",

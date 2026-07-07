@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_INSTRUMENTORS = [
     "openai",
     "openrouter",
+    "cometapi",
     "anthropic",
     "google.generativeai",
     "boto3",

@@ -1,6 +1,6 @@
 # LLM Providers
 
-TraceVerde auto-instruments 19+ LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
+TraceVerde auto-instruments 20+ LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
 
 ## Providers with Full Cost Tracking
 
@@ -8,6 +8,7 @@ TraceVerde auto-instruments 19+ LLM providers. No code changes are needed - just
 |----------|--------|---------------|---------|
 | OpenAI | GPT-4o, GPT-4 Turbo, GPT-5.2, o1/o3, embeddings (50+) | `[openai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openai/example.py) |
 | OpenRouter | All models via OpenAI-compatible API | `[openrouter]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openrouter/example.py) |
+| CometAPI | 500+ models via OpenAI- or Anthropic-compatible API | `[cometapi]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/comet_api.py) |
 | Anthropic | Claude Sonnet 4.6, Claude 3.5/3 series (15+) | `[anthropic]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/anthropic/example.py) |
 | Google AI | Gemini 2.5/2.0 Pro/Flash, PaLM 2 (30+) | `[google]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_ai/example.py) |
 | AWS Bedrock | Amazon Titan, Claude, Llama, Mistral (25+) | `[aws]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/aws_bedrock/example.py) |
@@ -65,6 +66,34 @@ message = client.messages.create(
 print(message.content[0].text)
 # Cost tracking and token usage automatically captured
 ```
+
+## Quick Example: CometAPI
+
+CometAPI is an all-in-one aggregator that exposes 500+ models (GPT, Claude, Gemini, DeepSeek, Qwen, and more) behind a single API key. It is compatible with both the Anthropic SDK and the OpenAI SDK - point either client's `base_url` at `https://api.cometapi.com` and TraceVerde detects and traces the calls with `gen_ai.system = "cometapi"`.
+
+```python
+import genai_otel
+genai_otel.instrument()
+
+import anthropic
+
+client = anthropic.Anthropic(
+    base_url="https://api.cometapi.com",
+    api_key="your-cometapi-key",  # from https://www.cometapi.com/console/token
+)
+message = client.messages.create(
+    model="claude-sonnet-5",
+    max_tokens=1024,
+    messages=[
+        {"role": "user", "content": "Can you describe LLMs to me?"}
+    ],
+)
+
+print(message.content[0].text)
+# Spans named cometapi.messages.create with token usage and cost tracking
+```
+
+The OpenAI SDK works the same way with `base_url="https://api.cometapi.com/v1"` (spans are named `cometapi.chat.completion`).
 
 ## Quick Example: Ollama (Local)
 
