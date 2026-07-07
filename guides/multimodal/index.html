@@ -10,25 +10,31 @@
       
       
       
+        <link rel="canonical" href="https://mandark-droid.github.io/genai_otel_instrument/guides/multimodal/">
       
+      
+        <link rel="prev" href="../evaluation/">
+      
+      
+        <link rel="next" href="../sarvam-ai/">
       
       
         
       
       
-      <link rel="icon" href="/genai_otel_instrument/assets/logo.jpg">
+      <link rel="icon" href="../../assets/logo.jpg">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>TraceVerde Documentation</title>
+        <title>Multimodal Observability - TraceVerde Documentation</title>
       
     
     
-      <link rel="stylesheet" href="/genai_otel_instrument/assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="/genai_otel_instrument/assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -47,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="/genai_otel_instrument/assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("/genai_otel_instrument/",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -73,6 +79,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#multimodal-observability" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -85,9 +96,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="/genai_otel_instrument/." title="TraceVerde Documentation" class="md-header__button md-logo" aria-label="TraceVerde Documentation" data-md-component="logo">
+    <a href="../.." title="TraceVerde Documentation" class="md-header__button md-logo" aria-label="TraceVerde Documentation" data-md-component="logo">
       
-  <img src="/genai_otel_instrument/assets/logo.jpg" alt="logo">
+  <img src="../../assets/logo.jpg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -104,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              
+              Multimodal Observability
             
           </span>
         </div>
@@ -222,9 +233,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="/genai_otel_instrument/." title="TraceVerde Documentation" class="md-nav__button md-logo" aria-label="TraceVerde Documentation" data-md-component="logo">
+    <a href="../.." title="TraceVerde Documentation" class="md-nav__button md-logo" aria-label="TraceVerde Documentation" data-md-component="logo">
       
-  <img src="/genai_otel_instrument/assets/logo.jpg" alt="logo">
+  <img src="../../assets/logo.jpg" alt="logo">
 
     </a>
     TraceVerde Documentation
@@ -251,7 +262,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -332,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/getting-started/installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   
@@ -360,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/getting-started/quickstart/" class="md-nav__link">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
         
   
   
@@ -388,7 +399,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/getting-started/configuration/" class="md-nav__link">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
         
   
   
@@ -416,7 +427,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/guides/demo-app/" class="md-nav__link">
+      <a href="../demo-app/" class="md-nav__link">
         
   
   
@@ -448,8 +459,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -460,13 +473,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -487,7 +498,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -505,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/guides/llm-providers/" class="md-nav__link">
+      <a href="../llm-providers/" class="md-nav__link">
         
   
   
@@ -533,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/guides/multi-agent-frameworks/" class="md-nav__link">
+      <a href="../multi-agent-frameworks/" class="md-nav__link">
         
   
   
@@ -561,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/guides/mcp-tools/" class="md-nav__link">
+      <a href="../mcp-tools/" class="md-nav__link">
         
   
   
@@ -589,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/guides/cost-tracking/" class="md-nav__link">
+      <a href="../cost-tracking/" class="md-nav__link">
         
   
   
@@ -617,7 +628,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/guides/gpu-metrics/" class="md-nav__link">
+      <a href="../gpu-metrics/" class="md-nav__link">
         
   
   
@@ -645,7 +656,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/guides/evaluation/" class="md-nav__link">
+      <a href="../evaluation/" class="md-nav__link">
         
   
   
@@ -670,10 +681,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="/genai_otel_instrument/guides/multimodal/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multimodal Observability
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -689,6 +727,114 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this exists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capture-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capture modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#store-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store backends
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redactors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Redactors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#span-attribute-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Span attribute reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#provider-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider coverage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -701,7 +847,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/guides/sarvam-ai/" class="md-nav__link">
+      <a href="../sarvam-ai/" class="md-nav__link">
         
   
   
@@ -790,7 +936,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/reference/performance-tuning/" class="md-nav__link">
+      <a href="../../reference/performance-tuning/" class="md-nav__link">
         
   
   
@@ -818,7 +964,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/reference/python-compatibility/" class="md-nav__link">
+      <a href="../../reference/python-compatibility/" class="md-nav__link">
         
   
   
@@ -846,7 +992,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/reference/server-metrics/" class="md-nav__link">
+      <a href="../../reference/server-metrics/" class="md-nav__link">
         
   
   
@@ -874,7 +1020,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/reference/semantic-conventions/" class="md-nav__link">
+      <a href="../../reference/semantic-conventions/" class="md-nav__link">
         
   
   
@@ -902,7 +1048,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/proposals/otel_genai_multimodal_content_parts/" class="md-nav__link">
+      <a href="../../proposals/otel_genai_multimodal_content_parts/" class="md-nav__link">
         
   
   
@@ -991,7 +1137,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/community/contributing/" class="md-nav__link">
+      <a href="../../community/contributing/" class="md-nav__link">
         
   
   
@@ -1019,7 +1165,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/genai_otel_instrument/community/changelog/" class="md-nav__link">
+      <a href="../../community/changelog/" class="md-nav__link">
         
   
   
@@ -1064,6 +1210,104 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this exists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capture-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capture modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#store-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store backends
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redactors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Redactors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#span-attribute-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Span attribute reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#provider-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider coverage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -1076,8 +1320,272 @@
               
               <article class="md-content__inner md-typeset">
                 
-  <h1>404 - Not found</h1>
+                  
 
+
+  
+  
+
+
+<h1 id="multimodal-observability">Multimodal Observability<a class="headerlink" href="#multimodal-observability" title="Permanent link">&para;</a></h1>
+<p><code>genai-otel-instrument</code> v1.0.0 adds first-class capture of multimodal content — images, audio,
+video, and documents — alongside the existing text instrumentation. Multimodal payloads never
+appear inline in span attributes; bytes are offloaded to a configured store and referenced by URI.</p>
+<h2 id="why-this-exists">Why this exists<a class="headerlink" href="#why-this-exists" title="Permanent link">&para;</a></h2>
+<p>OpenTelemetry GenAI semantic conventions standardize text prompts/completions but do <strong>not</strong>
+standardize how multimodal attachments — images, audio, video, documents — are captured on spans.
+This library defines that shape with an additive, OTel-compatible attribute namespace plus a
+pluggable offload pipeline so binary content lives in your object store, not in span attributes.
+(See <code>docs/proposals/otel_genai_multimodal_content_parts.md</code> for the upstream proposal we're
+filing with <code>open-telemetry/semantic-conventions</code>.)</p>
+<h2 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[multimodal,openai,anthropic,google]&#39;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_CAPTURE_MODE</span><span class="o">=</span>full
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE</span><span class="o">=</span>minio
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_ENDPOINT</span><span class="o">=</span>http://localhost:9000
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_BUCKET</span><span class="o">=</span>genai-otel-media
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_ACCESS_KEY</span><span class="o">=</span>...
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_SECRET_KEY</span><span class="o">=</span>...
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">genai_otel</span><span class="w"> </span><span class="kn">import</span> <span class="n">instrument</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Any subsequent OpenAI / Anthropic / Gemini / Groq call with multimodal content</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># automatically emits content-part attributes and uploads bytes to MinIO.</span>
+</code></pre></div>
+<h2 id="capture-modes">Capture modes<a class="headerlink" href="#capture-modes" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th><code>GENAI_OTEL_MEDIA_CAPTURE_MODE</code></th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>off</code> (default)</td>
+<td>No multimodal attributes emitted. Identical to pre-1.0.0.</td>
+</tr>
+<tr>
+<td><code>reference_only</code></td>
+<td>Modality + MIME + byte size captured. Bytes NOT stored.</td>
+</tr>
+<tr>
+<td><code>full</code></td>
+<td>Redact (if configured) → upload to store → reference by URI.</td>
+</tr>
+</tbody>
+</table>
+<p><code>off</code> is the default to preserve byte-identical behaviour for existing users. BFSI deployments
+that want to record multimodal <em>presence</em> without storing bytes should use <code>reference_only</code>.
+Production deployments that want full traceability + UI rendering use <code>full</code> plus a store.</p>
+<h2 id="store-backends">Store backends<a class="headerlink" href="#store-backends" title="Permanent link">&para;</a></h2>
+<p>Set via <code>GENAI_OTEL_MEDIA_STORE</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>none</code> (default)</td>
+<td>No offload. Works with <code>capture_mode=reference_only</code>.</td>
+</tr>
+<tr>
+<td><code>filesystem</code></td>
+<td>Local directory. <code>MEDIA_STORE_ENDPOINT</code> is the root path.</td>
+</tr>
+<tr>
+<td><code>s3</code> / <code>minio</code></td>
+<td>S3-compatible object storage. Requires the <code>multimodal-s3</code> extra.</td>
+</tr>
+<tr>
+<td><code>http</code></td>
+<td>PUTs to a configured base URL (self-hosted ingest gateways).</td>
+</tr>
+</tbody>
+</table>
+<p>Per-blob size is capped by <code>GENAI_OTEL_MEDIA_MAX_BYTES</code> (default 10 MiB). Oversized blobs are
+recorded with <code>gen_ai.media.stripped_reason="size_exceeded"</code> and the bytes are dropped.</p>
+<h2 id="redactors">Redactors<a class="headerlink" href="#redactors" title="Permanent link">&para;</a></h2>
+<p>Redactors run on raw bytes <strong>before</strong> upload, per modality. Built-ins:</p>
+<ul>
+<li><code>genai_otel.media.redactors.exif_stripper</code> — removes EXIF/metadata from images. Requires <code>Pillow</code>.</li>
+<li><code>genai_otel.media.redactors.face_blur</code> — Haar-cascade face detection + Gaussian blur. Requires <code>opencv-python-headless</code>.</li>
+<li><code>genai_otel.media.redactors.pdf_pii_redact</code> — regex-based PII removal in PDFs. Requires <code>pypdf</code>.</li>
+</ul>
+<p>Plug one in:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_REDACTOR</span><span class="o">=</span>genai_otel.media.redactors.face_blur
+</code></pre></div>
+<p>Or write your own:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">my_redactor</span><span class="p">(</span><span class="n">modality</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mime_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">if</span> <span class="n">modality</span> <span class="o">==</span> <span class="s2">&quot;image&quot;</span><span class="p">:</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="k">return</span> <span class="n">strip_pii_from_image</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="k">return</span> <span class="n">data</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_REDACTOR</span><span class="o">=</span>mypkg.my_redactor
+</code></pre></div>
+<p>If the redactor raises, the bytes are dropped and <code>stripped_reason=redactor_error</code> is recorded —
+fail-closed, never fail-open with unredacted bytes.</p>
+<h2 id="span-attribute-reference">Span attribute reference<a class="headerlink" href="#span-attribute-reference" title="Permanent link">&para;</a></h2>
+<p>For every multimodal message, the instrumentor emits:</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gen_ai.prompt.{n}.role</code></td>
+<td><code>user</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.type</code></td>
+<td><code>text</code> | <code>image</code> | <code>audio</code> | <code>video</code> | <code>document</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.text</code></td>
+<td>text parts only</td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.media_uri</code></td>
+<td><code>s3://bucket/key</code> or <code>https://...</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.media_mime_type</code></td>
+<td><code>image/png</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.media_byte_size</code></td>
+<td><code>123456</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.media_source</code></td>
+<td><code>inline_offloaded</code> | <code>external_url</code> | <code>reference_only</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.media.stripped_reason</code></td>
+<td><code>size_exceeded</code>, <code>modality_not_allowed</code>, <code>redactor_error</code>, <code>upload_error</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <code>gen_ai.completion.*</code> namespace mirrors this for generated content (e.g. image generation
+output, TTS responses).</p>
+<h2 id="provider-coverage">Provider coverage<a class="headerlink" href="#provider-coverage" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Image</th>
+<th>Audio</th>
+<th>Video</th>
+<th>Document</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI / OpenRouter / Groq</td>
+<td><code>image_url</code> (URL or data:)</td>
+<td><code>input_audio</code></td>
+<td><code>input_video</code> (URL / data:)</td>
+<td>via <code>file</code> blocks</td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td><code>image</code> (base64 / url)</td>
+<td>—</td>
+<td>—</td>
+<td><code>document</code> (base64 / url)</td>
+</tr>
+<tr>
+<td>Google Gemini</td>
+<td><code>inline_data</code> / <code>file_data</code></td>
+<td><code>inline_data</code></td>
+<td><code>inline_data</code> / <code>file_data</code> (<code>video/*</code>)</td>
+<td><code>inline_data</code> (PDF)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="configuration-reference">Configuration reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Env var</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_CAPTURE_MODE</code></td>
+<td><code>off</code></td>
+<td><code>off</code> | <code>reference_only</code> | <code>full</code></td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE</code></td>
+<td><code>none</code></td>
+<td><code>none</code> | <code>filesystem</code> | <code>s3</code> | <code>minio</code> | <code>http</code></td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_ENDPOINT</code></td>
+<td>—</td>
+<td>URL or local path</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_BUCKET</code></td>
+<td><code>genai-otel-media</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_PREFIX</code></td>
+<td><code>traces/{date}/{trace_id}/</code></td>
+<td>template</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_ACCESS_KEY</code></td>
+<td>—</td>
+<td>for s3/minio</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_SECRET_KEY</code></td>
+<td>—</td>
+<td>for s3/minio</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_MAX_BYTES</code></td>
+<td><code>10485760</code></td>
+<td>per-blob size cap</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_ALLOWED_MODALITIES</code></td>
+<td><code>image,audio,video,document</code></td>
+<td>comma-separated</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_REDACTOR</code></td>
+<td>—</td>
+<td>dotted path to callable</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
               </article>
             </div>
           
@@ -1158,10 +1666,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "/genai_otel_instrument/", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "/genai_otel_instrument/assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="/genai_otel_instrument/assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

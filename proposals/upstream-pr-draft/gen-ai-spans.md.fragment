@@ -1,0 +1,34 @@
+<!-- Insertion into docs/gen-ai/gen-ai-spans.md, in the "Recording content on
+attributes" section or a new subsection nearby. -->
+
+### Fail-closed multimodal capture
+
+Instrumentations MAY record a `StrippedPart` in `gen_ai.input.messages` /
+`gen_ai.output.messages` to indicate that a non-text content part was detected
+but its bytes were intentionally not captured. This is recommended whenever:
+
+- The captured payload would exceed a configured size cap (`size_exceeded`).
+- The modality is excluded from the configured allow-list (`modality_not_allowed`).
+- A pre-upload redactor raised an error and the instrumentation chose to
+  fail-closed rather than emit unredacted bytes (`redactor_error`).
+- An upload to the configured object store failed (`upload_error`).
+- No object store was configured but the instrumentation was asked to capture
+  bytes (`no_store_configured`).
+
+Recording a `StrippedPart` (rather than silently omitting the part) lets
+downstream consumers distinguish *no media in this turn* from *media was
+deliberately stripped*, which matters for compliance auditing and for
+diagnosing capture-pipeline regressions.
+
+When `BlobPart`, `FilePart`, or `UriPart` is recorded, the optional `byte_size`
+field SHOULD be populated when known. This is useful for telemetry-on-telemetry
+analysis (cost of capture, storage growth planning) without requiring consumers
+to fetch the bytes.
+
+> **Bytes-inline guidance.** `BlobPart` carries inline base64-encoded bytes.
+> For deployments that prefer to keep telemetry pipelines small or that route
+> binaries to operator-owned storage, `UriPart` referencing a blob in your own
+> object store (S3 / MinIO / etc.) is the recommended pattern. The choice of
+> part type itself encodes provenance: `BlobPart` = inline; `UriPart` = URI to
+> a location the consumer can resolve; `FilePart` = file_id pre-uploaded to
+> the provider.

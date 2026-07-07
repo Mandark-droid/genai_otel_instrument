@@ -735,6 +735,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#multimodal-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multimodal Observability
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#session-and-user-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1018,6 +1029,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guides/multimodal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multimodal Observability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guides/sarvam-ai/" class="md-nav__link">
         
   
@@ -1199,6 +1238,34 @@
     
   
     Semantic Conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../proposals/otel_genai_multimodal_content_parts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multimodal Proposal (OTel)
   
 
     
@@ -1639,6 +1706,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#multimodal-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multimodal Observability
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#session-and-user-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1788,7 +1866,7 @@
 </tr>
 </tbody>
 </table>
-<p>Default instrumentors: <code>openai</code>, <code>openrouter</code>, <code>anthropic</code>, <code>google.generativeai</code>, <code>boto3</code>, <code>azure.ai.openai</code>, <code>cohere</code>, <code>mistralai</code>, <code>together</code>, <code>groq</code>, <code>ollama</code>, <code>vertexai</code>, <code>replicate</code>, <code>anyscale</code>, <code>sambanova</code>, <code>sarvamai</code>, <code>langchain</code>, <code>langgraph</code>, <code>llama_index</code>, <code>transformers</code>, <code>autogen</code>, <code>autogen_agentchat</code>, <code>google_adk</code>, <code>pydantic_ai</code>, <code>openai_agents</code>, <code>bedrock_agents</code>, <code>crewai</code>, <code>smolagents</code> (3.10+), <code>litellm</code> (3.10+)</p>
+<p>Default instrumentors: <code>openai</code>, <code>openrouter</code>, <code>cometapi</code>, <code>anthropic</code>, <code>google.generativeai</code>, <code>boto3</code>, <code>azure.ai.openai</code>, <code>cohere</code>, <code>mistralai</code>, <code>together</code>, <code>groq</code>, <code>ollama</code>, <code>vertexai</code>, <code>replicate</code>, <code>anyscale</code>, <code>sambanova</code>, <code>sarvamai</code>, <code>langchain</code>, <code>langgraph</code>, <code>llama_index</code>, <code>transformers</code>, <code>autogen</code>, <code>autogen_agentchat</code>, <code>google_adk</code>, <code>pydantic_ai</code>, <code>openai_agents</code>, <code>bedrock_agents</code>, <code>crewai</code>, <code>smolagents</code> (3.10+), <code>litellm</code> (3.10+)</p>
 <p>Example - enable only specific instrumentors:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span>openai,anthropic,crewai
 </code></pre></div>
@@ -2320,6 +2398,71 @@
 <a id="__codelineno-7-45" name="__codelineno-7-45" href="#__codelineno-7-45"></a>    <span class="n">hallucination_threshold</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
 <a id="__codelineno-7-46" name="__codelineno-7-46" href="#__codelineno-7-46"></a><span class="p">)</span>
 </code></pre></div>
+<h2 id="multimodal-observability">Multimodal Observability<a class="headerlink" href="#multimodal-observability" title="Permanent link">&para;</a></h2>
+<p>Capture image/audio/document content parts on spans. See the
+<a href="../../guides/multimodal/">Multimodal Observability guide</a> for full details.</p>
+<table>
+<thead>
+<tr>
+<th>Env var</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_CAPTURE_MODE</code></td>
+<td><code>off</code></td>
+<td><code>off</code> | <code>reference_only</code> | <code>full</code></td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE</code></td>
+<td><code>none</code></td>
+<td><code>none</code> | <code>filesystem</code> | <code>s3</code> | <code>minio</code> | <code>http</code></td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_ENDPOINT</code></td>
+<td>—</td>
+<td>URL or local path</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_BUCKET</code></td>
+<td><code>genai-otel-media</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_PREFIX</code></td>
+<td><code>traces/{date}/{trace_id}/</code></td>
+<td>template</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_ACCESS_KEY</code></td>
+<td>—</td>
+<td>for s3/minio</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_SECRET_KEY</code></td>
+<td>—</td>
+<td>for s3/minio</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_MAX_BYTES</code></td>
+<td><code>10485760</code> (10 MiB)</td>
+<td>per-blob cap</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_ALLOWED_MODALITIES</code></td>
+<td><code>image,audio,video,document</code></td>
+<td>comma-separated</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_REDACTOR</code></td>
+<td>—</td>
+<td>dotted path to callable applied before upload</td>
+</tr>
+</tbody>
+</table>
+<p>The default <code>off</code> keeps text-only behaviour byte-identical with pre-1.0.0.</p>
 <h2 id="session-and-user-tracking">Session and User Tracking<a class="headerlink" href="#session-and-user-tracking" title="Permanent link">&para;</a></h2>
 <p>For programmatic session/user tracking, provide extractor callables:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
