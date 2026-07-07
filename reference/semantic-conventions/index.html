@@ -16,7 +16,7 @@
         <link rel="prev" href="../server-metrics/">
       
       
-        <link rel="next" href="../../community/contributing/">
+        <link rel="next" href="../../proposals/otel_genai_multimodal_content_parts/">
       
       
         
@@ -684,6 +684,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guides/multimodal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multimodal Observability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guides/sarvam-ai/" class="md-nav__link">
         
   
@@ -1022,6 +1050,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#multimodal-content-part-attributes-v100" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multimodal Content-Part Attributes (v1.0.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1031,6 +1070,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../proposals/otel_genai_multimodal_content_parts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multimodal Proposal (OTel)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1292,6 +1359,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#multimodal-content-part-attributes-v100" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multimodal Content-Part Attributes (v1.0.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1364,6 +1442,21 @@
 <td><code>gen_ai.usage.total_tokens</code></td>
 <td>int</td>
 <td>Total token count</td>
+</tr>
+<tr>
+<td><code>gen_ai.usage.token_count_estimated</code></td>
+<td>bool</td>
+<td><code>true</code> when prompt/completion token counts came from a fallback estimate (e.g. multimodal Ollama responses lacking <code>prompt_eval_count</code>, or HuggingFace vision/audio pipelines that don't surface usage). Absent on spans whose tokens come from the provider response.</td>
+</tr>
+<tr>
+<td><code>gen_ai.usage.image_count</code></td>
+<td>int</td>
+<td>Number of input images counted by the instrumentor for multimodal calls (vision pipelines).</td>
+</tr>
+<tr>
+<td><code>gen_ai.usage.audio_seconds</code></td>
+<td>float</td>
+<td>Total input audio duration in seconds for ASR / audio pipelines.</td>
 </tr>
 <tr>
 <td><code>gen_ai.cost.amount</code></td>
@@ -1500,6 +1593,67 @@
 <p>See <a href="../../guides/gpu-metrics/">GPU Metrics Guide</a> for the complete list.</p>
 <h3 id="evaluation-metrics">Evaluation Metrics<a class="headerlink" href="#evaluation-metrics" title="Permanent link">&para;</a></h3>
 <p>See <a href="../../guides/evaluation/">Evaluation Guide</a> for detector-specific metrics.</p>
+<h3 id="multimodal-content-part-attributes-v100">Multimodal Content-Part Attributes (v1.0.0)<a class="headerlink" href="#multimodal-content-part-attributes-v100" title="Permanent link">&para;</a></h3>
+<p>Emitted only when <code>GENAI_OTEL_MEDIA_CAPTURE_MODE</code> is set to <code>reference_only</code> or <code>full</code>.
+Default behaviour (<code>off</code>) emits nothing additional.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gen_ai.prompt.{n}.role</code></td>
+<td>string</td>
+<td><code>user</code>, <code>system</code>, <code>assistant</code>, <code>tool</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.type</code></td>
+<td>enum</td>
+<td><code>text</code> | <code>image</code> | <code>audio</code> | <code>video</code> | <code>document</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.text</code></td>
+<td>string</td>
+<td>text parts only</td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.media_uri</code></td>
+<td>string</td>
+<td>URI returned by the configured store</td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.media_mime_type</code></td>
+<td>string</td>
+<td>e.g. <code>image/png</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.media_byte_size</code></td>
+<td>int</td>
+<td>size of the captured payload</td>
+</tr>
+<tr>
+<td><code>gen_ai.prompt.{n}.content.{m}.media_source</code></td>
+<td>enum</td>
+<td><code>inline_offloaded</code> | <code>external_url</code> | <code>reference_only</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.completion.{n}.*</code></td>
+<td>—</td>
+<td>mirror namespace for generated content</td>
+</tr>
+<tr>
+<td><code>gen_ai.media.stripped_reason</code></td>
+<td>enum</td>
+<td><code>size_exceeded</code>, <code>modality_not_allowed</code>, <code>redactor_error</code>, <code>upload_error</code></td>
+</tr>
+</tbody>
+</table>
+<p>Not yet part of upstream OTel GenAI semconv. See
+<a href="../../proposals/otel_genai_multimodal_content_parts/">the proposal</a> for the upstream contribution we plan to file.</p>
 
 
 

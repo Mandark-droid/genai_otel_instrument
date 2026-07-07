@@ -609,6 +609,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#quick-example-cometapi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Example: CometAPI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#quick-example-ollama-local" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -869,6 +880,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../multimodal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multimodal Observability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sarvam-ai/" class="md-nav__link">
         
   
@@ -1050,6 +1089,34 @@
     
   
     Semantic Conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../proposals/otel_genai_multimodal_content_parts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multimodal Proposal (OTel)
   
 
     
@@ -1247,6 +1314,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#quick-example-cometapi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Example: CometAPI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#quick-example-ollama-local" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1372,7 +1450,7 @@
 
 
 <h1 id="llm-providers">LLM Providers<a class="headerlink" href="#llm-providers" title="Permanent link">&para;</a></h1>
-<p>TraceVerde auto-instruments 19+ LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.</p>
+<p>TraceVerde auto-instruments 20+ LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.</p>
 <h2 id="providers-with-full-cost-tracking">Providers with Full Cost Tracking<a class="headerlink" href="#providers-with-full-cost-tracking" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1395,6 +1473,12 @@
 <td>All models via OpenAI-compatible API</td>
 <td><code>[openrouter]</code></td>
 <td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openrouter/example.py">example</a></td>
+</tr>
+<tr>
+<td>CometAPI</td>
+<td>500+ models via OpenAI- or Anthropic-compatible API</td>
+<td><code>[cometapi]</code></td>
+<td><a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/comet_api.py">example</a></td>
 </tr>
 <tr>
 <td>Anthropic</td>
@@ -1514,24 +1598,47 @@
 <a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
 <a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="c1"># Cost tracking and token usage automatically captured</span>
 </code></pre></div>
-<h2 id="quick-example-ollama-local">Quick Example: Ollama (Local)<a class="headerlink" href="#quick-example-ollama-local" title="Permanent link">&para;</a></h2>
+<h2 id="quick-example-cometapi">Quick Example: CometAPI<a class="headerlink" href="#quick-example-cometapi" title="Permanent link">&para;</a></h2>
+<p>CometAPI is an all-in-one aggregator that exposes 500+ models (GPT, Claude, Gemini, DeepSeek, Qwen, and more) behind a single API key. It is compatible with both the Anthropic SDK and the OpenAI SDK - point either client's <code>base_url</code> at <code>https://api.cometapi.com</code> and TraceVerde detects and traces the calls with <code>gen_ai.system = "cometapi"</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">ollama</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">anthropic</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">response</span> <span class="o">=</span> <span class="n">ollama</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;llama2&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Why is the sky blue?&quot;</span><span class="p">}],</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">anthropic</span><span class="o">.</span><span class="n">Anthropic</span><span class="p">(</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://api.cometapi.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;your-cometapi-key&quot;</span><span class="p">,</span>  <span class="c1"># from https://www.cometapi.com/console/token</span>
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">)</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">][</span><span class="s2">&quot;content&quot;</span><span class="p">])</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># Local model traces captured with token counting</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">message</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">messages</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;claude-sonnet-5&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">max_tokens</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Can you describe LLMs to me?&quot;</span><span class="p">}</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="p">],</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="p">)</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="c1"># Spans named cometapi.messages.create with token usage and cost tracking</span>
+</code></pre></div>
+<p>The OpenAI SDK works the same way with <code>base_url="https://api.cometapi.com/v1"</code> (spans are named <code>cometapi.chat.completion</code>).</p>
+<h2 id="quick-example-ollama-local">Quick Example: Ollama (Local)<a class="headerlink" href="#quick-example-ollama-local" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">ollama</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">response</span> <span class="o">=</span> <span class="n">ollama</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;llama2&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Why is the sky blue?&quot;</span><span class="p">}],</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">)</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">][</span><span class="s2">&quot;content&quot;</span><span class="p">])</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># Local model traces captured with token counting</span>
 </code></pre></div>
 <h2 id="special-providers">Special Providers<a class="headerlink" href="#special-providers" title="Permanent link">&para;</a></h2>
 <h3 id="huggingface-transformers">HuggingFace Transformers<a class="headerlink" href="#huggingface-transformers" title="Permanent link">&para;</a></h3>
 <p>Local model execution with estimated costs based on parameter count.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>huggingface<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>huggingface<span class="o">]</span>
 </code></pre></div>
 <p>Instruments:</p>
 <ul>
@@ -1551,21 +1658,21 @@
 </ul>
 <h3 id="hyperbolic">Hyperbolic<a class="headerlink" href="#hyperbolic" title="Permanent link">&para;</a></h3>
 <p>Requires OTLP gRPC exporter due to <code>requests</code> library conflicts.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_PROTOCOL</span><span class="o">=</span>grpc
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span>http://localhost:4317
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span><span class="s2">&quot;openai,anthropic,hyperbolic&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_PROTOCOL</span><span class="o">=</span>grpc
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span>http://localhost:4317
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span><span class="s2">&quot;openai,anthropic,hyperbolic&quot;</span>
 </code></pre></div>
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/hyperbolic_example.py">Hyperbolic example</a>.</p>
 <h3 id="google-genai-new-sdk">Google GenAI (new SDK)<a class="headerlink" href="#google-genai-new-sdk" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>google<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>google<span class="o">]</span>
 </code></pre></div>
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_genai_example.py">Google GenAI example</a>.</p>
 <h3 id="litellm-multi-provider-proxy">LiteLLM (Multi-Provider Proxy)<a class="headerlink" href="#litellm-multi-provider-proxy" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openinference<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openinference<span class="o">]</span>
 </code></pre></div>
 <p>LiteLLM enables cost tracking across 100+ providers via a single proxy. See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/litellm/example.py">LiteLLM example</a>.</p>
 <h3 id="smolagents-huggingface-agents">Smolagents (HuggingFace Agents)<a class="headerlink" href="#smolagents-huggingface-agents" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openinference<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openinference<span class="o">]</span>
 </code></pre></div>
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/smolagents/example.py">Smolagents example</a>.</p>
 <h2 id="captured-attributes">Captured Attributes<a class="headerlink" href="#captured-attributes" title="Permanent link">&para;</a></h2>
