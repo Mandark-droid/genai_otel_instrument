@@ -41,6 +41,7 @@ pip install genai-otel-instrument[mistral]
 pip install genai-otel-instrument[groq]
 pip install genai-otel-instrument[ollama]
 pip install genai-otel-instrument[together]
+pip install genai-otel-instrument[cometapi]
 
 # All providers
 pip install genai-otel-instrument[all-providers]
