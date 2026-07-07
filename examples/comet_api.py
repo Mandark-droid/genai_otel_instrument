@@ -18,6 +18,15 @@ Requirements:
 
 import os
 
+try:
+    # Load COMETAPI_KEY from a local .env file when python-dotenv is available
+    # (IDEs like PyCharm load .env automatically; plain shells do not)
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 import genai_otel
 
 # Initialize instrumentation - CometAPI is enabled by default
@@ -34,6 +43,8 @@ print("=" * 80 + "\n")
 COMETAPI_KEY = os.environ.get("COMETAPI_KEY")
 if not COMETAPI_KEY:
     print("ERROR: COMETAPI_KEY environment variable not set")
+    print("Set it in your shell, or put COMETAPI_KEY=... in a .env file")
+    print("(loading .env requires: pip install python-dotenv)")
     print("Get your API key from: https://www.cometapi.com/console/token")
     exit(1)
 
