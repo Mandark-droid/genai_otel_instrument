@@ -50,7 +50,7 @@ That's it. No wrappers, no decorators, no config files. Every LLM call, database
 | Feature | TraceVerde | OpenLIT | Traceloop/OpenLLMetry | Langfuse |
 |---------|-----------|---------|----------------------|----------|
 | Zero-code setup | Yes | Yes | Yes | SDK required |
-| LLM providers | 19+ | 25+ | 15+ | Via integrations |
+| LLM providers | 20+ | 25+ | 15+ | Via integrations |
 | Multi-agent frameworks | 8 (CrewAI, LangGraph, ADK, AutoGen, OpenAI Agents, Pydantic AI, etc.) | Limited | Limited | Limited |
 | Cost tracking | Automatic (1,050+ models) | Manual config | Manual config | Manual config |
 | GPU metrics (NVIDIA + AMD) | Yes | No | No | No |
@@ -61,8 +61,8 @@ That's it. No wrappers, no decorators, no config files. Every LLM call, database
 
 ## What Gets Instrumented?
 
-### LLM Providers (19+)
-OpenAI, OpenRouter, Anthropic, Google AI, Google GenAI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, Vertex AI, Replicate, HuggingFace, SambaNova, Sarvam AI, Hyperbolic, LiteLLM
+### LLM Providers (20+)
+OpenAI, OpenRouter, CometAPI, Anthropic, Google AI, Google GenAI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, Vertex AI, Replicate, HuggingFace, SambaNova, Sarvam AI, Hyperbolic, LiteLLM
 
 [See all providers with examples >>](https://mandark-droid.github.io/genai_otel_instrument/guides/llm-providers/)
 

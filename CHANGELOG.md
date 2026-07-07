@@ -6,6 +6,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-07
+
+### Added
+
+- **CometAPI Provider Support**
+  - New `CometAPIInstrumentor` for [CometAPI](https://www.cometapi.com), an
+    all-in-one aggregator exposing 500+ models (GPT, Claude, Gemini, DeepSeek,
+    Qwen, and more) behind a single API key
+  - Automatic detection of CometAPI clients via `base_url` checking for
+    `cometapi.com` - works with BOTH the Anthropic SDK (`/v1/messages`) and the
+    OpenAI SDK (`/v1/chat/completions`)
+  - Token usage extraction handles both response shapes: OpenAI-compatible
+    (`prompt_tokens`/`completion_tokens`) and Anthropic-compatible
+    (`input_tokens`/`output_tokens`, including prompt-cache read/write tokens)
+  - Spans named `cometapi.messages.create` (Anthropic SDK) and
+    `cometapi.chat.completion` (OpenAI SDK) with `gen_ai.system = "cometapi"`
+  - Cost tracking resolves through the requested model name against the
+    existing pricing database (e.g. `claude-sonnet-5`, `gpt-5-mini`)
+  - Enabled by default (`cometapi` added to `DEFAULT_INSTRUMENTORS`)
+  - Install with: `pip install genai-otel-instrument[cometapi]`
+  - Example: `examples/comet_api.py` (Anthropic SDK + OpenAI SDK usage)
+  - 27 new unit tests in `tests/instrumentors/test_cometapi_instrumentor.py`
+  - Documentation: provider table + quick example in
+    `docs/guides/llm-providers.md`, install extra in
+    `docs/getting-started/installation.md`, default instrumentor list in
+    `docs/getting-started/configuration.md`, README provider list
+
 ## [1.4.2] - 2026-07-01
 
 ### Added

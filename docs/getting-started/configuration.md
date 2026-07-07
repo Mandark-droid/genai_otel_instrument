@@ -35,7 +35,7 @@ A complete `sample.env` template is included in the repository.
 |----------|---------|-------------|
 | `GENAI_ENABLED_INSTRUMENTORS` | all defaults | Comma-separated list of instrumentors to enable |
 
-Default instrumentors: `openai`, `openrouter`, `anthropic`, `google.generativeai`, `boto3`, `azure.ai.openai`, `cohere`, `mistralai`, `together`, `groq`, `ollama`, `vertexai`, `replicate`, `anyscale`, `sambanova`, `sarvamai`, `langchain`, `langgraph`, `llama_index`, `transformers`, `autogen`, `autogen_agentchat`, `google_adk`, `pydantic_ai`, `openai_agents`, `bedrock_agents`, `crewai`, `smolagents` (3.10+), `litellm` (3.10+)
+Default instrumentors: `openai`, `openrouter`, `cometapi`, `anthropic`, `google.generativeai`, `boto3`, `azure.ai.openai`, `cohere`, `mistralai`, `together`, `groq`, `ollama`, `vertexai`, `replicate`, `anyscale`, `sambanova`, `sarvamai`, `langchain`, `langgraph`, `llama_index`, `transformers`, `autogen`, `autogen_agentchat`, `google_adk`, `pydantic_ai`, `openai_agents`, `bedrock_agents`, `crewai`, `smolagents` (3.10+), `litellm` (3.10+)
 
 Example - enable only specific instrumentors:
 
