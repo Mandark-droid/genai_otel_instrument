@@ -157,8 +157,10 @@ def instrumentor(monkeypatch):
             BaseInstrumentor, "_shared_request_failure_counter", mock_request_failure_counter
         )
 
-        # Create instrumentor with cost tracking ENABLED
-        config = OTelConfig()
+        # Create instrumentor with cost tracking ENABLED and full metric verbosity
+        # so the granular cost counters / token histograms / finish counters
+        # (opt-in by default for hot-path performance) are exercised here.
+        config = OTelConfig(metrics_profile="full")
         config.enable_cost_tracking = True  # Explicitly enable cost tracking
 
         inst = ConcreteInstrumentor()

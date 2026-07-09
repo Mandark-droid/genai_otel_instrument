@@ -49,6 +49,12 @@ class GuardrailsAIInstrumentor(BaseInstrumentor):
             logger.debug("Skipping Guardrails AI instrumentation - library not available")
             return
 
+        # Idempotency guard: repeated instrument() calls must not stack wrappers
+        # on the shared Guard methods.
+        if self._instrumented:
+            logger.debug("Guardrails AI already instrumented, skipping repeat instrument()")
+            return
+
         self.config = config
 
         try:
@@ -172,6 +178,24 @@ class GuardrailsAIInstrumentor(BaseInstrumentor):
             ),
         )(wrapped)(*args, **kwargs)
 
+    def _cap_content(self, text: Any, default: int = 200) -> str:
+        """Cap captured content per ``config.content_max_length``.
+
+        Content capture is a required audit feature, so content keeps flowing;
+        this only bounds its size. ``content_max_length == 0`` (or missing) means
+        unlimited. When no usable config is present (unit tests) the historical
+        default cap is used.
+        """
+        s = text if isinstance(text, str) else str(text)
+        cfg = getattr(self, "config", None)
+        max_len = default
+        cfg_len = getattr(cfg, "content_max_length", None) if cfg is not None else None
+        if isinstance(cfg_len, int):
+            max_len = cfg_len
+        if max_len and max_len > 0:
+            return s[:max_len]
+        return s
+
     def _extract_guard_call_attributes(
         self, instance: Any, kwargs: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -270,8 +294,8 @@ class GuardrailsAIInstrumentor(BaseInstrumentor):
                 llm_output = args[0]
                 if isinstance(llm_output, str):
                     attrs["guardrails.llm_output_length"] = len(llm_output)
-                    # Truncate output for tracing
-                    attrs["guardrails.llm_output_preview"] = llm_output[:200]
+                    # Bounded preview for tracing (content_max_length aware)
+                    attrs["guardrails.llm_output_preview"] = self._cap_content(llm_output)
 
         except Exception as e:
             logger.debug("Failed to extract guard.validate attributes: %s", e)
@@ -379,7 +403,9 @@ class GuardrailsAIInstrumentor(BaseInstrumentor):
                 if validated_output is not None:
                     if isinstance(validated_output, str):
                         attrs["guardrails.validated_output_length"] = len(validated_output)
-                        attrs["guardrails.validated_output_preview"] = validated_output[:200]
+                        attrs["guardrails.validated_output_preview"] = self._cap_content(
+                            validated_output
+                        )
                     else:
                         attrs["guardrails.validated_output_type"] = type(validated_output).__name__
 

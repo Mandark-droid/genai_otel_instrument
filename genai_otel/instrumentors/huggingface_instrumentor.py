@@ -24,6 +24,17 @@ logger = logging.getLogger(__name__)
 _thread_local = threading.local()
 
 
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
+
+
 class HuggingFaceInstrumentor(BaseInstrumentor):
     """Instrumentor for HuggingFace Transformers and Inference API.
 
@@ -119,6 +130,12 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
             import importlib
 
             transformers_module = importlib.import_module("transformers")
+
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(transformers_module, "_genai_otel_hf_pipeline_instrumented", False) is True:
+                logger.debug("HuggingFace pipeline already instrumented, skipping")
+                return
+
             original_pipeline = transformers_module.pipeline
 
             # Capture self reference for use in nested classes
@@ -185,6 +202,10 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                 return WrappedPipeline(pipe)
 
             transformers_module.pipeline = wrapped_pipeline
+            try:
+                transformers_module._genai_otel_hf_pipeline_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
             logger.debug("HuggingFace Transformers pipeline instrumented")
 
         except Exception as e:
@@ -193,6 +214,11 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
     def _instrument_inference_client(self):
         """Instrument HuggingFace InferenceClient for API calls."""
         from huggingface_hub import InferenceClient
+
+        # Idempotency guard: never stack wrappers if instrument() runs twice.
+        if getattr(InferenceClient, "_genai_otel_hf_inference_instrumented", False) is True:
+            logger.debug("HuggingFace InferenceClient already instrumented, skipping")
+            return
 
         # Store original methods
         original_chat_completion = InferenceClient.chat_completion
@@ -212,6 +238,10 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
 
         InferenceClient.chat_completion = wrapped_chat_completion
         InferenceClient.text_generation = wrapped_text_generation
+        try:
+            InferenceClient._genai_otel_hf_inference_instrumented = True
+        except Exception:  # noqa: BLE001
+            pass
         logger.debug("HuggingFace InferenceClient instrumented")
 
     def _instrument_model_classes(self):
@@ -226,6 +256,11 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
             except ImportError:
                 # Fallback for older transformers versions
                 from transformers.generation import GenerationMixin
+
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(GenerationMixin, "_genai_otel_hf_generate_instrumented", False) is True:
+                logger.debug("HuggingFace GenerationMixin already instrumented, skipping")
+                return
 
             # Store reference to instrumentor for use in wrapper
             instrumentor = self
@@ -377,7 +412,9 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                                     "gen_ai.prompt.0",
                                     attributes={
                                         "gen_ai.prompt.role": "user",
-                                        "gen_ai.prompt.content": str(input_text),
+                                        "gen_ai.prompt.content": _cap_content(
+                                            instrumentor.config, input_text
+                                        ),
                                     },
                                 )
 
@@ -401,6 +438,7 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                                             )
 
                                     if output_text:
+                                        output_text = _cap_content(instrumentor.config, output_text)
                                         # Set as attribute for evaluation processor
                                         span.set_attribute("gen_ai.response", output_text)
                                         # Also add as event for observability
@@ -429,6 +467,10 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
 
             # Apply wrapper to GenerationMixin.generate (all models inherit this)
             GenerationMixin.generate = generate_wrapper(original_generate)
+            try:
+                GenerationMixin._genai_otel_hf_generate_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
 
             self._model_classes_instrumented = True
             logger.debug(
@@ -609,6 +651,8 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
             result: The API response object.
             request_kwargs: The original request kwargs.
         """
+        config = getattr(self, "config", None)
+
         # Add prompt content events for InferenceClient
         messages = request_kwargs.get("messages", [])
         if messages:
@@ -620,7 +664,7 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                         f"gen_ai.prompt.{idx}",
                         attributes={
                             "gen_ai.prompt.role": role,
-                            "gen_ai.prompt.content": str(content),
+                            "gen_ai.prompt.content": _cap_content(config, content),
                         },
                     )
         elif "prompt" in request_kwargs:
@@ -630,7 +674,7 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                 "gen_ai.prompt.0",
                 attributes={
                     "gen_ai.prompt.role": "user",
-                    "gen_ai.prompt.content": str(prompt),
+                    "gen_ai.prompt.content": _cap_content(config, prompt),
                 },
             )
 
@@ -642,19 +686,19 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
             if hasattr(result, "choices") and result.choices:
                 for idx, choice in enumerate(result.choices):
                     if hasattr(choice, "message") and hasattr(choice.message, "content"):
-                        content = choice.message.content
+                        content = _cap_content(config, choice.message.content)
                         if idx == 0:
-                            response_text = str(content)
+                            response_text = content
                         span.add_event(
                             f"gen_ai.completion.{idx}",
                             attributes={
                                 "gen_ai.completion.role": "assistant",
-                                "gen_ai.completion.content": str(content),
+                                "gen_ai.completion.content": content,
                             },
                         )
             # For text_generation responses
             elif hasattr(result, "generated_text"):
-                response_text = str(result.generated_text)
+                response_text = _cap_content(config, result.generated_text)
                 span.add_event(
                     "gen_ai.completion.0",
                     attributes={
@@ -666,7 +710,7 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
             elif isinstance(result, list) and result:
                 for idx, item in enumerate(result):
                     if isinstance(item, dict) and "generated_text" in item:
-                        response_text = str(item["generated_text"])
+                        response_text = _cap_content(config, item["generated_text"])
                         span.add_event(
                             f"gen_ai.completion.{idx}",
                             attributes={

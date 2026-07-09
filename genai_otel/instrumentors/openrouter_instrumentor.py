@@ -10,13 +10,28 @@ import logging
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
-from .base import BaseInstrumentor
+from .base import BaseInstrumentor, register_base_url_claim
 
 logger = logging.getLogger(__name__)
 
 
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
+
+
 class OpenRouterInstrumentor(BaseInstrumentor):
     """Instrumentor for OpenRouter API (OpenAI-compatible interface)"""
+
+    # Domain used both to detect OpenRouter clients and to claim them so the
+    # generic OpenAI instrumentor does not wrap the same client a second time.
+    _CLAIM_DOMAIN = "openrouter.ai"
 
     def __init__(self):
         """Initialize the instrumentor."""
@@ -54,6 +69,13 @@ class OpenRouterInstrumentor(BaseInstrumentor):
             import openai
             import wrapt
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(openai, "_genai_otel_openrouter_instrumented", False) is True:
+                logger.debug("OpenRouter already instrumented, skipping")
+                self._instrumented = True
+                register_base_url_claim(self._CLAIM_DOMAIN, "openrouter")
+                return
+
             # Instrument OpenAI client initialization to detect OpenRouter usage
             if hasattr(openai, "OpenAI"):
                 original_init = openai.OpenAI.__init__
@@ -67,7 +89,12 @@ class OpenRouterInstrumentor(BaseInstrumentor):
                     return result
 
                 openai.OpenAI.__init__ = wrapt.FunctionWrapper(original_init, wrapped_init)
+                try:
+                    openai._genai_otel_openrouter_instrumented = True
+                except Exception:  # noqa: BLE001
+                    pass
                 self._instrumented = True
+                register_base_url_claim(self._CLAIM_DOMAIN, "openrouter")
                 logger.info("OpenRouter instrumentation enabled")
 
         except Exception as e:
@@ -86,7 +113,7 @@ class OpenRouterInstrumentor(BaseInstrumentor):
         """
         if hasattr(client, "base_url") and client.base_url:
             base_url = str(client.base_url).lower()
-            return "openrouter.ai" in base_url
+            return self._CLAIM_DOMAIN in base_url
         return False
 
     def _instrument_client(self, client):
@@ -245,6 +272,8 @@ class OpenRouterInstrumentor(BaseInstrumentor):
             result: The API response object.
             request_kwargs: The original request kwargs.
         """
+        config = getattr(self, "config", None)
+
         # Add prompt content events
         messages = request_kwargs.get("messages", [])
         for idx, message in enumerate(messages):
@@ -253,7 +282,10 @@ class OpenRouterInstrumentor(BaseInstrumentor):
                 content = message.get("content", "")
                 span.add_event(
                     f"gen_ai.prompt.{idx}",
-                    attributes={"gen_ai.prompt.role": role, "gen_ai.prompt.content": str(content)},
+                    attributes={
+                        "gen_ai.prompt.role": role,
+                        "gen_ai.prompt.content": _cap_content(config, content),
+                    },
                 )
 
         # Add completion content events AND attributes (for evaluation processor)
@@ -261,18 +293,18 @@ class OpenRouterInstrumentor(BaseInstrumentor):
             response_text = None
             for idx, choice in enumerate(result.choices):
                 if hasattr(choice, "message") and hasattr(choice.message, "content"):
-                    content = choice.message.content
+                    content = _cap_content(config, choice.message.content)
                     # Add as event for observability
                     span.add_event(
                         f"gen_ai.completion.{idx}",
                         attributes={
                             "gen_ai.completion.role": "assistant",
-                            "gen_ai.completion.content": str(content),
+                            "gen_ai.completion.content": content,
                         },
                     )
                     # Capture first completion for evaluation
                     if idx == 0:
-                        response_text = str(content)
+                        response_text = content
 
             # Set as attribute for evaluation processor
             if response_text:

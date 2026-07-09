@@ -37,6 +37,19 @@ from ..config import OTelConfig
 
 logger = logging.getLogger(__name__)
 
+# NOTE on double-wrap / idempotency:
+# This instrumentor patches several third-party backends, some of which are
+# wrapped by dotted string (e.g. "chromadb", "pymilvus", "faiss") without first
+# importing the module, so there is no uniform module object to key an
+# identity-based double-wrap guard on (unlike falkordb/minio/timescaledb/rabbitmq
+# which do guard). ``instrument()`` is expected to be invoked once per process by
+# ``MCPInstrumentorManager`` during ``setup_auto_instrumentation``. If you add a
+# code path that can call ``instrument()`` more than once, add per-backend guards
+# keyed on the imported library module (see falkordb_instrumentor for the
+# pattern) to avoid stacking wrappers and emitting duplicate spans. These
+# instrumentors deliberately do not capture vectors/documents, so the data-
+# exposure impact of an accidental double-wrap is limited to duplicate spans.
+
 
 class VectorDBInstrumentor:  # pylint: disable=R0903
     """Instrument vector database clients"""

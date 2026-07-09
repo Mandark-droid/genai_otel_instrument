@@ -426,6 +426,87 @@ class TestDatabaseInstrumentorMCPMetrics(unittest.TestCase):
         # Should still work
         self.assertEqual(result, {"_id": "123"})
 
+    def test_db_operation_wrapper_no_nameerror_on_exception(self):
+        """When the wrapped op raises, the finally block must not raise NameError.
+
+        Regression test: previously the finally block referenced ``result`` which
+        was undefined when the wrapped call raised, masking the real exception.
+        """
+        wrapper = self.instrumentor._db_operation_wrapper("pymongo", "find_one")
+
+        boom = RuntimeError("db connection lost")
+        mock_op = MagicMock(side_effect=boom)
+
+        # The ORIGINAL exception (RuntimeError) must propagate, not a NameError.
+        with self.assertRaises(RuntimeError) as ctx:
+            wrapper(mock_op, MagicMock(), ({"q": 1},), {})
+        self.assertEqual(str(ctx.exception), "db connection lost")
+
+
+class TestDatabasePayloadSizeEstimate(unittest.TestCase):
+    """Tests for the cheap, bounded payload-size estimator."""
+
+    def test_estimate_scalars(self):
+        from genai_otel.mcp_instrumentors.database_instrumentor import _estimate_payload_size
+
+        self.assertEqual(_estimate_payload_size(None), 0)
+        self.assertEqual(_estimate_payload_size("hello"), 5)
+        self.assertEqual(_estimate_payload_size(b"abc"), 3)
+        self.assertGreater(_estimate_payload_size(123), 0)
+
+    def test_estimate_positive_for_large_batch(self):
+        from genai_otel.mcp_instrumentors.database_instrumentor import _estimate_payload_size
+
+        big = [("x" * 100,)] * 100000
+        self.assertGreater(_estimate_payload_size(big), 0)
+
+    def test_estimate_only_samples_bounded_elements(self):
+        """A large container must not be fully traversed/serialized."""
+        from genai_otel.mcp_instrumentors.database_instrumentor import (
+            _SIZE_SAMPLE_LIMIT,
+            _estimate_payload_size,
+        )
+
+        class CountingList(list):
+            def __init__(self, *a):
+                super().__init__(*a)
+                self.visited = 0
+
+            def __iter__(self):
+                for item in super().__iter__():
+                    self.visited += 1
+                    yield item
+
+        data = CountingList([("row", i) for i in range(10000)])
+        _estimate_payload_size(data)
+        # Only a bounded number of elements should have been visited.
+        self.assertLessEqual(data.visited, _SIZE_SAMPLE_LIMIT)
+
+    def test_add_psycopg2_metrics_double_wrap_guard(self):
+        """Second call must not re-wrap (double-wrap idempotency guard)."""
+        from genai_otel.mcp_instrumentors import database_instrumentor as dbmod
+
+        dbmod._METRICS_WRAPPED.clear()
+
+        class FakeCursor:
+            def execute(self):
+                pass
+
+            def executemany(self):
+                pass
+
+        instrumentor = DatabaseInstrumentor(OTelConfig())
+        with (
+            patch.object(dbmod, "Psycopg2Cursor", FakeCursor),
+            patch.object(dbmod, "wrapt") as mock_wrapt,
+        ):
+            instrumentor._add_psycopg2_metrics()
+            first = mock_wrapt.wrap_function_wrapper.call_count
+            self.assertGreaterEqual(first, 1)
+            # Guarded: no additional wrapping on the second call.
+            instrumentor._add_psycopg2_metrics()
+            self.assertEqual(mock_wrapt.wrap_function_wrapper.call_count, first)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

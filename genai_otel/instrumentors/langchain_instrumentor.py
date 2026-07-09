@@ -55,6 +55,12 @@ class LangChainInstrumentor(BaseInstrumentor):
             logger.debug("Skipping instrumentation - library not available")
             return
 
+        # Idempotency guard: repeated instrument() calls must not stack wrappers
+        # on the shared LangChain classes (Chain / AgentExecutor / BaseChatModel).
+        if self._instrumented:
+            logger.debug("LangChain already instrumented, skipping repeat instrument()")
+            return
+
         self.config = config
 
         # Instrument chains and agents
@@ -63,6 +69,8 @@ class LangChainInstrumentor(BaseInstrumentor):
         # Instrument chat models if langchain_core is available
         if self._langchain_core_available:
             self._instrument_chat_models()
+
+        self._instrumented = True
 
     def _resolve_session_id(self, instance, args, kwargs):
         """Resolve session ID from various sources.
@@ -100,6 +108,29 @@ class LangChainInstrumentor(BaseInstrumentor):
 
         return session_id
 
+    def _extract_agent_name(self, instance: Any) -> str:
+        """Safely extract an agent name from an AgentExecutor instance.
+
+        ``AgentExecutor.agent`` is normally a Runnable / BaseSingleActionAgent
+        object, not a dict, so calling ``.get()`` on it raises AttributeError.
+        Every access is guarded here so instrumentation never breaks the host's
+        agent call.
+
+        Returns:
+            str: The resolved agent name, or "unknown" if it cannot be found.
+        """
+        try:
+            agent_obj = getattr(instance, "agent", None)
+            if isinstance(agent_obj, dict):
+                return agent_obj.get("name", "unknown")
+            if agent_obj is not None:
+                name = getattr(agent_obj, "name", None)
+                if name:
+                    return str(name)
+        except Exception as e:
+            logger.debug("Failed to extract agent name: %s", e)
+        return "unknown"
+
     def _instrument_chains_and_agents(self):
         """Instrument LangChain chains and agents."""
         try:
@@ -116,13 +147,18 @@ class LangChainInstrumentor(BaseInstrumentor):
                 with instrumentor_ref.tracer.start_as_current_span(
                     f"langchain.chain.{chain_type}"
                 ) as span:
-                    span.set_attribute("langchain.chain.type", chain_type)
-                    session_id = instrumentor_ref._resolve_session_id(instance, args, kwargs)
-                    span.set_attribute("session.id", session_id)
-                    span.set_attribute("langchain.session.id", session_id)
-                    # Cross-framework conversation correlation per upstream
-                    # proposal semantic-conventions-genai#145.
-                    span.set_attribute("gen_ai.conversation.id", session_id)
+                    # Pre-call attribute extraction must never break the business
+                    # call: contain any failure here and still run the chain.
+                    try:
+                        span.set_attribute("langchain.chain.type", chain_type)
+                        session_id = instrumentor_ref._resolve_session_id(instance, args, kwargs)
+                        span.set_attribute("session.id", session_id)
+                        span.set_attribute("langchain.session.id", session_id)
+                        # Cross-framework conversation correlation per upstream
+                        # proposal semantic-conventions-genai#145.
+                        span.set_attribute("gen_ai.conversation.id", session_id)
+                    except Exception as e:
+                        logger.debug("Failed to set chain span attributes: %s", e)
                     result = original_call(instance, *args, **kwargs)
                     return result
 
@@ -135,17 +171,24 @@ class LangChainInstrumentor(BaseInstrumentor):
                 with instrumentor_ref.tracer.start_as_current_span(
                     "langchain.agent.execute"
                 ) as span:
-                    agent_name = getattr(instance, "agent", {}).get("name", "unknown")
-                    span.set_attribute("langchain.agent.name", agent_name)
-                    # Cross-framework agent attribution per upstream proposal
-                    # semantic-conventions-genai#91.
-                    span.set_attribute("gen_ai.agent.name", agent_name)
-                    session_id = instrumentor_ref._resolve_session_id(instance, args, kwargs)
-                    span.set_attribute("session.id", session_id)
-                    span.set_attribute("langchain.session.id", session_id)
-                    # Cross-framework conversation correlation per upstream
-                    # proposal semantic-conventions-genai#145.
-                    span.set_attribute("gen_ai.conversation.id", session_id)
+                    # Pre-call attribute extraction must never break the business
+                    # call. In particular AgentExecutor.agent is a Runnable/agent
+                    # object (not a dict), so calling .get() on it raised
+                    # AttributeError straight into the host's agent invocation.
+                    try:
+                        agent_name = instrumentor_ref._extract_agent_name(instance)
+                        span.set_attribute("langchain.agent.name", agent_name)
+                        # Cross-framework agent attribution per upstream proposal
+                        # semantic-conventions-genai#91.
+                        span.set_attribute("gen_ai.agent.name", agent_name)
+                        session_id = instrumentor_ref._resolve_session_id(instance, args, kwargs)
+                        span.set_attribute("session.id", session_id)
+                        span.set_attribute("langchain.session.id", session_id)
+                        # Cross-framework conversation correlation per upstream
+                        # proposal semantic-conventions-genai#145.
+                        span.set_attribute("gen_ai.conversation.id", session_id)
+                    except Exception as e:
+                        logger.debug("Failed to set agent span attributes: %s", e)
                     result = original_agent_call(instance, *args, **kwargs)
                     return result
 
@@ -170,13 +213,19 @@ class LangChainInstrumentor(BaseInstrumentor):
                 model_name = self._get_model_name(instance)
                 with self.tracer.start_as_current_span("langchain.chat_model.invoke") as span:
                     start_time = time.time()
-                    self._set_chat_attributes(span, instance, args, kwargs, model_name)
+                    try:
+                        self._set_chat_attributes(span, instance, args, kwargs, model_name)
+                    except Exception as e:
+                        logger.debug("Failed to set chat attributes: %s", e)
 
                     result = original_invoke(instance, *args, **kwargs)
 
                     # Use standard metrics recording from BaseInstrumentor
                     # This will extract usage, calculate costs, and record metrics
-                    self._record_result_metrics(span, result, start_time, kwargs)
+                    try:
+                        self._record_result_metrics(span, result, start_time, kwargs)
+                    except Exception as e:
+                        logger.debug("Failed to record metrics: %s", e)
 
                     return result
 
@@ -192,13 +241,19 @@ class LangChainInstrumentor(BaseInstrumentor):
                 model_name = self._get_model_name(instance)
                 with self.tracer.start_as_current_span("langchain.chat_model.ainvoke") as span:
                     start_time = time.time()
-                    self._set_chat_attributes(span, instance, args, kwargs, model_name)
+                    try:
+                        self._set_chat_attributes(span, instance, args, kwargs, model_name)
+                    except Exception as e:
+                        logger.debug("Failed to set chat attributes: %s", e)
 
                     result = await original_ainvoke(instance, *args, **kwargs)
 
                     # Use standard metrics recording from BaseInstrumentor
                     # This will extract usage, calculate costs, and record metrics
-                    self._record_result_metrics(span, result, start_time, kwargs)
+                    try:
+                        self._record_result_metrics(span, result, start_time, kwargs)
+                    except Exception as e:
+                        logger.debug("Failed to record metrics: %s", e)
 
                     return result
 
@@ -215,34 +270,41 @@ class LangChainInstrumentor(BaseInstrumentor):
                 with self.tracer.start_as_current_span("langchain.chat_model.batch") as span:
                     start_time = time.time()
 
-                    # Set standard GenAI attributes
-                    provider = self._extract_provider(instance)
-                    if provider:
-                        span.set_attribute("gen_ai.system", provider)
-                    else:
-                        span.set_attribute("gen_ai.system", "langchain")
+                    # Pre-call attribute extraction must never break the batch call.
+                    try:
+                        # Set standard GenAI attributes
+                        provider = self._extract_provider(instance)
+                        if provider:
+                            span.set_attribute("gen_ai.system", provider)
+                        else:
+                            span.set_attribute("gen_ai.system", "langchain")
 
-                    span.set_attribute("gen_ai.request.model", model_name)
-                    span.set_attribute("gen_ai.operation.name", "batch")
+                        span.set_attribute("gen_ai.request.model", model_name)
+                        span.set_attribute("gen_ai.operation.name", "batch")
 
-                    # Also set LangChain-specific attributes
-                    span.set_attribute("langchain.chat_model.name", model_name)
-                    span.set_attribute("langchain.chat_model.operation", "batch")
+                        # Also set LangChain-specific attributes
+                        span.set_attribute("langchain.chat_model.name", model_name)
+                        span.set_attribute("langchain.chat_model.operation", "batch")
 
-                    # Get batch size
-                    if args and len(args) > 0:
-                        batch_size = len(args[0]) if hasattr(args[0], "__len__") else 1
-                        span.set_attribute("langchain.chat_model.batch_size", batch_size)
+                        # Get batch size
+                        if args and len(args) > 0:
+                            batch_size = len(args[0]) if hasattr(args[0], "__len__") else 1
+                            span.set_attribute("langchain.chat_model.batch_size", batch_size)
 
-                    # Set session.id
-                    session_id = self._resolve_session_id(instance, args, kwargs)
-                    span.set_attribute("session.id", session_id)
-                    span.set_attribute("langchain.session.id", session_id)
+                        # Set session.id
+                        session_id = self._resolve_session_id(instance, args, kwargs)
+                        span.set_attribute("session.id", session_id)
+                        span.set_attribute("langchain.session.id", session_id)
+                    except Exception as e:
+                        logger.debug("Failed to set batch span attributes: %s", e)
 
                     result = original_batch(instance, *args, **kwargs)
 
                     # Record metrics (though batch results may not have usage info)
-                    self._record_result_metrics(span, result, start_time, kwargs)
+                    try:
+                        self._record_result_metrics(span, result, start_time, kwargs)
+                    except Exception as e:
+                        logger.debug("Failed to record metrics: %s", e)
 
                     return result
 
@@ -259,34 +321,41 @@ class LangChainInstrumentor(BaseInstrumentor):
                 with self.tracer.start_as_current_span("langchain.chat_model.abatch") as span:
                     start_time = time.time()
 
-                    # Set standard GenAI attributes
-                    provider = self._extract_provider(instance)
-                    if provider:
-                        span.set_attribute("gen_ai.system", provider)
-                    else:
-                        span.set_attribute("gen_ai.system", "langchain")
+                    # Pre-call attribute extraction must never break the batch call.
+                    try:
+                        # Set standard GenAI attributes
+                        provider = self._extract_provider(instance)
+                        if provider:
+                            span.set_attribute("gen_ai.system", provider)
+                        else:
+                            span.set_attribute("gen_ai.system", "langchain")
 
-                    span.set_attribute("gen_ai.request.model", model_name)
-                    span.set_attribute("gen_ai.operation.name", "batch")
+                        span.set_attribute("gen_ai.request.model", model_name)
+                        span.set_attribute("gen_ai.operation.name", "batch")
 
-                    # Also set LangChain-specific attributes
-                    span.set_attribute("langchain.chat_model.name", model_name)
-                    span.set_attribute("langchain.chat_model.operation", "abatch")
+                        # Also set LangChain-specific attributes
+                        span.set_attribute("langchain.chat_model.name", model_name)
+                        span.set_attribute("langchain.chat_model.operation", "abatch")
 
-                    # Get batch size
-                    if args and len(args) > 0:
-                        batch_size = len(args[0]) if hasattr(args[0], "__len__") else 1
-                        span.set_attribute("langchain.chat_model.batch_size", batch_size)
+                        # Get batch size
+                        if args and len(args) > 0:
+                            batch_size = len(args[0]) if hasattr(args[0], "__len__") else 1
+                            span.set_attribute("langchain.chat_model.batch_size", batch_size)
 
-                    # Set session.id
-                    session_id = self._resolve_session_id(instance, args, kwargs)
-                    span.set_attribute("session.id", session_id)
-                    span.set_attribute("langchain.session.id", session_id)
+                        # Set session.id
+                        session_id = self._resolve_session_id(instance, args, kwargs)
+                        span.set_attribute("session.id", session_id)
+                        span.set_attribute("langchain.session.id", session_id)
+                    except Exception as e:
+                        logger.debug("Failed to set batch span attributes: %s", e)
 
                     result = await original_abatch(instance, *args, **kwargs)
 
                     # Record metrics (though batch results may not have usage info)
-                    self._record_result_metrics(span, result, start_time, kwargs)
+                    try:
+                        self._record_result_metrics(span, result, start_time, kwargs)
+                    except Exception as e:
+                        logger.debug("Failed to record metrics: %s", e)
 
                     return result
 

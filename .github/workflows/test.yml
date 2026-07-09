@@ -6,6 +6,16 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+# Least privilege: the default GITHUB_TOKEN is write-all. Restrict every job to
+# read-only here and grant per-job elevation only where a job genuinely needs it.
+permissions:
+  contents: read
+
+# Action-pinning note: official actions/* are pinned by major tag below; third-
+# party actions (e.g. codecov) should be pinned to a full commit SHA. For a
+# fully hardened supply chain, replace every `@vN` tag (including actions/*) with
+# the corresponding `@<40-char-sha>  # vN` once verified.
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -49,9 +59,13 @@ jobs:
         pytest tests/ -v --cov=genai_otel --cov-report=xml --cov-report=term
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      # codecov-action@v3 is EOL; bumped to the current major (v5). SHA-pinning
+      # (e.g. codecov/codecov-action@<sha>  # v5) is preferred over a mutable tag.
+      # If you switch to tokenless OIDC upload (use_oidc), grant this job
+      # `id-token: write` under a job-level permissions block.
+      uses: codecov/codecov-action@v5
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
@@ -126,10 +140,21 @@ jobs:
         python -m pip install --upgrade pip
         pip install safety bandit
 
+    # safety is left non-blocking on purpose: the transitive dependency graph
+    # currently carries known advisories in optional/dev extras (see SECURITY.md),
+    # so making it hard-fail would break CI on issues outside this package's code.
+    # `continue-on-error` surfaces the failures as a visible annotation instead of
+    # silently swallowing them with `|| true`.
+    # TODO(supply-chain): pin/patch the flagged transitive deps, then make this
+    # step blocking (remove continue-on-error).
     - name: Run safety check
+      continue-on-error: true
       run: |
-        safety check || true
+        safety check
 
+    # bandit IS blocking: `-ll` reports only MEDIUM+ severity findings, of which
+    # there are currently none in genai_otel/ (all findings are LOW; see
+    # SECURITY.md). A new MEDIUM/HIGH finding should fail CI rather than be hidden.
     - name: Run bandit security check
       run: |
-        bandit -r genai_otel -ll || true
+        bandit -r genai_otel -ll

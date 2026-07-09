@@ -54,6 +54,12 @@ class HyperbolicInstrumentor(BaseInstrumentor):
         try:
             import requests
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(requests, "_genai_otel_hyperbolic_instrumented", False) is True:
+                logger.debug("Hyperbolic already instrumented, skipping")
+                self._instrumented = True
+                return
+
             # Wrap requests.post to intercept Hyperbolic API calls
             original_post = requests.post
 
@@ -83,18 +89,9 @@ class HyperbolicInstrumentor(BaseInstrumentor):
                     try:
                         # Make the actual API call
                         response = wrapped(*args, **kwargs)
-
-                        # Extract response attributes
-                        if response.status_code == 200:
-                            response_data = response.json()
-                            self._extract_and_record_response(span, response_data)
-                        else:
-                            span.set_attribute("error", True)
-                            span.set_attribute("http.status_code", response.status_code)
-
-                        return response
-
                     except Exception as e:
+                        # The real HTTP call failed - this is the host's error;
+                        # record and re-raise it unchanged.
                         span.set_attribute("error", True)
                         span.record_exception(e)
                         if self.error_counter:
@@ -108,8 +105,27 @@ class HyperbolicInstrumentor(BaseInstrumentor):
                             )
                         raise
 
+                    # The HTTP call succeeded. Process telemetry defensively so a
+                    # non-JSON / streaming body (response.json() raising) never
+                    # turns the host's successful call into a failure.
+                    try:
+                        if response.status_code == 200:
+                            response_data = response.json()
+                            self._extract_and_record_response(span, response_data)
+                        else:
+                            span.set_attribute("error", True)
+                            span.set_attribute("http.status_code", response.status_code)
+                    except Exception as e:  # noqa: BLE001
+                        logger.debug("Hyperbolic telemetry processing failed: %s", e)
+
+                    return response
+
             # Apply the wrapper
             requests.post = hyperbolic_post_wrapper(original_post)
+            try:
+                requests._genai_otel_hyperbolic_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
             self._instrumented = True
             logger.info("Hyperbolic instrumentation enabled")
 
@@ -207,12 +223,8 @@ class HyperbolicInstrumentor(BaseInstrumentor):
 
                 cost_calc = CostCalculator(custom_pricing_json=self.config.custom_pricing_json)
                 model = span.attributes.get("gen_ai.request.model", "unknown")
-                cost = cost_calc.calculate_cost(
-                    model_name=model,
-                    prompt_tokens=usage_dict["prompt_tokens"],
-                    completion_tokens=usage_dict["completion_tokens"],
-                    call_type="chat",
-                )
+                # Real signature is calculate_cost(model, usage: dict, call_type).
+                cost = cost_calc.calculate_cost(model, usage_dict, "chat")
 
                 if cost > 0 and self.cost_counter:
                     span.set_attribute("gen_ai.cost.amount", cost)

@@ -59,12 +59,22 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
 
             # Instrument Runner.run() (async/classmethod) and Runner.run_sync() (sync/classmethod)
             if hasattr(agents, "Runner"):
+                # Idempotency guard: never stack wrappers if instrument() runs twice.
+                if getattr(agents.Runner, "_genai_otel_agents_instrumented", False) is True:
+                    logger.debug("OpenAI Agents already instrumented, skipping")
+                    self._instrumented = True
+                    return
+
                 if hasattr(agents.Runner, "run"):
                     agents.Runner.run = run_wrapper(agents.Runner.run)
 
                 if hasattr(agents.Runner, "run_sync"):
                     agents.Runner.run_sync = run_sync_wrapper(agents.Runner.run_sync)
 
+                try:
+                    agents.Runner._genai_otel_agents_instrumented = True
+                except Exception:  # noqa: BLE001
+                    pass
                 self._instrumented = True
                 logger.info("OpenAI Agents SDK instrumentation enabled")
 

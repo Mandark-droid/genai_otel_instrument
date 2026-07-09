@@ -54,6 +54,12 @@ class GoogleADKInstrumentor(BaseInstrumentor):
             logger.debug("Skipping Google ADK instrumentation - library not available")
             return
 
+        # Idempotency guard: repeated instrument() calls must not stack wrappers
+        # on the shared Runner / InMemoryRunner classes.
+        if self._instrumented:
+            logger.debug("Google ADK already instrumented, skipping repeat instrument()")
+            return
+
         self.config = config
 
         try:
@@ -92,6 +98,24 @@ class GoogleADKInstrumentor(BaseInstrumentor):
             logger.error("Failed to instrument Google ADK: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
+
+    def _cap_content(self, text: Any, default: int = 200) -> str:
+        """Cap captured content per ``config.content_max_length``.
+
+        Content capture is a required audit feature, so content keeps flowing;
+        this only bounds its size. ``content_max_length == 0`` (or missing) means
+        unlimited. When no usable config is present (unit tests) the historical
+        default cap is used.
+        """
+        s = text if isinstance(text, str) else str(text)
+        cfg = getattr(self, "config", None)
+        max_len = default
+        cfg_len = getattr(cfg, "content_max_length", None) if cfg is not None else None
+        if isinstance(cfg_len, int):
+            max_len = cfg_len
+        if max_len and max_len > 0:
+            return s[:max_len]
+        return s
 
     def _extract_runner_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Runner.run_async() call.
@@ -167,7 +191,7 @@ class GoogleADKInstrumentor(BaseInstrumentor):
             if hasattr(new_message, "parts"):
                 for part in new_message.parts:
                     if hasattr(part, "text") and part.text:
-                        attrs["google_adk.input_message"] = str(part.text)[:200]
+                        attrs["google_adk.input_message"] = self._cap_content(part.text)
                         break
 
         return attrs
@@ -208,7 +232,7 @@ class GoogleADKInstrumentor(BaseInstrumentor):
 
         # Extract the input message (first positional arg)
         if args and len(args) > 0:
-            attrs["google_adk.input_message"] = str(args[0])[:200]
+            attrs["google_adk.input_message"] = self._cap_content(args[0])
 
         return attrs
 
@@ -239,9 +263,9 @@ class GoogleADKInstrumentor(BaseInstrumentor):
 
         try:
             if isinstance(result, str):
-                attrs["google_adk.output"] = result[:500]
+                attrs["google_adk.output"] = self._cap_content(result)
             elif hasattr(result, "text"):
-                attrs["google_adk.output"] = str(result.text)[:500]
+                attrs["google_adk.output"] = self._cap_content(result.text)
         except Exception as e:
             logger.debug("Failed to extract response attributes: %s", e)
 

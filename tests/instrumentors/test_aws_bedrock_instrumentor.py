@@ -137,9 +137,10 @@ class TestAWSBedrockInstrumentor(unittest.TestCase):
         original_invoke_model = MagicMock()
         mock_client.invoke_model = original_invoke_model
 
-        # Mock create_span_wrapper
-        mock_wrapper = MagicMock()
-        instrumentor.create_span_wrapper = MagicMock(return_value=mock_wrapper)
+        # Mock create_span_wrapper. It is a decorator FACTORY: calling it returns
+        # a decorator that must be applied to the original bound method.
+        mock_decorator = MagicMock()
+        instrumentor.create_span_wrapper = MagicMock(return_value=mock_decorator)
 
         # Call _instrument_bedrock_client
         instrumentor._instrument_bedrock_client(mock_client)
@@ -150,8 +151,10 @@ class TestAWSBedrockInstrumentor(unittest.TestCase):
             extract_attributes=instrumentor._extract_aws_bedrock_attributes,
         )
 
-        # Verify invoke_model was replaced
-        self.assertEqual(mock_client.invoke_model, mock_wrapper)
+        # The decorator must be applied to the ORIGINAL invoke_model (not assigned
+        # directly), otherwise invoke_model would be the factory and raise TypeError.
+        mock_decorator.assert_called_once_with(original_invoke_model)
+        self.assertEqual(mock_client.invoke_model, mock_decorator.return_value)
 
     def test_instrument_bedrock_client_without_invoke_model(self):
         """Test that _instrument_bedrock_client handles clients without invoke_model."""

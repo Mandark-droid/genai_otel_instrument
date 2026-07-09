@@ -54,6 +54,12 @@ class AutoGenAgentChatInstrumentor(BaseInstrumentor):
             logger.debug("Skipping AutoGen AgentChat instrumentation - library not available")
             return
 
+        # Idempotency guard: repeated instrument() calls must not stack wrappers
+        # on the shared ChatAgent / BaseGroupChat classes.
+        if self._instrumented:
+            logger.debug("AutoGen AgentChat already instrumented, skipping repeat instrument()")
+            return
+
         self.config = config
 
         try:
@@ -119,6 +125,24 @@ class AutoGenAgentChatInstrumentor(BaseInstrumentor):
             if config.fail_on_error:
                 raise
 
+    def _cap_content(self, text: Any, default: int = 200) -> str:
+        """Cap captured content per ``config.content_max_length``.
+
+        Content capture is a required audit feature, so content keeps flowing;
+        this only bounds its size. ``content_max_length == 0`` (or missing) means
+        unlimited. When no usable config is present (unit tests) the historical
+        default cap is used.
+        """
+        s = text if isinstance(text, str) else str(text)
+        cfg = getattr(self, "config", None)
+        max_len = default
+        cfg_len = getattr(cfg, "content_max_length", None) if cfg is not None else None
+        if isinstance(cfg_len, int):
+            max_len = cfg_len
+        if max_len and max_len > 0:
+            return s[:max_len]
+        return s
+
     def _extract_agent_run_attributes(
         self, instance: Any, args: Any, kwargs: Any
     ) -> Dict[str, Any]:
@@ -161,12 +185,12 @@ class AutoGenAgentChatInstrumentor(BaseInstrumentor):
 
         if task:
             if isinstance(task, str):
-                attrs["autogen_agentchat.task"] = task[:200]
+                attrs["autogen_agentchat.task"] = self._cap_content(task)
             elif isinstance(task, list):
                 # List of BaseMessage objects
                 attrs["autogen_agentchat.task.message_count"] = len(task)
                 if task and hasattr(task[0], "content"):
-                    attrs["autogen_agentchat.task"] = str(task[0].content)[:200]
+                    attrs["autogen_agentchat.task"] = self._cap_content(task[0].content)
 
         # Extract produced_message_types if available
         if hasattr(instance, "produced_message_types"):
@@ -260,7 +284,7 @@ class AutoGenAgentChatInstrumentor(BaseInstrumentor):
             task = kwargs.get("task")
 
         if task and isinstance(task, str):
-            attrs["autogen_agentchat.task"] = task[:200]
+            attrs["autogen_agentchat.task"] = self._cap_content(task)
 
         # Extract termination condition
         if hasattr(instance, "_termination_condition") and instance._termination_condition:

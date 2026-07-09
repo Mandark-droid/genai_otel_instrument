@@ -22,6 +22,21 @@ logger = logging.getLogger(__name__)
 PartType = Literal["text", "image", "audio", "video", "document"]
 MediaSource = Literal["inline_offloaded", "external_url", "reference_only"]
 
+# Hard ceiling on how many bytes an inline base64 blob may decode to. Untrusted
+# request media is base64-decoded here, so we must reject oversized payloads
+# BEFORE calling base64.b64decode (which would otherwise allocate the full
+# decoded buffer). This is a decompression/DoS guard; the precise per-request
+# cap is config.media_max_bytes, which callers can pass via detect_parts(
+# max_decoded_bytes=...). This module default is a generous safety ceiling used
+# when no cap is threaded in.
+_DEFAULT_MAX_DECODE_BYTES = 64 * 1024 * 1024  # 64 MiB
+
+
+def _estimated_decoded_size(b64: str) -> int:
+    """Estimate decoded byte size of a base64 string without decoding it."""
+    # 4 base64 chars -> 3 bytes. Ignore padding/whitespace for the estimate.
+    return (len(b64) * 3) // 4
+
 
 @dataclass
 class ContentPart:
@@ -46,12 +61,33 @@ class NormalizedMessage:
     parts: List[ContentPart]
 
 
-def _decode_b64(data: Any) -> Optional[bytes]:
+def _decode_b64(data: Any, max_bytes: Optional[int] = None) -> Optional[bytes]:
+    """Decode inline media, rejecting oversized payloads BEFORE decoding.
+
+    A pre-decode size guard prevents a small base64 string from expanding into
+    a huge in-memory buffer (decompression/DoS). Returns None on reject or
+    malformed input.
+    """
     if data is None:
         return None
+    cap = int(max_bytes) if max_bytes is not None else _DEFAULT_MAX_DECODE_BYTES
     if isinstance(data, (bytes, bytearray)):
+        if cap > 0 and len(data) > cap:
+            logger.warning(
+                "Inline media (%d bytes) exceeds decode cap (%d); dropping bytes", len(data), cap
+            )
+            return None
         return bytes(data)
     if isinstance(data, str):
+        # Guard the estimated decoded size BEFORE allocating via b64decode.
+        if cap > 0 and _estimated_decoded_size(data) > cap:
+            logger.warning(
+                "Inline media (~%d decoded bytes) exceeds decode cap (%d); dropping bytes "
+                "before base64 decode",
+                _estimated_decoded_size(data),
+                cap,
+            )
+            return None
         try:
             return base64.b64decode(data, validate=False)
         except Exception:  # noqa: BLE001
@@ -59,7 +95,7 @@ def _decode_b64(data: Any) -> Optional[bytes]:
     return None
 
 
-def _detect_openai_part(item: Any) -> Optional[ContentPart]:
+def _detect_openai_part(item: Any, max_bytes: Optional[int] = None) -> Optional[ContentPart]:
     """OpenAI / OpenAI-compatible chat content array element."""
     if isinstance(item, str):
         return ContentPart(type="text", text=item)
@@ -79,7 +115,7 @@ def _detect_openai_part(item: Any) -> Optional[ContentPart]:
                 mime = header.split(";", 1)[0].removeprefix("data:") or "image/png"
                 return ContentPart(
                     type="image",
-                    data=_decode_b64(payload),
+                    data=_decode_b64(payload, max_bytes),
                     media_mime_type=mime,
                 )
             except Exception:  # noqa: BLE001
@@ -91,7 +127,7 @@ def _detect_openai_part(item: Any) -> Optional[ContentPart]:
         fmt = audio.get("format") or "wav"
         return ContentPart(
             type="audio",
-            data=_decode_b64(audio.get("data")),
+            data=_decode_b64(audio.get("data"), max_bytes),
             media_mime_type=f"audio/{fmt}",
         )
     if ptype == "input_video" or ptype == "video":
@@ -101,12 +137,14 @@ def _detect_openai_part(item: Any) -> Optional[ContentPart]:
             try:
                 header, payload = url.split(",", 1)
                 mime = header.split(";", 1)[0].removeprefix("data:") or "video/mp4"
-                return ContentPart(type="video", data=_decode_b64(payload), media_mime_type=mime)
+                return ContentPart(
+                    type="video", data=_decode_b64(payload, max_bytes), media_mime_type=mime
+                )
             except Exception:  # noqa: BLE001
                 return ContentPart(type="video", external_url=url, media_mime_type="video/*")
         return ContentPart(
             type="video",
-            data=_decode_b64(v.get("data")) if isinstance(v, dict) else None,
+            data=_decode_b64(v.get("data"), max_bytes) if isinstance(v, dict) else None,
             external_url=url,
             media_mime_type=(v.get("mime_type") if isinstance(v, dict) else None) or "video/mp4",
         )
@@ -114,14 +152,14 @@ def _detect_openai_part(item: Any) -> Optional[ContentPart]:
         f = item.get("file") or item
         return ContentPart(
             type="document",
-            data=_decode_b64(f.get("file_data") or f.get("data")),
+            data=_decode_b64(f.get("file_data") or f.get("data"), max_bytes),
             external_url=f.get("file_url") or f.get("url"),
             media_mime_type="application/pdf",
         )
     return None
 
 
-def _detect_anthropic_part(item: Any) -> Optional[ContentPart]:
+def _detect_anthropic_part(item: Any, max_bytes: Optional[int] = None) -> Optional[ContentPart]:
     if isinstance(item, str):
         return ContentPart(type="text", text=item)
     if not isinstance(item, dict):
@@ -137,7 +175,7 @@ def _detect_anthropic_part(item: Any) -> Optional[ContentPart]:
         if stype == "base64":
             return ContentPart(
                 type="image",
-                data=_decode_b64(src.get("data")),
+                data=_decode_b64(src.get("data"), max_bytes),
                 media_mime_type=mime,
             )
         if stype == "url":
@@ -147,14 +185,14 @@ def _detect_anthropic_part(item: Any) -> Optional[ContentPart]:
         mime = src.get("media_type") or "application/pdf"
         if src.get("type") == "base64":
             return ContentPart(
-                type="document", data=_decode_b64(src.get("data")), media_mime_type=mime
+                type="document", data=_decode_b64(src.get("data"), max_bytes), media_mime_type=mime
             )
         if src.get("type") == "url":
             return ContentPart(type="document", external_url=src.get("url"), media_mime_type=mime)
     return None
 
 
-def _detect_google_part(item: Any) -> Optional[ContentPart]:
+def _detect_google_part(item: Any, max_bytes: Optional[int] = None) -> Optional[ContentPart]:
     if isinstance(item, str):
         return ContentPart(type="text", text=item)
     if not isinstance(item, dict):
@@ -165,7 +203,7 @@ def _detect_google_part(item: Any) -> Optional[ContentPart]:
             inline = getattr(item, "inline_data", None)
             if inline is not None:
                 mime = getattr(inline, "mime_type", None) or "application/octet-stream"
-                data = _decode_b64(getattr(inline, "data", None))
+                data = _decode_b64(getattr(inline, "data", None), max_bytes)
                 return _classify_google(mime, data=data)
         if hasattr(item, "file_data"):
             fd = getattr(item, "file_data", None)
@@ -180,7 +218,7 @@ def _detect_google_part(item: Any) -> Optional[ContentPart]:
     inline = item.get("inline_data") or item.get("inlineData")
     if inline:
         mime = inline.get("mime_type") or inline.get("mimeType") or "application/octet-stream"
-        return _classify_google(mime, data=_decode_b64(inline.get("data")))
+        return _classify_google(mime, data=_decode_b64(inline.get("data"), max_bytes))
     fd = item.get("file_data") or item.get("fileData")
     if fd:
         mime = fd.get("mime_type") or fd.get("mimeType") or "application/octet-stream"
@@ -212,13 +250,23 @@ _DETECTORS = {
 }
 
 
-def detect_parts(provider: str, content: Any, *, fallback_role: str = "user") -> List[ContentPart]:
+def detect_parts(
+    provider: str,
+    content: Any,
+    *,
+    fallback_role: str = "user",
+    max_decoded_bytes: Optional[int] = None,
+) -> List[ContentPart]:
     """Normalize a single message's content field into ContentPart objects.
 
     Args:
         provider: one of "openai" | "anthropic" | "google" | "groq"
         content: the raw value of `message["content"]` (str, list, or provider object)
         fallback_role: ignored here; preserved for symmetry with NormalizedMessage callers
+        max_decoded_bytes: pre-decode cap for inline base64 media. Pass
+            ``config.media_max_bytes`` to reject payloads that would exceed the
+            per-request cap before they are base64-decoded into memory. When
+            None, a generous module-level DoS ceiling applies.
 
     Returns:
         A list of ContentPart. Returns an empty list if nothing detected.
@@ -232,7 +280,7 @@ def detect_parts(provider: str, content: Any, *, fallback_role: str = "user") ->
     if isinstance(content, list):
         parts: List[ContentPart] = []
         for item in content:
-            cp = detector(item)
+            cp = detector(item, max_decoded_bytes)
             if cp is not None:
                 # populate byte_size if data present
                 if cp.data is not None and cp.media_byte_size is None:
@@ -240,7 +288,7 @@ def detect_parts(provider: str, content: Any, *, fallback_role: str = "user") ->
                 parts.append(cp)
         return parts
     if isinstance(content, dict):
-        cp = detector(content)
+        cp = detector(content, max_decoded_bytes)
         return [cp] if cp else []
     # Unknown shape — best-effort string coercion
     return [ContentPart(type="text", text=str(content))]

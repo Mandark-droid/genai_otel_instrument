@@ -599,6 +599,26 @@ class TestDSPyInstrumentor(unittest.TestCase):
             call_kwargs = mock_wrapper.call_args[1]
             self.assertEqual(call_kwargs["span_name"], "dspy.optimizer.copro")
 
+    @patch("genai_otel.instrumentors.dspy_instrumentor.logger")
+    def test_instrument_idempotent_guard(self, mock_logger):
+        """Repeated instrument() must return early via the idempotency guard."""
+        instrumentor = DSPyInstrumentor()
+        instrumentor._dspy_available = True
+        instrumentor._instrumented = True
+        instrumentor.instrument(OTelConfig())
+        mock_logger.debug.assert_any_call("DSPy already instrumented, skipping repeat instrument()")
+
+    def test_cap_content_respects_config(self):
+        """_cap_content honours content_max_length (default, small cap, unlimited)."""
+        instrumentor = DSPyInstrumentor()
+        self.assertEqual(instrumentor._cap_content("x" * 300), "x" * 200)
+        cfg = OTelConfig()
+        cfg.content_max_length = 3
+        instrumentor.config = cfg
+        self.assertEqual(instrumentor._cap_content("abcdef"), "abc")
+        cfg.content_max_length = 0
+        self.assertEqual(instrumentor._cap_content("x" * 300), "x" * 300)
+
 
 if __name__ == "__main__":
     unittest.main()

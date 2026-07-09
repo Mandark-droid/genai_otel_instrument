@@ -1,5 +1,6 @@
 """Offload pipeline behaviour: mode gating, size cap, redactor errors."""
 
+import io
 from dataclasses import dataclass
 from typing import Optional
 
@@ -16,6 +17,10 @@ class _Cfg:
     media_max_bytes: int = 10 * 1024 * 1024
     media_allowed_modalities: str = "image,audio,video,document"
     media_redactor: Optional[str] = None
+    # Deployment-hardening posture (new OTelConfig fields).
+    profile: str = ""
+    allow_external_egress: bool = True
+    content_max_length: int = 0
 
 
 class _MemStore:
@@ -90,6 +95,10 @@ def _failing_redactor(modality, mime, data):
     raise RuntimeError("boom")
 
 
+def _passthrough_redactor(modality, mime, data):
+    return data
+
+
 def test_redactor_failure_drops_bytes(monkeypatch):
     part = ContentPart(type="image", data=b"abc", media_mime_type="image/png")
     cfg = _Cfg(
@@ -106,3 +115,106 @@ def test_no_store_in_full_mode_degrades():
     out = offload_part(part, config=_Cfg(media_capture_mode="full"), store=None)
     assert out.media_source == "reference_only"
     assert out.extra["stripped_reason"] == "no_data_or_store"
+
+
+# ---------------------------------------------------------------------------
+# Redactor allowlist (dynamic-import hardening)
+# ---------------------------------------------------------------------------
+def test_restricted_profile_rejects_non_builtin_redactor():
+    part = ContentPart(type="image", data=b"abc", media_mime_type="image/png")
+    cfg = _Cfg(
+        media_capture_mode="full",
+        media_redactor="tests.media.test_offload._passthrough_redactor",
+        profile="bank",
+    )
+    store = _MemStore()
+    out = offload_part(part, config=cfg, store=store)
+    # Fail closed: bytes dropped, nothing uploaded.
+    assert out.media_source == "reference_only"
+    assert out.extra["stripped_reason"] == "redactor_not_allowed"
+    assert out.data is None
+    assert store.calls == []
+
+
+def test_no_egress_posture_rejects_non_builtin_redactor():
+    part = ContentPart(type="image", data=b"abc", media_mime_type="image/png")
+    cfg = _Cfg(
+        media_capture_mode="full",
+        media_redactor="tests.media.test_offload._passthrough_redactor",
+        allow_external_egress=False,
+    )
+    store = _MemStore()
+    out = offload_part(part, config=cfg, store=store)
+    assert out.media_source == "reference_only"
+    assert out.extra["stripped_reason"] == "redactor_not_allowed"
+    assert store.calls == []
+
+
+def test_restricted_profile_allows_builtin_redactor():
+    # A valid PNG through the built-in exif_stripper is permitted even under a
+    # strict profile, and uploads successfully.
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (8, 8), (0, 128, 255)).save(buf, format="PNG")
+    part = ContentPart(type="image", data=buf.getvalue(), media_mime_type="image/png")
+    cfg = _Cfg(
+        media_capture_mode="full",
+        media_redactor="genai_otel.media.redactors.exif_stripper",
+        profile="bank",
+    )
+    store = _MemStore()
+    out = offload_part(part, config=cfg, store=store)
+    assert out.media_source == "inline_offloaded"
+    assert len(store.calls) == 1
+
+
+def test_non_restricted_permits_explicit_non_builtin_redactor():
+    part = ContentPart(type="image", data=b"abc", media_mime_type="image/png")
+    cfg = _Cfg(
+        media_capture_mode="full",
+        media_redactor="tests.media.test_offload._passthrough_redactor",
+        # default posture: egress allowed, no strict profile
+    )
+    store = _MemStore()
+    out = offload_part(part, config=cfg, store=store)
+    assert out.media_source == "inline_offloaded"
+    assert len(store.calls) == 1
+
+
+def test_unresolvable_redactor_fails_closed():
+    part = ContentPart(type="image", data=b"abc", media_mime_type="image/png")
+    cfg = _Cfg(
+        media_capture_mode="full",
+        media_redactor="tests.media.does_not_exist.nope",
+    )
+    store = _MemStore()
+    out = offload_part(part, config=cfg, store=store)
+    assert out.media_source == "reference_only"
+    assert out.extra["stripped_reason"] == "redactor_not_allowed"
+    assert store.calls == []
+
+
+# ---------------------------------------------------------------------------
+# Text-content capping (content_max_length bounds canonical + flat text)
+# ---------------------------------------------------------------------------
+def test_text_part_capped_to_content_max_length():
+    part = ContentPart(type="text", text="A" * 500)
+    cfg = _Cfg(media_capture_mode="full", content_max_length=100)
+    out = offload_part(part, config=cfg, store=_MemStore())
+    assert out.text == "A" * 100
+
+
+def test_text_part_uncapped_when_limit_zero():
+    part = ContentPart(type="text", text="A" * 500)
+    cfg = _Cfg(media_capture_mode="full", content_max_length=0)
+    out = offload_part(part, config=cfg, store=_MemStore())
+    assert out.text == "A" * 500
+
+
+def test_text_part_not_capped_when_capture_off():
+    part = ContentPart(type="text", text="A" * 500)
+    cfg = _Cfg(media_capture_mode="off", content_max_length=100)
+    out = offload_part(part, config=cfg, store=_MemStore())
+    # Capture off -> no processing at all.
+    assert out.text == "A" * 500

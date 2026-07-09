@@ -95,6 +95,14 @@ print(message.content[0].text)
 
 The OpenAI SDK works the same way with `base_url="https://api.cometapi.com/v1"` (spans are named `cometapi.chat.completion`).
 
+!!! note "One span per call"
+    Aggregator clients (CometAPI, OpenRouter) are traced **only** by their
+    dedicated instrumentor - the generic OpenAI/Anthropic instrumentors skip
+    clients whose `base_url` points at an aggregator, so each call produces
+    exactly one span and one set of token/cost metrics (since v1.5.1). If you
+    disable the aggregator instrumentor, the generic SDK instrumentor traces
+    those clients instead.
+
 ## Quick Example: Ollama (Local)
 
 ```python

@@ -14,6 +14,7 @@ import subprocess  # nosec B404 - Only used for nvidia-smi with hardcoded args
 import threading
 import time
 from typing import Optional
+from urllib.parse import urlparse
 
 import requests
 
@@ -60,6 +61,19 @@ class OllamaServerMetricsPoller:
         """
         self.base_url = base_url.rstrip("/")
         self.interval = interval
+
+        # Only http/https endpoints may be polled. Reject other schemes
+        # (file://, ftp://, gopher://, etc.) so the background poller cannot be
+        # pointed at a non-http target via the OLLAMA_BASE_URL env var.
+        scheme = urlparse(self.base_url).scheme.lower()
+        self._url_valid = scheme in ("http", "https")
+        if not self._url_valid:
+            logger.warning(
+                "Ollama server metrics poller: refusing to poll non-http(s) URL "
+                "'%s' (scheme=%s); polling disabled",
+                self.base_url,
+                scheme or "none",
+            )
 
         # Auto-detect GPU VRAM if not provided
         if max_vram_gb is not None:
@@ -212,6 +226,10 @@ class OllamaServerMetricsPoller:
 
     def _collect_metrics(self):
         """Query Ollama /api/ps and update server metrics."""
+        # Never poll a URL whose scheme is not http/https.
+        if not getattr(self, "_url_valid", True):
+            logger.debug("Skipping Ollama poll - invalid (non-http) base_url: %s", self.base_url)
+            return
         try:
             # Query /api/ps endpoint
             response = requests.get(f"{self.base_url}/api/ps", timeout=2.0)

@@ -184,6 +184,57 @@ class OTelConfig:
         default_factory=lambda: float(os.getenv("GENAI_SAMPLING_RATE", "1.0"))
     )
 
+    # Metric verbosity (hot-path fan-out control).
+    #
+    # Full per-request detail is ALWAYS written to span attributes (token
+    # breakdowns, granular costs, finish reasons) so trace-based audit and
+    # explainability are never affected by these flags. What these flags gate is
+    # only the additional *aggregated metric* instruments recorded per call, which
+    # dominate per-call overhead and lock contention at high throughput.
+    #
+    # ``metrics_profile`` is a convenience that expands to the individual flags:
+    #   - "standard" (default): request count, latency, token counter, total cost.
+    #   - "full": also record token-distribution histograms, granular cost
+    #     counters, and finish/success/failure counters.
+    #   - "minimal": same as standard (reserved for future trimming).
+    # Individual flags override the profile when set explicitly via env.
+    metrics_profile: str = field(
+        default_factory=lambda: os.getenv("GENAI_METRICS_PROFILE", "standard").lower()
+    )
+    record_token_histograms: bool = field(
+        default_factory=lambda: os.getenv("GENAI_RECORD_TOKEN_HISTOGRAMS", "").lower() == "true"
+    )
+    record_granular_cost_metrics: bool = field(
+        default_factory=lambda: os.getenv("GENAI_RECORD_GRANULAR_COST_METRICS", "").lower()
+        == "true"
+    )
+    record_finish_metrics: bool = field(
+        default_factory=lambda: os.getenv("GENAI_RECORD_FINISH_METRICS", "").lower() == "true"
+    )
+    # Per-request concurrency gauge (server.requests.running). Cheap but adds a
+    # lock acquisition per call; keep on by default, disable for max throughput.
+    enable_concurrency_metrics: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_CONCURRENCY_METRICS", "true").lower()
+        == "true"
+    )
+
+    # Deployment hardening profile. "strict" / "bfsi" / "bank" expand (in
+    # __post_init__) to a locked-down posture suitable for regulated on-prem
+    # deployments: audit content capture stays ON, but ALL third-party network
+    # egress of content/telemetry is blocked and runtime model downloads are
+    # disabled (air-gapped). Empty string means no profile (backward compatible).
+    profile: str = field(default_factory=lambda: os.getenv("GENAI_PROFILE", "").lower())
+    # When False, components MUST NOT send content/telemetry to any third-party
+    # (non-OTLP-backend) endpoint - e.g. the Perspective API. Checked by detectors.
+    allow_external_egress: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ALLOW_EXTERNAL_EGRESS", "true").lower() == "true"
+    )
+    # When True, components MUST NOT fetch models/assets from the network at
+    # runtime (Detoxify weights, spaCy models, etc.). For air-gapped sites.
+    air_gapped: bool = field(
+        default_factory=lambda: os.getenv("GENAI_AIR_GAPPED", "false").lower() == "true"
+    )
+
     # OpenTelemetry semantic convention stability opt-in
     # Supports "gen_ai" for new conventions, "gen_ai/dup" for dual emission
     semconv_stability_opt_in: str = field(
@@ -354,6 +405,27 @@ class OTelConfig:
     # Example: lambda instance, args, kwargs: kwargs.get("metadata", {}).get("session_id")
     session_id_extractor: Optional[Callable[[Any, Tuple, Dict], Optional[str]]] = None
     user_id_extractor: Optional[Callable[[Any, Tuple, Dict], Optional[str]]] = None
+
+    def __post_init__(self):
+        """Expand the deployment hardening profile into concrete settings.
+
+        The bank / BFSI profile keeps audit-grade content capture ON (RBI
+        tracing/explainability mandate) while forcing OFF every path that would
+        send content or telemetry to a third party or fetch assets at runtime.
+        Individual settings explicitly provided via their own environment
+        variables are respected; the profile only fills in what the operator did
+        not pin.
+        """
+        if self.profile in ("strict", "bfsi", "bank"):
+            # Hard overrides: no third-party egress, no runtime downloads.
+            self.allow_external_egress = False
+            self.air_gapped = True
+            self.co2_offline_mode = True
+            self.toxicity_use_perspective_api = False
+            # Soft default: enable content capture for audit unless the operator
+            # explicitly set GENAI_ENABLE_CONTENT_CAPTURE.
+            if os.getenv("GENAI_ENABLE_CONTENT_CAPTURE", "") == "":
+                self.enable_content_capture = True
 
 
 from opentelemetry import trace
