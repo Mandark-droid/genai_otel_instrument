@@ -713,6 +713,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#security-hardening-bfsi-on-prem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Hardening (BFSI / on-prem)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-and-metric-verbosity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance and Metric Verbosity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#telemetry-opt-in" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1684,6 +1706,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#security-hardening-bfsi-on-prem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Hardening (BFSI / on-prem)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-and-metric-verbosity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance and Metric Verbosity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#telemetry-opt-in" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2325,6 +2369,91 @@
 </tr>
 </tbody>
 </table>
+<h2 id="security-hardening-bfsi-on-prem">Security Hardening (BFSI / on-prem)<a class="headerlink" href="#security-hardening-bfsi-on-prem" title="Permanent link">&para;</a></h2>
+<p>For regulated on-prem deployments, <code>GENAI_PROFILE=strict</code> (aliases <code>bfsi</code>, <code>bank</code>)
+locks down the posture in one switch: audit content capture stays <strong>on</strong>, but all
+third-party network egress is disabled and runtime model downloads are blocked.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_PROFILE</code></td>
+<td></td>
+<td><code>strict</code> / <code>bfsi</code> / <code>bank</code> expand to the hardened posture below (empty = no profile)</td>
+</tr>
+<tr>
+<td><code>GENAI_ALLOW_EXTERNAL_EGRESS</code></td>
+<td><code>true</code></td>
+<td>When <code>false</code>, components must not send content/telemetry to any third party (e.g. the toxicity Perspective API is disabled)</td>
+</tr>
+<tr>
+<td><code>GENAI_AIR_GAPPED</code></td>
+<td><code>false</code></td>
+<td>When <code>true</code>, components must not fetch models/assets at runtime (Detoxify weights, spaCy models)</td>
+</tr>
+</tbody>
+</table>
+<p>Under <code>GENAI_PROFILE=strict</code> the profile sets <code>GENAI_ALLOW_EXTERNAL_EGRESS=false</code>,
+<code>GENAI_AIR_GAPPED=true</code>, <code>GENAI_CO2_OFFLINE_MODE=true</code> and
+<code>GENAI_TOXICITY_USE_PERSPECTIVE_API=false</code>, and enables content capture for audit
+unless you pin <code>GENAI_ENABLE_CONTENT_CAPTURE</code> yourself.</p>
+<p>Blocking evaluation (<code>GENAI_PII_MODE=block</code>, <code>*_BLOCK_ON_DETECTION=true</code>) now
+intercepts the request <strong>before</strong> the LLM call and raises
+<code>genai_otel.exceptions.PolicyViolationError</code>, instead of only annotating the span
+after the response has already returned.</p>
+<h2 id="performance-and-metric-verbosity">Performance and Metric Verbosity<a class="headerlink" href="#performance-and-metric-verbosity" title="Permanent link">&para;</a></h2>
+<p>Full per-request detail is always written to span attributes (audit is
+unaffected). These flags gate only the additional aggregated-metric instruments,
+which dominate per-call overhead at high throughput.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_METRICS_PROFILE</code></td>
+<td><code>standard</code></td>
+<td><code>standard</code> = request count, latency, token counter, total cost. <code>full</code> = also token histograms, granular cost counters, finish counters</td>
+</tr>
+<tr>
+<td><code>GENAI_RECORD_TOKEN_HISTOGRAMS</code></td>
+<td><code>false</code></td>
+<td>Record per-request token distribution histograms</td>
+</tr>
+<tr>
+<td><code>GENAI_RECORD_GRANULAR_COST_METRICS</code></td>
+<td><code>false</code></td>
+<td>Record prompt/completion/reasoning/cache cost counters (span attributes are always set regardless)</td>
+</tr>
+<tr>
+<td><code>GENAI_RECORD_FINISH_METRICS</code></td>
+<td><code>false</code></td>
+<td>Record finish-reason / success / failure counters</td>
+</tr>
+<tr>
+<td><code>GENAI_ENABLE_CONCURRENCY_METRICS</code></td>
+<td><code>true</code></td>
+<td>Track the <code>gen_ai.server.requests.running</code> gauge</td>
+</tr>
+<tr>
+<td><code>OTEL_METRICS_EXEMPLAR_FILTER</code></td>
+<td><code>always_off</code></td>
+<td>Metric exemplar sampling; set <code>trace_based</code> to re-enable (adds per-measurement cost)</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/benchmarks"><code>benchmarks/</code></a>
+for per-call overhead numbers and the measurement tooling.</p>
 <h2 id="telemetry-opt-in">Telemetry (Opt-in)<a class="headerlink" href="#telemetry-opt-in" title="Permanent link">&para;</a></h2>
 <p>Anonymous usage telemetry is disabled by default.</p>
 <table>
