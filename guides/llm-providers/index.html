@@ -1621,6 +1621,15 @@
 <a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="c1"># Spans named cometapi.messages.create with token usage and cost tracking</span>
 </code></pre></div>
 <p>The OpenAI SDK works the same way with <code>base_url="https://api.cometapi.com/v1"</code> (spans are named <code>cometapi.chat.completion</code>).</p>
+<div class="admonition note">
+<p class="admonition-title">One span per call</p>
+<p>Aggregator clients (CometAPI, OpenRouter) are traced <strong>only</strong> by their
+dedicated instrumentor - the generic OpenAI/Anthropic instrumentors skip
+clients whose <code>base_url</code> points at an aggregator, so each call produces
+exactly one span and one set of token/cost metrics (since v1.5.1). If you
+disable the aggregator instrumentor, the generic SDK instrumentor traces
+those clients instead.</p>
+</div>
 <h2 id="quick-example-ollama-local">Quick Example: Ollama (Local)<a class="headerlink" href="#quick-example-ollama-local" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
