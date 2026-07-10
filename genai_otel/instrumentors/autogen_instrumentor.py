@@ -62,6 +62,12 @@ class AutoGenInstrumentor(BaseInstrumentor):
             logger.debug("Skipping AutoGen instrumentation - library not available")
             return
 
+        # Idempotency guard: repeated instrument() calls must not stack wrappers
+        # on the shared ConversableAgent / GroupChat classes.
+        if self._instrumented:
+            logger.debug("AutoGen already instrumented, skipping repeat instrument()")
+            return
+
         self.config = config
 
         try:
@@ -113,6 +119,24 @@ class AutoGenInstrumentor(BaseInstrumentor):
             logger.error("Failed to instrument AutoGen: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
+
+    def _cap_content(self, text: Any, default: int = 200) -> str:
+        """Cap captured content per ``config.content_max_length``.
+
+        Content capture is a required audit feature, so content keeps flowing;
+        this only bounds its size. ``content_max_length == 0`` (or missing) means
+        unlimited. When no usable config is present (unit tests) the historical
+        default cap is used.
+        """
+        s = text if isinstance(text, str) else str(text)
+        cfg = getattr(self, "config", None)
+        max_len = default
+        cfg_len = getattr(cfg, "content_max_length", None) if cfg is not None else None
+        if isinstance(cfg_len, int):
+            max_len = cfg_len
+        if max_len and max_len > 0:
+            return s[:max_len]
+        return s
 
     def _extract_chat_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from ConversableAgent.initiate_chat call.
@@ -175,11 +199,11 @@ class AutoGenInstrumentor(BaseInstrumentor):
         if message:
             # Message can be string or dict
             if isinstance(message, str):
-                attrs["autogen.message"] = message[:500]  # Truncate
+                attrs["autogen.message"] = self._cap_content(message)
                 attrs["autogen.message.type"] = "string"
             elif isinstance(message, dict):
                 if "content" in message:
-                    attrs["autogen.message"] = str(message["content"])[:500]
+                    attrs["autogen.message"] = self._cap_content(message["content"])
                 attrs["autogen.message.type"] = "dict"
             else:
                 attrs["autogen.message.type"] = str(type(message).__name__)
@@ -377,9 +401,9 @@ class AutoGenInstrumentor(BaseInstrumentor):
                     last_message = result.chat_history[-1]
                     if isinstance(last_message, dict):
                         if "content" in last_message:
-                            attrs["autogen.conversation.last_message"] = str(
+                            attrs["autogen.conversation.last_message"] = self._cap_content(
                                 last_message["content"]
-                            )[:500]
+                            )
                         if "role" in last_message:
                             attrs["autogen.conversation.last_role"] = last_message["role"]
                         if "name" in last_message:
@@ -403,7 +427,7 @@ class AutoGenInstrumentor(BaseInstrumentor):
 
             # Extract summary if available
             if hasattr(result, "summary"):
-                attrs["autogen.conversation.summary"] = str(result.summary)[:500]
+                attrs["autogen.conversation.summary"] = self._cap_content(result.summary)
 
         except Exception as e:
             logger.debug("Failed to extract response attributes: %s", e)

@@ -521,6 +521,54 @@ class TestCrewAIInstrumentor(unittest.TestCase):
 
             self.assertNotIn("session.id", attrs)
 
+    def test_thread_pool_executor_patch_is_idempotent(self):
+        """_patch_thread_pool_executor must not stack wrappers on repeat calls."""
+        from concurrent.futures import ThreadPoolExecutor
+
+        saved_submit = ThreadPoolExecutor.submit
+        try:
+            with patch.dict("sys.modules", {"crewai": MagicMock()}):
+                instrumentor = CrewAIInstrumentor()
+                instrumentor._patch_thread_pool_executor()
+                first = ThreadPoolExecutor.submit
+                self.assertTrue(getattr(first, "_genai_otel_wrapped", False))
+
+                # Second call sees the guard marker and is a no-op.
+                instrumentor._patch_thread_pool_executor()
+                self.assertIs(ThreadPoolExecutor.submit, first)
+        finally:
+            ThreadPoolExecutor.submit = saved_submit
+
+    def test_patched_submit_still_executes_task(self):
+        """The patched submit must still run submitted callables (unrelated work)."""
+        from concurrent.futures import ThreadPoolExecutor
+
+        saved_submit = ThreadPoolExecutor.submit
+        try:
+            with patch.dict("sys.modules", {"crewai": MagicMock()}):
+                instrumentor = CrewAIInstrumentor()
+                instrumentor._patch_thread_pool_executor()
+
+                with ThreadPoolExecutor(max_workers=1) as ex:
+                    fut = ex.submit(lambda x: x + 1, 41)
+                    self.assertEqual(fut.result(timeout=5), 42)
+        finally:
+            ThreadPoolExecutor.submit = saved_submit
+
+    def test_cap_content_respects_config(self):
+        """_cap_content honours content_max_length (default, small cap, unlimited)."""
+        with patch.dict("sys.modules", {"crewai": MagicMock()}):
+            instrumentor = CrewAIInstrumentor()
+        self.assertEqual(instrumentor._cap_content("x" * 300), "x" * 200)
+
+        cfg = OTelConfig()
+        cfg.content_max_length = 4
+        instrumentor.config = cfg
+        self.assertEqual(instrumentor._cap_content("abcdefgh"), "abcd")
+
+        cfg.content_max_length = 0
+        self.assertEqual(instrumentor._cap_content("x" * 300), "x" * 300)
+
 
 if __name__ == "__main__":
     unittest.main()

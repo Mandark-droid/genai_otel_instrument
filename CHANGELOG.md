@@ -6,6 +6,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security & performance hardening (BFSI / on-prem)
+
+This is a large hardening pass ahead of regulated on-prem (bank) deployments.
+Content capture stays configurable via the existing
+`GENAI_ENABLE_CONTENT_CAPTURE` / `GENAI_CONTENT_MAX_LENGTH` route (RBI
+tracing/auditability is preserved); the work below makes that data safer,
+bounded, and cheaper to collect, and fixes correctness bugs.
+
+### Added
+
+- **`GENAI_PROFILE=strict` (aliases `bfsi`, `bank`)** bank hardening profile: keeps
+  audit content capture ON but forces all third-party egress OFF and enables
+  air-gapped mode in one switch. New settings `GENAI_ALLOW_EXTERNAL_EGRESS`
+  (default true) and `GENAI_AIR_GAPPED` (default false); the strict profile sets
+  egress off, air-gapped on, `co2_offline_mode` on, and Perspective API off.
+- **Pre-call BLOCK enforcement**: `pii_mode=block` / `*_block_on_detection` now
+  actually intercept the request — a new pre-call hook evaluates the prompt and
+  raises `PolicyViolationError` (new, in `genai_otel.exceptions`) BEFORE the LLM
+  call when a configured policy triggers. Gated by an active blocking policy, so
+  the default path has zero extra cost.
+- **Metric verbosity controls** (`GENAI_METRICS_PROFILE`, plus
+  `GENAI_RECORD_TOKEN_HISTOGRAMS` / `GENAI_RECORD_GRANULAR_COST_METRICS` /
+  `GENAI_RECORD_FINISH_METRICS` / `GENAI_ENABLE_CONCURRENCY_METRICS`). Full
+  per-request detail is still always written to span attributes (audit is
+  unaffected); the redundant aggregated-metric instruments are now opt-in.
+
+### Changed (performance)
+
+- **Per-call span-wrapper overhead cut ~30-80%** (measured with content capture
+  ON): a priced model went ~61 us -> ~42 us and an unpriced/internal model
+  ~182 us -> ~31 us. Levers: memoized/indexed cost lookup (no more O(n) scan +
+  per-call `sorted()` of ~850 model keys), a process-wide shared `CostCalculator`
+  (one pricing-JSON parse instead of ~29), gated metric fan-out, removal of
+  per-call debug f-strings, and metric exemplar sampling now defaults OFF
+  (`OTEL_METRICS_EXEMPLAR_FILTER=always_off`, override to re-enable).
+- Single-thread instrumented throughput improved (~15.5k -> ~23k calls/s). Note:
+  thread-level scaling remains bounded by the CPython GIL (CPU-bound work);
+  scale out with multiple processes.
+
+### Fixed (correctness)
+
+- **Double execution of the wrapped LLM call**: the wrapper's outer fallback
+  re-invoked the wrapped function after it had already run, so every errored call
+  AND every sampled-out call (`GENAI_SAMPLING_RATE<1.0`) executed the underlying
+  request twice (double API spend, duplicated side effects). Fixed with an
+  `invoked` guard, a fast path for non-recording (sampled-out) spans, and
+  defensive reads so `_record_result_metrics` never touches `.name`/`.attributes`
+  on a `NonRecordingSpan`.
+- **Client-breaking instrumentors**: Groq and SambaNova `__init__` wrappers
+  returned a value (`TypeError` on every client construction); AWS Bedrock
+  assigned the decorator factory to `invoke_model` instead of wrapping the bound
+  method (`TypeError` on first call); Hyperbolic called `CostCalculator` with the
+  wrong signature and re-raised JSON errors into the caller. All fixed with
+  regression tests.
+- LangChain `AgentExecutor` wrapper called `.get()` on a non-dict; Haystack
+  wrappers passed `instance` twice into already-bound methods (corrupting
+  `Pipeline.run`); pymongo metrics wrapper `NameError` on the error path.
+
+### Security
+
+- **No third-party egress of content by default**: the toxicity Perspective API
+  path (which sends prompt/response text to Google) is now hard-gated on
+  `allow_external_egress`; the API key is scrubbed from logs. Detoxify/spaCy model
+  downloads are skipped in air-gapped mode.
+- **Media subsystem**: the `pdf_pii_redact` redactor no longer uploads the
+  original document while stamping a false `/RedactionApplied` flag - all
+  built-in redactors now FAIL CLOSED (drop bytes) on error/missing-dependency;
+  the env-driven redactor loader is allowlisted (built-ins only under strict
+  profile); untrusted inline media is size-capped before base64 decode and before
+  PIL/opencv/pypdf parsing (decompression-bomb defense); the filesystem store
+  enforces path-traversal containment + `0o600` perms; http/s3 stores reject
+  plaintext endpoints under strict profile and strip credentials from `media_uri`.
+- **Bounded content everywhere**: previously-unbounded content on spans, span
+  events, streaming buffers, enrichment-processor response copies, and MCP
+  `db.statement`/Cypher capture now honor `content_max_length` (0 = unlimited for
+  full audit).
+- **Evaluation dedup**: detectors previously ran up to 3x per span (inline,
+  `on_end`, and export); now deduped via an `evaluation.completed` marker.
+- **Supply chain / CI**: removed the non-existent `azure-ai-openai` dependency
+  (dependency-confusion vector; `[azure]` now uses the `openai` SDK); added
+  least-privilege `permissions:` blocks and a documented OIDC trusted-publishing
+  path to the workflows; added a `gitleaks` secret-scanning pre-commit hook;
+  de-hardcoded the API key in `scripts/test_basic_openai.py`; corrected stale
+  `SECURITY.md` claims.
+- Added double-wrap idempotency guards across instrumentors, scheme validation on
+  the Ollama metrics poller URL, and best-effort `uninstrument()` paths for
+  several MCP instrumentors.
+
+## [1.5.1] - 2026-07-10
+
+### Fixed
+
+- **Duplicate spans and double-counted metrics for aggregator clients
+  (OpenRouter, CometAPI)**: a client pointed at an aggregator `base_url` was
+  wrapped twice - once by the dedicated aggregator instrumentor and once by
+  the generic OpenAI/Anthropic instrumentor - producing two nested spans per
+  call (e.g. `cometapi.chat.completion` + `openai.chat.completion`) and
+  recording request/token/cost metrics twice. Aggregator instrumentors now
+  register a `base_url` claim (`register_base_url_claim` in
+  `instrumentors/base.py`) and the generic OpenAI/Anthropic instrumentors
+  skip claimed clients, so each call produces exactly one span and one set of
+  metrics. If the aggregator instrumentor is disabled, the generic
+  instrumentor traces those clients as before (no coverage loss).
+
 ## [1.5.0] - 2026-07-07
 
 ### Added

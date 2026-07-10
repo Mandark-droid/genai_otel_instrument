@@ -13,6 +13,17 @@ from .base import BaseInstrumentor
 logger = logging.getLogger(__name__)
 
 
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
+
+
 class CohereInstrumentor(BaseInstrumentor):
     """Instrumentor for Cohere"""
 
@@ -43,6 +54,12 @@ class CohereInstrumentor(BaseInstrumentor):
         try:
             import cohere
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(cohere.Client, "_genai_otel_cohere_instrumented", False) is True:
+                logger.debug("Cohere already instrumented, skipping")
+                self._instrumented = True
+                return
+
             original_init = cohere.Client.__init__
 
             def wrapped_init(instance, *args, **kwargs):
@@ -50,6 +67,10 @@ class CohereInstrumentor(BaseInstrumentor):
                 self._instrument_client(instance)
 
             cohere.Client.__init__ = wrapped_init
+            try:
+                cohere.Client._genai_otel_cohere_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
             self._instrumented = True
             logger.info("Cohere instrumentation enabled")
 
@@ -164,7 +185,9 @@ class CohereInstrumentor(BaseInstrumentor):
                 if hasattr(first_generation, "text"):
                     response_text = first_generation.text
                     if response_text:
-                        attrs["gen_ai.response"] = response_text
+                        attrs["gen_ai.response"] = _cap_content(
+                            getattr(self, "config", None), response_text
+                        )
         except (IndexError, AttributeError) as e:
             logger.debug("Failed to extract response content: %s", e)
 

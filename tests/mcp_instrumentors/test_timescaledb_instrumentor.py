@@ -5,8 +5,11 @@ from unittest.mock import MagicMock, patch
 
 from genai_otel.config import OTelConfig
 from genai_otel.mcp_instrumentors.timescaledb_instrumentor import (
+    _OPERATION_SCAN_LIMIT,
     TimescaleDBInstrumentor,
+    _bound_text,
     _detect_timescale_operation,
+    _operation_from_query,
 )
 
 
@@ -257,6 +260,41 @@ class TestTimescaleDBInstrumentor(unittest.TestCase):
         # Verify user cursor_factory was preserved
         call_kwargs = mock_original_connect.call_args[1]
         self.assertEqual(call_kwargs["cursor_factory"], user_cursor_factory)
+
+
+class TestTimescaleDBBoundedDetection(unittest.TestCase):
+    """Tests for bounded-prefix operation detection and error bounding."""
+
+    def test_operation_from_query_detects_within_prefix(self):
+        self.assertEqual(
+            _operation_from_query("SELECT create_hypertable('conditions', 'time')"),
+            "create_hypertable",
+        )
+        self.assertEqual(_operation_from_query("SELECT * FROM users"), "")
+
+    def test_operation_from_query_only_scans_bounded_prefix(self):
+        """A TimescaleDB token beyond the bounded prefix is not scanned."""
+        padded = "SELECT " + ("x" * (_OPERATION_SCAN_LIMIT + 50)) + " create_hypertable('c','t')"
+        # The token is entirely past the scan limit, so it must not be detected.
+        self.assertEqual(_operation_from_query(padded), "")
+
+    def test_operation_from_query_handles_non_string(self):
+        # Should not raise on a non-string query object.
+        class Q:
+            def __str__(self):
+                return "SELECT drop_chunks('c')"
+
+        self.assertEqual(_operation_from_query(Q()), "drop_chunks")
+
+    def test_error_message_is_bounded(self):
+        cfg = OTelConfig(content_max_length=5)
+        bounded = _bound_text("a very long SQL error echoing the statement", cfg)
+        self.assertTrue(bounded.startswith("a ver"))
+        self.assertLessEqual(len(bounded), 5 + len("...[truncated]"))
+
+    def test_error_message_full_when_cap_zero(self):
+        msg = "full error text retained for audit" * 10
+        self.assertEqual(_bound_text(msg, OTelConfig(content_max_length=0)), msg)
 
 
 if __name__ == "__main__":

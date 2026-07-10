@@ -10,9 +10,20 @@ import logging
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
-from .base import BaseInstrumentor
+from .base import BaseInstrumentor, find_base_url_claim
 
 logger = logging.getLogger(__name__)
+
+
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
 
 
 class OpenAIInstrumentor(BaseInstrumentor):
@@ -53,6 +64,12 @@ class OpenAIInstrumentor(BaseInstrumentor):
             import openai
             import wrapt
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(openai, "_genai_otel_openai_instrumented", False) is True:
+                logger.debug("OpenAI already instrumented, skipping")
+                self._instrumented = True
+                return
+
             # Instrument sync OpenAI client initialization
             if hasattr(openai, "OpenAI"):
                 original_init = openai.OpenAI.__init__
@@ -81,6 +98,12 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 self._instrumented = True
                 logger.info("AsyncOpenAI instrumentation enabled")
 
+            if self._instrumented:
+                try:
+                    openai._genai_otel_openai_instrumented = True
+                except Exception:  # noqa: BLE001
+                    pass
+
         except Exception as e:
             logger.error("Failed to instrument OpenAI: %s", e, exc_info=True)
             if config.fail_on_error:
@@ -92,6 +115,17 @@ class OpenAIInstrumentor(BaseInstrumentor):
         Args:
             client: The OpenAI client instance to instrument.
         """
+        # A client pointed at an aggregator (OpenRouter, CometAPI) is traced by
+        # its dedicated instrumentor; wrapping it here too would emit a
+        # duplicate span and double-count token/cost metrics.
+        claimed = find_base_url_claim(getattr(client, "base_url", None))
+        if claimed:
+            logger.debug(
+                "Skipping generic OpenAI instrumentation for client handled by "
+                "the '%s' instrumentor",
+                claimed,
+            )
+            return
         if (
             hasattr(client, "chat")
             and hasattr(client.chat, "completions")
@@ -318,6 +352,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
             result: The API response object.
             request_kwargs: The original request kwargs.
         """
+        config = getattr(self, "config", None)
+
         # Add prompt content events
         messages = request_kwargs.get("messages", [])
         for idx, message in enumerate(messages):
@@ -326,7 +362,10 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 content = message.get("content", "")
                 span.add_event(
                     f"gen_ai.prompt.{idx}",
-                    attributes={"gen_ai.prompt.role": role, "gen_ai.prompt.content": str(content)},
+                    attributes={
+                        "gen_ai.prompt.role": role,
+                        "gen_ai.prompt.content": _cap_content(config, content),
+                    },
                 )
 
         # Add completion content events AND attributes (for evaluation processor)
@@ -334,18 +373,18 @@ class OpenAIInstrumentor(BaseInstrumentor):
             response_text = None
             for idx, choice in enumerate(result.choices):
                 if hasattr(choice, "message") and hasattr(choice.message, "content"):
-                    content = choice.message.content
+                    content = _cap_content(config, choice.message.content)
                     # Add as event for observability
                     span.add_event(
                         f"gen_ai.completion.{idx}",
                         attributes={
                             "gen_ai.completion.role": "assistant",
-                            "gen_ai.completion.content": str(content),
+                            "gen_ai.completion.content": content,
                         },
                     )
                     # Capture first completion for evaluation
                     if idx == 0:
-                        response_text = str(content)
+                        response_text = content
 
             # Set as attribute for evaluation processor
             if response_text:

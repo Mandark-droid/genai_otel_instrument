@@ -76,8 +76,15 @@ class EvaluationEnrichingSpanExporter(SpanExporter):
 
             attributes = dict(span.attributes)
 
-            # Skip if evaluation attributes are already present
-            if "evaluation.pii.prompt.detected" in attributes:
+            # IDEMPOTENCY GUARD: skip if the detector suite has already run for
+            # this span. The detectors can be invoked up to three times (base.py
+            # inline pre-end run, EvaluationSpanProcessor.on_end, and here). Trip
+            # on the explicit "evaluation.completed" marker OR any existing
+            # evaluation.* attribute so we never re-run detectors or double-emit
+            # metrics.
+            if attributes.get("evaluation.completed") or any(
+                str(key).startswith("evaluation.") for key in attributes
+            ):
                 return span
 
             # Extract prompt and response using the processor's existing methods
@@ -132,6 +139,8 @@ class EvaluationEnrichingSpanExporter(SpanExporter):
                 has_enrichment |= self._check_hallucination(attributes, prompt, response)
 
             if has_enrichment:
+                # Mark the span as evaluated so any later pass is a no-op.
+                attributes["evaluation.completed"] = True
                 enriched_span = ReadableSpan(
                     name=span.name,
                     context=span.context,

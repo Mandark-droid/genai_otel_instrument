@@ -89,6 +89,18 @@ def test_video_modality():
     assert p["modality"] == "video"
 
 
+def test_text_part_capped_by_max_length():
+    part = ContentPart(type="text", text="Z" * 500)
+    msgs = build_canonical_messages([("user", [part])], max_length=100)
+    assert msgs[0]["parts"][0] == {"type": "text", "content": "Z" * 100}
+
+
+def test_text_part_uncapped_when_max_length_none():
+    part = ContentPart(type="text", text="Z" * 500)
+    msgs = build_canonical_messages([("user", [part])])
+    assert msgs[0]["parts"][0]["content"] == "Z" * 500
+
+
 def test_multi_message_multi_part():
     msgs = build_canonical_messages(
         [

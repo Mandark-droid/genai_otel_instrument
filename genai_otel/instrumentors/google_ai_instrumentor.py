@@ -101,6 +101,11 @@ class GoogleAIInstrumentor(BaseInstrumentor):
         import wrapt
         from google import genai
 
+        # Idempotency guard: never stack wrappers if instrument() runs twice.
+        if getattr(genai, "_genai_otel_google_instrumented", False) is True:
+            logger.debug("Google GenAI (new SDK) already instrumented, skipping")
+            return
+
         # The new SDK uses a Client-based approach
         # Instrument the Client class initialization to wrap generate_content methods
         if hasattr(genai, "Client"):
@@ -122,6 +127,11 @@ class GoogleAIInstrumentor(BaseInstrumentor):
                     extract_attributes=self._extract_google_ai_attributes,
                 )(original_generate)
 
+        try:
+            genai._genai_otel_google_instrumented = True
+        except Exception:  # noqa: BLE001
+            pass
+
     def _instrument_client(self, client):
         """Instrument a google-genai Client instance.
 
@@ -141,6 +151,11 @@ class GoogleAIInstrumentor(BaseInstrumentor):
         """Instrument the legacy google-generativeai SDK."""
         import google.generativeai as genai
 
+        # Idempotency guard: never stack wrappers if instrument() runs twice.
+        if getattr(genai, "_genai_otel_google_instrumented", False) is True:
+            logger.debug("Google Generative AI (legacy SDK) already instrumented, skipping")
+            return
+
         # Legacy SDK: Instrument GenerativeModel.generate_content
         if hasattr(genai, "GenerativeModel"):
             if hasattr(genai.GenerativeModel, "generate_content"):
@@ -149,6 +164,11 @@ class GoogleAIInstrumentor(BaseInstrumentor):
                     span_name="google.generativeai.generate_content",
                     extract_attributes=self._extract_google_ai_attributes,
                 )(original_generate)
+
+        try:
+            genai._genai_otel_google_instrumented = True
+        except Exception:  # noqa: BLE001
+            pass
 
     def _extract_google_ai_attributes(
         self, instance: Any, args: Any, kwargs: Any

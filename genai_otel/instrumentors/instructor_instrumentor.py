@@ -49,6 +49,12 @@ class InstructorInstrumentor(BaseInstrumentor):
             logger.debug("Skipping Instructor instrumentation - library not available")
             return
 
+        # Idempotency guard: repeated instrument() calls must not stack wrappers
+        # on the shared instructor functions.
+        if self._instrumented:
+            logger.debug("Instructor already instrumented, skipping repeat instrument()")
+            return
+
         self.config = config
 
         try:
@@ -171,6 +177,24 @@ class InstructorInstrumentor(BaseInstrumentor):
             span_name="instructor.retry",
             extract_attributes=lambda inst, args, kwargs: self._extract_retry_attributes(kwargs),
         )(wrapped)(*args, **kwargs)
+
+    def _cap_content(self, text: Any, default: int = 200) -> str:
+        """Cap captured content per ``config.content_max_length``.
+
+        Content capture is a required audit feature, so content keeps flowing;
+        this only bounds its size. ``content_max_length == 0`` (or missing) means
+        unlimited. When no usable config is present (unit tests) the historical
+        default cap is used.
+        """
+        s = text if isinstance(text, str) else str(text)
+        cfg = getattr(self, "config", None)
+        max_len = default
+        cfg_len = getattr(cfg, "content_max_length", None) if cfg is not None else None
+        if isinstance(cfg_len, int):
+            max_len = cfg_len
+        if max_len and max_len > 0:
+            return s[:max_len]
+        return s
 
     def _extract_from_provider_attributes(
         self, args: Any, kwargs: Dict[str, Any]
@@ -364,8 +388,7 @@ class InstructorInstrumentor(BaseInstrumentor):
                         for key in keys[:3]:
                             value = dumped[key]
                             if isinstance(value, (str, int, float, bool)):
-                                value_str = str(value)
-                                attrs[f"instructor.response.{key}"] = value_str[:200]
+                                attrs[f"instructor.response.{key}"] = self._cap_content(value)
                 except Exception:
                     pass
 

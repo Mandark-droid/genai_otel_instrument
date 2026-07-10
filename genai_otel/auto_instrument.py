@@ -284,6 +284,14 @@ def setup_auto_instrumentation(config: OTelConfig):
     # Configure OpenTelemetry SDK (TracerProvider, MeterProvider, etc.)
     import os
 
+    # Default metric exemplar sampling OFF. Exemplars (trace-metric correlation
+    # samples) cost a per-measurement RNG draw on the hot path - roughly a third
+    # of per-call metric overhead - which is not worth it for high-throughput
+    # (bank-scale) deployments. Operators who want exemplars can opt back in with
+    # OTEL_METRICS_EXEMPLAR_FILTER=trace_based|always_on. setdefault respects any
+    # explicit setting.
+    os.environ.setdefault("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+
     service_instance_id = os.getenv("OTEL_SERVICE_INSTANCE_ID")
     environment = os.getenv("OTEL_ENVIRONMENT")
     from .__version__ import __version__ as _pkg_version
@@ -392,6 +400,10 @@ def setup_auto_instrumentation(config: OTelConfig):
                     hipaa_mode=config.pii_hipaa_mode,
                     pci_dss_mode=config.pii_pci_dss_mode,
                     custom_patterns=config.pii_custom_patterns,
+                    # Plumb hardening settings so programmatic OTelConfig overrides
+                    # (not just env vars) are honored.
+                    air_gapped=config.air_gapped,
+                    content_max_length=config.content_max_length,
                 )
 
             # Build Toxicity config
@@ -403,6 +415,10 @@ def setup_auto_instrumentation(config: OTelConfig):
                     use_perspective_api=config.toxicity_use_perspective_api,
                     perspective_api_key=config.toxicity_perspective_api_key,
                     block_on_detection=config.toxicity_block_on_detection,
+                    # Plumb third-party egress / air-gap controls from OTelConfig so
+                    # programmatic overrides (not just env vars) are honored.
+                    allow_external_egress=config.allow_external_egress,
+                    air_gapped=config.air_gapped,
                 )
 
             # Build Bias config

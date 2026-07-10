@@ -491,6 +491,84 @@ class TestHaystackInstrumentor(unittest.TestCase):
             # Assert
             self.assertIsNone(finish_reason)
 
+    def test_pipeline_run_wrapper_passes_instance_once(self):
+        """Regression: wrappers must not forward the Pipeline instance twice.
+
+        Uses the REAL wrapt so the bound-method dispatch is exercised. Passing
+        ``instance`` again corrupts the real Pipeline.run call (the pipeline is
+        forwarded as an extra positional arg -> wrong/erroring call).
+        """
+        from genai_otel.config import OTelConfig
+
+        received = {}
+
+        class MockPipeline:
+            def run(self, data=None, **kwargs):
+                received["self"] = self
+                received["data"] = data
+                return {"answer": {"replies": ["ok"]}}
+
+        mock_haystack = MagicMock()
+        mock_haystack.Pipeline = MockPipeline
+
+        # Note: wrapt is intentionally NOT mocked here so real dispatch runs.
+        with patch.dict("sys.modules", {"haystack": mock_haystack}):
+            instrumentor = HaystackInstrumentor()
+            instrumentor.instrument(OTelConfig())
+
+            pipeline = MockPipeline()
+            result = pipeline.run(data={"query": "hi"})
+
+            self.assertIs(received["self"], pipeline)
+            self.assertEqual(received["data"], {"query": "hi"})
+            self.assertEqual(result, {"answer": {"replies": ["ok"]}})
+
+    @patch("genai_otel.instrumentors.haystack_instrumentor.logger")
+    def test_instrument_is_idempotent(self, mock_logger):
+        """Repeated instrument() calls must not re-wrap (idempotency guard)."""
+        from genai_otel.config import OTelConfig
+
+        class MockPipeline:
+            def run(self, data=None):
+                return {}
+
+        mock_haystack = MagicMock()
+        mock_haystack.Pipeline = MockPipeline
+
+        # Underlying function before wrapping (identity survives a single wrap;
+        # a second wrap would nest it, so this stays stable only if the guard held).
+        underlying = MockPipeline.run
+
+        with patch.dict("sys.modules", {"haystack": mock_haystack}):
+            instrumentor = HaystackInstrumentor()
+            instrumentor.instrument(OTelConfig())
+            self.assertTrue(instrumentor._instrumented)
+            self.assertIs(MockPipeline.run.__wrapped__, underlying)
+
+            # Second call must return early via the guard (no additional wrap).
+            instrumentor.instrument(OTelConfig())
+            mock_logger.debug.assert_any_call(
+                "Haystack already instrumented, skipping repeat instrument()"
+            )
+            self.assertIs(MockPipeline.run.__wrapped__, underlying)
+
+    def test_cap_content_respects_config(self):
+        """_cap_content honours content_max_length (default cap, small cap, unlimited)."""
+        from genai_otel.config import OTelConfig
+
+        instrumentor = HaystackInstrumentor()
+        # No config -> historical default cap of 200.
+        self.assertEqual(instrumentor._cap_content("x" * 300), "x" * 200)
+
+        cfg = OTelConfig()
+        cfg.content_max_length = 5
+        instrumentor.config = cfg
+        self.assertEqual(instrumentor._cap_content("abcdefgh"), "abcde")
+
+        # 0 => unlimited (full content for audit).
+        cfg.content_max_length = 0
+        self.assertEqual(instrumentor._cap_content("x" * 300), "x" * 300)
+
 
 if __name__ == "__main__":
     unittest.main()

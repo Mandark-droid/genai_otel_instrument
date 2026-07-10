@@ -28,6 +28,17 @@ from ..config import OTelConfig
 
 logger = logging.getLogger(__name__)
 
+# Identity-tracked registry of already-instrumented ``httpx`` module objects, to
+# make instrument() idempotent (repeated calls must not stack wrappers on
+# ``httpx.Client.request``). Keyed on object identity so mocked modules in unit
+# tests -- a fresh object per test -- never collide.
+_INSTRUMENTED_MODULES = []
+
+
+def _is_module_instrumented(module) -> bool:
+    """Return True if ``module`` (by identity) was already instrumented."""
+    return any(m is module for m in _INSTRUMENTED_MODULES)
+
 
 class APIInstrumentor(BaseInstrumentor):
     """Instrument custom API calls, adding GenAI-specific attributes.
@@ -79,7 +90,12 @@ class APIInstrumentor(BaseInstrumentor):
             # Wrap httpx.Client.request
             if httpx is None:
                 raise ImportError("httpx is not installed")
+            # Double-wrap guard: skip if this module object was already wrapped.
+            if _is_module_instrumented(httpx):
+                logger.debug("httpx already instrumented for API calls; skipping double-wrap")
+                return
             wrapt.wrap_function_wrapper(httpx.Client, "request", self._wrap_api_call)
+            _INSTRUMENTED_MODULES.append(httpx)
             logger.info("httpx library instrumented for API calls.")
         except ImportError:
             logger.debug("httpx library not found, skipping instrumentation.")

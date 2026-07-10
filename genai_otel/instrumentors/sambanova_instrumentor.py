@@ -14,6 +14,17 @@ from .base import BaseInstrumentor
 logger = logging.getLogger(__name__)
 
 
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
+
+
 class SambaNovaInstrumentor(BaseInstrumentor):
     """Instrumentor for SambaNova"""
 
@@ -49,14 +60,25 @@ class SambaNovaInstrumentor(BaseInstrumentor):
         try:
             import sambanova
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(sambanova.SambaNova, "_genai_otel_sambanova_instrumented", False) is True:
+                logger.debug("SambaNova already instrumented, skipping")
+                self._instrumented = True
+                return
+
             original_init = sambanova.SambaNova.__init__
 
             def wrapped_init(instance, *args, **kwargs):
                 original_init(instance, *args, **kwargs)
                 self._instrument_client(instance)
-                return instance
+                # NOTE: __init__ must return None; returning `instance` raises
+                # "TypeError: __init__() should return None" on every construction.
 
             sambanova.SambaNova.__init__ = wrapped_init
+            try:
+                sambanova.SambaNova._genai_otel_sambanova_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
             self._instrumented = True
             logger.info("SambaNova instrumentation enabled")
 
@@ -180,7 +202,9 @@ class SambaNovaInstrumentor(BaseInstrumentor):
                 if hasattr(first_choice, "message") and hasattr(first_choice.message, "content"):
                     response_content = first_choice.message.content
                     if response_content:
-                        attrs["gen_ai.response"] = response_content
+                        attrs["gen_ai.response"] = _cap_content(
+                            getattr(self, "config", None), response_content
+                        )
             except (IndexError, AttributeError) as e:
                 logger.debug("Failed to extract response content: %s", e)
 

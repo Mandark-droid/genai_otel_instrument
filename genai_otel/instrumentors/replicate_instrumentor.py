@@ -30,6 +30,12 @@ class ReplicateInstrumentor(BaseInstrumentor):
         try:
             import replicate
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(replicate, "_genai_otel_replicate_instrumented", False) is True:
+                logger.debug("Replicate already instrumented, skipping")
+                self._instrumented = True
+                return
+
             original_run = replicate.run
 
             # Wrap using create_span_wrapper
@@ -39,6 +45,10 @@ class ReplicateInstrumentor(BaseInstrumentor):
             )(original_run)
 
             replicate.run = wrapped_run
+            try:
+                replicate._genai_otel_replicate_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
             self._instrumented = True
             logger.info("Replicate instrumentation enabled")
 

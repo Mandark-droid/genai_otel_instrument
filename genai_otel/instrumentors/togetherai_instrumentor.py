@@ -22,6 +22,12 @@ class TogetherAIInstrumentor(BaseInstrumentor):
         try:
             import together
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(together, "_genai_otel_together_instrumented", False) is True:
+                logger.debug("Together AI already instrumented, skipping")
+                self._instrumented = True
+                return
+
             # Instrument chat completions (newer API)
             if hasattr(together, "Together"):
                 # This is the newer Together SDK with client-based API
@@ -46,6 +52,12 @@ class TogetherAIInstrumentor(BaseInstrumentor):
                 together.Complete.create = wrapped_complete
                 self._instrumented = True
                 logger.info("Together AI instrumentation enabled (Complete API)")
+
+            if self._instrumented:
+                try:
+                    together._genai_otel_together_instrumented = True
+                except Exception:  # noqa: BLE001
+                    pass
 
         except ImportError:
             logger.debug("Together AI library not installed, instrumentation will be skipped")

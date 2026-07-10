@@ -19,6 +19,17 @@ from .base import BaseInstrumentor
 logger = logging.getLogger(__name__)
 
 
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
+
+
 class MistralAIInstrumentor(BaseInstrumentor):
     """Instrumentor for Mistral AI SDK v1.0+"""
 
@@ -184,7 +195,6 @@ class MistralAIInstrumentor(BaseInstrumentor):
             self._start_time = start_time
             self._span_name = span_name
             self._usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-            self._response_text = ""
             self._first_chunk = True
             self._ttft = None
 
@@ -238,14 +248,12 @@ class MistralAIInstrumentor(BaseInstrumentor):
         def _process_chunk(self, chunk):
             """Process a streaming chunk to extract usage."""
             try:
-                # Mistral streaming chunks have: data.choices[0].delta.content
+                # Mistral streaming chunks have: data.choices[0].delta.content.
+                # We intentionally do NOT accumulate the streamed text here: it was
+                # a dead buffer (never emitted) that held the full response in
+                # memory unbounded. Only token usage from the final chunk is used.
                 if hasattr(chunk, "data"):
                     data = chunk.data
-                    if hasattr(data, "choices") and len(data.choices) > 0:
-                        delta = data.choices[0].delta
-                        if hasattr(delta, "content") and delta.content:
-                            self._response_text += delta.content
-
                     # Extract usage if available on final chunk
                     if hasattr(data, "usage") and data.usage:
                         usage = data.usage
@@ -343,7 +351,9 @@ class MistralAIInstrumentor(BaseInstrumentor):
                 if hasattr(first_choice, "message") and hasattr(first_choice.message, "content"):
                     response_content = first_choice.message.content
                     if response_content:
-                        attrs["gen_ai.response"] = response_content
+                        attrs["gen_ai.response"] = _cap_content(
+                            getattr(self, "config", None), response_content
+                        )
         except (IndexError, AttributeError) as e:
             logger.debug(f"Failed to extract response content: {e}")
 

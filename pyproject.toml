@@ -109,7 +109,11 @@ cometapi = ["openai>=1.0.0", "anthropic>=0.18.0"]  # CometAPI works via OpenAI o
 anthropic = ["anthropic>=0.18.0"]
 google = ["google-generativeai>=0.3.0"]
 aws = ["boto3>=1.28.0"]
-azure = ["azure-ai-openai>=1.0.0"]
+# Azure OpenAI is accessed through the official `openai` package's AzureOpenAI
+# client, not a separate SDK. The previously-declared `azure-ai-openai` package
+# does not exist on PyPI (dependency-confusion / name-planting risk), so this
+# extra intentionally pulls in `openai` only.
+azure = ["openai>=1.0.0"]
 cohere = ["cohere>=4.0.0"]
 mistral = ["mistralai>=0.4.2"]
 together = ["together>=0.2.0"]
@@ -199,7 +203,8 @@ all-providers = [
     "anthropic>=0.18.0",
     "google-generativeai>=0.3.0",
     "boto3>=1.28.0",
-    "azure-ai-openai>=1.0.0",
+    # Azure OpenAI uses the `openai` package (already listed above); there is no
+    # separate `azure-ai-openai` PyPI package.
     "cohere>=4.0.0",
     "mistralai>=0.4.2",
     "together>=0.2.0",
@@ -255,7 +260,8 @@ all = [
     "anthropic>=0.18.0",
     "google-generativeai>=0.3.0",
     "boto3>=1.28.0",
-    "azure-ai-openai>=1.0.0",
+    # Azure OpenAI uses the `openai` package (already listed above); there is no
+    # separate `azure-ai-openai` PyPI package.
     "cohere>=4.0.0",
     "mistralai>=0.4.2",
     "together>=0.2.0",

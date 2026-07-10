@@ -8,6 +8,17 @@ from .base import BaseInstrumentor
 logger = logging.getLogger(__name__)
 
 
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
+
+
 class AWSBedrockInstrumentor(BaseInstrumentor):
     """Instrumentor for AWS Bedrock"""
 
@@ -33,6 +44,12 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
         try:
             import boto3  # Moved to top
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(boto3, "_genai_otel_bedrock_instrumented", False) is True:
+                logger.debug("AWS Bedrock already instrumented, skipping")
+                self._instrumented = True
+                return
+
             original_client = boto3.client
 
             def wrapped_client(*args, **kwargs):
@@ -42,17 +59,27 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                 return client
 
             boto3.client = wrapped_client
+            try:
+                boto3._genai_otel_bedrock_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
+            # Required so create_span_wrapper actually records spans instead of
+            # short-circuiting to the unwrapped call.
+            self._instrumented = True
 
         except ImportError:
             pass
 
     def _instrument_bedrock_client(self, client):
         if hasattr(client, "invoke_model"):
-            instrumented_invoke_method = self.create_span_wrapper(
+            # Capture the bound method and apply the span-wrapper factory to it;
+            # assigning the factory itself (without calling it on the original)
+            # makes invoke_model raise TypeError on first use.
+            original_invoke_model = client.invoke_model
+            client.invoke_model = self.create_span_wrapper(
                 span_name="aws.bedrock.invoke_model",
                 extract_attributes=self._extract_aws_bedrock_attributes,
-            )
-            client.invoke_model = instrumented_invoke_method
+            )(original_invoke_model)
 
     def _extract_aws_bedrock_attributes(
         self, instance: Any, args: Any, kwargs: Any
@@ -186,5 +213,11 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                             attrs["gen_ai.response"] = first_result["outputText"]
         except (json.JSONDecodeError, AttributeError, KeyError, IndexError) as e:
             logger.debug("Failed to extract response content: %s", e)
+
+        # Bound captured completion text (audit content stays, but capped).
+        if "gen_ai.response" in attrs:
+            attrs["gen_ai.response"] = _cap_content(
+                getattr(self, "config", None), attrs["gen_ai.response"]
+            )
 
         return attrs
