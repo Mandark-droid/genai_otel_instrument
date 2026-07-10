@@ -18,6 +18,17 @@ from .base import BaseInstrumentor
 logger = logging.getLogger(__name__)
 
 
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
+
+
 def _safe_kwarg(kwargs, key, default=None):
     """Safely extract a kwarg value, handling SDK OMIT/NotGiven sentinels.
 
@@ -138,6 +149,12 @@ class SarvamAIInstrumentor(BaseInstrumentor):
         try:
             import sarvamai
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(sarvamai.SarvamAI, "_genai_otel_sarvam_instrumented", False) is True:
+                logger.debug("Sarvam AI already instrumented, skipping")
+                self._instrumented = True
+                return
+
             original_init = sarvamai.SarvamAI.__init__
 
             def wrapped_init(instance, *args, **kwargs):
@@ -162,6 +179,10 @@ class SarvamAIInstrumentor(BaseInstrumentor):
             except Exception as e:
                 logger.debug("Sarvam AI async client instrumentation skipped: %s", e)
 
+            try:
+                sarvamai.SarvamAI._genai_otel_sarvam_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
             self._instrumented = True
             logger.info("Sarvam AI instrumentation enabled")
 
@@ -568,7 +589,9 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                 if hasattr(first_choice, "message") and hasattr(first_choice.message, "content"):
                     response_content = first_choice.message.content
                     if response_content:
-                        attrs["gen_ai.response"] = response_content
+                        attrs["gen_ai.response"] = _cap_content(
+                            getattr(self, "config", None), response_content
+                        )
         except (IndexError, AttributeError) as e:
             logger.debug("Failed to extract response content: %s", e)
 

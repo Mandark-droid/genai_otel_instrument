@@ -49,6 +49,12 @@ class DSPyInstrumentor(BaseInstrumentor):
             logger.debug("Skipping DSPy instrumentation - library not available")
             return
 
+        # Idempotency guard: repeated instrument() calls must not stack wrappers
+        # on the shared DSPy module / predict / optimizer functions.
+        if self._instrumented:
+            logger.debug("DSPy already instrumented, skipping repeat instrument()")
+            return
+
         self.config = config
 
         try:
@@ -250,6 +256,24 @@ class DSPyInstrumentor(BaseInstrumentor):
             extract_response_attributes=self._extract_optimizer_response_attributes,
         )(wrapped)(*args, **kwargs)
 
+    def _cap_content(self, text: Any, default: int = 200) -> str:
+        """Cap captured content per ``config.content_max_length``.
+
+        Content capture is a required audit feature, so content keeps flowing;
+        this only bounds its size. ``content_max_length == 0`` (or missing) means
+        unlimited. When no usable config is present (unit tests) the historical
+        default cap is used.
+        """
+        s = text if isinstance(text, str) else str(text)
+        cfg = getattr(self, "config", None)
+        max_len = default
+        cfg_len = getattr(cfg, "content_max_length", None) if cfg is not None else None
+        if isinstance(cfg_len, int):
+            max_len = cfg_len
+        if max_len and max_len > 0:
+            return s[:max_len]
+        return s
+
     def _extract_module_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Module execution.
 
@@ -319,7 +343,7 @@ class DSPyInstrumentor(BaseInstrumentor):
                 if hasattr(sig, "__name__"):
                     attrs["dspy.predict.signature"] = sig.__name__
                 if hasattr(sig, "instructions") and sig.instructions:
-                    attrs["dspy.predict.instructions"] = str(sig.instructions)[:500]
+                    attrs["dspy.predict.instructions"] = self._cap_content(sig.instructions)
 
                 # Extract input and output fields
                 if hasattr(sig, "input_fields"):
@@ -334,10 +358,7 @@ class DSPyInstrumentor(BaseInstrumentor):
             if kwargs:
                 # Get first input value for tracing
                 for key, value in list(kwargs.items())[:3]:
-                    if isinstance(value, str):
-                        attrs[f"dspy.predict.input.{key}"] = value[:500]
-                    else:
-                        attrs[f"dspy.predict.input.{key}"] = str(value)[:200]
+                    attrs[f"dspy.predict.input.{key}"] = self._cap_content(value)
 
         except Exception as e:
             logger.debug("Failed to extract predict attributes: %s", e)
@@ -378,7 +399,7 @@ class DSPyInstrumentor(BaseInstrumentor):
             if kwargs:
                 for key, value in list(kwargs.items())[:3]:
                     if isinstance(value, str):
-                        attrs[f"dspy.cot.input.{key}"] = value[:500]
+                        attrs[f"dspy.cot.input.{key}"] = self._cap_content(value)
 
         except Exception as e:
             logger.debug("Failed to extract chain_of_thought attributes: %s", e)
@@ -420,7 +441,7 @@ class DSPyInstrumentor(BaseInstrumentor):
             if kwargs:
                 for key, value in list(kwargs.items())[:3]:
                     if isinstance(value, str):
-                        attrs[f"dspy.react.input.{key}"] = value[:500]
+                        attrs[f"dspy.react.input.{key}"] = self._cap_content(value)
 
         except Exception as e:
             logger.debug("Failed to extract react attributes: %s", e)
@@ -520,10 +541,7 @@ class DSPyInstrumentor(BaseInstrumentor):
             if hasattr(result, "_store"):
                 store = result._store
                 for key, value in list(store.items())[:5]:
-                    if isinstance(value, str):
-                        attrs[f"dspy.predict.output.{key}"] = value[:500]
-                    else:
-                        attrs[f"dspy.predict.output.{key}"] = str(value)[:200]
+                    attrs[f"dspy.predict.output.{key}"] = self._cap_content(value)
 
         except Exception as e:
             logger.debug("Failed to extract predict response attributes: %s", e)
@@ -550,14 +568,14 @@ class DSPyInstrumentor(BaseInstrumentor):
                 reasoning_fields = ["rationale", "reasoning", "thought", "chain_of_thought"]
                 for field in reasoning_fields:
                     if field in store:
-                        attrs["dspy.cot.reasoning"] = str(store[field])[:1000]
+                        attrs["dspy.cot.reasoning"] = self._cap_content(store[field], default=1000)
                         break
 
                 # Extract final answer/output
                 for key, value in list(store.items())[:5]:
                     if key not in reasoning_fields:
                         if isinstance(value, str):
-                            attrs[f"dspy.cot.output.{key}"] = value[:500]
+                            attrs[f"dspy.cot.output.{key}"] = self._cap_content(value)
 
         except Exception as e:
             logger.debug("Failed to extract chain_of_thought response attributes: %s", e)
@@ -587,7 +605,7 @@ class DSPyInstrumentor(BaseInstrumentor):
                 # Extract final answer
                 for key, value in list(store.items())[:5]:
                     if isinstance(value, str):
-                        attrs[f"dspy.react.output.{key}"] = value[:500]
+                        attrs[f"dspy.react.output.{key}"] = self._cap_content(value)
 
         except Exception as e:
             logger.debug("Failed to extract react response attributes: %s", e)

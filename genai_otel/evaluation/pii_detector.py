@@ -5,6 +5,7 @@ capabilities using Microsoft Presidio library.
 """
 
 import logging
+import os
 import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -12,6 +13,16 @@ from typing import Any, Dict, List, Optional
 from .config import PIIConfig, PIIEntityType, PIIMode
 
 logger = logging.getLogger(__name__)
+
+# Process-wide "log once" guard for the air-gapped notice.
+_AIRGAP_NOTICE_LOGGED = False
+
+
+def _log_airgap_notice_once(message: str) -> None:
+    global _AIRGAP_NOTICE_LOGGED
+    if not _AIRGAP_NOTICE_LOGGED:
+        _AIRGAP_NOTICE_LOGGED = True
+        logger.info(message)
 
 
 @dataclass
@@ -59,10 +70,44 @@ class PIIDetector:
         self._anonymizer = None
         self._presidio_available = False
         self._custom_entities: list = []
+        # Air-gap / content-cap posture (mirrors OTelConfig; may be plumbed from
+        # it). Env-var fallback so a foreign/older config still defaults safely.
+        self._air_gapped = getattr(
+            config,
+            "air_gapped",
+            os.getenv("GENAI_AIR_GAPPED", "false").lower() == "true",
+        )
+        self._content_max_length = getattr(
+            config,
+            "content_max_length",
+            int(os.getenv("GENAI_CONTENT_MAX_LENGTH", "200")),
+        )
         self._check_availability()
+
+    def _cap_text(self, text: Optional[str]) -> Optional[str]:
+        """Bound exported redacted text so a near-full copy of the prompt /
+        response cannot bloat the span. 0 (or negative) means unlimited."""
+        if text is None:
+            return None
+        cap = self._content_max_length
+        if cap and cap > 0 and len(text) > cap:
+            return text[:cap]
+        return text
 
     def _check_availability(self):
         """Check if Presidio is available."""
+        # On air-gapped hosts, force the underlying spaCy / HuggingFace stack
+        # offline so model resolution can never trigger a runtime network
+        # download. The required models (e.g. en_core_web_lg) must be
+        # pre-installed; if they are missing, Presidio init fails and we fall
+        # back to local regex patterns instead of reaching out to the network.
+        if self._air_gapped:
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+            os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+            _log_airgap_notice_once(
+                "Air-gapped mode enabled: PII models must be pre-installed "
+                "(no runtime spaCy/HuggingFace download will be attempted)."
+            )
         try:
             from presidio_analyzer import AnalyzerEngine
             from presidio_anonymizer import AnonymizerEngine
@@ -261,7 +306,9 @@ class PIIDetector:
             # Redact if mode is REDACT
             redacted_text = None
             if self.config.mode == PIIMode.REDACT and has_pii:
-                redacted_text = self._redact_pii(text, results)
+                # Bound the redacted copy so it cannot export a near-full,
+                # untruncated copy of the (still sensitive) original text.
+                redacted_text = self._cap_text(self._redact_pii(text, results))
 
             # Block if mode is BLOCK
             blocked = self.config.mode == PIIMode.BLOCK and has_pii
@@ -504,6 +551,9 @@ class PIIDetector:
                 start, end = entity["start"], entity["end"]
                 replacement = self.config.redaction_char * (end - start)
                 redacted_text = redacted_text[:start] + replacement + redacted_text[end:]
+            # Bound the redacted copy so it cannot export a near-full copy of the
+            # (still sensitive) original text.
+            redacted_text = self._cap_text(redacted_text)
 
         blocked = self.config.mode == PIIMode.BLOCK and has_pii
 

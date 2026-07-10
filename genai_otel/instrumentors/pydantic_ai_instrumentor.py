@@ -50,6 +50,12 @@ class PydanticAIInstrumentor(BaseInstrumentor):
             logger.debug("Skipping Pydantic AI instrumentation - library not available")
             return
 
+        # Idempotency guard: repeated instrument() calls must not stack wrappers
+        # on the shared Agent class.
+        if self._instrumented:
+            logger.debug("Pydantic AI already instrumented, skipping repeat instrument()")
+            return
+
         self.config = config
 
         try:
@@ -123,6 +129,24 @@ class PydanticAIInstrumentor(BaseInstrumentor):
             extract_attributes=self._extract_agent_attributes,
         )(wrapped)(*args, **kwargs)
 
+    def _cap_content(self, text: Any, default: int = 200) -> str:
+        """Cap captured content per ``config.content_max_length``.
+
+        Content capture is a required audit feature, so content keeps flowing;
+        this only bounds its size. ``content_max_length == 0`` (or missing) means
+        unlimited. When no usable config is present (unit tests) the historical
+        default cap is used.
+        """
+        s = text if isinstance(text, str) else str(text)
+        cfg = getattr(self, "config", None)
+        max_len = default
+        cfg_len = getattr(cfg, "content_max_length", None) if cfg is not None else None
+        if isinstance(cfg_len, int):
+            max_len = cfg_len
+        if max_len and max_len > 0:
+            return s[:max_len]
+        return s
+
     def _extract_agent_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Agent.run call.
 
@@ -172,7 +196,7 @@ class PydanticAIInstrumentor(BaseInstrumentor):
                     if callable(prompt):
                         prompts.append("<function>")
                     else:
-                        prompts.append(str(prompt)[:200])  # Truncate
+                        prompts.append(self._cap_content(prompt))
                 attrs["pydantic_ai.system_prompts"] = prompts[:5]  # Limit to 5
             except Exception as e:
                 logger.debug("Failed to extract system prompts: %s", e)
@@ -207,10 +231,7 @@ class PydanticAIInstrumentor(BaseInstrumentor):
             user_prompt = kwargs["prompt"]
 
         if user_prompt:
-            if isinstance(user_prompt, str):
-                attrs["pydantic_ai.user_prompt"] = user_prompt[:500]  # Truncate
-            else:
-                attrs["pydantic_ai.user_prompt"] = str(user_prompt)[:500]
+            attrs["pydantic_ai.user_prompt"] = self._cap_content(user_prompt)
 
         # Extract message history if provided
         if "message_history" in kwargs:
@@ -291,9 +312,9 @@ class PydanticAIInstrumentor(BaseInstrumentor):
                     # If data is a Pydantic model, convert to dict
                     if hasattr(data, "model_dump"):
                         data_dict = data.model_dump()
-                        attrs["pydantic_ai.result.data"] = str(data_dict)[:500]
+                        attrs["pydantic_ai.result.data"] = self._cap_content(data_dict)
                     else:
-                        attrs["pydantic_ai.result.data"] = str(data)[:500]
+                        attrs["pydantic_ai.result.data"] = self._cap_content(data)
                 except Exception as e:
                     logger.debug("Failed to extract result data: %s", e)
 
@@ -306,7 +327,9 @@ class PydanticAIInstrumentor(BaseInstrumentor):
                     if result.messages:
                         last_msg = result.messages[-1]
                         if hasattr(last_msg, "content"):
-                            attrs["pydantic_ai.result.last_message"] = str(last_msg.content)[:500]
+                            attrs["pydantic_ai.result.last_message"] = self._cap_content(
+                                last_msg.content
+                            )
                         if hasattr(last_msg, "role"):
                             attrs["pydantic_ai.result.last_role"] = last_msg.role
                 except Exception as e:

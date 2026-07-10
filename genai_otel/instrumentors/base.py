@@ -31,6 +31,7 @@ from opentelemetry.trace import Status, StatusCode
 
 from ..config import OTelConfig
 from ..cost_calculator import CostCalculator
+from ..exceptions import PolicyViolationError
 from ..semconv import SemanticConvention as SC
 from ..server_metrics import get_server_metrics
 
@@ -60,6 +61,54 @@ logger = logging.getLogger(__name__)
 # Global flag to track if shared metrics have been created
 _SHARED_METRICS_CREATED = False
 _SHARED_METRICS_LOCK = threading.Lock()
+
+# Shared default CostCalculator so the ~150 KB pricing JSON is parsed once for the
+# whole process instead of once per instrumentor instance (previously ~29 parses,
+# ~14 MB of duplicate dicts). Instrumentors that supply custom pricing get their
+# own instance in _setup_config().
+_DEFAULT_COST_CALCULATOR = None
+_DEFAULT_COST_CALCULATOR_LOCK = threading.Lock()
+
+
+def _get_default_cost_calculator() -> "CostCalculator":
+    """Return the process-wide shared CostCalculator, creating it once."""
+    global _DEFAULT_COST_CALCULATOR
+    if _DEFAULT_COST_CALCULATOR is None:
+        with _DEFAULT_COST_CALCULATOR_LOCK:
+            if _DEFAULT_COST_CALCULATOR is None:
+                _DEFAULT_COST_CALCULATOR = CostCalculator()
+    return _DEFAULT_COST_CALCULATOR
+
+
+# base_url domains claimed by dedicated aggregator instrumentors (OpenRouter,
+# CometAPI). Generic SDK instrumentors (OpenAI, Anthropic) consult this before
+# instrumenting a client: a client whose base_url is claimed gets its span AND
+# metrics from the dedicated instrumentor only. Without this, an aggregator
+# call was wrapped twice (instance wrapper over class wrapper), producing a
+# duplicate nested span and double-counted token/cost metrics.
+_BASE_URL_CLAIMS: Dict[str, str] = {}
+_BASE_URL_CLAIMS_LOCK = threading.Lock()
+
+
+def register_base_url_claim(domain_substring: str, instrumentor_name: str) -> None:
+    """Claim clients whose base_url contains ``domain_substring`` for a dedicated instrumentor.
+
+    Called by aggregator instrumentors when they activate. Registration is
+    idempotent; claims apply only for the lifetime of the process.
+    """
+    with _BASE_URL_CLAIMS_LOCK:
+        _BASE_URL_CLAIMS[domain_substring.lower()] = instrumentor_name
+
+
+def find_base_url_claim(base_url: Any) -> Optional[str]:
+    """Return the name of the dedicated instrumentor claiming ``base_url``, or None."""
+    if not base_url:
+        return None
+    url = str(base_url).lower()
+    for domain, name in _BASE_URL_CLAIMS.items():
+        if domain in url:
+            return name
+    return None
 
 
 class BaseInstrumentor(ABC):  # pylint: disable=R0902
@@ -105,12 +154,21 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     _hallucination_detector = None
     _evaluation_lock = threading.Lock()
 
+    # Pre-call BLOCK policy. Set by EvaluationSpanProcessor to the set of policy
+    # names configured with block_on_detection / PII block mode. When empty
+    # (_blocking_active False) the hot path skips pre-call evaluation entirely,
+    # so non-blocking deployments pay zero extra cost.
+    _blocking_active = False
+    _blocking_policies = frozenset()
+
     def __init__(self):
         """Initializes the instrumentor with OpenTelemetry tracers, meters, and common metrics."""
         self.tracer = trace.get_tracer(__name__)
         self.meter = metrics.get_meter(__name__)
         self.config: Optional[OTelConfig] = None
-        self.cost_calculator = CostCalculator()  # Will be updated when instrument() is called
+        # Shared instance by default; replaced with a private one only when the
+        # user supplies custom pricing (see _setup_config).
+        self.cost_calculator = _get_default_cost_calculator()
         self._instrumented = False
 
         # Use shared metrics to avoid duplicate warnings
@@ -365,7 +423,14 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 if provider == "google" and content is None:
                     content = msg.get("parts")
 
-            parts = detect_parts(provider, content)
+            # Bound untrusted inline-media decoding to the configured per-request
+            # cap (defends against decompression/size bombs on the hot path).
+            _media_cap = getattr(self.config, "media_max_bytes", None) if self.config else None
+            parts = (
+                detect_parts(provider, content, max_decoded_bytes=_media_cap)
+                if _media_cap
+                else detect_parts(provider, content)
+            )
             if not parts:
                 continue
             span.set_attribute(SC.GEN_AI_PROMPT_ROLE.format(n=n), role)
@@ -404,11 +469,21 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             try:
                 import json as _json  # noqa: WPS433
 
+                # Cap canonical text content to the configured length (0/None =
+                # unlimited for full audit). offload_part already caps part.text;
+                # this is belt-and-suspenders for the canonical emission.
+                _text_cap = getattr(self.config, "content_max_length", 0) if self.config else 0
+                _text_cap = _text_cap or None
+
                 if prompt_messages_for_canonical:
-                    canonical_input = build_canonical_messages(prompt_messages_for_canonical)
+                    canonical_input = build_canonical_messages(
+                        prompt_messages_for_canonical, max_length=_text_cap
+                    )
                     span.set_attribute("gen_ai.input.messages", _json.dumps(canonical_input))
                 if completion_messages_for_canonical:
-                    canonical_output = build_canonical_messages(completion_messages_for_canonical)
+                    canonical_output = build_canonical_messages(
+                        completion_messages_for_canonical, max_length=_text_cap
+                    )
                     span.set_attribute("gen_ai.output.messages", _json.dumps(canonical_output))
             except Exception as e:  # noqa: BLE001
                 logger.warning("Failed to emit canonical gen_ai.input/output.messages: %s", e)
@@ -469,6 +544,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 logger.debug("Instrumentation not active, calling %s directly", span_name)
                 return wrapped(*args, **kwargs)
 
+            # Tracks whether the wrapped (business) call has been invoked. The
+            # outer fallback below must NEVER re-invoke it once it has run, or an
+            # errored/sampled-out call would execute twice (double API spend and
+            # duplicated side effects).
+            invoked = False
+
             try:
                 # Start a new span
                 initial_attributes = {}
@@ -492,6 +573,37 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 # so nested calls (e.g. tool calls within an LLM call) inherit
                 # this span as their parent for proper trace hierarchy
                 span = self.tracer.start_span(span_name, attributes=initial_attributes)
+
+                # Fast path for sampled-out spans. When trace sampling drops a
+                # span the tracer returns a NonRecordingSpan, which has no `.name`
+                # or `.attributes`; the full recording path below touched those and
+                # raised, and the outer fallback then re-invoked the wrapped call
+                # (double execution). Here we skip all extraction/record work (it
+                # would be discarded anyway) and record only the request count and
+                # latency, keeping client metrics independent of trace sampling.
+                if not span.is_recording():
+                    ctx = trace.set_span_in_context(span)
+                    token = otel_context.attach(ctx)
+                    fast_start = time.time()
+                    try:
+                        if BaseInstrumentor._blocking_active:
+                            self._enforce_precall_policy(span, kwargs)
+                        invoked = True
+                        result = wrapped(*args, **kwargs)
+                        try:
+                            if self.request_counter:
+                                self.request_counter.add(1, {"operation": span_name})
+                            if self.latency_histogram:
+                                self.latency_histogram.record(
+                                    time.time() - fast_start, {"operation": span_name}
+                                )
+                        except Exception:  # pragma: no cover - metrics must never break the call
+                            pass
+                        return result
+                    finally:
+                        span.end()
+                        otel_context.detach(token)
+
                 ctx = trace.set_span_in_context(span)
                 token = otel_context.attach(ctx)
                 start_time = time.time()
@@ -526,7 +638,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             logger.debug("Failed to extract user ID: %s", e)
 
                 try:
+                    # Pre-call block policy (gated; zero cost unless a blocking
+                    # detector is configured). Raises PolicyViolationError to
+                    # prevent the LLM call entirely when a policy triggers.
+                    if BaseInstrumentor._blocking_active:
+                        self._enforce_precall_policy(span, kwargs)
                     # Call the original function
+                    invoked = True
                     result = wrapped(*args, **kwargs)
 
                     # Handle async functions: if the result is a coroutine,
@@ -731,6 +849,15 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     raise
 
             except Exception as e:
+                if invoked or isinstance(e, PolicyViolationError):
+                    # Either the wrapped call already executed (a failure here is
+                    # in our instrumentation, not the business call), or this is a
+                    # deliberate pre-call policy block. Never (re-)invoke the
+                    # wrapped function - propagate the original exception.
+                    raise
+                # Failure happened during span setup before the call ran: fall back
+                # to calling the wrapped function directly so instrumentation never
+                # breaks the host application.
                 logger.error("Span creation failed for '%s': %s", span_name, e, exc_info=True)
                 return wrapped(*args, **kwargs)
 
@@ -745,13 +872,32 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             start_time: The time when the function started executing.
             request_kwargs: The original request kwargs (for content capture).
         """
+        # Resolve metric-verbosity flags once. Full per-request detail is always
+        # written to span attributes below regardless of these flags; they only
+        # gate the extra aggregated-metric instruments recorded on the hot path.
+        cfg = self.config
+        _profile_full = bool(cfg) and getattr(cfg, "metrics_profile", "standard") == "full"
+        _rec_token_hist = _profile_full or (
+            bool(cfg) and getattr(cfg, "record_token_histograms", False)
+        )
+        _rec_granular = _profile_full or (
+            bool(cfg) and getattr(cfg, "record_granular_cost_metrics", False)
+        )
+        _rec_finish = _profile_full or (bool(cfg) and getattr(cfg, "record_finish_metrics", False))
+
+        # A NonRecordingSpan (sampled out, or an API-default tracer used by a
+        # custom async/sync wrapper) exposes neither .name nor .attributes; read
+        # them defensively so this method never raises on such spans.
+        _sname = getattr(span, "name", None) or "unknown"
+        _sattrs = getattr(span, "attributes", None) or {}
+
         # Record latency
         try:
             duration = time.time() - start_time
             if self.latency_histogram:
-                self.latency_histogram.record(duration, {"operation": span.name})
+                self.latency_histogram.record(duration, {"operation": _sname})
         except Exception as e:
-            logger.warning("Failed to record latency for span '%s': %s", span.name, e)
+            logger.warning("Failed to record latency for span '%s': %s", _sname, e)
 
         # Extract and set response attributes if available
         try:
@@ -831,9 +977,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         self.token_counter.add(
                             prompt_tokens, {"token_type": "prompt", "operation": span.name}
                         )
-                    # Record histogram for distribution analysis
-                    if self.prompt_tokens_histogram:
-                        model = span.attributes.get("gen_ai.request.model", "unknown")
+                    # Record histogram for distribution analysis (opt-in)
+                    if _rec_token_hist and self.prompt_tokens_histogram:
+                        model = _sattrs.get("gen_ai.request.model", "unknown")
                         self.prompt_tokens_histogram.record(
                             int(prompt_tokens), {"model": str(model), "operation": span.name}
                         )
@@ -850,9 +996,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         self.token_counter.add(
                             completion_tokens, {"token_type": "completion", "operation": span.name}
                         )
-                    # Record histogram for distribution analysis
-                    if self.completion_tokens_histogram:
-                        model = span.attributes.get("gen_ai.request.model", "unknown")
+                    # Record histogram for distribution analysis (opt-in)
+                    if _rec_token_hist and self.completion_tokens_histogram:
+                        model = _sattrs.get("gen_ai.request.model", "unknown")
                         self.completion_tokens_histogram.record(
                             int(completion_tokens), {"model": str(model), "operation": span.name}
                         )
@@ -894,22 +1040,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         span.set_attribute("gen_ai.usage.reasoning.output_tokens", int(reasoning))
 
                 # Calculate and record cost if enabled and applicable
-                logger.debug(
-                    f"Cost tracking check: config={self.config is not None}, "
-                    f"enable_cost_tracking={self.config.enable_cost_tracking if self.config else 'N/A'}"
-                )
                 if self.config and self.config.enable_cost_tracking:
                     try:
-                        model = span.attributes.get("gen_ai.request.model", "unknown")
+                        model = _sattrs.get("gen_ai.request.model", "unknown")
                         # Assuming 'chat' as a default call_type for generic base instrumentor tests.
                         # Specific instrumentors will provide the actual call_type.
-                        call_type = span.attributes.get("gen_ai.request.type", "chat")
-
-                        logger.debug(
-                            f"Calculating cost for model={model}, call_type={call_type}, "
-                            f"prompt_tokens={usage.get('prompt_tokens')}, "
-                            f"completion_tokens={usage.get('completion_tokens')}"
-                        )
+                        call_type = _sattrs.get("gen_ai.request.type", "chat")
 
                         # Use granular cost calculation for chat requests
                         if call_type == "chat":
@@ -918,31 +1054,25 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             )
                             total_cost = costs["total"]
 
-                            # Record total cost
+                            # Record total cost (always) and set span attribute.
                             if total_cost > 0:
                                 if self.cost_counter:
                                     self.cost_counter.add(total_cost, {"model": str(model)})
                                 # Always set span attributes (needed for cost tracking)
                                 span.set_attribute("gen_ai.usage.cost.total", total_cost)
-                                logger.debug(
-                                    f"Set cost attribute: gen_ai.usage.cost.total={total_cost}"
-                                )
-                            else:
-                                logger.debug(
-                                    f"Cost is zero, not setting attributes. Costs: {costs}"
-                                )
 
-                            # Record and set attributes for granular costs
-                            # Note: Metrics recording is optional, span attributes are always set
+                            # Granular costs: span attributes are ALWAYS set (needed for
+                            # audit / explainability); the per-breakdown metric counters
+                            # are opt-in (_rec_granular) to keep the hot path lean.
                             if costs["prompt"] > 0:
-                                if self.prompt_cost_counter:
+                                if _rec_granular and self.prompt_cost_counter:
                                     self.prompt_cost_counter.add(
                                         costs["prompt"], {"model": str(model)}
                                     )
                                 span.set_attribute("gen_ai.usage.cost.prompt", costs["prompt"])
 
                             if costs["completion"] > 0:
-                                if self.completion_cost_counter:
+                                if _rec_granular and self.completion_cost_counter:
                                     self.completion_cost_counter.add(
                                         costs["completion"], {"model": str(model)}
                                     )
@@ -951,7 +1081,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 )
 
                             if costs["reasoning"] > 0:
-                                if self.reasoning_cost_counter:
+                                if _rec_granular and self.reasoning_cost_counter:
                                     self.reasoning_cost_counter.add(
                                         costs["reasoning"], {"model": str(model)}
                                     )
@@ -960,7 +1090,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 )
 
                             if costs["cache_read"] > 0:
-                                if self.cache_read_cost_counter:
+                                if _rec_granular and self.cache_read_cost_counter:
                                     self.cache_read_cost_counter.add(
                                         costs["cache_read"], {"model": str(model)}
                                     )
@@ -969,7 +1099,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 )
 
                             if costs["cache_write"] > 0:
-                                if self.cache_write_cost_counter:
+                                if _rec_granular and self.cache_write_cost_counter:
                                     self.cache_write_cost_counter.add(
                                         costs["cache_write"], {"model": str(model)}
                                     )
@@ -1000,34 +1130,116 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             if hasattr(self, "_extract_finish_reason"):
                 finish_reason = self._extract_finish_reason(result)
                 if finish_reason:
-                    model = span.attributes.get("gen_ai.request.model", "unknown")
-
-                    # Record finish reason counter
-                    if self.request_finish_counter:
-                        self.request_finish_counter.add(
-                            1, {"finish_reason": finish_reason, "model": str(model)}
-                        )
-
-                    # Set span attribute
+                    # Set span attribute (always - needed for audit).
                     span.set_attribute("gen_ai.response.finish_reason", finish_reason)
 
-                    # Track success vs failure based on finish reason
-                    # Success: stop, length, end_turn, etc.
-                    # Failure: error, content_filter, timeout, etc.
-                    success_reasons = {"stop", "length", "end_turn", "max_tokens"}
-                    failure_reasons = {"error", "content_filter", "timeout", "rate_limit"}
+                    # Finish/success/failure metric counters are opt-in (_rec_finish).
+                    if _rec_finish:
+                        model = _sattrs.get("gen_ai.request.model", "unknown")
 
-                    if finish_reason in success_reasons:
-                        if self.request_success_counter:
-                            self.request_success_counter.add(1, {"model": str(model)})
-                    elif finish_reason in failure_reasons:
-                        if self.request_failure_counter:
-                            self.request_failure_counter.add(
+                        # Record finish reason counter
+                        if self.request_finish_counter:
+                            self.request_finish_counter.add(
                                 1, {"finish_reason": finish_reason, "model": str(model)}
                             )
+
+                        # Track success vs failure based on finish reason
+                        # Success: stop, length, end_turn, etc.
+                        # Failure: error, content_filter, timeout, etc.
+                        success_reasons = {"stop", "length", "end_turn", "max_tokens"}
+                        failure_reasons = {"error", "content_filter", "timeout", "rate_limit"}
+
+                        if finish_reason in success_reasons:
+                            if self.request_success_counter:
+                                self.request_success_counter.add(1, {"model": str(model)})
+                        elif finish_reason in failure_reasons:
+                            if self.request_failure_counter:
+                                self.request_failure_counter.add(
+                                    1, {"finish_reason": finish_reason, "model": str(model)}
+                                )
         except Exception as e:
             logger.debug(
                 "Failed to extract or record finish reason for span '%s': %s", span.name, e
+            )
+
+    @staticmethod
+    def _extract_prompt_for_eval(kwargs) -> Optional[str]:
+        """Best-effort prompt text extraction for pre-call policy evaluation.
+
+        Reads the full ``messages`` list (so USER content is evaluated, not just
+        a system/first message) and falls back to a plain ``prompt`` kwarg.
+        """
+        msgs = kwargs.get("messages")
+        if msgs and isinstance(msgs, list):
+            parts: List[str] = []
+            for m in msgs:
+                content = m.get("content") if isinstance(m, dict) else getattr(m, "content", None)
+                if isinstance(content, str):
+                    parts.append(content)
+                elif isinstance(content, list):
+                    parts.extend(blk.get("text", "") for blk in content if isinstance(blk, dict))
+            joined = "\n".join(p for p in parts if p)
+            if joined:
+                return joined
+        prompt = kwargs.get("prompt")
+        if isinstance(prompt, str):
+            return prompt
+        return None
+
+    def _enforce_precall_policy(self, span, kwargs) -> None:
+        """Evaluate the prompt against block-mode detectors BEFORE the LLM call.
+
+        Runs only the policies the operator configured with block_on_detection /
+        PII block mode (``_blocking_policies``). If any triggers, records the
+        block on the span and raises ``PolicyViolationError`` so the wrapped call
+        is never executed. Gated by ``_blocking_active`` in the caller, so the
+        default (non-blocking) hot path never reaches this method.
+        """
+        policies = BaseInstrumentor._blocking_policies
+        if not policies:
+            return
+        prompt = self._extract_prompt_for_eval(kwargs)
+        if not prompt:
+            return
+
+        # (policy name, detector, truthy result attribute)
+        checks = (
+            ("pii", BaseInstrumentor._pii_detector, "has_pii"),
+            ("toxicity", BaseInstrumentor._toxicity_detector, "is_toxic"),
+            ("prompt_injection", BaseInstrumentor._prompt_injection_detector, "is_injection"),
+            (
+                "restricted_topics",
+                BaseInstrumentor._restricted_topics_detector,
+                "has_restricted_topic",
+            ),
+            ("bias", BaseInstrumentor._bias_detector, "has_bias"),
+        )
+        triggered: List[str] = []
+        for name, detector, flag in checks:
+            if name not in policies or detector is None:
+                continue
+            try:
+                result = detector.detect(prompt)
+            except Exception as e:  # noqa: BLE001 - a detector fault must not block the call
+                logger.warning("Pre-call %s policy check failed: %s", name, e)
+                continue
+            if getattr(result, flag, False):
+                try:
+                    span.set_attribute(f"evaluation.{name}.prompt.blocked", True)
+                except Exception:  # noqa: BLE001
+                    pass
+                triggered.append(name)
+
+        if triggered:
+            try:
+                span.set_attribute("evaluation.blocked", True)
+                span.set_attribute("evaluation.blocked_reasons", triggered)
+            except Exception:  # noqa: BLE001
+                pass
+            raise PolicyViolationError(
+                "Request blocked by evaluation policy: " + ", ".join(triggered),
+                policy=triggered[0],
+                details={"reasons": triggered},
             )
 
     def _run_evaluation_checks(self, span, args, kwargs, result):
@@ -1309,6 +1521,15 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             )
                 except Exception as e:
                     logger.warning(f"Hallucination detection failed: {e}", exc_info=True)
+
+            # Mark evaluation as done so the downstream EvaluationSpanProcessor /
+            # EvaluationEnrichingSpanExporter can skip re-running the (expensive)
+            # detector suite on the same span - detectors previously ran up to 3x
+            # per request (inline here, in on_end, and in the exporter).
+            try:
+                span.set_attribute("evaluation.completed", True)
+            except Exception:  # noqa: BLE001
+                pass
 
         except Exception as e:
             logger.warning(f"Evaluation checks failed: {e}", exc_info=True)

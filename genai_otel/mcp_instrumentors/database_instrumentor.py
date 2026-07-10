@@ -9,7 +9,6 @@ This instrumentor uses a hybrid approach:
 2. Custom wrapt wrappers add MCP-specific metrics (duration, payload sizes)
 """
 
-import json
 import logging
 import time
 
@@ -70,6 +69,78 @@ except ImportError:
     mysql = None
     MySQLCursor = None
     MYSQL_AVAILABLE = False
+
+
+# Sampling cap for the cheap payload-size estimator. Large containers are sized
+# by sampling this many elements and extrapolating, instead of serializing all.
+_SIZE_SAMPLE_LIMIT = 10
+_SIZE_MAX_DEPTH = 2
+
+# Identity-tracked registry of cursor/collection classes already wrapped with the
+# custom MCP-metrics wrappers, to prevent stacking on repeated instrument() calls.
+# Keyed on object identity so mocked classes in unit tests never collide.
+_METRICS_WRAPPED = []
+
+
+def _estimate_payload_size(obj, depth=0):
+    """Cheap, bounded estimate of a payload's serialized size in bytes.
+
+    This runs on the database hot path purely to feed request/response-size
+    histograms, so it must stay roughly constant-time regardless of payload
+    size. Instead of fully serializing (e.g. ``json.dumps`` on a multi-MB
+    ``executemany`` batch), it samples a bounded number of elements from
+    containers and extrapolates by the container length.
+    """
+    if obj is None:
+        return 0
+    if isinstance(obj, (bytes, bytearray, memoryview)):
+        return len(obj)
+    if isinstance(obj, str):
+        return len(obj)
+    if isinstance(obj, bool):
+        return 1
+    if isinstance(obj, int):
+        return 8
+    if isinstance(obj, float):
+        return 8
+    if depth >= _SIZE_MAX_DEPTH:
+        # Stop recursing; approximate deeper structures by their length.
+        try:
+            return len(obj)
+        except TypeError:
+            return 16
+    if isinstance(obj, dict):
+        n = len(obj)
+        if n == 0:
+            return 2
+        total = 0
+        sampled = 0
+        for key, value in obj.items():
+            total += _estimate_payload_size(key, depth + 1)
+            total += _estimate_payload_size(value, depth + 1)
+            sampled += 1
+            if sampled >= _SIZE_SAMPLE_LIMIT:
+                break
+        return int(total / sampled * n) + 2
+    if isinstance(obj, (list, tuple, set, frozenset)):
+        n = len(obj)
+        if n == 0:
+            return 2
+        total = 0
+        sampled = 0
+        for item in obj:
+            total += _estimate_payload_size(item, depth + 1)
+            sampled += 1
+            if sampled >= _SIZE_SAMPLE_LIMIT:
+                break
+        return int(total / sampled * n) + 2
+    # Opaque object: cheap constant; do NOT str()/serialize it (could be huge).
+    return 16
+
+
+def _metrics_already_wrapped(cls) -> bool:
+    """Return True if ``cls`` (by identity) already has the custom metric wrappers."""
+    return any(c is cls for c in _METRICS_WRAPPED)
 
 
 class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
@@ -149,6 +220,10 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
     def _add_psycopg2_metrics(self):
         """Add MCP metrics collection to psycopg2 cursor execute methods."""
         try:
+            # Double-wrap guard: skip if this cursor class was already wrapped.
+            if Psycopg2Cursor is not None and _metrics_already_wrapped(Psycopg2Cursor):
+                logger.debug("PostgreSQL MCP metrics already enabled; skipping double-wrap")
+                return
             # Wrap psycopg2 cursor execute methods
             if hasattr(Psycopg2Cursor, "execute"):
                 wrapt.wrap_function_wrapper(
@@ -160,6 +235,8 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
                     "cursor.executemany",
                     self._db_execute_wrapper("psycopg2"),
                 )
+            if Psycopg2Cursor is not None:
+                _METRICS_WRAPPED.append(Psycopg2Cursor)
             logger.debug("PostgreSQL MCP metrics enabled")
         except Exception as e:
             logger.debug(f"Failed to add PostgreSQL MCP metrics: {e}")
@@ -167,6 +244,10 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
     def _add_pymongo_metrics(self):
         """Add MCP metrics collection to pymongo collection methods."""
         try:
+            # Double-wrap guard: skip if this collection class was already wrapped.
+            if PymongoCollection is not None and _metrics_already_wrapped(PymongoCollection):
+                logger.debug("MongoDB MCP metrics already enabled; skipping double-wrap")
+                return
             # Wrap common pymongo collection methods
             methods_to_wrap = [
                 "find",
@@ -187,6 +268,8 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
                         f"Collection.{method_name}",
                         self._db_operation_wrapper("pymongo", method_name),
                     )
+            if PymongoCollection is not None:
+                _METRICS_WRAPPED.append(PymongoCollection)
             logger.debug("MongoDB MCP metrics enabled")
         except Exception as e:
             logger.debug(f"Failed to add MongoDB MCP metrics: {e}")
@@ -194,6 +277,10 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
     def _add_mysql_metrics(self):
         """Add MCP metrics collection to MySQL cursor execute methods."""
         try:
+            # Double-wrap guard: skip if this cursor class was already wrapped.
+            if MySQLCursor is not None and _metrics_already_wrapped(MySQLCursor):
+                logger.debug("MySQL MCP metrics already enabled; skipping double-wrap")
+                return
             # Wrap MySQL cursor execute methods
             if hasattr(MySQLCursor, "execute"):
                 wrapt.wrap_function_wrapper(
@@ -207,6 +294,8 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
                     "MySQLCursor.executemany",
                     self._db_execute_wrapper("mysql"),
                 )
+            if MySQLCursor is not None:
+                _METRICS_WRAPPED.append(MySQLCursor)
             logger.debug("MySQL MCP metrics enabled")
         except Exception as e:
             logger.debug(f"Failed to add MySQL MCP metrics: {e}")
@@ -240,18 +329,18 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
                         1, {"db.system": db_system, "mcp.operation": "execute"}
                     )
 
-                # Estimate request size (query + params)
+                # Estimate request size (query + params).
+                # Use a cheap, bounded estimate rather than fully serializing the
+                # payload: a large executemany batch must not be re-serialized on
+                # the hot path just to measure its size.
                 try:
                     query = args[0] if args else ""
                     params = (
                         args[1] if len(args) > 1 else kwargs.get("vars") or kwargs.get("params")
                     )
-                    request_size = len(str(query))
-                    if params:
-                        try:
-                            request_size += len(json.dumps(params, default=str))
-                        except (TypeError, ValueError):
-                            request_size += len(str(params))
+                    request_size = _estimate_payload_size(query)
+                    if params is not None:
+                        request_size += _estimate_payload_size(params)
 
                     if self.mcp_request_size_histogram:
                         self.mcp_request_size_histogram.record(
@@ -284,6 +373,10 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
 
         def wrapper(wrapped, instance, args, kwargs):
             start_time = time.time()
+            # Initialize before the call so the finally block can reference it
+            # even when the wrapped operation raises (avoids a NameError that
+            # would otherwise mask the real exception).
+            result = None
             try:
                 result = wrapped(*args, **kwargs)
                 return result
@@ -301,24 +394,18 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
                         1, {"db.system": db_system, "mcp.operation": operation}
                     )
 
-                # Estimate payload sizes
+                # Estimate payload sizes (cheap, bounded; see _estimate_payload_size)
                 try:
-                    # Request size: serialize args and kwargs
+                    # Request size: sample args and kwargs rather than serializing
                     request_size = 0
                     if args:
                         for arg in args:
                             if arg is not None:
-                                try:
-                                    request_size += len(json.dumps(arg, default=str))
-                                except (TypeError, ValueError):
-                                    request_size += len(str(arg))
+                                request_size += _estimate_payload_size(arg)
                     if kwargs:
                         for val in kwargs.values():
                             if val is not None:
-                                try:
-                                    request_size += len(json.dumps(val, default=str))
-                                except (TypeError, ValueError):
-                                    request_size += len(str(val))
+                                request_size += _estimate_payload_size(val)
 
                     if self.mcp_request_size_histogram and request_size > 0:
                         self.mcp_request_size_histogram.record(
@@ -329,10 +416,7 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
                     response_size = 0
                     if result is not None:
                         if isinstance(result, dict):
-                            try:
-                                response_size = len(json.dumps(result, default=str))
-                            except (TypeError, ValueError):
-                                response_size = len(str(result))
+                            response_size = _estimate_payload_size(result)
                         elif isinstance(result, (list, tuple)):
                             response_size = len(result) * 100  # Estimate 100 bytes per item
                         elif isinstance(result, int):

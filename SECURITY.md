@@ -41,9 +41,20 @@ them independently if they install the corresponding extras.
 ## PII and Data Security
 
 ### Content Capture Controls
-- `enable_content_capture` (default: `true`) - Controls whether prompt/response content is included in spans
-- `content_max_length` (default: `1000`) - Truncates captured content to limit data exposure
-- Users can disable content capture entirely for compliance-sensitive deployments
+- `enable_content_capture` (env `GENAI_ENABLE_CONTENT_CAPTURE`, default: `false`) -
+  Controls whether prompt/response content is included in spans. It is **off by
+  default**; prompt/response text is only captured on spans when an operator
+  explicitly opts in.
+- `content_max_length` (env `GENAI_CONTENT_MAX_LENGTH`, default: `200`) -
+  Truncates captured content to limit data exposure. Set to `0` for no limit.
+- Content capture is configurable rather than always-on, and is intended for
+  **audit / explainability** use cases where the deployment needs prompt/response
+  visibility (e.g. regulated tracing mandates). Deployments that must not place
+  customer content in telemetry should leave it disabled.
+- Under the bank / BFSI hardening profile (`GENAI_PROFILE=strict|bfsi|bank`),
+  content capture is turned **on for audit** unless the operator has explicitly
+  pinned `GENAI_ENABLE_CONTENT_CAPTURE`; that same profile forces all third-party
+  egress paths off (see below).
 
 ### PII Detection (Evaluation Module)
 - **DETECT mode**: Returns PII findings with original text for review
@@ -66,7 +77,39 @@ them independently if they install the corresponding extras.
 ### Export Endpoints
 - Telemetry data is only sent to user-configured OTLP endpoints
 - Default endpoint is `localhost:4318` (local collector)
-- No data is sent to third-party services by the library itself
+- Telemetry itself goes only to the operator's OTLP endpoint. With all
+  third-party features left at their (off) defaults, the library performs no
+  outbound calls of its own beyond that OTLP export. See the caveats below for
+  the optional features that can reach external services.
+
+### Third-Party Network Paths and Air-Gap Controls
+When **opt-in** evaluation features are enabled, two code paths can reach hosts
+outside the deployment; these are the only third-party network paths in the
+library:
+
+1. **Toxicity via Google Perspective API** (`GENAI_TOXICITY_USE_PERSPECTIVE_API=true`
+   plus an API key) - sends prompt/response text to `commentanalyzer.googleapis.com`.
+   Disabled by default.
+2. **Detoxify model download** - the local Detoxify toxicity model fetches model
+   weights from the internet (torch-hub / Hugging Face) on first use. Only
+   reachable if toxicity detection is explicitly enabled with the local model.
+
+Egress controls (config, env-overridable):
+
+- `GENAI_PROFILE=strict|bfsi|bank` - deployment hardening profile for
+  air-gapped / bank use. It forces `allow_external_egress=false`,
+  `air_gapped=true`, offline CO2 mode, and **disables the Perspective API path**
+  (`toxicity_use_perspective_api` is forced off), so no prompt/response text is
+  sent to Google under this profile.
+- `GENAI_ALLOW_EXTERNAL_EGRESS` (default `true`) and `GENAI_AIR_GAPPED`
+  (default `false`) express the intended no-external-egress / air-gapped posture
+  and are forced to the safe values by the strict profile.
+
+Caveat for air-gapped deployments: the Detoxify **model download** requires
+network access on first use. In an air-gapped or strict-profile deployment, do
+not enable the Detoxify toxicity path unless the model weights have been
+pre-provisioned locally; treat any toxicity/Detoxify usage as requiring
+operator verification that no runtime download occurs.
 
 ## Thread Safety
 

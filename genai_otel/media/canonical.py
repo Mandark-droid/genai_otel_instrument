@@ -31,7 +31,7 @@ Mapping (post-pivot from the earlier `StrippedPart` proposal):
 from __future__ import annotations
 
 import base64
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .detector import ContentPart
 
@@ -43,10 +43,17 @@ def _modality_for(part: ContentPart) -> str:
     return part.type
 
 
-def _part_to_canonical(part: ContentPart) -> Dict[str, Any]:
+def _cap_text(text: str, max_length: Optional[int]) -> str:
+    """Bound emitted text content to ``max_length`` (keep content, cap length)."""
+    if max_length and max_length > 0 and len(text) > max_length:
+        return text[:max_length]
+    return text
+
+
+def _part_to_canonical(part: ContentPart, max_length: Optional[int] = None) -> Dict[str, Any]:
     """Convert a single ContentPart into an OTel-canonical schema part dict."""
     if part.type == "text":
-        return {"type": "text", "content": part.text or ""}
+        return {"type": "text", "content": _cap_text(part.text or "", max_length)}
 
     stripped_reason = (part.extra or {}).get("stripped_reason")
     is_stripped = part.media_source == "reference_only" or stripped_reason is not None
@@ -89,11 +96,18 @@ def _part_to_canonical(part: ContentPart) -> Dict[str, Any]:
     return {"type": part.type}
 
 
-def build_canonical_messages(messages_with_parts) -> List[Dict[str, Any]]:
+def build_canonical_messages(
+    messages_with_parts, *, max_length: Optional[int] = None
+) -> List[Dict[str, Any]]:
     """Build a list of ChatMessage dicts conforming to the upstream JSON schema.
 
     Args:
         messages_with_parts: iterable of (role: str, parts: List[ContentPart]).
+        max_length: optional cap on emitted text-part content length. Pass
+            ``config.content_max_length`` so `gen_ai.input.messages` /
+            `gen_ai.output.messages` do not emit full untruncated prompt text.
+            When None, text is emitted uncapped (callers that route parts
+            through ``offload_part`` already have their text bounded there).
 
     Returns:
         A list ready to be JSON-serialized into `gen_ai.input.messages` /
@@ -104,7 +118,7 @@ def build_canonical_messages(messages_with_parts) -> List[Dict[str, Any]]:
         out.append(
             {
                 "role": role,
-                "parts": [_part_to_canonical(p) for p in parts],
+                "parts": [_part_to_canonical(p, max_length) for p in parts],
             }
         )
     return out

@@ -20,6 +20,17 @@ from .ollama_server_metrics_poller import start_ollama_metrics_poller
 logger = logging.getLogger(__name__)
 
 
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
+
+
 class OllamaInstrumentor(BaseInstrumentor):
     """Instrumentor for Ollama"""
 
@@ -53,6 +64,12 @@ class OllamaInstrumentor(BaseInstrumentor):
             return
 
         try:
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(self._ollama_module, "_genai_otel_ollama_instrumented", False) is True:
+                logger.debug("Ollama already instrumented, skipping")
+                self._instrumented = True
+                return
+
             # Store original methods and wrap them
             self._original_generate = self._ollama_module.generate
             self._original_chat = self._ollama_module.chat
@@ -71,6 +88,10 @@ class OllamaInstrumentor(BaseInstrumentor):
             )(self._original_chat)
             self._ollama_module.chat = wrapped_chat
 
+            try:
+                self._ollama_module._genai_otel_ollama_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
             self._instrumented = True
             logger.info("Ollama instrumentation enabled")
 
@@ -385,6 +406,8 @@ class OllamaInstrumentor(BaseInstrumentor):
             result: The API response object.
             request_kwargs: The original request kwargs.
         """
+        config = getattr(self, "config", None)
+
         # Add prompt content events for chat
         messages = request_kwargs.get("messages", [])
         for idx, message in enumerate(messages):
@@ -393,7 +416,10 @@ class OllamaInstrumentor(BaseInstrumentor):
                 content = message.get("content", "")
                 span.add_event(
                     f"gen_ai.prompt.{idx}",
-                    attributes={"gen_ai.prompt.role": role, "gen_ai.prompt.content": str(content)},
+                    attributes={
+                        "gen_ai.prompt.role": role,
+                        "gen_ai.prompt.content": _cap_content(config, content),
+                    },
                 )
 
         # Add completion content events AND attributes (for evaluation processor)
@@ -419,15 +445,16 @@ class OllamaInstrumentor(BaseInstrumentor):
                 content = result.response
 
             if content:
+                capped = _cap_content(config, content)
                 # Add as event for observability
                 span.add_event(
                     "gen_ai.completion.0",
                     attributes={
                         "gen_ai.completion.role": "assistant",
-                        "gen_ai.completion.content": str(content),
+                        "gen_ai.completion.content": capped,
                     },
                 )
                 # Set as attribute for evaluation processor
-                span.set_attribute("gen_ai.response", str(content))
+                span.set_attribute("gen_ai.response", capped)
         except Exception as e:
             logger.debug("Failed to add content events for Ollama response: %s", e)

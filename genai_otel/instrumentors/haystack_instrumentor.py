@@ -50,6 +50,12 @@ class HaystackInstrumentor(BaseInstrumentor):
             logger.debug("Skipping Haystack instrumentation - library not available")
             return
 
+        # Idempotency guard: repeated instrument() calls must not stack wrappers
+        # on the shared Haystack Pipeline / component classes.
+        if self._instrumented:
+            logger.debug("Haystack already instrumented, skipping repeat instrument()")
+            return
+
         self.config = config
 
         try:
@@ -115,11 +121,42 @@ class HaystackInstrumentor(BaseInstrumentor):
             if config.fail_on_error:
                 raise
 
+    def _cap_content(self, text: Any, default: int = 200) -> str:
+        """Cap captured content per ``config.content_max_length``.
+
+        Content capture is a required audit feature, so content keeps flowing;
+        this only bounds its size. ``content_max_length == 0`` (or missing) means
+        unlimited. When no config is present (e.g. unit tests) the historical
+        default cap is used.
+
+        Args:
+            text: The value to stringify and cap.
+            default: Fallback cap when no config is available.
+
+        Returns:
+            str: The (possibly truncated) string.
+        """
+        s = text if isinstance(text, str) else str(text)
+        cfg = getattr(self, "config", None)
+        max_len = default
+        cfg_len = getattr(cfg, "content_max_length", None) if cfg is not None else None
+        if isinstance(cfg_len, int):
+            max_len = cfg_len
+        if max_len and max_len > 0:
+            return s[:max_len]
+        return s
+
     def _wrap_pipeline_run(self, wrapped, instance, args, kwargs):
         """Wrap Pipeline.run method with span.
 
+        Note: ``create_span_wrapper`` returns a wrapt.decorator; ``wrapped`` is
+        already bound to ``instance`` here, so it must be invoked as
+        ``(wrapped)(*args, **kwargs)``. Passing ``instance`` again would forward
+        the Pipeline object as an extra positional argument and corrupt the real
+        ``Pipeline.run`` call.
+
         Args:
-            wrapped: The original method.
+            wrapped: The original (already bound) method.
             instance: The Pipeline instance.
             args: Positional arguments.
             kwargs: Keyword arguments.
@@ -127,7 +164,7 @@ class HaystackInstrumentor(BaseInstrumentor):
         return self.create_span_wrapper(
             span_name="haystack.pipeline.run",
             extract_attributes=self._extract_pipeline_attributes,
-        )(wrapped)(instance, *args, **kwargs)
+        )(wrapped)(*args, **kwargs)
 
     def _wrap_pipeline_run_async(self, wrapped, instance, args, kwargs):
         """Wrap Pipeline.run_async method with span.
@@ -141,7 +178,7 @@ class HaystackInstrumentor(BaseInstrumentor):
         return self.create_span_wrapper(
             span_name="haystack.pipeline.run_async",
             extract_attributes=self._extract_pipeline_attributes,
-        )(wrapped)(instance, *args, **kwargs)
+        )(wrapped)(*args, **kwargs)
 
     def _wrap_generator_run(self, wrapped, instance, args, kwargs):
         """Wrap Generator.run method with span.
@@ -155,7 +192,7 @@ class HaystackInstrumentor(BaseInstrumentor):
         return self.create_span_wrapper(
             span_name="haystack.generator.run",
             extract_attributes=self._extract_generator_attributes,
-        )(wrapped)(instance, *args, **kwargs)
+        )(wrapped)(*args, **kwargs)
 
     def _wrap_chat_generator_run(self, wrapped, instance, args, kwargs):
         """Wrap ChatGenerator.run method with span.
@@ -169,7 +206,7 @@ class HaystackInstrumentor(BaseInstrumentor):
         return self.create_span_wrapper(
             span_name="haystack.chat_generator.run",
             extract_attributes=self._extract_chat_generator_attributes,
-        )(wrapped)(instance, *args, **kwargs)
+        )(wrapped)(*args, **kwargs)
 
     def _wrap_retriever_run(self, wrapped, instance, args, kwargs):
         """Wrap Retriever.run method with span.
@@ -183,7 +220,7 @@ class HaystackInstrumentor(BaseInstrumentor):
         return self.create_span_wrapper(
             span_name="haystack.retriever.run",
             extract_attributes=self._extract_retriever_attributes,
-        )(wrapped)(instance, *args, **kwargs)
+        )(wrapped)(*args, **kwargs)
 
     def _extract_pipeline_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Pipeline.run call.
@@ -238,7 +275,7 @@ class HaystackInstrumentor(BaseInstrumentor):
                     attrs["haystack.pipeline.input.keys"] = list(data.keys())[:10]
                     # Extract query if present
                     if "query" in data:
-                        attrs["haystack.pipeline.input.query"] = str(data["query"])[:500]
+                        attrs["haystack.pipeline.input.query"] = self._cap_content(data["query"])
             except Exception as e:
                 logger.debug("Failed to extract pipeline input: %s", e)
 
@@ -296,7 +333,7 @@ class HaystackInstrumentor(BaseInstrumentor):
         if "prompt" in kwargs:
             try:
                 prompt = kwargs["prompt"]
-                attrs["haystack.generator.prompt"] = str(prompt)[:500]
+                attrs["haystack.generator.prompt"] = self._cap_content(prompt)
             except Exception as e:
                 logger.debug("Failed to extract prompt: %s", e)
 
@@ -349,9 +386,9 @@ class HaystackInstrumentor(BaseInstrumentor):
                     if messages:
                         last_msg = messages[-1]
                         if hasattr(last_msg, "content"):
-                            attrs["haystack.chat_generator.last_message"] = str(last_msg.content)[
-                                :500
-                            ]
+                            attrs["haystack.chat_generator.last_message"] = self._cap_content(
+                                last_msg.content
+                            )
                         if hasattr(last_msg, "role"):
                             attrs["haystack.chat_generator.last_role"] = last_msg.role
             except Exception as e:
@@ -383,7 +420,7 @@ class HaystackInstrumentor(BaseInstrumentor):
         if "query" in kwargs:
             try:
                 query = kwargs["query"]
-                attrs["haystack.retriever.query"] = str(query)[:500]
+                attrs["haystack.retriever.query"] = self._cap_content(query)
             except Exception as e:
                 logger.debug("Failed to extract query: %s", e)
 
@@ -460,7 +497,9 @@ class HaystackInstrumentor(BaseInstrumentor):
                             replies = value["replies"]
                             if isinstance(replies, list) and replies:
                                 attrs[f"haystack.output.{key}.replies.count"] = len(replies)
-                                attrs[f"haystack.output.{key}.first_reply"] = str(replies[0])[:500]
+                                attrs[f"haystack.output.{key}.first_reply"] = self._cap_content(
+                                    replies[0]
+                                )
 
                         # Check for documents (retriever output)
                         if "documents" in value:

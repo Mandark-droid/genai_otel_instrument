@@ -9,6 +9,16 @@ on:
     tags:
       - 'v*'  # Trigger on version tags
 
+# Least privilege: the default GITHUB_TOKEN is write-all. This validation
+# workflow only reads the repo and uploads a build artifact (which uses the
+# Actions runtime token, not GITHUB_TOKEN), so read-only is sufficient.
+permissions:
+  contents: read
+
+# Action-pinning note: official actions/* are pinned by major tag below; third-
+# party actions should be pinned to a full commit SHA. Prefer replacing every
+# `@vN` with `@<40-char-sha>  # vN` once verified.
+
 jobs:
   pre-release-validation:
     runs-on: ${{ matrix.os }}

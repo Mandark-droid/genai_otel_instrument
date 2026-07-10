@@ -5,9 +5,37 @@ on:
     types: [published]
   workflow_dispatch:  # Allow manual triggering for testing
 
+# Least privilege: default the whole workflow to read-only. The publish job
+# below declares exactly what it needs.
+permissions:
+  contents: read
+
+# Action-pinning note: official actions/* are pinned by major tag; third-party
+# actions should be pinned to a full commit SHA. Prefer replacing every `@vN`
+# with `@<40-char-sha>  # vN` once verified.
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+
+    # This job holds long-lived PyPI tokens (secrets.*_PYPI_API_TOKEN). Keep the
+    # GITHUB_TOKEN read-only.
+    #
+    # RECOMMENDED HARDENING (additive, not yet enabled):
+    #   1. OIDC Trusted Publishing removes the long-lived tokens entirely. To
+    #      switch, register this repo/workflow as a Trusted Publisher on PyPI,
+    #      uncomment `id-token: write` below, and use the commented
+    #      `pypa/gh-action-pypi-publish` step further down instead of twine.
+    #   2. SUPPLY-CHAIN: this job currently runs `pip install -e ".[dev]"` +
+    #      pytest (untrusted, unpinned resolve) in the SAME job that carries the
+    #      publish token. A compromised/planted dependency would execute code
+    #      next to the token. Preferred structure: a separate `build`/`test` job
+    #      produces the sdist+wheel as an artifact, and an isolated `publish` job
+    #      (no build/test/install steps) only downloads that artifact and uploads
+    #      it. Do NOT run untrusted installs in the token-bearing publish job.
+    permissions:
+      contents: read
+      # id-token: write   # <-- uncomment to enable OIDC Trusted Publishing
 
     steps:
     - uses: actions/checkout@v4
@@ -61,6 +89,26 @@ jobs:
 
         deactivate
         rm -rf test_env
+
+    # ---------------------------------------------------------------------------
+    # OIDC Trusted Publishing (RECOMMENDED alternative to the token steps below).
+    # This is additive/commented so the maintainer can switch without downtime.
+    # To enable: register the Trusted Publisher on PyPI (and Test PyPI), uncomment
+    # `id-token: write` in this job's permissions block above, and use these steps
+    # INSTEAD of the twine-based "Publish to Test PyPI" / "Publish to PyPI" steps.
+    # No PYPI_API_TOKEN / TEST_PYPI_API_TOKEN secrets are needed with OIDC.
+    #
+    # - name: Publish to Test PyPI (OIDC Trusted Publishing)
+    #   if: github.event_name == 'release'
+    #   uses: pypa/gh-action-pypi-publish@release/v1   # SHA-pin preferred
+    #   with:
+    #     repository-url: https://test.pypi.org/legacy/
+    #     skip-existing: true
+    #
+    # - name: Publish to PyPI (OIDC Trusted Publishing)
+    #   if: github.event_name == 'release'
+    #   uses: pypa/gh-action-pypi-publish@release/v1   # SHA-pin preferred
+    # ---------------------------------------------------------------------------
 
     - name: Publish to Test PyPI
       if: github.event_name == 'release'

@@ -4,8 +4,23 @@ from __future__ import annotations
 
 import logging
 from typing import Optional
+from urllib.parse import urlsplit, urlunsplit
 
 logger = logging.getLogger(__name__)
+
+
+def _strip_userinfo(url: str) -> str:
+    """Remove any embedded ``user:pass@`` credentials from a URL."""
+    try:
+        parts = urlsplit(url)
+    except Exception:  # noqa: BLE001
+        return url
+    if parts.username or parts.password:
+        netloc = parts.hostname or ""
+        if parts.port:
+            netloc = f"{netloc}:{parts.port}"
+        parts = parts._replace(netloc=netloc)
+    return urlunsplit(parts)
 
 
 class S3MinioStore:
@@ -13,7 +28,7 @@ class S3MinioStore:
 
     Configures via constructor args or env-var fallback:
         AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
-    For MinIO, set `endpoint` to e.g. `http://minio.internal:9000`.
+    For MinIO, set `endpoint` to e.g. `https://minio.internal:9000`.
     """
 
     def __init__(
@@ -24,7 +39,13 @@ class S3MinioStore:
         access_key: Optional[str] = None,
         secret_key: Optional[str] = None,
         region: str = "us-east-1",
+        require_https: bool = False,
     ) -> None:
+        if require_https and endpoint and endpoint.lower().startswith("http://"):
+            raise ValueError(
+                "Plaintext http:// S3/MinIO endpoint is not allowed under a strict profile "
+                "or when external egress is disabled; use https://"
+            )
         try:
             import boto3  # type: ignore
             from botocore.client import Config  # type: ignore
@@ -63,5 +84,7 @@ class S3MinioStore:
             ContentType=mime_type or "application/octet-stream",
         )
         if self._endpoint:
-            return f"{self._endpoint.rstrip('/')}/{self._bucket}/{key}"
+            # Strip any embedded credentials so they don't leak into telemetry.
+            public_endpoint = _strip_userinfo(self._endpoint.rstrip("/"))
+            return f"{public_endpoint}/{self._bucket}/{key}"
         return f"s3://{self._bucket}/{key}"

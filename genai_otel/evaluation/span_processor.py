@@ -37,14 +37,22 @@ class EvaluationSpanProcessor(SpanProcessor):
     attributes. It runs checks on prompts and responses based on enabled features.
 
     Features:
-        - PII Detection: Detect and redact personally identifiable information
+        - PII Detection: Detect and (optionally) attach a redacted copy
         - Toxicity Detection: Monitor toxic or harmful content
         - Bias Detection: Detect demographic and other biases
-        - Prompt Injection Detection: Protect against prompt injection attacks
-        - Restricted Topics: Block sensitive or inappropriate topics
+        - Prompt Injection Detection: Detect prompt injection attempts
+        - Restricted Topics: Flag sensitive or inappropriate topics
         - Hallucination Detection: Track factual accuracy and groundedness
 
     All features are opt-in and configured independently.
+
+    IMPORTANT - "block" semantics: this processor runs in ``on_end``, i.e. AFTER
+    the LLM call has already returned. When a detector's ``block_on_detection``
+    (or ``pii_mode=block``) is set, this path only *annotates* the span (status
+    ERROR + an ``evaluation.*.blocked`` attribute) and records a metric - it
+    does NOT interrupt or prevent the call. Real pre-call blocking is handled by
+    a separate hook that invokes each detector's ``detect()`` before the
+    provider call.
     """
 
     def __init__(
@@ -304,6 +312,33 @@ class EvaluationSpanProcessor(SpanProcessor):
                     logger.info("Registered Hallucination detector with BaseInstrumentor")
                 else:
                     logger.warning("Hallucination detector is None, not registering")
+
+                # Compute the set of policies configured to BLOCK. The pre-call
+                # hook in BaseInstrumentor enforces exactly these (and is skipped
+                # entirely when the set is empty, so non-blocking deployments pay
+                # nothing). Hallucination has no block mode (it needs the response).
+                blocking = set()
+                _pii_mode = getattr(self.pii_config, "mode", None)
+                if self.pii_config.enabled and getattr(_pii_mode, "value", _pii_mode) == "block":
+                    blocking.add("pii")
+                if self.toxicity_config.enabled and self.toxicity_config.block_on_detection:
+                    blocking.add("toxicity")
+                if self.bias_config.enabled and self.bias_config.block_on_detection:
+                    blocking.add("bias")
+                if (
+                    self.prompt_injection_config.enabled
+                    and self.prompt_injection_config.block_on_detection
+                ):
+                    blocking.add("prompt_injection")
+                if (
+                    self.restricted_topics_config.enabled
+                    and self.restricted_topics_config.block_on_detection
+                ):
+                    blocking.add("restricted_topics")
+                BaseInstrumentor._blocking_policies = frozenset(blocking)
+                BaseInstrumentor._blocking_active = bool(blocking)
+                if blocking:
+                    logger.info("Pre-call BLOCK policy active for: %s", sorted(blocking))
         except Exception as e:
             logger.warning(
                 f"Failed to register detectors with BaseInstrumentor: {e}", exc_info=True
@@ -321,6 +356,19 @@ class EvaluationSpanProcessor(SpanProcessor):
         """
         # Most evaluation happens on_end, but we can do prompt analysis here if needed
         pass
+
+    @staticmethod
+    def _already_evaluated(attributes: dict) -> bool:
+        """Return True if the detector suite has already run for this span.
+
+        The guard trips on the explicit ``evaluation.completed`` marker (set by
+        base.py after its inline pre-end run, or by this processor) OR on the
+        presence of any ``evaluation.*`` attribute, so detectors are never run
+        more than once per span across the base / processor / exporter paths.
+        """
+        if attributes.get("evaluation.completed"):
+            return True
+        return any(str(key).startswith("evaluation.") for key in attributes)
 
     def on_end(self, span: ReadableSpan) -> None:
         """Called when a span is ended.
@@ -360,6 +408,15 @@ class EvaluationSpanProcessor(SpanProcessor):
             # Extract prompt and response from span attributes
             attributes = dict(span.attributes) if span.attributes else {}
 
+            # IDEMPOTENCY GUARD: the detector suite can be invoked up to three
+            # times for the same span (base.py inline pre-end run,
+            # EvaluationSpanProcessor.on_end, and the enriching exporter). If the
+            # span has already been evaluated (marker set by base.py, or any
+            # evaluation.* attribute already present), skip re-running detectors
+            # to avoid redundant ML/regex work and duplicate metric emission.
+            if self._already_evaluated(attributes):
+                return
+
             prompt = self._extract_prompt_from_events(span) or self._extract_prompt(attributes)
             response = self._extract_response(attributes)
 
@@ -386,6 +443,10 @@ class EvaluationSpanProcessor(SpanProcessor):
             # Run hallucination detection (responses only)
             if self.hallucination_config.enabled and self.hallucination_detector:
                 self._check_hallucination(span, prompt, response, attributes, safe_set_attribute)
+
+            # Mark the span as evaluated so downstream paths (the enriching
+            # exporter) do not re-run the detector suite on it.
+            safe_set_attribute("evaluation.completed", True)
 
         except Exception as e:
             logger.error("Error in evaluation span processor: %s", e, exc_info=True)
@@ -645,7 +706,8 @@ class EvaluationSpanProcessor(SpanProcessor):
                             },
                         )
 
-                    # If blocking, set error status
+                    # If flagged for blocking, annotate span status (post-call; does not
+                    # interrupt the call, which already returned)
                     if result.blocked:
                         try:
                             span.set_status(
@@ -698,7 +760,8 @@ class EvaluationSpanProcessor(SpanProcessor):
                             },
                         )
 
-                    # If blocking, set error status
+                    # If flagged for blocking, annotate span status (post-call; does not
+                    # interrupt the call, which already returned)
                     if result.blocked:
                         try:
                             span.set_status(
@@ -763,7 +826,8 @@ class EvaluationSpanProcessor(SpanProcessor):
                             1, {"category": category, "location": "prompt"}
                         )
 
-                    # If blocking, set error status
+                    # If flagged for blocking, annotate span status (post-call; does not
+                    # interrupt the call, which already returned)
                     if result.blocked:
                         try:
                             span.set_status(
@@ -804,7 +868,8 @@ class EvaluationSpanProcessor(SpanProcessor):
                             1, {"category": category, "location": "response"}
                         )
 
-                    # If blocking, set error status
+                    # If flagged for blocking, annotate span status (post-call; does not
+                    # interrupt the call, which already returned)
                     if result.blocked:
                         try:
                             span.set_status(
@@ -872,7 +937,8 @@ class EvaluationSpanProcessor(SpanProcessor):
                             1, {"bias_type": bias_type, "location": "prompt"}
                         )
 
-                    # If blocking mode and threshold exceeded, set error status
+                    # If flagged for blocking, annotate span status (post-call; does not
+                    # interrupt the call, which already returned)
                     if self.bias_config.block_on_detection and result.has_bias:
                         try:
                             span.set_status(
@@ -921,7 +987,8 @@ class EvaluationSpanProcessor(SpanProcessor):
                             1, {"bias_type": bias_type, "location": "response"}
                         )
 
-                    # If blocking mode and threshold exceeded, set error status
+                    # If flagged for blocking, annotate span status (post-call; does not
+                    # interrupt the call, which already returned)
                     if self.bias_config.block_on_detection and result.has_bias:
                         try:
                             span.set_status(
@@ -978,7 +1045,8 @@ class EvaluationSpanProcessor(SpanProcessor):
                 for inj_type in result.injection_types:
                     self.prompt_injection_type_counter.add(1, {"injection_type": inj_type})
 
-                # If blocking, set error status
+                # If flagged for blocking, annotate span status (post-call; does not
+                # interrupt the call, which already returned)
                 if result.blocked:
                     try:
                         span.set_status(
@@ -1045,7 +1113,8 @@ class EvaluationSpanProcessor(SpanProcessor):
                             1, {"topic": topic, "location": "prompt"}
                         )
 
-                    # If blocking, set error status
+                    # If flagged for blocking, annotate span status (post-call; does not
+                    # interrupt the call, which already returned)
                     if result.blocked:
                         try:
                             span.set_status(
@@ -1093,7 +1162,8 @@ class EvaluationSpanProcessor(SpanProcessor):
                             1, {"topic": topic, "location": "response"}
                         )
 
-                    # If blocking, set error status
+                    # If flagged for blocking, annotate span status (post-call; does not
+                    # interrupt the call, which already returned)
                     if result.blocked:
                         try:
                             span.set_status(

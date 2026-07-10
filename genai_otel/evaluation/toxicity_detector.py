@@ -6,12 +6,34 @@ This module provides toxicity detection capabilities using:
 """
 
 import logging
+import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from .config import ToxicityConfig
 
 logger = logging.getLogger(__name__)
+
+# Process-wide "log once" guards so a blocked egress / air-gapped download is
+# surfaced exactly once instead of on every request.
+_EGRESS_BLOCK_LOGGED = False
+_AIRGAP_BLOCK_LOGGED = False
+
+
+def _log_egress_block_once(message: str) -> None:
+    global _EGRESS_BLOCK_LOGGED
+    if not _EGRESS_BLOCK_LOGGED:
+        _EGRESS_BLOCK_LOGGED = True
+        logger.warning(message)
+
+
+def _log_airgap_block_once(message: str) -> None:
+    global _AIRGAP_BLOCK_LOGGED
+    if not _AIRGAP_BLOCK_LOGGED:
+        _AIRGAP_BLOCK_LOGGED = True
+        logger.warning(message)
+
 
 # Try to import optional dependencies at module level for testability
 try:
@@ -69,65 +91,42 @@ class ToxicityDetector:
         self._detoxify_model = None
         self._perspective_available = False
         self._detoxify_available = False
+        # Egress / air-gap posture. Read from the config (which mirrors
+        # OTelConfig) with an env-var fallback so an older/foreign config object
+        # that lacks the field still defaults to the hardened env behaviour.
+        self._egress_allowed = getattr(
+            config,
+            "allow_external_egress",
+            os.getenv("GENAI_ALLOW_EXTERNAL_EGRESS", "true").lower() == "true",
+        )
+        self._air_gapped = getattr(
+            config,
+            "air_gapped",
+            os.getenv("GENAI_AIR_GAPPED", "false").lower() == "true",
+        )
         self._check_availability()
+
+    def _sanitize(self, text: str) -> str:
+        """Strip the Perspective API key (and any ``key=`` URL param) from a
+        string before it is logged, so the developer key never reaches logs."""
+        if not text:
+            return text
+        key = getattr(self.config, "perspective_api_key", None)
+        if key:
+            text = text.replace(key, "***REDACTED***")
+        # googleapiclient appends the key as a ?key=... URL parameter.
+        text = re.sub(r"(?i)(key=)[^&\s\"']+", r"\1***REDACTED***", text)
+        return text
 
     def _check_availability(self):
         """Check which toxicity detection methods are available."""
         # Check Perspective API
         if self.config.use_perspective_api and self.config.perspective_api_key:
-            try:
-                if discovery is None:
-                    raise ImportError("googleapiclient not installed")
-
-                # Use httplib2 with timeout to prevent hanging API calls
-                build_kwargs = {
-                    "serviceName": "commentanalyzer",
-                    "version": "v1alpha1",
-                    "developerKey": self.config.perspective_api_key,
-                    "discoveryServiceUrl": "https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
-                    "static_discovery": False,
-                }
-                try:
-                    import httplib2
-
-                    build_kwargs["http"] = httplib2.Http(timeout=self.config.api_timeout)
-                except ImportError:
-                    logger.debug(
-                        "httplib2 not available, Perspective API calls will have no timeout"
-                    )
-
-                self._perspective_client = discovery.build(**build_kwargs)
-                self._perspective_available = True
-                logger.info("Google Perspective API initialized successfully")
-            except ImportError as e:
-                logger.warning(
-                    "Perspective API not available: %s. Install with: pip install google-api-python-client",
-                    e,
-                )
-                self._perspective_available = False
-            except Exception as e:
-                logger.error("Failed to initialize Perspective API: %s", e)
-                self._perspective_available = False
+            self._init_perspective()
 
         # Check Detoxify
         if self.config.use_local_model:
-            try:
-                if Detoxify is None:
-                    raise ImportError("detoxify not installed")
-
-                # Load the model (using "original" model by default)
-                self._detoxify_model = Detoxify("original")
-                self._detoxify_available = True
-                logger.info("Detoxify model loaded successfully")
-            except ImportError as e:
-                logger.warning(
-                    "Detoxify not available: %s. Install with: pip install detoxify",
-                    e,
-                )
-                self._detoxify_available = False
-            except Exception as e:
-                logger.error("Failed to load Detoxify model: %s", e)
-                self._detoxify_available = False
+            self._init_detoxify()
 
         if not self._perspective_available and not self._detoxify_available:
             logger.warning(
@@ -135,6 +134,99 @@ class ToxicityDetector:
                 "  - Perspective API: pip install google-api-python-client\n"
                 "  - Detoxify: pip install detoxify"
             )
+
+    def _init_perspective(self):
+        """Initialize the Google Perspective API client (external egress)."""
+        # HARD GATE: never initialize / call the external Google Perspective API
+        # when third-party egress is disallowed. This keeps customer text inside
+        # the application boundary. Fall back to local Detoxify instead.
+        if not self._egress_allowed:
+            _log_egress_block_once(
+                "Perspective API requested but external egress is disabled "
+                "(allow_external_egress=False / bank profile). Skipping "
+                "Perspective API; will use local Detoxify if available."
+            )
+            self._perspective_available = False
+            return
+        try:
+            if discovery is None:
+                raise ImportError("googleapiclient not installed")
+
+            # Use httplib2 with timeout to prevent hanging API calls
+            build_kwargs = {
+                "serviceName": "commentanalyzer",
+                "version": "v1alpha1",
+                "developerKey": self.config.perspective_api_key,
+                "discoveryServiceUrl": "https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
+                "static_discovery": False,
+            }
+            try:
+                import httplib2
+
+                build_kwargs["http"] = httplib2.Http(timeout=self.config.api_timeout)
+            except ImportError:
+                logger.debug("httplib2 not available, Perspective API calls will have no timeout")
+
+            self._perspective_client = discovery.build(**build_kwargs)
+            self._perspective_available = True
+            logger.info("Google Perspective API initialized successfully")
+        except ImportError as e:
+            logger.warning(
+                "Perspective API not available: %s. Install with: pip install google-api-python-client",
+                e,
+            )
+            self._perspective_available = False
+        except Exception as e:
+            # Never log with exc_info here: a traceback can include the request
+            # URI carrying the developer key as a ?key=... parameter.
+            logger.error("Failed to initialize Perspective API: %s", self._sanitize(str(e)))
+            self._perspective_available = False
+
+    def _init_detoxify(self):
+        """Load the local Detoxify model, honoring the air-gapped posture."""
+        # Optional local checkpoint so air-gapped sites can point at pre-staged
+        # weights instead of triggering a torch-hub / huggingface.co download.
+        local_path = os.getenv("GENAI_TOXICITY_DETOXIFY_PATH") or os.getenv(
+            "GENAI_DETOXIFY_MODEL_PATH"
+        )
+        try:
+            if Detoxify is None:
+                raise ImportError("detoxify not installed")
+
+            if self._air_gapped:
+                if not local_path:
+                    # Do NOT trigger a runtime network download on an air-gapped
+                    # host. Skip Detoxify with a single clear log line.
+                    _log_airgap_block_once(
+                        "Air-gapped mode is enabled but no local Detoxify model "
+                        "path is configured (set GENAI_TOXICITY_DETOXIFY_PATH to "
+                        "pre-staged weights). Skipping Detoxify to avoid a runtime "
+                        "model download."
+                    )
+                    self._detoxify_available = False
+                    return
+                # Belt-and-suspenders: force the underlying HF/torch stack offline
+                # so no metadata/weight fetch can escape to the network.
+                os.environ.setdefault("HF_HUB_OFFLINE", "1")
+                os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+                self._detoxify_model = Detoxify(checkpoint=local_path)
+            elif local_path:
+                self._detoxify_model = Detoxify(checkpoint=local_path)
+            else:
+                # Load the model (using "original" model by default)
+                self._detoxify_model = Detoxify("original")
+
+            self._detoxify_available = True
+            logger.info("Detoxify model loaded successfully")
+        except ImportError as e:
+            logger.warning(
+                "Detoxify not available: %s. Install with: pip install detoxify",
+                e,
+            )
+            self._detoxify_available = False
+        except Exception as e:
+            logger.error("Failed to load Detoxify model: %s", e)
+            self._detoxify_available = False
 
     def is_available(self) -> bool:
         """Check if toxicity detector is available.
@@ -161,8 +253,15 @@ class ToxicityDetector:
             return ToxicityDetectionResult(is_toxic=False, original_text=text)
 
         try:
-            # Try Perspective API first if configured and available
-            if self.config.use_perspective_api and self._perspective_available:
+            # Try Perspective API first if configured, available, AND egress is
+            # permitted. The extra egress check is defence-in-depth: the client
+            # is not built when egress is disallowed, so this should already be
+            # False, but we never route customer text to Google without it.
+            if (
+                self.config.use_perspective_api
+                and self._perspective_available
+                and self._egress_allowed
+            ):
                 return self._detect_with_perspective(text)
             # Fall back to Detoxify
             elif self._detoxify_available:
@@ -237,7 +336,9 @@ class ToxicityDetector:
             )
 
         except Exception as e:
-            logger.error("Perspective API error: %s", e, exc_info=True)
+            # Never log with exc_info: a traceback can include the request URI
+            # carrying the developer key. Sanitize the message as well.
+            logger.error("Perspective API error: %s", self._sanitize(str(e)))
             # Fall back to Detoxify if available
             if self._detoxify_available:
                 logger.info("Falling back to Detoxify")

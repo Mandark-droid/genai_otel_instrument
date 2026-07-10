@@ -22,6 +22,12 @@ class VertexAIInstrumentor(BaseInstrumentor):
         try:
             from vertexai.preview.generative_models import GenerativeModel
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(GenerativeModel, "_genai_otel_vertexai_instrumented", False) is True:
+                logger.debug("Vertex AI already instrumented, skipping")
+                self._instrumented = True
+                return
+
             original_generate = GenerativeModel.generate_content
 
             # Wrap using create_span_wrapper
@@ -31,6 +37,10 @@ class VertexAIInstrumentor(BaseInstrumentor):
             )(original_generate)
 
             GenerativeModel.generate_content = wrapped_generate
+            try:
+                GenerativeModel._genai_otel_vertexai_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
             self._instrumented = True
             logger.info("Vertex AI instrumentation enabled")
 

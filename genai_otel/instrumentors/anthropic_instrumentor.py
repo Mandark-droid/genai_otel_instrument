@@ -8,9 +8,20 @@ import logging
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
-from .base import BaseInstrumentor
+from .base import BaseInstrumentor, find_base_url_claim
 
 logger = logging.getLogger(__name__)
+
+
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
 
 
 class AnthropicInstrumentor(BaseInstrumentor):
@@ -51,6 +62,12 @@ class AnthropicInstrumentor(BaseInstrumentor):
             import anthropic
             import wrapt
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(anthropic, "_genai_otel_anthropic_instrumented", False) is True:
+                logger.debug("Anthropic already instrumented, skipping")
+                self._instrumented = True
+                return
+
             if hasattr(anthropic, "Anthropic"):
                 original_init = anthropic.Anthropic.__init__
 
@@ -60,6 +77,10 @@ class AnthropicInstrumentor(BaseInstrumentor):
                     return result
 
                 anthropic.Anthropic.__init__ = wrapt.FunctionWrapper(original_init, wrapped_init)
+                try:
+                    anthropic._genai_otel_anthropic_instrumented = True
+                except Exception:  # noqa: BLE001
+                    pass
                 self._instrumented = True
                 logger.info("Anthropic instrumentation enabled")
 
@@ -74,6 +95,17 @@ class AnthropicInstrumentor(BaseInstrumentor):
         Args:
             client: The Anthropic client instance to instrument.
         """
+        # A client pointed at an aggregator (e.g. CometAPI) is traced by its
+        # dedicated instrumentor; wrapping it here too would emit a duplicate
+        # span and double-count token/cost metrics.
+        claimed = find_base_url_claim(getattr(client, "base_url", None))
+        if claimed:
+            logger.debug(
+                "Skipping generic Anthropic instrumentation for client handled "
+                "by the '%s' instrumentor",
+                claimed,
+            )
+            return
         if hasattr(client, "messages") and hasattr(client.messages, "create"):
             original_create = client.messages.create
             instrumented_create_method = self.create_span_wrapper(
@@ -148,6 +180,8 @@ class AnthropicInstrumentor(BaseInstrumentor):
             result: The API response object.
             request_kwargs: The original request kwargs.
         """
+        config = getattr(self, "config", None)
+
         # Add prompt content events
         messages = request_kwargs.get("messages", [])
         for idx, message in enumerate(messages):
@@ -156,7 +190,10 @@ class AnthropicInstrumentor(BaseInstrumentor):
                 content = message.get("content", "")
                 span.add_event(
                     f"gen_ai.prompt.{idx}",
-                    attributes={"gen_ai.prompt.role": role, "gen_ai.prompt.content": str(content)},
+                    attributes={
+                        "gen_ai.prompt.role": role,
+                        "gen_ai.prompt.content": _cap_content(config, content),
+                    },
                 )
 
         # Add completion content events AND attributes (for evaluation processor)
@@ -164,17 +201,18 @@ class AnthropicInstrumentor(BaseInstrumentor):
             response_text = None
             for idx, content_block in enumerate(result.content):
                 if hasattr(content_block, "text"):
+                    content = _cap_content(config, content_block.text)
                     # Add as event for observability
                     span.add_event(
                         f"gen_ai.completion.{idx}",
                         attributes={
                             "gen_ai.completion.role": "assistant",
-                            "gen_ai.completion.content": content_block.text,
+                            "gen_ai.completion.content": content,
                         },
                     )
                     # Capture first text block for evaluation
                     if idx == 0:
-                        response_text = content_block.text
+                        response_text = content
 
             # Set as attribute for evaluation processor
             if response_text:

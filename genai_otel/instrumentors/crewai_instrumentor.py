@@ -63,6 +63,12 @@ class CrewAIInstrumentor(BaseInstrumentor):
             logger.debug("Skipping CrewAI instrumentation - library not available")
             return
 
+        # Idempotency guard: repeated instrument() calls must not stack wrappers
+        # on the shared Crew / Task / Agent classes or re-patch ThreadPoolExecutor.
+        if self._instrumented:
+            logger.debug("CrewAI already instrumented, skipping repeat instrument()")
+            return
+
         self.config = config
 
         # Disable CrewAI's built-in telemetry to prevent conflicts with OpenTelemetry
@@ -133,34 +139,81 @@ class CrewAIInstrumentor(BaseInstrumentor):
 
         This ensures that any code using ThreadPoolExecutor (including CrewAI internally)
         will automatically propagate trace context to worker threads.
+
+        NOTE: this patches the stdlib ``concurrent.futures.ThreadPoolExecutor.submit``
+        process-wide, so it affects every thread pool in the host application, not
+        only CrewAI's. To keep that blast radius safe:
+
+        - a double-wrap guard prevents stacking the wrapper on repeat/parallel
+          instrument() calls; and
+        - the wrapper is fully defensive: if OTel context capture/attach fails for
+          any reason, the original callable is submitted and executed unchanged, so
+          an unrelated submit is never broken and never double-submitted.
         """
         try:
             from concurrent.futures import ThreadPoolExecutor
 
             original_submit = ThreadPoolExecutor.submit
 
-            def context_propagating_submit(self, fn, /, *args, **kwargs):
-                """Submit with automatic context propagation."""
-                # Capture current context
-                ctx = otel_context.get_current()
+            # Double-wrap guard: if submit was already patched by this library
+            # (this instance, or another CrewAI instrumentor in the same process),
+            # do not wrap it again.
+            if getattr(original_submit, "_genai_otel_wrapped", False):
+                logger.debug("ThreadPoolExecutor.submit already patched, skipping")
+                return
 
-                # Wrap the function to propagate context
+            def context_propagating_submit(self, fn, /, *args, **kwargs):
+                """Submit with automatic context propagation.
+
+                Never breaks an unrelated submit: on any failure capturing or
+                attaching context, the original callable is submitted unchanged.
+                ``original_submit`` is called exactly once on every path.
+                """
+                try:
+                    ctx = otel_context.get_current()
+                except Exception:
+                    # Could not capture context; submit the callable unchanged.
+                    return original_submit(self, fn, *args, **kwargs)
+
                 def wrapper():
-                    token = otel_context.attach(ctx)
+                    # The business callable must always run, even if context
+                    # attach fails in the worker thread.
+                    try:
+                        token = otel_context.attach(ctx)
+                    except Exception:
+                        return fn(*args, **kwargs)
                     try:
                         return fn(*args, **kwargs)
                     finally:
                         otel_context.detach(token)
 
-                # Submit the wrapped function
                 return original_submit(self, wrapper)
 
+            context_propagating_submit._genai_otel_wrapped = True
             ThreadPoolExecutor.submit = context_propagating_submit
             logger.debug("Patched ThreadPoolExecutor.submit() for automatic context propagation")
 
         except Exception as e:
             logger.debug(f"Could not patch ThreadPoolExecutor: {e}")
             # Not critical - continue with other instrumentation
+
+    def _cap_content(self, text: Any, default: int = 200) -> str:
+        """Cap captured content per ``config.content_max_length``.
+
+        Content capture is a required audit feature, so content keeps flowing;
+        this only bounds its size. ``content_max_length == 0`` (or missing) means
+        unlimited. When no config is present (unit tests) the historical default
+        cap is used.
+        """
+        s = text if isinstance(text, str) else str(text)
+        cfg = getattr(self, "config", None)
+        max_len = default
+        cfg_len = getattr(cfg, "content_max_length", None) if cfg is not None else None
+        if isinstance(cfg_len, int):
+            max_len = cfg_len
+        if max_len and max_len > 0:
+            return s[:max_len]
+        return s
 
     def _extract_task_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Task execution.
@@ -385,13 +438,12 @@ class CrewAIInstrumentor(BaseInstrumentor):
                     input_keys = list(inputs.keys())
                     attrs["crewai.inputs.keys"] = input_keys
 
-                    # Store input values (truncated)
+                    # Store input values (bounded via content_max_length)
                     for key, value in list(inputs.items())[:5]:  # Limit to 5 inputs
-                        value_str = str(value)[:200]  # Truncate long values
-                        attrs[f"crewai.inputs.{key}"] = value_str
+                        attrs[f"crewai.inputs.{key}"] = self._cap_content(value)
                 else:
                     # Non-dict inputs
-                    attrs["crewai.inputs"] = str(inputs)[:200]
+                    attrs["crewai.inputs"] = self._cap_content(inputs)
             except Exception as e:
                 logger.debug("Failed to extract inputs: %s", e)
 
@@ -524,14 +576,12 @@ class CrewAIInstrumentor(BaseInstrumentor):
         try:
             # If result is a string (common case)
             if isinstance(result, str):
-                output = result[:500]  # Truncate to avoid span size issues
-                attrs["crewai.output"] = output
+                attrs["crewai.output"] = self._cap_content(result)
                 attrs["crewai.output_length"] = len(result)
 
             # If result is a CrewOutput object
             elif hasattr(result, "raw"):
-                output = str(result.raw)[:500]
-                attrs["crewai.output"] = output
+                attrs["crewai.output"] = self._cap_content(result.raw)
                 attrs["crewai.output_length"] = len(str(result.raw))
 
             # If result has tasks_output attribute (list of task results)
@@ -545,8 +595,7 @@ class CrewAIInstrumentor(BaseInstrumentor):
                         task_outputs = []
                         for idx, task_output in enumerate(tasks_output[:5]):  # Limit to 5 tasks
                             if hasattr(task_output, "raw"):
-                                task_result = str(task_output.raw)[:200]  # Truncate
-                                task_outputs.append(task_result)
+                                task_outputs.append(self._cap_content(task_output.raw))
 
                         if task_outputs:
                             attrs["crewai.task_outputs"] = task_outputs
