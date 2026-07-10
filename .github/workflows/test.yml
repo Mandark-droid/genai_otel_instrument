@@ -5,6 +5,9 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  # Allow running the full test matrix manually from the Actions tab
+  # ("Run workflow" button) against any branch.
+  workflow_dispatch:
 
 # Least privilege: the default GITHUB_TOKEN is write-all. Restrict every job to
 # read-only here and grant per-job elevation only where a job genuinely needs it.
