@@ -47,17 +47,18 @@ That's it. No wrappers, no decorators, no config files. Every LLM call, database
 
 ## Why TraceVerde?
 
-| Feature | TraceVerde | OpenLIT | Traceloop/OpenLLMetry | Langfuse |
-|---------|-----------|---------|----------------------|----------|
-| Zero-code setup | Yes | Yes | Yes | SDK required |
-| LLM providers | 20+ | 25+ | 15+ | Via integrations |
-| Multi-agent frameworks | 8 (CrewAI, LangGraph, ADK, AutoGen, OpenAI Agents, Pydantic AI, etc.) | Limited | Limited | Limited |
-| Cost tracking | Automatic (1,050+ models) | Manual config | Manual config | Manual config |
-| GPU metrics (NVIDIA + AMD) | Yes | No | No | No |
-| MCP tool instrumentation | Yes (databases, caches, vector DBs, queues) | Limited | Limited | No |
-| Evaluation (PII, toxicity, bias, hallucination, prompt injection) | Built-in (6 detectors) | No | No | Separate service |
-| OpenTelemetry native | Yes | Yes | Yes | Partial |
-| License | Apache-2.0 | Apache-2.0 | Apache-2.0 | MIT |
+| Feature | TraceVerde | OpenLIT | Traceloop/OpenLLMetry | Langfuse | Galileo | Arize (Phoenix) | Opik (Comet) |
+|---------|-----------|---------|----------------------|----------|---------|-----------------|--------------|
+| Zero-code setup | Yes | Yes | Yes | SDK required | SDK required | SDK / auto (OpenInference) | SDK required |
+| LLM providers | 20+ | 25+ | 15+ | Via integrations | Via integrations | Via integrations | Via integrations |
+| Multi-agent frameworks | 8 (CrewAI, LangGraph, ADK, AutoGen, OpenAI Agents, Pydantic AI, etc.) | Limited | Limited | Limited | Limited | Limited | Limited |
+| Cost tracking | Automatic (1,050+ models) | Manual config | Manual config | Manual config | Yes | Yes | Yes |
+| GPU metrics (NVIDIA + AMD) | Yes | No | No | No | No | No | No |
+| MCP tool instrumentation | Yes (databases, caches, vector DBs, queues) | Limited | Limited | No | No | No | No |
+| Evaluation (PII, toxicity, bias, hallucination, prompt injection) | Built-in (6 detectors) | No | No | Separate service | Extensive (core focus) | Built-in (Phoenix evals) | Built-in (core focus) |
+| OpenTelemetry native | Yes | Yes | Yes | Partial | Partial | Yes (OpenInference) | Partial |
+| Self-hosted / on-prem | Yes (fully local) | Yes | Yes | Yes | Enterprise tier | Yes (Phoenix) | Yes |
+| License | Apache-2.0 | Apache-2.0 | Apache-2.0 | MIT | Proprietary | Open-source + Commercial | Apache-2.0 |
 
 ## What Gets Instrumented?
 

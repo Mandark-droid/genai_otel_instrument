@@ -475,6 +475,28 @@ class TestInstructorInstrumentor(unittest.TestCase):
             self.assertEqual(len(attrs["instructor.response.text"]), 200)
             self.assertTrue(attrs["instructor.validation.success"])
 
+    @patch("genai_otel.instrumentors.instructor_instrumentor.logger")
+    def test_instrument_idempotent_guard(self, mock_logger):
+        """Repeated instrument() must return early via the idempotency guard."""
+        instrumentor = InstructorInstrumentor()
+        instrumentor._instructor_available = True
+        instrumentor._instrumented = True
+        instrumentor.instrument(OTelConfig())
+        mock_logger.debug.assert_any_call(
+            "Instructor already instrumented, skipping repeat instrument()"
+        )
+
+    def test_cap_content_respects_config(self):
+        """_cap_content honours content_max_length (default, small cap, unlimited)."""
+        instrumentor = InstructorInstrumentor()
+        self.assertEqual(instrumentor._cap_content("x" * 300), "x" * 200)
+        cfg = OTelConfig()
+        cfg.content_max_length = 3
+        instrumentor.config = cfg
+        self.assertEqual(instrumentor._cap_content("abcdef"), "abc")
+        cfg.content_max_length = 0
+        self.assertEqual(instrumentor._cap_content("x" * 300), "x" * 300)
+
 
 if __name__ == "__main__":
     unittest.main()

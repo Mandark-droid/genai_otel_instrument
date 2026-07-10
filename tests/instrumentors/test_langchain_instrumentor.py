@@ -637,6 +637,161 @@ class TestLangChainInstrumentor(unittest.TestCase):
             self.assertEqual(attribute_dict.get("session.id"), "chat-session-789")
             self.assertEqual(attribute_dict.get("langchain.session.id"), "chat-session-789")
 
+    def test_wrapped_agent_call_with_object_agent(self):
+        """Regression: AgentExecutor.agent is an object (not a dict).
+
+        Previously ``getattr(instance, "agent", {}).get("name")`` raised
+        AttributeError straight into the host's agent call. The call must now
+        succeed and the name comes from the object's ``.name`` attribute.
+        """
+
+        class RealAgent:
+            def __init__(self):
+                self.name = "obj_agent"
+
+        class MockAgentExecutor:
+            def __init__(self):
+                self.agent = RealAgent()
+
+            def __call__(self, *args, **kwargs):
+                return {"result": "agent_output"}
+
+        mock_langchain = MagicMock()
+        mock_chains_module = MagicMock()
+        mock_agents_module = MagicMock()
+        mock_chains_module.base.Chain = MagicMock()
+        mock_agents_module.agent.AgentExecutor = MockAgentExecutor
+
+        with patch.dict(
+            "sys.modules",
+            {
+                "langchain": mock_langchain,
+                "langchain.chains": mock_chains_module,
+                "langchain.chains.base": mock_chains_module.base,
+                "langchain.agents": mock_agents_module,
+                "langchain.agents.agent": mock_agents_module.agent,
+            },
+        ):
+            instrumentor = LangChainInstrumentor()
+            instrumentor.tracer = MagicMock()
+            config = OTelConfig()
+            mock_span = MagicMock()
+            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = (
+                mock_span
+            )
+            instrumentor.instrument(config)
+
+            agent = MockAgentExecutor()
+            # Must NOT raise AttributeError, and must return the real result.
+            result = agent("input")
+            self.assertEqual(result, {"result": "agent_output"})
+
+            calls = mock_span.set_attribute.call_args_list
+            attribute_dict = {call[0][0]: call[0][1] for call in calls}
+            self.assertEqual(attribute_dict["langchain.agent.name"], "obj_agent")
+
+    def test_wrapped_agent_call_object_agent_no_name(self):
+        """Object agent with no usable name resolves to 'unknown' and never raises."""
+
+        class RealAgent:
+            pass  # no name attribute
+
+        class MockAgentExecutor:
+            def __init__(self):
+                self.agent = RealAgent()
+
+            def __call__(self, *args, **kwargs):
+                return "ok"
+
+        mock_langchain = MagicMock()
+        mock_chains_module = MagicMock()
+        mock_agents_module = MagicMock()
+        mock_chains_module.base.Chain = MagicMock()
+        mock_agents_module.agent.AgentExecutor = MockAgentExecutor
+
+        with patch.dict(
+            "sys.modules",
+            {
+                "langchain": mock_langchain,
+                "langchain.chains": mock_chains_module,
+                "langchain.chains.base": mock_chains_module.base,
+                "langchain.agents": mock_agents_module,
+                "langchain.agents.agent": mock_agents_module.agent,
+            },
+        ):
+            instrumentor = LangChainInstrumentor()
+            instrumentor.tracer = MagicMock()
+            config = OTelConfig()
+            mock_span = MagicMock()
+            instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = (
+                mock_span
+            )
+            instrumentor.instrument(config)
+
+            agent = MockAgentExecutor()
+            self.assertEqual(agent("input"), "ok")
+            attribute_dict = {
+                call[0][0]: call[0][1] for call in mock_span.set_attribute.call_args_list
+            }
+            self.assertEqual(attribute_dict["langchain.agent.name"], "unknown")
+
+    def test_extract_agent_name_variants(self):
+        """_extract_agent_name handles dict, object, missing, and raising instances."""
+        instrumentor = LangChainInstrumentor()
+
+        dict_holder = MagicMock()
+        dict_holder.agent = {"name": "dict_agent"}
+        self.assertEqual(instrumentor._extract_agent_name(dict_holder), "dict_agent")
+
+        class Holder:
+            pass
+
+        obj_holder = Holder()
+        obj_agent = Holder()
+        obj_agent.name = "object_agent"
+        obj_holder.agent = obj_agent
+        self.assertEqual(instrumentor._extract_agent_name(obj_holder), "object_agent")
+
+        missing = Holder()
+        self.assertEqual(instrumentor._extract_agent_name(missing), "unknown")
+
+    def test_instrument_is_idempotent(self):
+        """Repeated instrument() calls must not stack wrappers (idempotency guard)."""
+
+        class MockChain:
+            def __call__(self, *args, **kwargs):
+                return "r"
+
+        class MockAgentExecutor:
+            def __call__(self, *args, **kwargs):
+                return "r"
+
+        mock_langchain = MagicMock()
+        mock_chains_module = MagicMock()
+        mock_agents_module = MagicMock()
+        mock_chains_module.base.Chain = MockChain
+        mock_agents_module.agent.AgentExecutor = MockAgentExecutor
+
+        with patch.dict(
+            "sys.modules",
+            {
+                "langchain": mock_langchain,
+                "langchain.chains": mock_chains_module,
+                "langchain.chains.base": mock_chains_module.base,
+                "langchain.agents": mock_agents_module,
+                "langchain.agents.agent": mock_agents_module.agent,
+            },
+        ):
+            instrumentor = LangChainInstrumentor()
+            config = OTelConfig()
+            instrumentor.instrument(config)
+            wrapped_once = MockChain.__call__
+            self.assertTrue(instrumentor._instrumented)
+
+            # Second call must return early without re-wrapping.
+            instrumentor.instrument(config)
+            self.assertIs(MockChain.__call__, wrapped_once)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

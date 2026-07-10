@@ -12,12 +12,31 @@ MCP tools include: databases, vector DBs, caches (Redis), message queues (Kafka)
 
 import json
 import logging
+import os
 from typing import Any, Dict, Optional
 
 from opentelemetry import context as otel_context
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 
 logger = logging.getLogger(__name__)
+
+# Bounded default (chars) for copied response text. These OpenInference
+# enrichment processors do not receive an OTelConfig, so we read the shared
+# GENAI_CONTENT_MAX_LENGTH env var and otherwise fall back to a large but finite
+# cap to prevent a full (multi-MB) tool result from bloating a span. An explicit
+# value of 0 (or negative) means unlimited (operator opt-in).
+_DEFAULT_RESPONSE_CONTENT_CAP = 10000
+
+
+def _resolve_content_cap() -> int:
+    """Resolve the response-content cap from GENAI_CONTENT_MAX_LENGTH."""
+    raw = os.getenv("GENAI_CONTENT_MAX_LENGTH")
+    if raw is None:
+        return _DEFAULT_RESPONSE_CONTENT_CAP
+    try:
+        return int(raw)
+    except ValueError:
+        return _DEFAULT_RESPONSE_CONTENT_CAP
 
 
 class MCPSpanEnrichmentProcessor(SpanProcessor):
@@ -33,7 +52,18 @@ class MCPSpanEnrichmentProcessor(SpanProcessor):
     def __init__(self):
         """Initialize the MCP span enrichment processor."""
         super().__init__()
+        self._content_cap = _resolve_content_cap()
         logger.debug("MCP span enrichment processor initialized")
+
+    def _cap(self, text: str) -> str:
+        """Bound copied response text so a full tool result cannot bloat a span.
+
+        0 (or negative) cap means unlimited (operator opt-in).
+        """
+        cap = self._content_cap
+        if cap and cap > 0 and text is not None and len(text) > cap:
+            return text[:cap]
+        return text
 
     def on_start(self, span: Span, parent_context: Optional[otel_context.Context] = None) -> None:
         """Called when a span is started. No-op for this processor.
@@ -204,7 +234,7 @@ class MCPSpanEnrichmentProcessor(SpanProcessor):
         if "output.value" in attributes:
             output_value = attributes["output.value"]
             if output_value:
-                return str(output_value)
+                return self._cap(str(output_value))
 
         # Try tool.result
         if "tool.result" in attributes:
@@ -212,16 +242,16 @@ class MCPSpanEnrichmentProcessor(SpanProcessor):
             if tool_result:
                 # Handle both string and structured results
                 if isinstance(tool_result, dict):
-                    return json.dumps(tool_result)
-                return str(tool_result)
+                    return self._cap(json.dumps(tool_result))
+                return self._cap(str(tool_result))
 
         # Try mcp.response
         if "mcp.response" in attributes:
             mcp_response = attributes["mcp.response"]
             if mcp_response:
                 if isinstance(mcp_response, dict):
-                    return json.dumps(mcp_response)
-                return str(mcp_response)
+                    return self._cap(json.dumps(mcp_response))
+                return self._cap(str(mcp_response))
 
         # Try generic result/response attributes
         for key in ["result", "response", "output"]:
@@ -229,8 +259,8 @@ class MCPSpanEnrichmentProcessor(SpanProcessor):
                 value = attributes[key]
                 if value:
                     if isinstance(value, dict):
-                        return json.dumps(value)
-                    return str(value)
+                        return self._cap(json.dumps(value))
+                    return self._cap(str(value))
 
         return None
 

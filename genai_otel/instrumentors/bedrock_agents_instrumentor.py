@@ -65,6 +65,12 @@ class BedrockAgentsInstrumentor(BaseInstrumentor):
             import wrapt
             from botocore.client import BaseClient
 
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(BaseClient, "_genai_otel_bedrock_agents_instrumented", False) is True:
+                logger.debug("AWS Bedrock Agents already instrumented, skipping")
+                self._instrumented = True
+                return
+
             # Store original make_request method
             original_make_request = BaseClient._make_request
 
@@ -118,6 +124,10 @@ class BedrockAgentsInstrumentor(BaseInstrumentor):
 
             # Replace the method
             BaseClient._make_request = wrapped_make_request
+            try:
+                BaseClient._genai_otel_bedrock_agents_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
 
             self._instrumented = True
             logger.info("AWS Bedrock Agents instrumentation enabled")

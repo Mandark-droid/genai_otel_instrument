@@ -163,3 +163,62 @@ def test_unknown_provider_falls_back_to_openai():
 
 def test_none_content_returns_empty():
     assert detect_parts("openai", None) == []
+
+
+# ---------------------------------------------------------------------------
+# Pre-decode size guard (decompression/DoS): reject before base64 decode
+# ---------------------------------------------------------------------------
+def test_predecode_size_cap_rejects_oversized_inline_image():
+    big = base64.b64encode(b"x" * 1000).decode()
+    parts = detect_parts(
+        "openai",
+        [{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{big}"}}],
+        max_decoded_bytes=100,
+    )
+    # Part still detected (modality + mime preserved), but bytes were NOT decoded.
+    assert parts[0].type == "image"
+    assert parts[0].media_mime_type == "image/png"
+    assert parts[0].data is None
+
+
+def test_predecode_size_cap_allows_within_cap():
+    small = base64.b64encode(b"x" * 10).decode()
+    parts = detect_parts(
+        "openai",
+        [{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{small}"}}],
+        max_decoded_bytes=1000,
+    )
+    assert parts[0].data is not None
+
+
+def test_predecode_size_cap_applies_to_anthropic_base64():
+    big = base64.b64encode(b"y" * 2000).decode()
+    parts = detect_parts(
+        "anthropic",
+        [
+            {
+                "type": "image",
+                "source": {"type": "base64", "media_type": "image/png", "data": big},
+            }
+        ],
+        max_decoded_bytes=100,
+    )
+    assert parts[0].type == "image"
+    assert parts[0].data is None
+
+
+def test_decode_b64_helper_rejects_oversized_raw_bytes():
+    from genai_otel.media.detector import _decode_b64
+
+    assert _decode_b64(b"x" * 500, 100) is None
+    assert _decode_b64(b"x" * 50, 100) == b"x" * 50
+
+
+def test_default_module_cap_still_decodes_small_media():
+    # Without an explicit cap, ordinary small inline media still decodes.
+    small = base64.b64encode(b"\x89PNG\r\n").decode()
+    parts = detect_parts(
+        "openai",
+        [{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{small}"}}],
+    )
+    assert parts[0].data is not None

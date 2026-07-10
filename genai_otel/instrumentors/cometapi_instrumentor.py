@@ -17,13 +17,29 @@ import logging
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
-from .base import BaseInstrumentor
+from .base import BaseInstrumentor, register_base_url_claim
 
 logger = logging.getLogger(__name__)
 
 
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
+
+
 class CometAPIInstrumentor(BaseInstrumentor):
     """Instrumentor for CometAPI (OpenAI- and Anthropic-compatible interfaces)"""
+
+    # Domain used both to detect CometAPI clients and to claim them so the
+    # generic OpenAI/Anthropic instrumentors do not wrap the same client a
+    # second time.
+    _CLAIM_DOMAIN = "cometapi.com"
 
     def __init__(self):
         """Initialize the instrumentor."""
@@ -81,7 +97,11 @@ class CometAPIInstrumentor(BaseInstrumentor):
                 import openai
 
                 # Instrument OpenAI client initialization to detect CometAPI usage
-                if hasattr(openai, "OpenAI"):
+                # (guard prevents stacking wrappers if instrument() runs twice).
+                if (
+                    hasattr(openai, "OpenAI")
+                    and getattr(openai, "_genai_otel_cometapi_instrumented", False) is not True
+                ):
                     original_openai_init = openai.OpenAI.__init__
 
                     def wrapped_openai_init(wrapped, instance, args, kwargs):
@@ -95,13 +115,21 @@ class CometAPIInstrumentor(BaseInstrumentor):
                     openai.OpenAI.__init__ = wrapt.FunctionWrapper(
                         original_openai_init, wrapped_openai_init
                     )
+                    try:
+                        openai._genai_otel_cometapi_instrumented = True
+                    except Exception:  # noqa: BLE001
+                        pass
                     self._instrumented = True
 
             if self._anthropic_available:
                 import anthropic
 
                 # Instrument Anthropic client initialization to detect CometAPI usage
-                if hasattr(anthropic, "Anthropic"):
+                # (guard prevents stacking wrappers if instrument() runs twice).
+                if (
+                    hasattr(anthropic, "Anthropic")
+                    and getattr(anthropic, "_genai_otel_cometapi_instrumented", False) is not True
+                ):
                     original_anthropic_init = anthropic.Anthropic.__init__
 
                     def wrapped_anthropic_init(wrapped, instance, args, kwargs):
@@ -117,9 +145,14 @@ class CometAPIInstrumentor(BaseInstrumentor):
                     anthropic.Anthropic.__init__ = wrapt.FunctionWrapper(
                         original_anthropic_init, wrapped_anthropic_init
                     )
+                    try:
+                        anthropic._genai_otel_cometapi_instrumented = True
+                    except Exception:  # noqa: BLE001
+                        pass
                     self._instrumented = True
 
             if self._instrumented:
+                register_base_url_claim(self._CLAIM_DOMAIN, "cometapi")
                 logger.info("CometAPI instrumentation enabled")
 
         except Exception as e:
@@ -138,7 +171,7 @@ class CometAPIInstrumentor(BaseInstrumentor):
         """
         if hasattr(client, "base_url") and client.base_url:
             base_url = str(client.base_url).lower()
-            return "cometapi.com" in base_url
+            return self._CLAIM_DOMAIN in base_url
         return False
 
     def _instrument_openai_client(self, client):
@@ -308,6 +341,8 @@ class CometAPIInstrumentor(BaseInstrumentor):
             result: The API response object.
             request_kwargs: The original request kwargs.
         """
+        config = getattr(self, "config", None)
+
         # Add prompt content events
         messages = request_kwargs.get("messages", [])
         for idx, message in enumerate(messages):
@@ -316,7 +351,10 @@ class CometAPIInstrumentor(BaseInstrumentor):
                 content = message.get("content", "")
                 span.add_event(
                     f"gen_ai.prompt.{idx}",
-                    attributes={"gen_ai.prompt.role": role, "gen_ai.prompt.content": str(content)},
+                    attributes={
+                        "gen_ai.prompt.role": role,
+                        "gen_ai.prompt.content": _cap_content(config, content),
+                    },
                 )
 
         response_text = None
@@ -325,29 +363,30 @@ class CometAPIInstrumentor(BaseInstrumentor):
         if hasattr(result, "choices") and result.choices:
             for idx, choice in enumerate(result.choices):
                 if hasattr(choice, "message") and hasattr(choice.message, "content"):
-                    content = choice.message.content
+                    content = _cap_content(config, choice.message.content)
                     span.add_event(
                         f"gen_ai.completion.{idx}",
                         attributes={
                             "gen_ai.completion.role": "assistant",
-                            "gen_ai.completion.content": str(content),
+                            "gen_ai.completion.content": content,
                         },
                     )
                     if idx == 0:
-                        response_text = str(content)
+                        response_text = content
         # Anthropic-compatible responses: completion content from content blocks
         elif hasattr(result, "content") and result.content:
             for idx, content_block in enumerate(result.content):
                 if hasattr(content_block, "text"):
+                    content = _cap_content(config, content_block.text)
                     span.add_event(
                         f"gen_ai.completion.{idx}",
                         attributes={
                             "gen_ai.completion.role": "assistant",
-                            "gen_ai.completion.content": content_block.text,
+                            "gen_ai.completion.content": content,
                         },
                     )
                     if idx == 0:
-                        response_text = content_block.text
+                        response_text = content
 
         # Set as attribute for evaluation processor
         if response_text:

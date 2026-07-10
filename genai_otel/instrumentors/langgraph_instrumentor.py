@@ -45,6 +45,12 @@ class LangGraphInstrumentor(BaseInstrumentor):
             logger.debug("Skipping LangGraph instrumentation - library not available")
             return
 
+        # Idempotency guard: repeated instrument() calls must not stack wrappers
+        # on the shared StateGraph.compile method.
+        if self._instrumented:
+            logger.debug("LangGraph already instrumented, skipping repeat instrument()")
+            return
+
         self.config = config
 
         try:
@@ -59,8 +65,12 @@ class LangGraphInstrumentor(BaseInstrumentor):
                     # Get the compiled graph
                     compiled_graph = wrapped(*args, **kwargs)
 
-                    # Instrument the compiled graph's execution methods
-                    self._instrument_compiled_graph(compiled_graph, instance)
+                    # Instrument the compiled graph's execution methods. This must
+                    # never break the host's compile() call, so contain any failure.
+                    try:
+                        self._instrument_compiled_graph(compiled_graph, instance)
+                    except Exception as e:
+                        logger.debug("Failed to instrument compiled graph: %s", e)
 
                     return compiled_graph
 
@@ -161,6 +171,24 @@ class LangGraphInstrumentor(BaseInstrumentor):
             ),
         )(wrapped)(*args, **kwargs)
 
+    def _cap_content(self, text: Any, default: int = 200) -> str:
+        """Cap captured content per ``config.content_max_length``.
+
+        Content capture is a required audit feature, so content keeps flowing;
+        this only bounds its size. ``content_max_length == 0`` (or missing) means
+        unlimited. When no config is present (unit tests) the historical default
+        cap is used.
+        """
+        s = text if isinstance(text, str) else str(text)
+        cfg = getattr(self, "config", None)
+        max_len = default
+        cfg_len = getattr(cfg, "content_max_length", None) if cfg is not None else None
+        if isinstance(cfg_len, int):
+            max_len = cfg_len
+        if max_len and max_len > 0:
+            return s[:max_len]
+        return s
+
     def _extract_graph_attributes(
         self, instance: Any, args: Any, kwargs: Any, state_graph: Any
     ) -> Dict[str, Any]:
@@ -222,14 +250,13 @@ class LangGraphInstrumentor(BaseInstrumentor):
                     state_keys = list(input_state.keys())
                     attrs["langgraph.input.keys"] = state_keys[:10]
 
-                    # Store truncated values for important keys
+                    # Store bounded values for important keys
                     for key in ["messages", "query", "question", "input"][:3]:
                         if key in input_state:
-                            value = str(input_state[key])[:200]
-                            attrs[f"langgraph.input.{key}"] = value
+                            attrs[f"langgraph.input.{key}"] = self._cap_content(input_state[key])
                 else:
                     # Non-dict input
-                    attrs["langgraph.input"] = str(input_state)[:200]
+                    attrs["langgraph.input"] = self._cap_content(input_state)
             except Exception as e:
                 logger.debug("Failed to extract input state: %s", e)
 
@@ -321,11 +348,10 @@ class LangGraphInstrumentor(BaseInstrumentor):
                 state_keys = list(result.keys())
                 attrs["langgraph.output.keys"] = state_keys[:10]
 
-                # Store truncated values for important keys
+                # Store bounded values for important keys
                 for key in ["messages", "answer", "output", "result"][:3]:
                     if key in result:
-                        value_str = str(result[key])[:500]
-                        attrs[f"langgraph.output.{key}"] = value_str
+                        attrs[f"langgraph.output.{key}"] = self._cap_content(result[key])
 
                 # Count the number of state updates/steps
                 if "messages" in result and isinstance(result["messages"], list):

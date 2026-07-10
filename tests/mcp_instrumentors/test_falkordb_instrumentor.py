@@ -278,3 +278,129 @@ class TestFalkorDBInstrumentor:
         mock_span.set_attribute.assert_any_call("db.operation", "copy")
         mock_span.set_attribute.assert_any_call("db.name", "social")
         mock_span.set_attribute.assert_any_call("falkordb.destination_graph", "social_backup")
+
+
+def _capture_query_wrapper(config, mock_falkordb):
+    """Instrument with a captured tracer/span and return (wrappers, mock_span)."""
+    mock_tracer = MagicMock()
+    mock_span = MagicMock()
+    mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock(return_value=mock_span)
+    mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock(return_value=False)
+
+    wrappers = {}
+
+    def capture_wrapper(module, name, wrapper_func):
+        wrappers[name] = wrapper_func
+
+    with patch.dict("sys.modules", {"falkordb": mock_falkordb}):
+        with patch("wrapt.wrap_function_wrapper", side_effect=capture_wrapper):
+            with patch("genai_otel.mcp_instrumentors.falkordb_instrumentor.trace") as mock_trace:
+                mock_trace.get_tracer.return_value = mock_tracer
+                from genai_otel.mcp_instrumentors.falkordb_instrumentor import FalkorDBInstrumentor
+
+                instrumentor = FalkorDBInstrumentor(config)
+                instrumentor.instrument()
+    return wrappers, mock_span
+
+
+class TestFalkorDBStatementBounding:
+    """Tests for the content_max_length bounding of db.statement and errors."""
+
+    def test_bound_text_truncates_when_cap_positive(self):
+        from genai_otel.mcp_instrumentors.falkordb_instrumentor import (
+            _TRUNCATION_SUFFIX,
+            _bound_text,
+        )
+
+        cfg = OTelConfig(content_max_length=10)
+        result = _bound_text("MATCH (n) WHERE n.name = 1 RETURN n", cfg)
+        assert result == "MATCH (n) " + _TRUNCATION_SUFFIX
+        assert result.startswith("MATCH (n) ")
+
+    def test_bound_text_keeps_full_when_cap_zero(self):
+        from genai_otel.mcp_instrumentors.falkordb_instrumentor import _bound_text
+
+        long_statement = "MATCH (n) WHERE n.name = 1 RETURN n" * 50
+        assert _bound_text(long_statement, OTelConfig(content_max_length=0)) == long_statement
+
+    def test_bound_text_safe_without_field(self):
+        """A config missing content_max_length (e.g. spec mock) means unlimited."""
+        from unittest.mock import MagicMock as MM
+
+        from genai_otel.mcp_instrumentors.falkordb_instrumentor import _bound_text
+
+        cfg = MM(spec=OTelConfig)  # spec has no content_max_length attribute
+        assert _bound_text("some cypher", cfg) == "some cypher"
+
+    def test_db_statement_is_bounded_on_span(self):
+        cfg = OTelConfig(content_max_length=10)
+        wrappers, mock_span = _capture_query_wrapper(cfg, MagicMock())
+
+        cypher = "MATCH (n) WHERE n.name = 'x' RETURN n"
+        wrappers["Graph.query"](MagicMock(return_value="ok"), None, (cypher,), {})
+
+        stmt_calls = [
+            c.args[1] for c in mock_span.set_attribute.call_args_list if c.args[0] == "db.statement"
+        ]
+        assert stmt_calls, "db.statement was not captured"
+        assert stmt_calls[0].startswith(cypher[:10])
+        assert len(stmt_calls[0]) < len(cypher) + 20  # bounded, not the full statement
+
+    def test_db_statement_full_when_cap_zero(self):
+        cfg = OTelConfig(content_max_length=0)
+        wrappers, mock_span = _capture_query_wrapper(cfg, MagicMock())
+
+        cypher = "MATCH (n) WHERE n.name = 'longvalue-for-audit' RETURN n"
+        wrappers["Graph.query"](MagicMock(return_value="ok"), None, (cypher,), {})
+
+        mock_span.set_attribute.assert_any_call("db.statement", cypher)
+
+    def test_error_status_is_bounded(self):
+        cfg = OTelConfig(content_max_length=8)
+        wrappers, mock_span = _capture_query_wrapper(cfg, MagicMock())
+
+        long_msg = "syntax error near VERY_LONG_SQL_ECHOED_BACK_IN_ERROR" * 3
+        with pytest.raises(RuntimeError):
+            wrappers["Graph.query"](
+                MagicMock(side_effect=RuntimeError(long_msg)), None, ("MATCH (n) RETURN n",), {}
+            )
+
+        assert mock_span.set_status.called
+        status = mock_span.set_status.call_args.args[0]
+        assert len(status.description) <= 8 + len("...[truncated]")
+
+
+class TestFalkorDBDoubleWrapGuard:
+    """Tests for the idempotency / double-wrap guard."""
+
+    def test_repeated_instrument_does_not_stack(self, config):
+        from genai_otel.mcp_instrumentors import falkordb_instrumentor as fmod
+
+        fmod._INSTRUMENTED_MODULES.clear()
+        fmod._WRAPPED_TARGETS.clear()
+
+        mock_falkordb = MagicMock()
+        with patch.dict("sys.modules", {"falkordb": mock_falkordb}):
+            with patch("wrapt.wrap_function_wrapper") as mock_wrap:
+                instrumentor = fmod.FalkorDBInstrumentor(config)
+                assert instrumentor.instrument() is True
+                first = mock_wrap.call_count
+                assert first == 5
+                # Second call is guarded: no additional wrapping.
+                assert instrumentor.instrument() is True
+                assert mock_wrap.call_count == first
+
+    def test_uninstrument_resets_guard(self, config):
+        from genai_otel.mcp_instrumentors import falkordb_instrumentor as fmod
+
+        fmod._INSTRUMENTED_MODULES.clear()
+        fmod._WRAPPED_TARGETS.clear()
+
+        mock_falkordb = MagicMock()
+        with patch.dict("sys.modules", {"falkordb": mock_falkordb}):
+            with patch("wrapt.wrap_function_wrapper"):
+                instrumentor = fmod.FalkorDBInstrumentor(config)
+                instrumentor.instrument()
+                assert fmod._is_module_instrumented(mock_falkordb) is True
+                assert instrumentor.uninstrument() is True
+                assert fmod._is_module_instrumented(mock_falkordb) is False

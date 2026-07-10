@@ -13,6 +13,17 @@ from .base import BaseInstrumentor
 logger = logging.getLogger(__name__)
 
 
+def _cap_content(config, text):
+    """Bound captured content to config.content_max_length (0/None/unset = unlimited)."""
+    if text is None:
+        return text
+    text = str(text)
+    max_len = getattr(config, "content_max_length", 0) if config else 0
+    if isinstance(max_len, int) and max_len > 0:
+        return text[:max_len]
+    return text
+
+
 class AzureOpenAIInstrumentor(BaseInstrumentor):
     """Instrumentor for Azure OpenAI"""
 
@@ -37,6 +48,11 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
         self.config = config
         try:
             from azure.ai.openai import OpenAIClient
+
+            # Idempotency guard: never stack wrappers if instrument() runs twice.
+            if getattr(OpenAIClient, "_genai_otel_azure_instrumented", False) is True:
+                logger.debug("Azure OpenAI already instrumented, skipping")
+                return
 
             original_complete = OpenAIClient.complete
 
@@ -82,6 +98,10 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
                     return result
 
             OpenAIClient.complete = wrapped_complete
+            try:
+                OpenAIClient._genai_otel_azure_instrumented = True
+            except Exception:  # noqa: BLE001
+                pass
 
         except ImportError:
             pass
@@ -122,5 +142,11 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
                         attrs["gen_ai.response"] = response_content
         except (IndexError, AttributeError) as e:
             logger.debug("Failed to extract response content: %s", e)
+
+        # Bound captured completion text (audit content stays, but capped).
+        if "gen_ai.response" in attrs:
+            attrs["gen_ai.response"] = _cap_content(
+                getattr(self, "config", None), attrs["gen_ai.response"]
+            )
 
         return attrs

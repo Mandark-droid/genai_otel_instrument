@@ -3,9 +3,13 @@
 import json
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+# Sentinel distinguishing "not cached yet" from a cached None result, so that
+# negative lookups (unknown/internal models) are memoized too.
+_MISS = object()
 
 
 class CostCalculator:
@@ -21,10 +25,60 @@ class CostCalculator:
                 Format: {"chat": {"model-name": {"promptPrice": 0.001, "completionPrice": 0.002}}}
                 Custom prices will be merged with default pricing, with custom taking precedence.
         """
-        self.pricing_data: Dict[str, Any] = {}
+        # Precomputed lookup structures (rebuilt whenever pricing_data is set):
+        #   _exact_index[category]  = {lowercased_key: original_key}
+        #   _substr_index[category] = [(lowercased_key, original_key), ...] longest-first
+        # plus per-model memoization caches for name resolution and chat pricing.
+        self._exact_index: Dict[str, Dict[str, str]] = {}
+        self._substr_index: Dict[str, List[Tuple[str, str]]] = {}
+        self._norm_cache: Dict[Tuple[str, str], Optional[str]] = {}
+        self._chat_pricing_cache: Dict[str, Optional[Dict[str, Any]]] = {}
+        self._pricing_data: Dict[str, Any] = {}
         self._load_pricing()
+        self._build_indices()
         if custom_pricing_json:
             self._merge_custom_pricing(custom_pricing_json)
+
+    @property
+    def pricing_data(self) -> Dict[str, Any]:
+        """The pricing table.
+
+        Reassigning it (``calculator.pricing_data = {...}``) rebuilds the lookup
+        indices and clears the memo caches, so code and tests that swap in a
+        different pricing dict stay consistent. In-place mutation of the returned
+        dict does NOT rebuild indices; callers doing that should call
+        :meth:`_build_indices` themselves (as :meth:`_merge_custom_pricing` does).
+        """
+        return self._pricing_data
+
+    @pricing_data.setter
+    def pricing_data(self, value: Dict[str, Any]) -> None:
+        self._pricing_data = value if isinstance(value, dict) else {}
+        # During __init__ the index attributes are created before this setter is
+        # first driven by _load_pricing, so rebuild eagerly on every reassignment.
+        if hasattr(self, "_exact_index"):
+            self._build_indices()
+
+    def _build_indices(self) -> None:
+        """Precompute lowercase exact-match and length-sorted substring indices
+        for each pricing category and clear the per-model memo caches.
+
+        Called once after loading and again whenever custom pricing is merged.
+        This turns per-call model resolution from an O(n) scan plus a per-call
+        ``sorted()`` over all keys into an O(1) dict hit (exact) or a single
+        precomputed longest-first pass (substring), memoized per model name.
+        """
+        self._exact_index = {}
+        self._substr_index = {}
+        self._norm_cache = {}
+        self._chat_pricing_cache = {}
+        for category, models in self.pricing_data.items():
+            if not isinstance(models, dict):
+                continue
+            lowered = [(str(k).lower(), k) for k in models]
+            self._exact_index[category] = {lk: k for lk, k in lowered}
+            # Longest keys first so a substring match prefers the most specific model.
+            self._substr_index[category] = sorted(lowered, key=lambda t: len(t[0]), reverse=True)
 
     def _load_pricing(self):
         """Load pricing data from the JSON configuration file."""
@@ -117,6 +171,9 @@ class CostCalculator:
                         pricing,
                     )
 
+            # Rebuild lookup indices and drop memo caches so merged pricing is visible.
+            self._build_indices()
+
         except json.JSONDecodeError as e:
             logger.error(
                 "Failed to decode custom pricing JSON: %s. Custom pricing will be ignored.", e
@@ -197,16 +254,24 @@ class CostCalculator:
         granular = self._calculate_chat_cost_granular(model, usage)
         return granular["total"]
 
-    def _calculate_chat_cost_granular(self, model: str, usage: Dict[str, int]) -> Dict[str, float]:
-        """Calculate granular cost breakdown for chat models.
+    def _resolve_chat_pricing(self, model: str) -> Optional[Dict[str, Any]]:
+        """Resolve the pricing dict for a chat model, memoized per model name.
 
-        Returns:
-            Dict with keys: total, prompt, completion, reasoning, cache_read, cache_write
+        Returns the model's pricing entry, a parameter-count-based local-model
+        price tier for unknown Ollama/HuggingFace models, or None when no pricing
+        can be determined. Negative results are cached too, so unknown/internal
+        model names do not repeatedly scan the pricing table on the hot path.
         """
-        model_key = self._normalize_model_name(model, "chat")
+        cached = self._chat_pricing_cache.get(model, _MISS)
+        if cached is not _MISS:
+            return cached
 
-        # Fallback for unknown local models (Ollama, HuggingFace): estimate pricing based on parameter count
-        if not model_key:
+        model_key = self._normalize_model_name(model, "chat")
+        if model_key:
+            pricing: Optional[Dict[str, Any]] = self.pricing_data["chat"][model_key]
+        else:
+            # Fallback for unknown local models (Ollama, HuggingFace): estimate
+            # pricing based on parameter count parsed from the model name.
             param_count = self._extract_param_count_from_model_name(model)
             if param_count is not None:
                 pricing = self._get_local_model_price_tier(param_count)
@@ -220,16 +285,27 @@ class CostCalculator:
                 )
             else:
                 logger.debug("Pricing not found for chat model: %s", model)
-                return {
-                    "total": 0.0,
-                    "prompt": 0.0,
-                    "completion": 0.0,
-                    "reasoning": 0.0,
-                    "cache_read": 0.0,
-                    "cache_write": 0.0,
-                }
-        else:
-            pricing = self.pricing_data["chat"][model_key]
+                pricing = None
+
+        self._chat_pricing_cache[model] = pricing
+        return pricing
+
+    def _calculate_chat_cost_granular(self, model: str, usage: Dict[str, int]) -> Dict[str, float]:
+        """Calculate granular cost breakdown for chat models.
+
+        Returns:
+            Dict with keys: total, prompt, completion, reasoning, cache_read, cache_write
+        """
+        pricing = self._resolve_chat_pricing(model)
+        if pricing is None:
+            return {
+                "total": 0.0,
+                "prompt": 0.0,
+                "completion": 0.0,
+                "reasoning": 0.0,
+                "cache_read": 0.0,
+                "cache_write": 0.0,
+            }
 
         # Standard prompt and completion tokens
         prompt_tokens = usage.get("prompt_tokens", 0)
@@ -338,22 +414,44 @@ class CostCalculator:
         return 0.0
 
     def _normalize_model_name(self, model: str, category: str) -> Optional[str]:
-        """Normalize model name to match pricing keys for a specific category."""
-        if category not in self.pricing_data:
+        """Normalize model name to match pricing keys for a specific category.
+
+        Memoized per ``(model, category)`` including negative results, backed by
+        the precomputed exact/substring indices from :meth:`_build_indices`.
+        """
+        cache_key = (model, category)
+        cached = self._norm_cache.get(cache_key, _MISS)
+        if cached is not _MISS:
+            return cached
+        result = self._resolve_model_key(model, category)
+        self._norm_cache[cache_key] = result
+        return result
+
+    def _resolve_model_key(self, model: str, category: str) -> Optional[str]:
+        """Resolve a model name to its pricing key using precomputed indices.
+
+        Preserves the original semantics: case-insensitive exact match first,
+        then the longest matching substring key.
+        """
+        cat_data = self._pricing_data.get(category)
+        if not isinstance(cat_data, dict) or not cat_data:
             return None
-
+        # Detect out-of-band in-place additions/removals to pricing_data[category]
+        # (callers that mutate the nested dict instead of reassigning pricing_data)
+        # and rebuild the indices so lookups stay correct. This runs only on a memo
+        # miss, so the warm hot path (all cache hits) never pays for it.
+        if len(self._exact_index.get(category, ())) != len(cat_data):
+            self._build_indices()
+        exact = self._exact_index.get(category)
+        if not exact:
+            return None
         normalized_model = model.lower()
-
-        # Exact match (case-insensitive)
-        for key in self.pricing_data[category]:
-            if normalized_model == key.lower():
-                return key
-
-        # Substring match (case-insensitive)
-        sorted_keys = sorted(self.pricing_data[category].keys(), key=len, reverse=True)
-        for key in sorted_keys:
-            if key.lower() in normalized_model:
-                return key
+        hit = exact.get(normalized_model)
+        if hit is not None:
+            return hit
+        for lower_key, original_key in self._substr_index.get(category, ()):  # longest-first
+            if lower_key in normalized_model:
+                return original_key
         return None
 
     def _extract_param_count_from_model_name(self, model: str) -> Optional[float]:
