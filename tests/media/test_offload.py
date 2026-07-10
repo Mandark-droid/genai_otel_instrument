@@ -153,6 +153,7 @@ def test_no_egress_posture_rejects_non_builtin_redactor():
 def test_restricted_profile_allows_builtin_redactor():
     # A valid PNG through the built-in exif_stripper is permitted even under a
     # strict profile, and uploads successfully.
+    pytest.importorskip("PIL")
     from PIL import Image
 
     buf = io.BytesIO()

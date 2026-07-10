@@ -8,10 +8,13 @@ Covers:
   - PII air-gapped offline env enforcement
 """
 
+import importlib.util
 import os
 from unittest.mock import Mock, patch
 
 import pytest
+
+_PRESIDIO_MISSING = importlib.util.find_spec("presidio_analyzer") is None
 
 from genai_otel.evaluation.config import PIIConfig, PIIMode, ToxicityConfig
 from genai_otel.evaluation.pii_detector import PIIDetector
@@ -203,6 +206,7 @@ class TestPIIAirGap:
         detector = PIIDetector(config)
         assert detector._air_gapped is True
 
+    @pytest.mark.skipif(_PRESIDIO_MISSING, reason="presidio_analyzer not installed")
     @patch("presidio_analyzer.AnalyzerEngine", side_effect=Exception("boom"))
     def test_airgapped_sets_offline_env(self, mock_engine, monkeypatch):
         # Force the underlying HF/spaCy stack offline BEFORE any model resolve.

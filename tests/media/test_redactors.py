@@ -93,6 +93,7 @@ def test_face_blur_fails_closed_when_opencv_missing(monkeypatch):
 # exif_stripper valid path: strips and does not raise
 # ---------------------------------------------------------------------------
 def test_exif_stripper_strips_valid_image_without_raising():
+    pytest.importorskip("PIL")
     from PIL import Image
 
     buf = io.BytesIO()
@@ -120,6 +121,7 @@ def _fake_pdf_reader_factory(text):
 
 
 def test_pdf_pii_scan_raises_when_pii_detected(monkeypatch):
+    pytest.importorskip("pypdf")
     import pypdf
 
     # PAN pattern: 5 letters, 4 digits, 1 letter
@@ -129,6 +131,7 @@ def test_pdf_pii_scan_raises_when_pii_detected(monkeypatch):
 
 
 def test_pdf_pii_scan_passes_clean_pdf_through_unchanged(monkeypatch):
+    pytest.importorskip("pypdf")
     import pypdf
 
     monkeypatch.setattr(pypdf, "PdfReader", _fake_pdf_reader_factory("nothing sensitive here"))
