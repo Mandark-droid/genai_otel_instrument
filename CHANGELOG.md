@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-07-10
+
 ### Security & performance hardening (BFSI / on-prem)
 
 This is a large hardening pass ahead of regulated on-prem (bank) deployments.
@@ -93,22 +95,18 @@ bounded, and cheaper to collect, and fixes correctness bugs.
 - Added double-wrap idempotency guards across instrumentors, scheme validation on
   the Ollama metrics poller URL, and best-effort `uninstrument()` paths for
   several MCP instrumentors.
+- **Aggregator client dedup** (folded in from the never-released 1.5.1): a client
+  pointed at an aggregator `base_url` (OpenRouter, CometAPI) was wrapped twice -
+  by the dedicated aggregator instrumentor and by the generic OpenAI/Anthropic
+  instrumentor - producing duplicate spans and double-counted token/cost metrics.
+  Aggregator instrumentors now register a `base_url` claim and the generic
+  instrumentors skip claimed clients (one span, one set of metrics per call).
 
-## [1.5.1] - 2026-07-10
+### Pricing
 
-### Fixed
-
-- **Duplicate spans and double-counted metrics for aggregator clients
-  (OpenRouter, CometAPI)**: a client pointed at an aggregator `base_url` was
-  wrapped twice - once by the dedicated aggregator instrumentor and once by
-  the generic OpenAI/Anthropic instrumentor - producing two nested spans per
-  call (e.g. `cometapi.chat.completion` + `openai.chat.completion`) and
-  recording request/token/cost metrics twice. Aggregator instrumentors now
-  register a `base_url` claim (`register_base_url_claim` in
-  `instrumentors/base.py`) and the generic OpenAI/Anthropic instrumentors
-  skip claimed clients, so each call produces exactly one span and one set of
-  metrics. If the aggregator instrumentor is disabled, the generic
-  instrumentor traces those clients as before (no coverage loss).
+- Added `cacheReadPrice` ($0.50/1M) to the Sakana Fugu Ultra entries
+  (`fugu-ultra` / `sakana/fugu-ultra` / `fugu-ultra-20260615`); the >272K-context
+  premium tier is documented in each note (not representable in the flat schema).
 
 ## [1.5.0] - 2026-07-07
 
