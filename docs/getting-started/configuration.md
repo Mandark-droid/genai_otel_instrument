@@ -231,6 +231,46 @@ All evaluation features are opt-in and disabled by default. See the [Evaluation 
 | `GENAI_ENABLE_HALLUCINATION_DETECTION` | `false` | Enable hallucination detection |
 | `GENAI_HALLUCINATION_THRESHOLD` | `0.6` | Detection threshold (0.0-1.0) |
 
+## Security Hardening (BFSI / on-prem)
+
+For regulated on-prem deployments, `GENAI_PROFILE=strict` (aliases `bfsi`, `bank`)
+locks down the posture in one switch: audit content capture stays **on**, but all
+third-party network egress is disabled and runtime model downloads are blocked.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GENAI_PROFILE` | | `strict` / `bfsi` / `bank` expand to the hardened posture below (empty = no profile) |
+| `GENAI_ALLOW_EXTERNAL_EGRESS` | `true` | When `false`, components must not send content/telemetry to any third party (e.g. the toxicity Perspective API is disabled) |
+| `GENAI_AIR_GAPPED` | `false` | When `true`, components must not fetch models/assets at runtime (Detoxify weights, spaCy models) |
+
+Under `GENAI_PROFILE=strict` the profile sets `GENAI_ALLOW_EXTERNAL_EGRESS=false`,
+`GENAI_AIR_GAPPED=true`, `GENAI_CO2_OFFLINE_MODE=true` and
+`GENAI_TOXICITY_USE_PERSPECTIVE_API=false`, and enables content capture for audit
+unless you pin `GENAI_ENABLE_CONTENT_CAPTURE` yourself.
+
+Blocking evaluation (`GENAI_PII_MODE=block`, `*_BLOCK_ON_DETECTION=true`) now
+intercepts the request **before** the LLM call and raises
+`genai_otel.exceptions.PolicyViolationError`, instead of only annotating the span
+after the response has already returned.
+
+## Performance and Metric Verbosity
+
+Full per-request detail is always written to span attributes (audit is
+unaffected). These flags gate only the additional aggregated-metric instruments,
+which dominate per-call overhead at high throughput.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GENAI_METRICS_PROFILE` | `standard` | `standard` = request count, latency, token counter, total cost. `full` = also token histograms, granular cost counters, finish counters |
+| `GENAI_RECORD_TOKEN_HISTOGRAMS` | `false` | Record per-request token distribution histograms |
+| `GENAI_RECORD_GRANULAR_COST_METRICS` | `false` | Record prompt/completion/reasoning/cache cost counters (span attributes are always set regardless) |
+| `GENAI_RECORD_FINISH_METRICS` | `false` | Record finish-reason / success / failure counters |
+| `GENAI_ENABLE_CONCURRENCY_METRICS` | `true` | Track the `gen_ai.server.requests.running` gauge |
+| `OTEL_METRICS_EXEMPLAR_FILTER` | `always_off` | Metric exemplar sampling; set `trace_based` to re-enable (adds per-measurement cost) |
+
+See [`benchmarks/`](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/benchmarks)
+for per-call overhead numbers and the measurement tooling.
+
 ## Telemetry (Opt-in)
 
 Anonymous usage telemetry is disabled by default.
