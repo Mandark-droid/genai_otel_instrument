@@ -4452,17 +4452,20 @@
     "fugu-ultra": {
       "promptPrice": 0.005,
       "completionPrice": 0.03,
-      "note": "Sakana AI Fugu Ultra (Jun 15, 2026) - input $5/1M, output $30/1M, cache read $0.50/1M, 1M context. Source: models.dev"
+      "cacheReadPrice": 0.0005,
+      "note": "Sakana AI Fugu Ultra (fugu-ultra-20260615). Base prices for context <=272K: input $5/1M, output $30/1M, cache read $0.50/1M. Above 272K context Sakana charges input $10/1M, output $45/1M, cache read $1.00/1M - the flat per-token schema cannot model context-dependent tiers, so the base (<=272K) tier is stored. 1M context. Source: models.dev / Sakana AI"
     },
     "sakana/fugu-ultra": {
       "promptPrice": 0.005,
       "completionPrice": 0.03,
-      "note": "Sakana AI Fugu Ultra via provider prefix"
+      "cacheReadPrice": 0.0005,
+      "note": "Sakana AI Fugu Ultra via provider prefix. Base tier (context <=272K): input $5/1M, output $30/1M, cache read $0.50/1M; >272K tier ($10/$45/$1.00 per 1M) not representable in the flat schema."
     },
     "fugu-ultra-20260615": {
       "promptPrice": 0.005,
       "completionPrice": 0.03,
-      "note": "Sakana AI Fugu Ultra dated snapshot"
+      "cacheReadPrice": 0.0005,
+      "note": "Sakana AI Fugu Ultra dated snapshot. Base tier (context <=272K): input $5/1M, output $30/1M, cache read $0.50/1M; >272K tier ($10/$45/$1.00 per 1M) not representable in the flat schema."
     },
     "dashscope/qwen3.5-plus": {
       "promptPrice": 0.0004,
