@@ -260,11 +260,11 @@ TraceVerde v1.1.1 already emits the proposed shape on the wire via dual-emission
 
 ## Ecosystem & Framework Contributions
 
-Beyond the spec, `genai_otel` is being upstreamed **into agent frameworks** as their native OpenTelemetry observability layer — demonstrating the library powering real third-party agents, not just first-party services:
+Beyond the spec, `genai_otel` is shipping **inside agent frameworks** as their OpenTelemetry observability layer — in-tree where the project accepts it, or as a standalone plugin where the project's policy keeps integrations out of the core tree — demonstrating the library powering real third-party agents, not just first-party services:
 
-| PR | Framework | Contribution | Status |
+| Integration | Framework | Contribution | Status |
 |---|---|---|---|
-| [**hermes-agent #48184**](https://github.com/NousResearch/hermes-agent/pull/48184) | [NousResearch Hermes](https://github.com/NousResearch/hermes-agent) | A bundled `observability/otel` plugin exporting Hermes turns / LLM calls / tool calls as OTel GenAI spans **and** dashboard log records, with no changes to Hermes core. When `genai-otel-instrument` is installed it additionally unlocks on-prem **GPU / energy / CO2 metrics**, **local-model cost** (parameter-size pricing for Ollama / HF / vLLM), and an inline **eval / guardrail suite** (PII, toxicity, bias, prompt-injection, restricted-topics, hallucination) scored on prompt **and** response — signals no vanilla OTel SDK or other GenAI instrumentor emits. | Open |
+| [**hermes-otel-plugin**](https://github.com/Mandark-droid/hermes-otel-plugin) | [NousResearch Hermes](https://github.com/NousResearch/hermes-agent) | A standalone `otel` plugin (`hermes plugins install Mandark-droid/hermes-otel-plugin`) exporting Hermes turns / LLM calls / tool calls as OTel GenAI spans **and** dashboard log records, with no changes to Hermes core. When `genai-otel-instrument` is installed it additionally unlocks on-prem **GPU / energy / CO2 metrics**, **local-model cost** (parameter-size pricing for Ollama / HF / vLLM), and an inline **eval / guardrail suite** (PII, toxicity, bias, prompt-injection, restricted-topics, hallucination) scored on prompt **and** response — signals no vanilla OTel SDK or other GenAI instrumentor emits. Originally upstream [PR #48184](https://github.com/NousResearch/hermes-agent/pull/48184) — approved on code review, then republished standalone per Hermes's policy that observability backends ship as standalone plugin repos. | **Shipped** (standalone plugin, MIT) |
 
 ## Who Uses TraceVerde?
 

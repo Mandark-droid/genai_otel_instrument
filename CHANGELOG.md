@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-07-15
+
+### Changed
+
+- **README — Hermes integration now points to the standalone plugin repo.**
+  The upstream `NousResearch/hermes-agent` PR #48184 (bundled
+  `observability/otel` plugin) was approved on code review and then closed
+  per the project's standing policy that observability backends ship as
+  standalone plugin repos rather than in the core tree. The integration now
+  lives at [Mandark-droid/hermes-otel-plugin](https://github.com/Mandark-droid/hermes-otel-plugin)
+  (`hermes plugins install Mandark-droid/hermes-otel-plugin`), and the
+  Ecosystem & Framework Contributions table reflects the shipped standalone
+  status. Docs-only release — no code changes.
+
 ## [1.6.0] - 2026-07-10
 
 ### Security & performance hardening (BFSI / on-prem)
