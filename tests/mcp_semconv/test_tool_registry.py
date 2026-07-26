@@ -223,3 +223,69 @@ class TestCapabilities:
             [FOOD_SCHEMA], capability_patterns={"refund": (r"report_error",)}
         )
         assert registry.has_capability("refund") is True
+
+
+class TestSeparatorAssumptionCanary:
+    """Fail loudly if the upstream composite-proxy separator stops being ``_``.
+
+    Server attribution rests on an assumption this repo does not control: that a
+    composite proxy joins namespace and tool name with an underscore. Two
+    upstream behaviours make a silent change here expensive:
+
+    * ``mcpadapt._sanitize_function_name`` runs ``name.replace("-", "_")`` and
+      then strips remaining non-word characters, so a proxy that switched to
+      ``-`` or ``.`` would arrive already rewritten - the registry would still
+      resolve it, but nothing downstream could tell a rewritten name from a
+      genuine one.
+    * A separator that survives sanitisation but is not in
+      :data:`DEFAULT_PREFIX_SEPARATORS` would stop being stripped, and every
+      ground-truth comparison would quietly read 0%.
+
+    Neither failure raises on its own. These tests are the alarm.
+    """
+
+    def test_fastmcp_still_joins_namespace_and_tool_with_underscore(self):
+        """The live check: mount a server and read back the wire name."""
+        fastmcp = pytest.importorskip("fastmcp", reason="fastmcp not installed")
+
+        parent = fastmcp.FastMCP(name="parent")
+        child = fastmcp.FastMCP(name="food")
+
+        @child.tool(name="search_restaurants")
+        def search_restaurants() -> str:  # pragma: no cover - body never runs
+            return "ok"
+
+        parent.mount(child, namespace="food")
+
+        import asyncio
+
+        listed = asyncio.run(parent.list_tools())
+        names = sorted(getattr(t, "name", str(t)) for t in listed)
+        assert "food_search_restaurants" in names, (
+            "fastmcp no longer joins namespace and tool name with '_'. Observed "
+            "names: {0}. Server attribution in MCPToolRegistry.resolve() assumes "
+            "the underscore form - update DEFAULT_PREFIX_SEPARATORS and the "
+            "server-attribution docs before shipping.".format(names)
+        )
+
+    def test_underscore_is_the_first_separator_tried(self):
+        """A cheap guard that runs even without fastmcp installed."""
+        from genai_otel.mcp_semconv.tool_registry import DEFAULT_PREFIX_SEPARATORS
+
+        assert (
+            DEFAULT_PREFIX_SEPARATORS[0] == "_"
+        ), "Underscore must stay the primary composite-proxy separator; " "observed {0}".format(
+            DEFAULT_PREFIX_SEPARATORS
+        )
+
+    def test_mcpadapt_sanitiser_still_rewrites_hyphens_to_underscores(self):
+        """If mcpadapt stops rewriting, a hyphen separator would reach us intact."""
+        mcpadapt_core = pytest.importorskip("mcpadapt.core", reason="mcpadapt not installed")
+        sanitise = getattr(mcpadapt_core, "_sanitize_function_name", None)
+        if sanitise is None:
+            pytest.skip("mcpadapt._sanitize_function_name not present")
+
+        assert sanitise("food-search_restaurants") == "food_search_restaurants", (
+            "mcpadapt._sanitize_function_name no longer normalises '-' to '_'. "
+            "A hyphen-separated proxy would now reach the registry unrewritten."
+        )
