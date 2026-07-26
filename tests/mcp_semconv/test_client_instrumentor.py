@@ -88,9 +88,15 @@ class TestSpanEmission:
         _invoke(instrumentor, session, "food_search_restaurants", {"query": "pizza"})
         assert len(exporter.get_finished_spans()) == 1
 
-    def test_span_is_named_for_the_unprefixed_tool(self, instrumentor, exporter):
+    def test_span_is_named_for_the_server_and_unprefixed_tool(self, instrumentor, exporter):
         _invoke(instrumentor, _FakeClientSession(), "food_search_restaurants")
-        assert exporter.get_finished_spans()[0].name == "mcp.call_tool search_restaurants"
+        assert exporter.get_finished_spans()[0].name == "mcp.call_tool food.search_restaurants"
+
+    def test_span_name_omits_server_when_it_cannot_be_attributed(self, instrumentor, exporter):
+        # get_addresses exists on both food and instamart, so the server is
+        # genuinely unknown - the name must not invent one.
+        _invoke(instrumentor, _FakeClientSession(), "get_addresses")
+        assert exporter.get_finished_spans()[0].name == "mcp.call_tool get_addresses"
 
     def test_span_carries_prefix_stripped_attribution(self, instrumentor, exporter):
         _invoke(instrumentor, _FakeClientSession(), "food_search_restaurants")
