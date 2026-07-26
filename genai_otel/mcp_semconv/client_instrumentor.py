@@ -284,6 +284,22 @@ def build_error_attributes(source: Any) -> Dict[str, Any]:
 # ----------------------------------------------------------------------
 
 
+def build_span_name(resolution: ToolResolution, fallback: Any = None) -> str:
+    """Build the span name for one ``callTool``.
+
+    ``mcp.call_tool {server}.{tool}`` when the server is known, falling back to
+    ``mcp.call_tool {tool}`` when it is not (an unmapped tool, or a name present
+    on several servers). The server is part of the name deliberately: the same
+    tool name exists on more than one server in a composite surface, so a
+    name without it collapses distinct operations into one entry in every
+    latency and error-rate breakdown.
+    """
+    tool = resolution.tool or (str(fallback) if fallback else "")
+    if resolution.server:
+        return "mcp.call_tool {0}.{1}".format(resolution.server, tool)
+    return "mcp.call_tool {0}".format(tool)
+
+
 def build_call_attributes(
     raw_name: str,
     arguments: Any = None,
@@ -534,7 +550,7 @@ class MCPClientInstrumentor(BaseInstrumentor):
                 logger.debug("Failed to build MCP call attributes: %s", e)
                 attributes, resolution = {}, ToolResolution(raw_name=str(name), tool=str(name))
 
-            span_name = "mcp.call_tool {0}".format(resolution.tool or name)
+            span_name = build_span_name(resolution, fallback=name)
             span = instrumentor.tracer.start_span(span_name, attributes=attributes)
 
             with trace.use_span(span, end_on_exit=True, record_exception=False):
