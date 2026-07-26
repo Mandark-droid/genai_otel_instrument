@@ -374,3 +374,10 @@ CLAUDE.md
 genai_otel/__version__.py
 genai_otel/__version__.py
 .claude/settings.local.json
+
+# test-first workflow scratch outputs (pytest baseline/after dumps)
+baseline_*.txt
+after_*.txt
+
+# local test virtualenv
+.venv_test/
