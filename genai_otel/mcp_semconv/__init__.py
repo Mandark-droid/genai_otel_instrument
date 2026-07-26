@@ -48,6 +48,7 @@ from .client_instrumentor import (
     build_call_attributes,
     build_error_attributes,
     build_result_attributes,
+    build_span_name,
     expected_tool,
     extract_cart,
     extract_result_payload,
@@ -104,6 +105,7 @@ __all__ = [
     "build_call_attributes",
     "build_result_attributes",
     "build_error_attributes",
+    "build_span_name",
     "extract_result_payload",
     "extract_cart",
     # Session state
