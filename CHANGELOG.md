@@ -6,6 +6,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **MCP client instrumentation (`genai_otel.mcp_semconv`)** — one span per
+  `callTool`, named `mcp.call_tool {server}.{tool}`. This is net-new ground:
+  `openinference-instrumentation-mcp` is a pure W3C context-propagation shim
+  that creates no spans and sets no attributes, and
+  `openinference-instrumentation-smolagents` names every MCP tool span after
+  the adapter class (`MCPAdaptTool`) with no server attribution, no protocol
+  error detail, and no session key. Nothing here double-instruments either.
+
+  Emits `mcp.server`, `mcp.tool`, `mcp.tool.raw_name`, `mcp.stage`,
+  `mcp.behaviour`, `mcp.idempotent`, `mcp.session_id`,
+  `mcp.error.message_raw` / `.http_status` / `.jsonrpc_code`,
+  `mcp.tool_selection.candidate_count` / `.correct` / `.expected`,
+  `mcp.identifier.hallucinated`, `commerce.cart_hash`,
+  `commerce.order.placement_attempt` and `commerce.terminal_state`.
+
+- **Schema-map-driven tool metadata** (`MCPToolRegistry`). Stage, behaviour and
+  idempotency come from a supplied schema map, never hardcoded. Server
+  attribution resolves against *known* server names rather than splitting on
+  the first separator, so a real tool name that contains the separator
+  (`search_restaurants_dineout`) is not mangled. A canary test fails loudly if
+  the upstream composite-proxy separator assumption ever changes.
+
+- **Deterministic terminal-state classifier** (`TerminalStateClassifier`).
+  Rule-based over span attributes with no LLM judgement; every classification
+  returns the evidence that produced it. Seven states, with `BLOCKED_NO_TOOL`
+  sub-classified by the resolution the user actually requested — which
+  separates "the agent failed" from "no tool in the surface could have
+  succeeded".
+
+- **Live validation harness** (`examples/mcp_live_validation/`). Drives a real
+  MCP client over stdio against a real FastMCP composite-proxy server and
+  asserts the emitted attributes, so the instrumentation is verified against a
+  real transport rather than only against mocks.
+
+### Security
+
+- MCP user identifiers are salted-SHA-256 hashed before reaching a span
+  (`GENAI_MCP_HASH_SALT`; an ephemeral per-process salt with a warning when
+  unset). Request and response bodies are never written to a span by this
+  module — the session id is recorded as the support-correlation key, and
+  hallucinated-identifier detection records offending argument *keys* only,
+  never their values.
+
 ## [1.6.1] - 2026-07-15
 
 ### Changed
