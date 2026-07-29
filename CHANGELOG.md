@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **LiteLLM callers lost all token and cost telemetry ([#10](https://github.com/Mandark-droid/genai_otel_instrument/issues/10)).**
+  LiteLLM calls the OpenAI SDK in raw-response mode so it can read rate-limit
+  headers, so `chat.completions.create` returns
+  `openai._legacy_response.LegacyAPIResponse` rather than a `ChatCompletion`.
+  That wrapper exposes no `.usage` — the model is reachable only via `.parse()`
+  — so every `hasattr(result, "usage")` check was False and usage, cost and
+  finish-reason were dropped. The failure was silent: spans were created and
+  request attributes were correct, only the numbers were missing. Where an LLM
+  gateway is the standard inference entry point this zeroes cost dashboards and
+  spend attribution for every service behind it, and a zeroed cost reads as
+  "this was free" rather than "this was not measured". Raw-response wrappers are
+  now unwrapped centrally in `BaseInstrumentor._record_result_metrics`, so all
+  instrumentors benefit; it also covers direct use of
+  `with_raw_response.create(...)` and the same wrapper shape on Azure OpenAI.
+  Degrades to prior behaviour if a wrapper cannot be parsed, and does not touch
+  streaming (the only caller runs on the non-streaming branch).
+
 ### Added
 
 - **MCP client instrumentation (`genai_otel.mcp_semconv`)** — one span per
