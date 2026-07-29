@@ -111,6 +111,25 @@ class TestPrivacy:
         attributes, _ = build_call_attributes("search_menu", registry=registry, context=context)
         assert attributes[MCPAttributes.SESSION_ID] == "sess-abc"
 
+    def test_session_id_also_emitted_under_the_conventional_keys(self, registry):
+        """MCP spans must be joinable with the LLM spans from the same run.
+
+        `mcp.session_id` alone shares no key with `session.id` /
+        `gen_ai.conversation.id`, which is what BaseInstrumentor sets — so a
+        session could not be reassembled from its own telemetry and tool calls
+        fragmented into ~1.5-span "sessions". Regression test for #11.
+        """
+        context = MCPCallContext(session_id="sess-abc")
+        attributes, _ = build_call_attributes("search_menu", registry=registry, context=context)
+        assert attributes["session.id"] == "sess-abc"
+        assert attributes["gen_ai.conversation.id"] == "sess-abc"
+
+    def test_no_session_keys_when_no_session_declared(self, registry):
+        """Absent a session, emit nothing rather than an empty or invented id."""
+        attributes, _ = build_call_attributes("search_menu", registry=registry)
+        assert "session.id" not in attributes
+        assert "gen_ai.conversation.id" not in attributes
+
     def test_user_identifier_is_hashed_never_raw(self, registry):
         phone = "+919812345678"
         context = MCPCallContext(session_id="s", user_id=phone)

@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **MCP spans were unjoinable with the LLM spans from the same run ([#11](https://github.com/Mandark-droid/genai_otel_instrument/issues/11)).**
+  MCP client spans recorded the session only as `mcp.session_id`, while LLM
+  spans use `session.id` / `gen_ai.conversation.id` (set from
+  `config.session_id_extractor`). With no key in common an agent session could
+  not be reassembled from its own telemetry: on a real run 10 spans carried
+  `session.id` and 450+ tool calls carried none, so 552 spans grouped into 209
+  "sessions" of roughly 1.5 spans each where eight runs had actually happened —
+  and the fragments look plausible, so anything computing cost, duration or
+  tool-usage per session was silently wrong. `mcp_session()` now emits the
+  conventional keys alongside `mcp.session_id`, which stays unchanged for
+  existing readers.
+
+### Fixed
+
 - **LiteLLM callers lost all token and cost telemetry ([#10](https://github.com/Mandark-droid/genai_otel_instrument/issues/10)).**
   LiteLLM calls the OpenAI SDK in raw-response mode so it can read rate-limit
   headers, so `chat.completions.create` returns
