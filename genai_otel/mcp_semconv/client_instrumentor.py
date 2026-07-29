@@ -352,6 +352,19 @@ def build_call_attributes(
     if context is not None:
         if context.session_id:
             attributes[MCPAttributes.SESSION_ID] = context.session_id
+            # Also emit the conventional keys. `mcp.session_id` alone made MCP
+            # spans unjoinable with the LLM spans from the same agent run, which
+            # set `session.id` / `gen_ai.conversation.id` via
+            # BaseInstrumentor's session_id_extractor. With no key in common, a
+            # session cannot be reassembled from its own telemetry: on a real
+            # run 10 spans carried session.id and 450+ tool calls carried none,
+            # so 552 spans grouped into 209 "sessions" of ~1.5 spans each where
+            # eight runs actually happened -- and the fragments look plausible,
+            # so the error is silent. Additive: anything already reading
+            # `mcp.session_id` is unaffected.
+            # https://github.com/Mandark-droid/genai_otel_instrument/issues/11
+            attributes["session.id"] = context.session_id
+            attributes["gen_ai.conversation.id"] = context.session_id
         if context.expected_tool:
             # Compared against the unprefixed name. Comparing against the raw
             # name here is the bug that silently scores every run 0%.
