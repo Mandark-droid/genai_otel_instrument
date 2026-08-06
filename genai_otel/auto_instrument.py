@@ -344,7 +344,15 @@ def setup_auto_instrumentation(config: OTelConfig):
     cost_calculator = None
     if config.enable_cost_tracking:
         try:
-            cost_calculator = CostCalculator()
+            # Reuse the process-wide calculator rather than building another
+            # one. Both are default-priced, so this is behaviour-identical, but
+            # a fresh instance rebuilds the whole exact/substring index over
+            # every priced model - allocation that repeats on each
+            # setup_auto_instrumentation() call and scales with the size of the
+            # pricing table.
+            from .instrumentors.base import _get_default_cost_calculator
+
+            cost_calculator = _get_default_cost_calculator()
             cost_processor = CostEnrichmentSpanProcessor(cost_calculator)
             tracer_provider.add_span_processor(cost_processor)
             logger.info("Cost enrichment processor added")

@@ -9,7 +9,7 @@ TraceVerde provides production-ready, zero-code instrumentation for GenAI applic
 - **Zero-Code Setup** - Just install and set env vars, or add one line of code
 - **19+ LLM Providers** - OpenAI, Anthropic, Google AI, AWS Bedrock, Azure, Cohere, Mistral, Together AI, Groq, Ollama, and more
 - **8 Multi-Agent Frameworks** - CrewAI, LangGraph, Google ADK, AutoGen, OpenAI Agents SDK, Pydantic AI, Haystack, DSPy
-- **Automatic Cost Tracking** - 1,050+ model pricing database with per-request cost breakdown
+- **Automatic Cost Tracking** - 1,700+ model pricing database with per-request cost breakdown
 - **GPU Metrics** - Real-time NVIDIA and AMD GPU monitoring (utilization, memory, temperature, power)
 - **MCP Tool Instrumentation** - Databases, caches, vector DBs, message queues, object storage
 - **Built-in Evaluation** - PII detection, toxicity, bias, prompt injection, restricted topics, hallucination detection
@@ -43,7 +43,7 @@ response = client.chat.completions.create(
 - [LLM Providers](guides/llm-providers.md) - 19+ providers with code examples
 - [Multi-Agent Frameworks](guides/multi-agent-frameworks.md) - CrewAI, LangGraph, Google ADK, AutoGen, and more
 - [MCP Tools](guides/mcp-tools.md) - Databases, caches, vector DBs, message queues
-- [Cost Tracking](guides/cost-tracking.md) - Automatic cost calculation for 1,050+ models
+- [Cost Tracking](guides/cost-tracking.md) - Automatic cost calculation for 1,700+ models
 - [GPU Metrics](guides/gpu-metrics.md) - NVIDIA and AMD GPU monitoring
 - [Evaluation & Safety](guides/evaluation.md) - PII, toxicity, bias, prompt injection, hallucination detection
 
