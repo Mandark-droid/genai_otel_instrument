@@ -31,6 +31,7 @@ class CostCalculator:
         # plus per-model memoization caches for name resolution and chat pricing.
         self._exact_index: Dict[str, Dict[str, str]] = {}
         self._substr_index: Dict[str, List[Tuple[str, str]]] = {}
+        self._indexed_counts: Dict[str, int] = {}
         self._norm_cache: Dict[Tuple[str, str], Optional[str]] = {}
         self._chat_pricing_cache: Dict[str, Optional[Dict[str, Any]]] = {}
         self._pricing_data: Dict[str, Any] = {}
@@ -70,6 +71,7 @@ class CostCalculator:
         """
         self._exact_index = {}
         self._substr_index = {}
+        self._indexed_counts = {}
         self._norm_cache = {}
         self._chat_pricing_cache = {}
         for category, models in self.pricing_data.items():
@@ -79,6 +81,10 @@ class CostCalculator:
             self._exact_index[category] = {lk: k for lk, k in lowered}
             # Longest keys first so a substring match prefers the most specific model.
             self._substr_index[category] = sorted(lowered, key=lambda t: len(t[0]), reverse=True)
+            # Record the source dict size, not the index size. Keys that differ
+            # only by case collapse into one exact-index entry, so the two
+            # counts are not interchangeable - see _resolve_model_key.
+            self._indexed_counts[category] = len(models)
 
     def _load_pricing(self):
         """Load pricing data from the JSON configuration file."""
@@ -254,6 +260,29 @@ class CostCalculator:
         granular = self._calculate_chat_cost_granular(model, usage)
         return granular["total"]
 
+    def pricing_source(self, model: str, call_type: str = "chat") -> str:
+        """Report where this model's price came from.
+
+        A cost of 0.0 is ambiguous on its own: it means either "this call really
+        was free" or "no price could be found". Callers that record cost should
+        record this alongside it so the two are distinguishable downstream - a
+        zero that is actually an unpriced model must not be summed into a spend
+        figure as though it were free.
+
+        Returns:
+            ``"table"``     - matched an entry in the pricing file.
+            ``"estimated"`` - no entry; price inferred from the parameter count
+                              in the model name via the local-model size tier.
+                              Indicative only, not a billable figure.
+            ``"unpriced"``  - no price could be determined; cost will be 0.0.
+        """
+        category = call_type if call_type in self.pricing_data else "chat"
+        if self._normalize_model_name(model, category):
+            return "table"
+        if category == "chat" and self._extract_param_count_from_model_name(model) is not None:
+            return "estimated"
+        return "unpriced"
+
     def _resolve_chat_pricing(self, model: str) -> Optional[Dict[str, Any]]:
         """Resolve the pricing dict for a chat model, memoized per model name.
 
@@ -419,6 +448,15 @@ class CostCalculator:
         Memoized per ``(model, category)`` including negative results, backed by
         the precomputed exact/substring indices from :meth:`_build_indices`.
         """
+        # Staleness check runs BEFORE the memo lookup, not inside the resolver.
+        # Memoization caches negative results too, so a name looked up before an
+        # out-of-band in-place addition would otherwise keep returning the
+        # cached None and never reach the resolver's guard. One dict length
+        # comparison per call is cheap enough to keep on the hot path.
+        cat_data = self._pricing_data.get(category)
+        if isinstance(cat_data, dict) and self._indexed_counts.get(category) != len(cat_data):
+            self._build_indices()
+
         cache_key = (model, category)
         cached = self._norm_cache.get(cache_key, _MISS)
         if cached is not _MISS:
@@ -440,7 +478,15 @@ class CostCalculator:
         # (callers that mutate the nested dict instead of reassigning pricing_data)
         # and rebuild the indices so lookups stay correct. This runs only on a memo
         # miss, so the warm hot path (all cache hits) never pays for it.
-        if len(self._exact_index.get(category, ())) != len(cat_data):
+        # Compare against the size the index was built from. Comparing against
+        # len(self._exact_index[category]) instead looks equivalent but is not:
+        # pricing keys that differ only by case (MiniMax-M2.5 / minimax-m2.5)
+        # collapse into a single exact-index entry, so that count is
+        # permanently below len(cat_data). The mismatch then fired on every
+        # memo miss, rebuilding all indices and clearing _norm_cache each time,
+        # which defeated memoisation entirely and made every lookup pay a full
+        # index rebuild.
+        if self._indexed_counts.get(category) != len(cat_data):
             self._build_indices()
         exact = self._exact_index.get(category)
         if not exact:
@@ -482,8 +528,13 @@ class CostCalculator:
         model_lower = model.lower()
 
         # First try explicit parameter count patterns (e.g., 135m, 7b, 70b)
-        # Matches: digits followed by optional decimal, then 'm' or 'b'
-        pattern = r"(\d+(?:\.\d+)?)(m|b)(?:\s|:|$|-)"
+        # Matches: digits followed by optional decimal, then 'm' or 'b'.
+        # The size token may be closed by any non-alphanumeric character, not
+        # just space/colon/dash: fine-tune and checkpoint names routinely use
+        # '_' or '.' as the separator ("MMPO_Gemma_7b_gamma1.1",
+        # "smollm2-135M_pretrained_400k"), and restricting the delimiter set
+        # dropped those to an unpriced $0.00 instead of the local-size tier.
+        pattern = r"(\d+(?:\.\d+)?)(m|b)(?:[^a-z0-9]|$)"
         match = re.search(pattern, model_lower)
         if match:
             value = float(match.group(1))
