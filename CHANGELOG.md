@@ -6,6 +6,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Pricing coverage sweep: 565 chat models added (858 -> 1423).** Imported from
+  models.dev, restricted to first-party providers and the major clouds that
+  resell under their own SKUs. Gateway/router listings (nano-gpt, kilo,
+  openrouter, vercel, llmgateway and similar) are deliberately excluded: they
+  re-list the same underlying model at their own markup, so importing them
+  would make the recorded price depend on which aggregator happened to be
+  indexed first. Coverage of models.dev's priced catalogue goes from 3614/5739
+  (63%) to 4779/5739 (83%).
+
+  This includes the **July and August 2026 releases the scheduled refresh never
+  delivered** - Claude Opus 5, Kimi K3, Gemini 3.6 Flash, Gemini 3.5 Flash Lite,
+  Qwen3.7 Flash, Qwen3.8-Max, Thinking Machines Inkling, Tencent Hy3 and Muse
+  Spark 1.2 - together with their Bedrock, Vertex and regional aliases.
+
+- **`gen_ai.usage.cost.pricing_source` span attribute**, reporting `table`,
+  `estimated` or `unpriced`. A cost of `0.0` is otherwise ambiguous: it means
+  either "this call was free" or "no price was found", and the two must not be
+  summed into a spend figure alike. `estimated` marks a price inferred from the
+  parameter count in the model name (indicative, not billable).
+
+### Fixed
+
+- **Model-name resolution rebuilt every index on every lookup.** The staleness
+  guard compared the exact-index size against the pricing-dict size, but keys
+  differing only by case (`MiniMax-M3` / `minimax-m3`) collapse into one
+  exact-index entry, so those counts never matched. The guard therefore fired on
+  every call, rebuilding all indices and clearing the memo cache each time,
+  which defeated memoisation entirely. Over 4000 lookups: cold 1288ms -> 107ms,
+  warm 1257ms -> 0.63ms. The guard now compares against the size the index was
+  built from, and runs before the memo lookup so cached negative results cannot
+  go stale.
+
+- **Version punctuation mismatches billed against the wrong model.** Vendors
+  publish `gpt-4.1` while callers and eval harnesses routinely send `gpt-4-1`.
+  A dotted key cannot match a dashed name as a substring, so the dashed form
+  fell through to whatever shorter key did match: `gpt-4-1` resolved to `gpt-4`
+  and was billed at $30/1M instead of $2/1M (15x over), `gpt-4-1-nano` at 300x
+  over, while `gpt-5-4-pro` resolved to `gpt-5` and was billed at $1.25/1M
+  instead of $30/1M (24x under). Dashed aliases are now registered wherever they
+  would resolve differently.
+
+- **`setup_auto_instrumentation()` built a second `CostCalculator`** instead of
+  reusing the process-wide one, rebuilding the full pricing index on every call.
+
+- **Parameter-count fallback missed `_` and `.` delimited size tokens**
+  (`MMPO_Gemma_7b_gamma1.1`, `smollm2-135M_pretrained_400k`), dropping those
+  models to an unpriced $0.00 rather than the local-size tier. 145 more models
+  now resolve to an estimated price.
+
+- **Embedding, reranker and ASR models are no longer imported into the `chat`
+  table.** Several (`text-embedding-3-small`, `mistral-embed`,
+  `gemini-embedding-001`) are already keyed under `embeddings` with a different
+  value shape, so importing them duplicated the entry and added keys to the chat
+  substring index that no chat call should match.
+
+- **Free-tier listings are skipped rather than stored as `$0`.** NVIDIA NIM,
+  Groq, zai `*-flash` and llama.com quote 0/0 on models.dev. A stored zero is
+  indistinguishable from a real price and, being the longer key, would win the
+  substring race and shadow the paid entry for the same family - reporting real
+  spend as free.
+
 ## [1.7.0] - 2026-08-06
 
 ### Fixed
