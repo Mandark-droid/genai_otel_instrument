@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-08-06
+
 ### Fixed
 
 - **MCP spans were unjoinable with the LLM spans from the same run ([#11](https://github.com/Mandark-droid/genai_otel_instrument/issues/11)).**
@@ -19,8 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tool-usage per session was silently wrong. `mcp_session()` now emits the
   conventional keys alongside `mcp.session_id`, which stays unchanged for
   existing readers.
-
-### Fixed
 
 - **LiteLLM callers lost all token and cost telemetry ([#10](https://github.com/Mandark-droid/genai_otel_instrument/issues/10)).**
   LiteLLM calls the OpenAI SDK in raw-response mode so it can read rate-limit
@@ -38,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `with_raw_response.create(...)` and the same wrapper shape on Azure OpenAI.
   Degrades to prior behaviour if a wrapper cannot be parsed, and does not touch
   streaming (the only caller runs on the non-streaming branch).
+
+- **`mcp` added to the `dev` extra.**
+  `tests/mcp_semconv/test_client_instrumentor.py` asserts the instrumentor wraps
+  the real `mcp.client.session.ClientSession`, but the SDK was never a dev
+  dependency, so every CI test job failed on `ModuleNotFoundError: No module
+  named 'mcp'`. It is pinned to `python_version >= '3.10'` (the SDK's own floor)
+  and the two tests that need it skip themselves on 3.9.
 
 ### Added
 
@@ -2660,6 +2667,7 @@ This is the first public release of genai-otel-instrument, a comprehensive OpenT
 - Fixed tests for base/redis and auto instrument (a701603)
 - Updated `test_auto_instrument.py` assertions to match new OTLP exporter configuration (exporters now read endpoint from environment variables instead of direct parameters)
 
-[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v0.1.2.dev0...HEAD
+[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.6.1...v1.7.0
 [0.1.2.dev0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v0.1.0...v0.1.2.dev0
 [0.1.0]: https://github.com/Mandark-droid/genai_otel_instrument/releases/tag/v0.1.0
