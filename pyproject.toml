@@ -337,6 +337,11 @@ dev = [
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
     "pytest-asyncio>=0.21.0",
+    # tests/mcp_semconv/test_client_instrumentor.py asserts the instrumentor
+    # wraps the real mcp.client.session.ClientSession, so the SDK has to be
+    # importable in dev. The package requires 3.10+; the tests that need it
+    # skip themselves on 3.9.
+    "mcp>=1.0.0; python_version >= '3.10'",
     # Patched version (GHSA-3936-cmfr-pm3m) requires Python 3.10+; keep
     # 3.9 dev environments on the latest 3.9-compatible release. Black is
     # dev-only and not in the published wheel, so the residual exposure

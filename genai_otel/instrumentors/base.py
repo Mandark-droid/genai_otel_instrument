@@ -35,6 +35,43 @@ from ..exceptions import PolicyViolationError
 from ..semconv import SemanticConvention as SC
 from ..server_metrics import get_server_metrics
 
+
+def _unwrap_api_response(result: Any) -> Any:
+    """Return the parsed model when handed an OpenAI raw-response wrapper.
+
+    LiteLLM calls the OpenAI SDK in raw-response mode so it can read rate-limit
+    headers, so ``chat.completions.create`` hands back
+    ``openai._legacy_response.LegacyAPIResponse`` rather than a
+    ``ChatCompletion``. That wrapper exposes no ``.usage`` -- the model is only
+    reachable through ``.parse()`` -- so every ``hasattr(result, "usage")`` check
+    was False and usage, cost and finish-reason were dropped without a word.
+
+    The failure was silent and therefore expensive: spans were created, request
+    attributes were correct, and only the numbers were missing. Where a gateway
+    is the standard inference entry point that zeroes cost dashboards and spend
+    attribution for every service behind it -- and a zeroed cost reads as "this
+    was free" rather than "this was not measured".
+
+    Degrades to the original object if the wrapper cannot be parsed:
+    instrumentation must never raise into the caller. Streaming is unaffected,
+    since the only caller runs on the non-streaming branch, so no stream is
+    consumed here. ``LegacyAPIResponse.parse()`` memoises, so this does not
+    re-deserialise on repeated access.
+
+    See https://github.com/Mandark-droid/genai_otel_instrument/issues/10
+    """
+    if result is None or hasattr(result, "usage"):
+        return result
+    parse = getattr(result, "parse", None)
+    if not callable(parse):
+        return result
+    try:
+        parsed = parse()
+    except Exception:  # noqa: BLE001 - telemetry must never break the call
+        return result
+    return parsed if parsed is not None else result
+
+
 # Import histogram bucket definitions
 try:
     from genai_otel.metrics import _GEN_AI_CLIENT_OPERATION_DURATION_BUCKETS
@@ -872,6 +909,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             start_time: The time when the function started executing.
             request_kwargs: The original request kwargs (for content capture).
         """
+        # A raw-response wrapper hides the model behind .parse(); unwrap before
+        # any extraction runs, or usage, cost and finish-reason are all silently
+        # dropped. This is the LiteLLM path, so it affects every caller routed
+        # through an LLM gateway. See _unwrap_api_response.
+        result = _unwrap_api_response(result)
+
         # Resolve metric-verbosity flags once. Full per-request detail is always
         # written to span attributes below regardless of these flags; they only
         # gate the extra aggregated-metric instruments recorded on the hot path.
