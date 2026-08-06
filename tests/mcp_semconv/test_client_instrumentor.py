@@ -232,6 +232,7 @@ class TestInstrumentLifecycle:
     """instrument() / uninstrument() against the real ClientSession class."""
 
     def test_instrument_wraps_and_uninstrument_restores(self, registry):
+        pytest.importorskip("mcp", reason="mcp SDK requires Python 3.10+")
         from mcp.client.session import ClientSession
 
         original = ClientSession.call_tool
@@ -245,6 +246,7 @@ class TestInstrumentLifecycle:
         assert ClientSession.call_tool is original
 
     def test_double_instrument_does_not_stack_wrappers(self, registry):
+        pytest.importorskip("mcp", reason="mcp SDK requires Python 3.10+")
         from mcp.client.session import ClientSession
 
         original = ClientSession.call_tool
