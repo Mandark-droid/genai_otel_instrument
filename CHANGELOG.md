@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-08-07
+
+> Ships everything in 1.7.0 as well. That version was tagged and passed
+> pre-release validation, but a GitHub-wide Actions outage on 2026-08-06 meant
+> its publish workflow never ran, so no 1.7.0 artifact exists on PyPI. Its
+> changes are merged into main and therefore included here — upgrading from
+> 1.6.1 straight to 1.8.0 loses nothing.
+
 ### Added
 
 - **Pricing coverage sweep: 565 chat models added (858 -> 1423).** Imported from
@@ -2751,7 +2759,8 @@ This is the first public release of genai-otel-instrument, a comprehensive OpenT
 - Fixed tests for base/redis and auto instrument (a701603)
 - Updated `test_auto_instrument.py` assertions to match new OTLP exporter configuration (exporters now read endpoint from environment variables instead of direct parameters)
 
-[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.6.1...v1.7.0
 [0.1.2.dev0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v0.1.0...v0.1.2.dev0
 [0.1.0]: https://github.com/Mandark-droid/genai_otel_instrument/releases/tag/v0.1.0
