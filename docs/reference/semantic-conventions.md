@@ -27,6 +27,22 @@ TraceVerde follows OpenTelemetry semantic conventions for GenAI with additional 
 | `gen_ai.usage.cost.total` | float | Total cost in USD |
 | `gen_ai.usage.cost.prompt` | float | Prompt token cost |
 | `gen_ai.usage.cost.completion` | float | Completion token cost |
+| `gen_ai.usage.cost.pricing_source` | string | Where the price came from: `table`, `estimated` or `unpriced` |
+
+!!! warning "Read `pricing_source` before summing cost"
+
+    A `gen_ai.usage.cost.total` of `0.0` is ambiguous on its own — it means
+    either "this call really was free" or "no price could be found for this
+    model". Always read `pricing_source` alongside it:
+
+    | Value | Meaning |
+    |-------|---------|
+    | `table` | Matched an entry in the shipped pricing file. Billable. |
+    | `estimated` | No entry; price inferred from the parameter count in the model name via the local-model size tier. **Indicative only** — do not treat as a billable figure. |
+    | `unpriced` | No price could be determined. `cost.total` will be `0.0` and must not be counted as free spend. |
+
+    A dashboard that sums `cost.total` without filtering on `pricing_source`
+    will silently under-report spend for every unpriced model.
 
 ### Session Tracking
 

@@ -376,3 +376,106 @@ class TestCustomPricing(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPricingSource(unittest.TestCase):
+    """A cost of 0.0 is ambiguous. pricing_source() says which kind of zero it is."""
+
+    def setUp(self):
+        patcher = patch.object(CostCalculator, "_load_pricing", MagicMock())
+        self.addCleanup(patcher.stop)
+        patcher.start()
+        self.calc = CostCalculator()
+        self.calc.pricing_data = {
+            "chat": {"gpt-4o": {"promptPrice": 0.0005, "completionPrice": 0.0015}},
+            "embeddings": {"text-embedding-ada-002": 0.0001},
+        }
+
+    def test_known_model_reports_table(self):
+        self.assertEqual(self.calc.pricing_source("gpt-4o"), "table")
+
+    def test_substring_match_still_reports_table(self):
+        self.assertEqual(self.calc.pricing_source("gpt-4o-2024-08-06"), "table")
+
+    def test_unknown_model_with_a_size_token_reports_estimated(self):
+        # Priced off the parameter-count tier, so indicative rather than billable.
+        self.assertEqual(self.calc.pricing_source("some-random-finetune-7b"), "estimated")
+
+    def test_unknown_model_without_a_size_token_reports_unpriced(self):
+        self.assertEqual(self.calc.pricing_source("Dhanishtha"), "unpriced")
+
+    def test_unpriced_model_costs_zero_but_is_not_reported_as_free(self):
+        costs = self.calc.calculate_granular_cost(
+            "Dhanishtha", {"prompt_tokens": 1000, "completion_tokens": 1000}, "chat"
+        )
+        self.assertEqual(costs["total"], 0.0)
+        self.assertEqual(self.calc.pricing_source("Dhanishtha"), "unpriced")
+
+
+class TestParamCountDelimiters(unittest.TestCase):
+    """Size tokens may be closed by '_' or '.', not only space/colon/dash.
+
+    Fine-tune and checkpoint names use those separators routinely; treating them
+    as non-delimiters dropped the model to an unpriced $0.00 instead of the
+    local-size tier.
+    """
+
+    def setUp(self):
+        patcher = patch.object(CostCalculator, "_load_pricing", MagicMock())
+        self.addCleanup(patcher.stop)
+        patcher.start()
+        self.calc = CostCalculator()
+
+    def test_underscore_delimited_size(self):
+        self.assertEqual(
+            self.calc._extract_param_count_from_model_name("MMPO_Gemma_7b_gamma1.1"), 7.0
+        )
+
+    def test_underscore_delimited_millions(self):
+        self.assertEqual(
+            self.calc._extract_param_count_from_model_name("smollm2-135M_pretrained_400k"), 0.135
+        )
+
+    def test_existing_delimiters_still_work(self):
+        self.assertEqual(self.calc._extract_param_count_from_model_name("llama3:70b"), 70.0)
+        self.assertEqual(self.calc._extract_param_count_from_model_name("llama-2-7b"), 7.0)
+        self.assertEqual(self.calc._extract_param_count_from_model_name("smollm2:360m"), 0.36)
+
+
+class TestIndexRebuildGuard(unittest.TestCase):
+    """Keys differing only by case collapse in the exact index.
+
+    The staleness guard therefore cannot compare the index size against the
+    pricing dict size: for a table containing both 'MiniMax-M3' and
+    'minimax-m3' those counts never match, so the guard fired on every lookup,
+    rebuilt all indices and cleared the memo cache each time - defeating
+    memoisation entirely.
+    """
+
+    def setUp(self):
+        patcher = patch.object(CostCalculator, "_load_pricing", MagicMock())
+        self.addCleanup(patcher.stop)
+        patcher.start()
+        self.calc = CostCalculator()
+        self.calc.pricing_data = {
+            "chat": {
+                "MiniMax-M3": {"promptPrice": 0.0003, "completionPrice": 0.0012},
+                "minimax-m3": {"promptPrice": 0.0003, "completionPrice": 0.0012},
+                "gpt-4o": {"promptPrice": 0.0005, "completionPrice": 0.0015},
+            }
+        }
+
+    def test_case_colliding_keys_do_not_defeat_memoisation(self):
+        for name in ("gpt-4o", "unknown-a", "unknown-b"):
+            self.calc._normalize_model_name(name, "chat")
+        self.assertEqual(len(self.calc._norm_cache), 3)
+
+    def test_in_place_addition_is_still_detected(self):
+        self.assertIsNone(self.calc._normalize_model_name("brand-new-model", "chat"))
+        self.calc.pricing_data["chat"]["brand-new-model"] = {
+            "promptPrice": 1.0,
+            "completionPrice": 2.0,
+        }
+        self.assertEqual(
+            self.calc._normalize_model_name("brand-new-model", "chat"), "brand-new-model"
+        )

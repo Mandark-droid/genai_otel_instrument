@@ -1104,6 +1104,15 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 # Always set span attributes (needed for cost tracking)
                                 span.set_attribute("gen_ai.usage.cost.total", total_cost)
 
+                            # Say where the price came from. Without this a 0.0
+                            # cost is indistinguishable from a genuinely free
+                            # call, so unpriced models silently read as free
+                            # rather than as unmeasured.
+                            span.set_attribute(
+                                "gen_ai.usage.cost.pricing_source",
+                                self.cost_calculator.pricing_source(model, call_type),
+                            )
+
                             # Granular costs: span attributes are ALWAYS set (needed for
                             # audit / explainability); the per-breakdown metric counters
                             # are opt-in (_rec_granular) to keep the hot path lean.
@@ -1691,6 +1700,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                             self.cost_counter.add(total_cost, {"model": str(model)})
                                         span.set_attribute("gen_ai.usage.cost.total", total_cost)
                                         logger.debug(f"Streaming cost: {total_cost} USD")
+
+                                    # See the non-streaming path: a 0.0 cost has
+                                    # to be distinguishable from an unpriced one.
+                                    span.set_attribute(
+                                        "gen_ai.usage.cost.pricing_source",
+                                        self.cost_calculator.pricing_source(model, call_type),
+                                    )
 
                                     # Record granular costs
                                     if costs["prompt"] > 0:
