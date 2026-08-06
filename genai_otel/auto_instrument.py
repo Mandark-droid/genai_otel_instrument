@@ -129,6 +129,11 @@ except ImportError:
         VertexAIInstrumentor,
     )
 
+try:
+    from .mcp_semconv.client_instrumentor import MCPClientInstrumentor
+except ImportError:  # pragma: no cover - mirrors the fallback used above
+    from genai_otel.mcp_semconv.client_instrumentor import MCPClientInstrumentor
+
 logger = logging.getLogger(__name__)
 
 # OpenInference instrumentors are loaded lazily to avoid importing litellm (~10s)
@@ -204,6 +209,10 @@ INSTRUMENTORS = {
     "llama_index": LlamaIndexInstrumentor,
     "pydantic_ai": PydanticAIInstrumentor,  # Pydantic AI type-safe agent framework
     "transformers": HuggingFaceInstrumentor,
+    # MCP client attribution (mcp.* / commerce.* semantic conventions). Opt-in
+    # rather than default: it is most useful with a tool schema map attached,
+    # which only the application can supply. See genai_otel.mcp_semconv.
+    "mcp_client": MCPClientInstrumentor,
 }
 
 # OpenInference instrumentors (smolagents, litellm, mcp) are added to INSTRUMENTORS

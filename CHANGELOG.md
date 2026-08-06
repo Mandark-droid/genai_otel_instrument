@@ -6,6 +6,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-08-06
+
+### Fixed
+
+- **MCP spans were unjoinable with the LLM spans from the same run ([#11](https://github.com/Mandark-droid/genai_otel_instrument/issues/11)).**
+  MCP client spans recorded the session only as `mcp.session_id`, while LLM
+  spans use `session.id` / `gen_ai.conversation.id` (set from
+  `config.session_id_extractor`). With no key in common an agent session could
+  not be reassembled from its own telemetry: on a real run 10 spans carried
+  `session.id` and 450+ tool calls carried none, so 552 spans grouped into 209
+  "sessions" of roughly 1.5 spans each where eight runs had actually happened —
+  and the fragments look plausible, so anything computing cost, duration or
+  tool-usage per session was silently wrong. `mcp_session()` now emits the
+  conventional keys alongside `mcp.session_id`, which stays unchanged for
+  existing readers.
+
+- **LiteLLM callers lost all token and cost telemetry ([#10](https://github.com/Mandark-droid/genai_otel_instrument/issues/10)).**
+  LiteLLM calls the OpenAI SDK in raw-response mode so it can read rate-limit
+  headers, so `chat.completions.create` returns
+  `openai._legacy_response.LegacyAPIResponse` rather than a `ChatCompletion`.
+  That wrapper exposes no `.usage` — the model is reachable only via `.parse()`
+  — so every `hasattr(result, "usage")` check was False and usage, cost and
+  finish-reason were dropped. The failure was silent: spans were created and
+  request attributes were correct, only the numbers were missing. Where an LLM
+  gateway is the standard inference entry point this zeroes cost dashboards and
+  spend attribution for every service behind it, and a zeroed cost reads as
+  "this was free" rather than "this was not measured". Raw-response wrappers are
+  now unwrapped centrally in `BaseInstrumentor._record_result_metrics`, so all
+  instrumentors benefit; it also covers direct use of
+  `with_raw_response.create(...)` and the same wrapper shape on Azure OpenAI.
+  Degrades to prior behaviour if a wrapper cannot be parsed, and does not touch
+  streaming (the only caller runs on the non-streaming branch).
+
+- **`mcp` added to the `dev` extra.**
+  `tests/mcp_semconv/test_client_instrumentor.py` asserts the instrumentor wraps
+  the real `mcp.client.session.ClientSession`, but the SDK was never a dev
+  dependency, so every CI test job failed on `ModuleNotFoundError: No module
+  named 'mcp'`. It is pinned to `python_version >= '3.10'` (the SDK's own floor)
+  and the two tests that need it skip themselves on 3.9.
+
+### Added
+
+- **MCP client instrumentation (`genai_otel.mcp_semconv`)** — one span per
+  `callTool`, named `mcp.call_tool {server}.{tool}`. This is net-new ground:
+  `openinference-instrumentation-mcp` is a pure W3C context-propagation shim
+  that creates no spans and sets no attributes, and
+  `openinference-instrumentation-smolagents` names every MCP tool span after
+  the adapter class (`MCPAdaptTool`) with no server attribution, no protocol
+  error detail, and no session key. Nothing here double-instruments either.
+
+  Emits `mcp.server`, `mcp.tool`, `mcp.tool.raw_name`, `mcp.stage`,
+  `mcp.behaviour`, `mcp.idempotent`, `mcp.session_id`,
+  `mcp.error.message_raw` / `.http_status` / `.jsonrpc_code`,
+  `mcp.tool_selection.candidate_count` / `.correct` / `.expected`,
+  `mcp.identifier.hallucinated`, `commerce.cart_hash`,
+  `commerce.order.placement_attempt` and `commerce.terminal_state`.
+
+- **Schema-map-driven tool metadata** (`MCPToolRegistry`). Stage, behaviour and
+  idempotency come from a supplied schema map, never hardcoded. Server
+  attribution resolves against *known* server names rather than splitting on
+  the first separator, so a real tool name that contains the separator
+  (`search_restaurants_dineout`) is not mangled. A canary test fails loudly if
+  the upstream composite-proxy separator assumption ever changes.
+
+- **Deterministic terminal-state classifier** (`TerminalStateClassifier`).
+  Rule-based over span attributes with no LLM judgement; every classification
+  returns the evidence that produced it. Seven states, with `BLOCKED_NO_TOOL`
+  sub-classified by the resolution the user actually requested — which
+  separates "the agent failed" from "no tool in the surface could have
+  succeeded".
+
+- **Live validation harness** (`examples/mcp_live_validation/`). Drives a real
+  MCP client over stdio against a real FastMCP composite-proxy server and
+  asserts the emitted attributes, so the instrumentation is verified against a
+  real transport rather than only against mocks.
+
+### Security
+
+- MCP user identifiers are salted-SHA-256 hashed before reaching a span
+  (`GENAI_MCP_HASH_SALT`; an ephemeral per-process salt with a warning when
+  unset). Request and response bodies are never written to a span by this
+  module — the session id is recorded as the support-correlation key, and
+  hallucinated-identifier detection records offending argument *keys* only,
+  never their values.
+
 ## [1.6.1] - 2026-07-15
 
 ### Changed
@@ -2582,6 +2667,7 @@ This is the first public release of genai-otel-instrument, a comprehensive OpenT
 - Fixed tests for base/redis and auto instrument (a701603)
 - Updated `test_auto_instrument.py` assertions to match new OTLP exporter configuration (exporters now read endpoint from environment variables instead of direct parameters)
 
-[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v0.1.2.dev0...HEAD
+[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.6.1...v1.7.0
 [0.1.2.dev0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v0.1.0...v0.1.2.dev0
 [0.1.0]: https://github.com/Mandark-droid/genai_otel_instrument/releases/tag/v0.1.0
