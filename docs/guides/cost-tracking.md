@@ -1,6 +1,6 @@
 # Cost Tracking
 
-TraceVerde includes automatic cost tracking with pricing data for **1,050+ models** across **30+ providers**. Every LLM call is enriched with per-request cost breakdown.
+TraceVerde includes automatic cost tracking with pricing data for **1,700+ models** across **40+ providers**. Every LLM call is enriched with per-request cost breakdown.
 
 ## How It Works
 
