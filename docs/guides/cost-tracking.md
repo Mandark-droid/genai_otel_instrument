@@ -22,19 +22,54 @@ Every LLM span gets these attributes:
 | `gen_ai.usage.cost.total` | Total cost in USD | `0.003250` |
 | `gen_ai.usage.cost.prompt` | Prompt token cost | `0.001250` |
 | `gen_ai.usage.cost.completion` | Completion token cost | `0.002000` |
+| `gen_ai.usage.cost.pricing_source` | Where the price came from | `table` |
+
+### Telling "free" apart from "not measured"
+
+`cost.total = 0.0` means one of two very different things, so every span also
+carries `gen_ai.usage.cost.pricing_source`:
+
+- **`table`** — matched the shipped pricing file. Billable.
+- **`estimated`** — no entry for this model, so the price was inferred from the
+  parameter count in its name (e.g. `...-7b`) via the local-model size tier.
+  Useful for relative comparison, not for a bill.
+- **`unpriced`** — no price could be determined at all.
+
+Filter on this before aggregating. Summing `cost.total` across all spans without
+it under-reports spend, because every unpriced model contributes `0.0` and looks
+identical to a genuinely free call:
+
+```python
+# Spend you can defend, plus an explicit count of what could not be priced.
+billable = [s for s in spans if s.attributes.get("gen_ai.usage.cost.pricing_source") == "table"]
+unpriced = [s for s in spans if s.attributes.get("gen_ai.usage.cost.pricing_source") == "unpriced"]
+print(f"${sum(s.attributes['gen_ai.usage.cost.total'] for s in billable):.4f}"
+      f" across {len(billable)} calls; {len(unpriced)} calls could not be priced")
+```
+
+If `unpriced` is large, the model is missing from `genai_otel/llm_pricing.json` —
+add it via `custom_pricing_json` or open an issue.
 
 ## Supported Providers
+
+The pricing file carries **1400+ chat models**, covering roughly 83% of the
+priced catalogue on models.dev. Coverage is deliberately limited to first-party
+providers and the major clouds that resell under their own SKUs — gateway and
+router listings are excluded, because they re-price the same underlying model
+and the recorded cost would then depend on which aggregator was indexed first.
 
 | Provider | Models | Pricing Type |
 |----------|--------|--------------|
 | OpenAI | GPT-5.5 series, GPT-4o, GPT-4 Turbo, o1/o3, embeddings (50+) | Per token (prompt/completion) |
-| Anthropic | Claude Sonnet 5, Claude Fable 5, Claude Opus 4.8, Claude Sonnet 4.6, Claude 3.5/3 series (15+) | Per token + cache pricing |
-| Google AI | Gemini 3.5 Flash, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (30+) | Per token |
+| Anthropic | Claude Opus 5, Claude Sonnet 5, Claude Fable 5, Claude Opus 4.8, Claude Sonnet 4.6, Claude 3.5/3 series (20+) | Per token + cache pricing |
+| Google AI | Gemini 3.6 Flash, Gemini 3.5 Flash / Flash Lite, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (35+) | Per token |
 | AWS Bedrock | Titan, Claude, Llama, Mistral (25+) | Per token |
 | Azure OpenAI | Same as OpenAI | Per token |
 | Cohere | Command A/R/R+, North Mini Code, Embed v4/v3, rerankers (15+) | Per token |
 | Mistral AI | Large/Medium/Small, Mixtral, embeddings (20+) | Per token |
-| Moonshot AI | Kimi K2.7 Code, K2.6, K2.5, Kimi Latest (15+) | Per token + cache pricing |
+| Moonshot AI | Kimi K3, Kimi K2.7 Code, K2.6, K2.5, Kimi Latest (20+) | Per token + cache pricing |
+| Alibaba / Qwen | Qwen3.8-Max, Qwen3.7 Flash/Max, Qwen3.6 series (40+) | Per token |
+| Thinking Machines | Inkling, Inkling Small | Per token |
 | Xiaomi | MiMo V2.5 Pro/UltraSpeed, MiMo V2 Flash/Omni/Pro (6+) | Per token + cache pricing |
 | Zhipu / Z.AI | GLM-5.2, GLM-5.1, GLM-5 series | Per token + cache pricing |
 | Meituan | LongCat-2.0, LongCat Flash Chat | Per token (cache free) |
