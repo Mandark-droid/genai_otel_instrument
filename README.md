@@ -52,7 +52,7 @@ That's it. No wrappers, no decorators, no config files. Every LLM call, database
 | Zero-code setup | Yes | Yes | Yes | SDK required | SDK required | SDK / auto (OpenInference) | SDK required |
 | LLM providers | 20+ | 25+ | 15+ | Via integrations | Via integrations | Via integrations | Via integrations |
 | Multi-agent frameworks | 8 (CrewAI, LangGraph, ADK, AutoGen, OpenAI Agents, Pydantic AI, etc.) | Limited | Limited | Limited | Limited | Limited | Limited |
-| Cost tracking | Automatic (1,050+ models) | Manual config | Manual config | Manual config | Yes | Yes | Yes |
+| Cost tracking | Automatic (1,700+ models) | Manual config | Manual config | Manual config | Yes | Yes | Yes |
 | GPU metrics (NVIDIA + AMD) | Yes | No | No | No | No | No | No |
 | MCP tool instrumentation | Yes (databases, caches, vector DBs, queues) | Limited | Limited | No | No | No | No |
 | Evaluation (PII, toxicity, bias, hallucination, prompt injection) | Built-in (6 detectors) | No | No | Separate service | Extensive (core focus) | Built-in (Phoenix evals) | Built-in (core focus) |
@@ -120,7 +120,7 @@ PII Detection (GDPR/HIPAA/PCI-DSS), Toxicity Detection, Bias Detection, Prompt I
 
 ### Automatic Cost Tracking
 
-1,050+ models across 30+ providers with per-request cost breakdown. Supports differential pricing (prompt vs completion), reasoning tokens, cache pricing, and custom model pricing.
+1,700+ models across 40+ providers with per-request cost breakdown. Supports differential pricing (prompt vs completion), reasoning tokens, cache pricing, and custom model pricing.
 
 ```python
 # Cost tracking is enabled by default - just instrument and go
