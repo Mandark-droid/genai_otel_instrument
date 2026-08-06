@@ -119,7 +119,17 @@ class BiasDetector:
                 r"\b(?:gay|lesbian|homosexual|bisexual|transgender|lgbt)\s+(?:agenda|lifestyle)\b",
                 r"\bchoose\s+to\s+be\s+(?:gay|homosexual|transgender)\b",
                 r"\b(?:real|normal|natural)\s+(?:man|woman|gender)\b",
-                r"\b(?:he-she|it|tranny)\b",
+                # "he-she" and "tranny" are genuine slurs. The bare pronoun
+                # "it" was here too, and as a context-free \bit\b it matched
+                # almost any English text: on a 24h agentic workload this
+                # fired on 516/683 prompts (76%), every sampled detection
+                # matching only "it". A detector that fires on three quarters
+                # of traffic buries real findings and misreports the operator's
+                # own system as biased. The dehumanising usage the pattern was
+                # reaching for is "it" applied to a person, which needs
+                # context to identify. See issue #13.
+                r"\b(?:he-she|tranny)\b",
+                r"\bcall(?:s|ed|ing)?\s+(?:him|her|them)\s+(?:an?\s+)?it\b",
             ],
             "keywords": [
                 "homophobic",
