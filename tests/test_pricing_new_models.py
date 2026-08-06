@@ -94,3 +94,111 @@ SNAPSHOT_ROUTING = [
 @pytest.mark.parametrize("requested,expected_key", SNAPSHOT_ROUTING)
 def test_snapshot_alias_routing(calc, requested, expected_key):
     assert calc._normalize_model_name(requested, "chat") == expected_key
+
+
+# --- July / August 2026 sweep ------------------------------------------------
+# The scheduled monthly refresh did not deliver these: the 2026-08-03 run of the
+# routine fired but produced no branch, PR or draft release, so July's releases
+# were never imported. Backfilled from models.dev (first-party + hyperscaler
+# providers only).
+JULY_AUGUST_2026_MODELS = [
+    # July
+    ("claude-opus-5", 0.005, 0.025),
+    ("anthropic.claude-opus-5", 0.005, 0.025),
+    ("kimi-k3", 0.003, 0.015),
+    ("moonshotai/Kimi-K3", 0.003, 0.015),
+    ("gemini-3.6-flash", 0.0015, 0.0075),
+    ("gemini-3-6-flash", 0.0015, 0.0075),
+    ("gemini-3-5-flash-lite", 0.0003, 0.0025),
+    ("thinkingmachines/Inkling", 0.00187, 0.00468),
+    ("tencent/Hy3", 0.00014, 0.00058),
+    # August
+    ("qwen3.8-max", 0.002, 0.006),
+    ("muse-spark-1.2", 0.00125, 0.00425),
+]
+
+
+@pytest.mark.parametrize("model,prompt_price,completion_price", JULY_AUGUST_2026_MODELS)
+def test_july_august_2026_model_cost(calc, model, prompt_price, completion_price):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["prompt"] == pytest.approx(prompt_price)
+    assert costs["completion"] == pytest.approx(completion_price)
+
+
+# Vendors write "gpt-4.1"; callers and eval harnesses frequently send
+# "gpt-4-1". A dotted key cannot match a dashed name as a substring, so before
+# the punctuation aliases these fell through to a shorter, unrelated key -
+# "gpt-4-1" landed on "gpt-4" and was billed at $30/1M instead of $2/1M.
+# Each case below is a real mis-billing, so assert the price, not just the key.
+PUNCTUATION_ALIASES = [
+    ("gpt-4-1", 0.002, 0.008),
+    ("gpt-4-1-mini", 0.0004, 0.0016),
+    ("gpt-4-1-nano", 0.0001, 0.0004),
+    ("gpt-5-1-codex-mini", 0.00025, 0.002),
+    ("gpt-5-4-pro", 0.03, 0.18),
+    ("glm-5-1", 0.0014, 0.0044),
+]
+
+
+@pytest.mark.parametrize("model,prompt_price,completion_price", PUNCTUATION_ALIASES)
+def test_dashed_version_alias_does_not_fall_back_to_shorter_key(
+    calc, model, prompt_price, completion_price
+):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["prompt"] == pytest.approx(prompt_price)
+    assert costs["completion"] == pytest.approx(completion_price)
+
+
+def test_gpt_4_1_is_not_billed_as_gpt_4(calc):
+    """The specific regression above, stated as its own case."""
+    assert calc._normalize_model_name("gpt-4-1", "chat") != "gpt-4"
+    usage = {"prompt_tokens": 1000, "completion_tokens": 0}
+    gpt4 = calc.calculate_granular_cost("gpt-4", usage, "chat")
+    gpt41 = calc.calculate_granular_cost("gpt-4-1", usage, "chat")
+    assert gpt41["prompt"] < gpt4["prompt"]
+
+
+# Embeddings, rerankers and ASR models live in their own categories with their
+# own value shapes. Several are also already keyed under "embeddings", so
+# letting them into "chat" would both duplicate the entry and add keys to the
+# chat substring index that no chat call should ever match.
+NON_CHAT_MODELS = [
+    "text-embedding-3-small",
+    "text-embedding-3-large",
+    "text-embedding-ada-002",
+    "mistral-embed",
+    "gemini-embedding-001",
+    "whisper-large-v3",
+]
+
+
+@pytest.mark.parametrize("model", NON_CHAT_MODELS)
+def test_embedding_and_asr_models_are_not_in_the_chat_table(calc, model):
+    assert model not in calc.pricing_data["chat"]
+
+
+# Free-tier listings (NVIDIA NIM, Groq, zai *-flash, llama.com) quote 0/0 on
+# models.dev. Importing those would have been actively harmful: the free-tier id
+# is the LONGER key, so it would win the substring race and shadow the paid
+# entry for the same family, silently reporting real spend as $0.00. They are
+# skipped at import, so these names must still reach a paid price - or no price
+# at all, which the pricing_source attribute reports honestly.
+FREE_TIER_IDS_THAT_MUST_NOT_SHADOW = [
+    "glm-4.5-flash",
+    "glm-4.7-flash",
+    "meta/llama-3.1-8b-instruct",
+    "google/gemma-3n-e4b-it",
+]
+
+
+@pytest.mark.parametrize("model", FREE_TIER_IDS_THAT_MUST_NOT_SHADOW)
+def test_free_tier_listings_do_not_shadow_paid_pricing(calc, model):
+    key = calc._normalize_model_name(model, "chat")
+    if key is None:
+        return  # no price at all is acceptable; a bogus $0 price is not
+    entry = calc.pricing_data["chat"][key]
+    assert not (
+        entry.get("promptPrice") == 0 and entry.get("completionPrice") == 0
+    ), f"{model} resolved to {key}, a $0/$0 entry that would report real spend as free"
