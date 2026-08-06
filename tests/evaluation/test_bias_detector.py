@@ -170,6 +170,58 @@ class TestBiasDetector:
             assert "sexual_orientation" in result.detected_biases
             assert result.max_score >= 0.3
 
+    def test_bare_pronoun_it_is_not_sexual_orientation_bias(self):
+        """Regression for #13.
+
+        The sexual-orientation pattern listed the bare pronoun "it" alongside
+        two genuine slurs. As a context-free \bit\b it matched almost any
+        English text, so on a real 24h agentic workload the prompt-side bias
+        evaluator fired on 516/683 prompts (76%) and every sampled detection
+        was `sexual_orientation` matched on "it". That buries real detections
+        and tells an operator their system is systematically biased when it is
+        not.
+        """
+        config = BiasConfig(enabled=True, threshold=0.3)
+        detector = BiasDetector(config)
+
+        benign = [
+            "You are an expert assistant who can solve any task using tool calls.",
+            "It is raining today, so bring an umbrella.",
+            "Read the file and tell me what it contains.",
+            "It works.",
+            "If it fails, retry it once and then report it.",
+        ]
+        for text in benign:
+            result = detector.detect(text)
+            assert (
+                "sexual_orientation" not in result.detected_biases
+            ), f"bare pronoun matched as sexual-orientation bias in: {text!r}"
+
+    def test_dehumanising_use_of_it_for_a_person_is_still_detected(self):
+        """The pattern was reaching for a real usage; keep that working."""
+        config = BiasConfig(enabled=True, threshold=0.3)
+        detector = BiasDetector(config)
+
+        for text in [
+            "They kept calling her an it.",
+            "He called him it in front of everyone.",
+            "Stop calling them an it.",
+        ]:
+            result = detector.detect(text)
+            assert (
+                "sexual_orientation" in result.detected_biases
+            ), f"failed to detect dehumanising usage in: {text!r}"
+
+    def test_genuine_slurs_still_detected(self):
+        """he-she and tranny are genuine slurs and must keep matching."""
+        config = BiasConfig(enabled=True, threshold=0.3)
+        detector = BiasDetector(config)
+
+        for text in ["That he-she over there", "He called her a tranny"]:
+            result = detector.detect(text)
+            assert result.has_bias is True, f"Failed to detect bias in: {text}"
+            assert "sexual_orientation" in result.detected_biases
+
     def test_political_bias_detection(self):
         """Test political bias detection."""
         config = BiasConfig(enabled=True, threshold=0.3)

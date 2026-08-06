@@ -69,6 +69,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   substring race and shadow the paid entry for the same family - reporting real
   spend as free.
 
+- **Bias detector fired on 76% of prompts because the pronoun "it" was listed
+  as a sexual-orientation slur ([#13](https://github.com/Mandark-droid/genai_otel_instrument/issues/13)).**
+  `bias_detector.py` put the bare English pronoun `it` alongside two genuine
+  slurs in the sexual-orientation pattern. As a context-free `\bit\b` it matched
+  almost any English text: on a 24h agentic workload the prompt-side evaluator
+  fired on 516/683 prompts (76%), and every sampled detection was
+  `sexual_orientation` matched on nothing but `it`. Toxicity and
+  prompt-injection fired 0/974 on the same traffic, so this one was the outlier.
+
+  A detector that fires on three quarters of traffic is worse than a missing
+  one: real detections are buried, and a dashboard reporting "bias detected on
+  76% of prompts" tells an operator their system is systematically biased when
+  it is not — a claim someone has to answer for in a regulated setting. Nothing
+  errored, so the number looked authoritative.
+
+  The bare pronoun is removed. The dehumanising usage the pattern was reaching
+  for — `it` applied to a person — now requires context
+  (`called her an it`), and the genuine slurs still match. On benign agentic
+  prompts the false-positive rate goes from 9/10 to 0/10 with every genuine
+  detection preserved.
+
 ## [1.7.0] - 2026-08-06
 
 ### Fixed
