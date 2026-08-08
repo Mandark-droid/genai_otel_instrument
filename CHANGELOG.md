@@ -6,6 +6,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-08-08
+
+### Fixed
+
+- **Instrumenting httpx made every SYNCHRONOUS call return a wrapper instead of a
+  response.** `APIInstrumentor._wrap_api_call` called `create_span_wrapper(...)` — which
+  returns a `@wrapt.decorator` — as `instrumented_call(wrapped, instance, args, kwargs)`.
+  Calling a wrapt decorator that way does not execute anything; it builds and returns a
+  `FunctionWrapper`. So callers received the wrapper rather than the response, and any
+  `resp.status_code` raised:
+
+  ```
+  AttributeError: 'function' object has no attribute 'status_code'
+  ```
+
+  Only `httpx.Client.request` is wrapped, so `client.send()` and the entire `AsyncClient`
+  were unaffected — which is why this survived: nearly every caller in practice is async,
+  and the synchronous ones failed silently wherever the exception was swallowed. In one
+  downstream platform it meant a Jinja template loader served on-disk prompts for months
+  while newer versions sat in a central prompt store, logged at `debug` where nobody saw
+  it.
+
+  Fixed by decorating first and then calling: `instrumented_call(wrapped)(*args, **kwargs)`.
+
+  Five regression tests added in
+  `tests/mcp_instrumentors/test_api_instrumentor_returns_response.py`, each verified to
+  fail against the old line and pass against the new one. The load-bearing one is
+  end-to-end: after `instrument()`, a real `httpx.Client().get()` over `MockTransport`
+  must still return a `Response`. Every unit-level assertion about *whether the call
+  happened* passes against a wrapper too — only asserting on what comes **back** catches
+  this class of bug.
+
+  Anyone on 1.6.x–1.8.0 doing synchronous httpx calls in an instrumented process is
+  affected and should upgrade.
+
 ## [1.8.0] - 2026-08-07
 
 > Ships everything in 1.7.0 as well. That version was tagged and passed
