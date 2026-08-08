@@ -53,7 +53,9 @@ def test_wrap_api_call_returns_the_wrapped_calls_result_not_a_wrapper():
 
     result = inst._wrap_api_call(wrapped, None, ("GET", "http://example.test/x"), {})
 
-    assert result is sentinel, f"expected the wrapped call's return value, got {type(result).__name__}"
+    assert (
+        result is sentinel
+    ), f"expected the wrapped call's return value, got {type(result).__name__}"
     # The regression in one line: this is the attribute access that used to blow up.
     assert result.status_code == 200
 
@@ -121,8 +123,8 @@ def test_real_httpx_client_still_returns_a_response_after_instrumentation():
     with httpx.Client(transport=transport) as client:
         resp = client.get("http://example.test/ping")
 
-    assert hasattr(resp, "status_code"), (
-        f"got {type(resp).__name__}, not a Response — the wrapper was returned instead of called"
-    )
+    assert hasattr(
+        resp, "status_code"
+    ), f"got {type(resp).__name__}, not a Response — the wrapper was returned instead of called"
     assert resp.status_code == 200
     assert resp.json() == {"ok": True}
