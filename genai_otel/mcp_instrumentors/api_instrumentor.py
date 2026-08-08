@@ -122,7 +122,13 @@ class APIInstrumentor(BaseInstrumentor):
         instrumented_call = self.create_span_wrapper(
             span_name=span_name, extract_attributes=self._extract_api_attributes
         )
-        return instrumented_call(wrapped, instance, args, kwargs)
+        # create_span_wrapper returns a @wrapt.decorator. Calling a wrapt decorator with
+        # (wrapped, instance, args, kwargs) does NOT execute anything — it returns a
+        # FunctionWrapper. So this used to hand the CALLER the wrapper instead of the
+        # response, and every `resp.status_code` raised
+        # "AttributeError: 'function' object has no attribute 'status_code'".
+        # Decorate first, then call: that runs the span logic and returns the real result.
+        return instrumented_call(wrapped)(*args, **kwargs)
 
     def _extract_api_attributes(
         self, instance: Any, args: Any, kwargs: Any
