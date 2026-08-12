@@ -201,8 +201,11 @@ class HyperbolicInstrumentor(BaseInstrumentor):
             }
 
             # Record token usage as span attributes
-            span.set_attribute("gen_ai.usage.prompt_tokens", usage_dict["prompt_tokens"])
-            span.set_attribute("gen_ai.usage.completion_tokens", usage_dict["completion_tokens"])
+            self._set_token_usage_attributes(
+                span,
+                prompt_tokens=usage_dict["prompt_tokens"],
+                completion_tokens=usage_dict["completion_tokens"],
+            )
             span.set_attribute("gen_ai.usage.total_tokens", usage_dict["total_tokens"])
 
             # Record token metrics

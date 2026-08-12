@@ -900,6 +900,47 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
         return wrapper
 
+    def _set_token_usage_attributes(
+        self,
+        span,
+        prompt_tokens: Any = None,
+        completion_tokens: Any = None,
+    ) -> None:
+        """Set token-usage span attributes per the OTel GenAI semantic conventions.
+
+        ``gen_ai.usage.input_tokens`` / ``gen_ai.usage.output_tokens`` are the
+        current convention: semantic-conventions v1.27.0 renamed
+        ``gen_ai.usage.prompt_tokens`` -> ``gen_ai.usage.input_tokens`` and
+        ``gen_ai.usage.completion_tokens`` -> ``gen_ai.usage.output_tokens``
+        (open-telemetry/semantic-conventions#1200). They are therefore always
+        emitted.
+
+        The superseded names are emitted only when the operator opts into dual
+        emission with ``OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai/dup``, which is
+        what that flag means upstream.
+
+        This matters for interoperability, not just tidiness: a backend that
+        consumes the current conventions reads zero tokens when only the
+        superseded names are present. Arize AX, for one, maps
+        ``gen_ai.usage.{input,output}_tokens`` onto ``llm.token_count.*`` and
+        derives cost from them.
+        """
+        emit_superseded = bool(
+            self.config
+            and self.config.semconv_stability_opt_in
+            and "dup" in self.config.semconv_stability_opt_in
+        )
+
+        if isinstance(prompt_tokens, (int, float)) and prompt_tokens > 0:
+            span.set_attribute(SC.GEN_AI_USAGE_INPUT_TOKENS, int(prompt_tokens))
+            if emit_superseded:
+                span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
+
+        if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
+            span.set_attribute(SC.GEN_AI_USAGE_OUTPUT_TOKENS, int(completion_tokens))
+            if emit_superseded:
+                span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
+
     def _record_result_metrics(self, span, result, start_time: float, request_kwargs: dict = None):
         """Record metrics derived from the function result and execution time.
 
@@ -1005,12 +1046,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 completion_tokens = usage.get("completion_tokens", 0)
                 total_tokens = usage.get("total_tokens", 0)
 
-                # Record token counts if available and positive
-                # Support dual emission based on OTEL_SEMCONV_STABILITY_OPT_IN
-                emit_old_attrs = (
-                    self.config
-                    and self.config.semconv_stability_opt_in
-                    and "dup" in self.config.semconv_stability_opt_in
+                # Record token counts if available and positive. Which attribute
+                # names are emitted (current vs superseded) is decided centrally
+                # by _set_token_usage_attributes.
+                self._set_token_usage_attributes(
+                    span,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
                 )
 
                 # Record prompt tokens
@@ -1026,11 +1068,6 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         self.prompt_tokens_histogram.record(
                             int(prompt_tokens), {"model": str(model), "operation": span.name}
                         )
-                    # Always set span attributes (needed for cost calculation)
-                    span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
-                    # Old semantic convention (if dual emission enabled)
-                    if emit_old_attrs:
-                        span.set_attribute("gen_ai.usage.input_tokens", int(prompt_tokens))
 
                 # Record completion tokens
                 if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
@@ -1045,11 +1082,6 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         self.completion_tokens_histogram.record(
                             int(completion_tokens), {"model": str(model), "operation": span.name}
                         )
-                    # Always set span attributes (needed for cost calculation)
-                    span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
-                    # Old semantic convention (if dual emission enabled)
-                    if emit_old_attrs:
-                        span.set_attribute("gen_ai.usage.output_tokens", int(completion_tokens))
 
                 # Record total tokens
                 if isinstance(total_tokens, (int, float)) and total_tokens > 0:
@@ -1650,7 +1682,15 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         completion_tokens = usage.get("completion_tokens", 0)
                         total_tokens = usage.get("total_tokens", 0)
 
-                        # Record token counts
+                        # Record token counts. Attribute naming (current vs
+                        # superseded) is decided centrally by
+                        # _set_token_usage_attributes.
+                        self._set_token_usage_attributes(
+                            span,
+                            prompt_tokens=prompt_tokens,
+                            completion_tokens=completion_tokens,
+                        )
+
                         if isinstance(prompt_tokens, (int, float)) and prompt_tokens > 0:
                             if self.token_counter:
                                 self.token_counter.add(
@@ -1661,7 +1701,6 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 self.prompt_tokens_histogram.record(
                                     int(prompt_tokens), {"model": model, "operation": span.name}
                                 )
-                            span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
 
                         if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
                             if self.token_counter:
@@ -1674,9 +1713,6 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 self.completion_tokens_histogram.record(
                                     int(completion_tokens), {"model": model, "operation": span.name}
                                 )
-                            span.set_attribute(
-                                "gen_ai.usage.completion_tokens", int(completion_tokens)
-                            )
 
                         if isinstance(total_tokens, (int, float)) and total_tokens > 0:
                             span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))

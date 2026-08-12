@@ -470,8 +470,8 @@ class TestHuggingFacePipelineUsageEstimation(unittest.TestCase):
             pipe=MagicMock(),
         )
         attrs = self._attrs_set()
-        self.assertEqual(attrs["gen_ai.usage.prompt_tokens"], 100)
-        self.assertEqual(attrs["gen_ai.usage.completion_tokens"], 10)
+        self.assertEqual(attrs["gen_ai.usage.input_tokens"], 100)
+        self.assertEqual(attrs["gen_ai.usage.output_tokens"], 10)
         self.assertEqual(attrs["gen_ai.usage.total_tokens"], 110)
         self.assertTrue(attrs["gen_ai.usage.token_count_estimated"])
 
@@ -492,8 +492,8 @@ class TestHuggingFacePipelineUsageEstimation(unittest.TestCase):
         )
         attrs = self._attrs_set()
         self.assertEqual(attrs["gen_ai.usage.image_count"], 1)
-        self.assertEqual(attrs["gen_ai.usage.prompt_tokens"], 258)
-        self.assertEqual(attrs["gen_ai.usage.completion_tokens"], 2)
+        self.assertEqual(attrs["gen_ai.usage.input_tokens"], 258)
+        self.assertEqual(attrs["gen_ai.usage.output_tokens"], 2)
         self.assertTrue(attrs["gen_ai.usage.token_count_estimated"])
 
     def test_record_pipeline_usage_asr(self):
@@ -511,8 +511,8 @@ class TestHuggingFacePipelineUsageEstimation(unittest.TestCase):
         )
         attrs = self._attrs_set()
         self.assertAlmostEqual(attrs["gen_ai.usage.audio_seconds"], 3.0)
-        self.assertEqual(attrs["gen_ai.usage.prompt_tokens"], 150)
-        self.assertEqual(attrs["gen_ai.usage.completion_tokens"], 3)
+        self.assertEqual(attrs["gen_ai.usage.input_tokens"], 150)
+        self.assertEqual(attrs["gen_ai.usage.output_tokens"], 3)
 
     def test_record_pipeline_usage_no_input_no_output(self):
         self.instrumentor._record_pipeline_usage_and_cost(

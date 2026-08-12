@@ -391,8 +391,8 @@ class TestLangChainInstrumentor(unittest.TestCase):
 
             self.assertEqual(attribute_dict.get("langchain.chat_model.name"), "gpt-4")
             self.assertEqual(attribute_dict.get("langchain.chat_model.operation"), "invoke")
-            self.assertEqual(attribute_dict.get("gen_ai.usage.prompt_tokens"), 10)
-            self.assertEqual(attribute_dict.get("gen_ai.usage.completion_tokens"), 20)
+            self.assertEqual(attribute_dict.get("gen_ai.usage.input_tokens"), 10)
+            self.assertEqual(attribute_dict.get("gen_ai.usage.output_tokens"), 20)
             self.assertEqual(attribute_dict.get("gen_ai.usage.total_tokens"), 30)
 
     def test_instrument_chat_models_batch(self):

@@ -573,37 +573,97 @@ def test_dual_token_attribute_emission(instrumentor):
     set_attribute_calls = mock_span.set_attribute.call_args_list
     attributes_set = {call[0][0]: call[0][1] for call in set_attribute_calls}
 
-    # New semantic conventions
-    assert attributes_set.get("gen_ai.usage.prompt_tokens") == 10
-    assert attributes_set.get("gen_ai.usage.completion_tokens") == 20
-    assert attributes_set.get("gen_ai.usage.total_tokens") == 30
-
-    # Old semantic conventions
+    # Current semantic conventions (semantic-conventions#1200, v1.27.0)
     assert attributes_set.get("gen_ai.usage.input_tokens") == 10
     assert attributes_set.get("gen_ai.usage.output_tokens") == 20
+    assert attributes_set.get("gen_ai.usage.total_tokens") == 30
+
+    # Superseded names, emitted only because dual emission is on
+    assert attributes_set.get("gen_ai.usage.prompt_tokens") == 10
+    assert attributes_set.get("gen_ai.usage.completion_tokens") == 20
 
 
 def test_single_token_attribute_emission(instrumentor):
-    """Test that only new token attributes are emitted when semconv_stability_opt_in=gen_ai."""
+    """Only the current token attributes are emitted when semconv_stability_opt_in=gen_ai."""
     inst, mock_span = instrumentor
-    # Default is gen_ai (new conventions only)
+    # Default is gen_ai (current conventions only)
     inst.config.semconv_stability_opt_in = "gen_ai"
 
     result = {"usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}}
     inst._record_result_metrics(mock_span, result, time.time() - 1)
 
-    # Verify only new token attributes are set
+    # Verify only the current token attributes are set
     set_attribute_calls = mock_span.set_attribute.call_args_list
     attributes_set = {call[0][0]: call[0][1] for call in set_attribute_calls}
 
-    # New semantic conventions
-    assert attributes_set.get("gen_ai.usage.prompt_tokens") == 10
-    assert attributes_set.get("gen_ai.usage.completion_tokens") == 20
+    # Current semantic conventions
+    assert attributes_set.get("gen_ai.usage.input_tokens") == 10
+    assert attributes_set.get("gen_ai.usage.output_tokens") == 20
     assert attributes_set.get("gen_ai.usage.total_tokens") == 30
 
-    # Old semantic conventions should NOT be set
-    assert "gen_ai.usage.input_tokens" not in attributes_set
-    assert "gen_ai.usage.output_tokens" not in attributes_set
+    # Superseded names must NOT be set without the dup opt-in. A backend that
+    # reads the current conventions (e.g. Arize AX -> llm.token_count.*) sees
+    # zero tokens if these are all we emit.
+    assert "gen_ai.usage.prompt_tokens" not in attributes_set
+    assert "gen_ai.usage.completion_tokens" not in attributes_set
+
+
+def test_set_token_usage_attributes_defaults_to_current_semconv(instrumentor):
+    """Without the dup opt-in, only the current input/output names are emitted.
+
+    Regression guard for the polarity of the two conventions: v1.27.0 renamed
+    prompt_tokens -> input_tokens and completion_tokens -> output_tokens, so
+    the input/output pair is what a standards-native backend reads.
+    """
+    inst, mock_span = instrumentor
+    inst.config.semconv_stability_opt_in = "gen_ai"
+
+    inst._set_token_usage_attributes(mock_span, prompt_tokens=7, completion_tokens=11)
+
+    attrs = {call[0][0]: call[0][1] for call in mock_span.set_attribute.call_args_list}
+    assert attrs["gen_ai.usage.input_tokens"] == 7
+    assert attrs["gen_ai.usage.output_tokens"] == 11
+    assert "gen_ai.usage.prompt_tokens" not in attrs
+    assert "gen_ai.usage.completion_tokens" not in attrs
+
+
+def test_set_token_usage_attributes_dup_emits_both_conventions(instrumentor):
+    """gen_ai/dup emits the current names alongside the superseded ones."""
+    inst, mock_span = instrumentor
+    inst.config.semconv_stability_opt_in = "gen_ai/dup"
+
+    inst._set_token_usage_attributes(mock_span, prompt_tokens=7, completion_tokens=11)
+
+    attrs = {call[0][0]: call[0][1] for call in mock_span.set_attribute.call_args_list}
+    assert attrs["gen_ai.usage.input_tokens"] == 7
+    assert attrs["gen_ai.usage.output_tokens"] == 11
+    assert attrs["gen_ai.usage.prompt_tokens"] == 7
+    assert attrs["gen_ai.usage.completion_tokens"] == 11
+
+
+@pytest.mark.parametrize("value", [0, -1, None, "12", object()])
+def test_set_token_usage_attributes_skips_non_positive_and_non_numeric(instrumentor, value):
+    """Zero, negative and non-numeric counts emit no token attributes at all."""
+    inst, mock_span = instrumentor
+    inst.config.semconv_stability_opt_in = "gen_ai/dup"
+
+    inst._set_token_usage_attributes(mock_span, prompt_tokens=value, completion_tokens=value)
+
+    names = {call[0][0] for call in mock_span.set_attribute.call_args_list}
+    assert not [n for n in names if n.startswith("gen_ai.usage.")]
+
+
+def test_set_token_usage_attributes_without_config(instrumentor):
+    """A missing config must not raise; it simply means no dual emission."""
+    inst, mock_span = instrumentor
+    inst.config = None
+
+    inst._set_token_usage_attributes(mock_span, prompt_tokens=3, completion_tokens=4)
+
+    attrs = {call[0][0]: call[0][1] for call in mock_span.set_attribute.call_args_list}
+    assert attrs["gen_ai.usage.input_tokens"] == 3
+    assert attrs["gen_ai.usage.output_tokens"] == 4
+    assert "gen_ai.usage.prompt_tokens" not in attrs
 
 
 # --- Tests for Streaming Metrics (Phase 3.4) ---
@@ -863,8 +923,8 @@ def test_token_histograms_recorded(instrumentor):
 
     # Verify span attributes are set
     assert mock_span.set_attribute.call_count >= 3
-    mock_span.set_attribute.assert_any_call("gen_ai.usage.prompt_tokens", 100)
-    mock_span.set_attribute.assert_any_call("gen_ai.usage.completion_tokens", 50)
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.input_tokens", 100)
+    mock_span.set_attribute.assert_any_call("gen_ai.usage.output_tokens", 50)
     mock_span.set_attribute.assert_any_call("gen_ai.usage.total_tokens", 150)
 
 
