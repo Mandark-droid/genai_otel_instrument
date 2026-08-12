@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-08-12
+
+### Fixed
+
+- **Two Groq transcription models still carried the per-minute unit** that 1.11.0
+  corrected everywhere else. The sweep matched entries whose value equalled the
+  upstream per-second rate multiplied by exactly 60, and these two had been
+  rounded (`3.083e-05 * 60 = 0.0018498` against a stored `0.00185`), so they
+  slipped the filter. Read as per-second they implied $6.66/hour;
+  `groq/whisper-large-v3` and `-turbo` are now $0.111/hour and $0.040/hour,
+  matching Groq's published rates.
+
+- **AssemblyAI `best` and `nano` were transposed and stale.** The
+  provider-qualified keys had `best` cheaper than `nano`, inherited from
+  upstream, while the bare keys had the opposite. Verified against
+  assemblyai.com/pricing: `best` (Universal-3.5 Pro) is $0.21/hour and `nano`
+  (Universal-2) is $0.15/hour. All four keys - `assemblyai/best`,
+  `assemblyai/nano`, `best`, `nano` - plus `assemblyai/universal-3-pro` and
+  `assemblyai/universal-2`, now carry the published rates.
+
+  None of these were billing anyone, since no Deepgram, AssemblyAI, Fireworks or
+  Groq-Whisper instrumentor exists yet - the same latency that hid the unit bug
+  in the first place.
+
+### Known gaps
+
+- Four duration-priced entries remain unverified because they are absent from the
+  upstream price list and would need vendor pages to confirm:
+  `assemblyai/slam-1`, `deepgram/nova-3-multilingual`, `fireworks/whisper-v3` and
+  `fireworks/whisper-v3-turbo`. Each looks per-minute, but that is inference, not
+  a checked rate, so they are left as-is rather than guessed at.
+
 ## [1.11.0] - 2026-08-12
 
 ### Fixed
