@@ -33,6 +33,7 @@ from ..config import OTelConfig
 from ..cost_calculator import CostCalculator
 from ..exceptions import PolicyViolationError
 from ..semconv import SemanticConvention as SC
+from ..semconv import genai_semconv_modes, genai_tier_opted_in
 from ..server_metrics import get_server_metrics
 
 
@@ -499,10 +500,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         # gen_ai.output.messages JSON when the user has opted into the new
         # GenAI semconv stability tier ("gen_ai" or "gen_ai/dup").
         # See docs/proposals/upstream-pr-draft/ for the canonical schema.
-        opt_in = (self.config.semconv_stability_opt_in if self.config else "") or ""
-        if "gen_ai" in opt_in and (
-            prompt_messages_for_canonical or completion_messages_for_canonical
-        ):
+        # Gated on the GenAI tier opt-in, NOT on genai_semconv_modes: this payload
+        # carries message CONTENT, so an explicit opt-out must be honoured rather
+        # than defaulted to the safe-for-naming value. See genai_tier_opted_in.
+        emit_canonical = genai_tier_opted_in(
+            self.config.semconv_stability_opt_in if self.config else None
+        )
+        if emit_canonical and (prompt_messages_for_canonical or completion_messages_for_canonical):
             try:
                 import json as _json  # noqa: WPS433
 
@@ -593,6 +597,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 if extract_attributes:
                     try:
                         extracted_attrs = extract_attributes(instance, args, kwargs)
+                        extracted_attrs = self._with_provider_aliases(extracted_attrs)
                         for key, value in extracted_attrs.items():
                             if isinstance(value, (str, int, float, bool)):
                                 initial_attributes[key] = value
@@ -900,6 +905,41 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
         return wrapper
 
+    def _with_provider_aliases(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        """Return ``attrs`` with the model provider under both accepted spellings.
+
+        ``gen_ai.system`` was renamed to ``gen_ai.provider.name``. Roughly 29
+        instrumentors write the superseded spelling as a raw string literal in
+        their own ``_extract_*_attributes``, so mirroring it here -- on the two
+        paths every one of those dicts flows through -- fixes all of them without
+        editing any, and keeps the naming policy in one place. The same reason
+        token emission was centralised in :meth:`_set_token_usage_attributes`.
+
+        This is the provider half of the interop problem 1.9.0 fixed for tokens:
+        a backend reading the current conventions sees no provider at all, which
+        is not a cosmetic gap -- consumers routinely treat a missing provider as
+        "not a GenAI span" and drop the record rather than showing it unlabelled.
+
+        Never overwrites a value the instrumentor set deliberately, and returns
+        the dict unchanged when neither spelling is present, so non-GenAI spans
+        are untouched. Copies before mutating -- the caller's dict may be reused.
+        """
+        current = attrs.get(SC.GEN_AI_PROVIDER_NAME)
+        superseded = attrs.get(SC.GEN_AI_SYSTEM)
+        if current == superseded:  # both absent, or already consistent
+            return attrs
+
+        _, emit_superseded = genai_semconv_modes(
+            self.config.semconv_stability_opt_in if self.config else None
+        )
+
+        mirrored = dict(attrs)
+        if current is None:
+            mirrored[SC.GEN_AI_PROVIDER_NAME] = superseded
+        elif superseded is None and emit_superseded:
+            mirrored[SC.GEN_AI_SYSTEM] = current
+        return mirrored
+
     def _set_token_usage_attributes(
         self,
         span,
@@ -925,21 +965,19 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         ``gen_ai.usage.{input,output}_tokens`` onto ``llm.token_count.*`` and
         derives cost from them.
         """
-        emit_superseded = bool(
-            self.config
-            and self.config.semconv_stability_opt_in
-            and "dup" in self.config.semconv_stability_opt_in
+        _, emit_superseded = genai_semconv_modes(
+            self.config.semconv_stability_opt_in if self.config else None
         )
 
         if isinstance(prompt_tokens, (int, float)) and prompt_tokens > 0:
             span.set_attribute(SC.GEN_AI_USAGE_INPUT_TOKENS, int(prompt_tokens))
             if emit_superseded:
-                span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
+                span.set_attribute(SC.GEN_AI_USAGE_PROMPT_TOKENS, int(prompt_tokens))
 
         if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
             span.set_attribute(SC.GEN_AI_USAGE_OUTPUT_TOKENS, int(completion_tokens))
             if emit_superseded:
-                span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
+                span.set_attribute(SC.GEN_AI_USAGE_COMPLETION_TOKENS, int(completion_tokens))
 
     def _record_result_metrics(self, span, result, start_time: float, request_kwargs: dict = None):
         """Record metrics derived from the function result and execution time.
@@ -988,6 +1026,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             if hasattr(self, "_extract_response_attributes"):
                 response_attrs = self._extract_response_attributes(result)
                 if response_attrs and isinstance(response_attrs, dict):
+                    response_attrs = self._with_provider_aliases(response_attrs)
                     for key, value in response_attrs.items():
                         if isinstance(value, (str, int, float, bool)):
                             span.set_attribute(key, value)
