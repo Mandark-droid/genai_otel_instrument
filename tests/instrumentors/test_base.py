@@ -340,9 +340,13 @@ def test_record_result_metrics_success(instrumentor):
     )
     inst.cost_counter.add.assert_called_once_with(0.01, {"model": "test_model"})
     inst.latency_histogram.record.assert_called_once()
-    # 4 attributes: prompt_tokens, completion_tokens, total_tokens, cost.total
-    # (cost.total is now set for non-chat call_types too — previously dropped).
-    assert mock_span.set_attribute.call_count == 4
+    # 6 attributes: input_tokens + output_tokens (current names), their two
+    # superseded spellings, total_tokens, and cost.total. The superseded pair is
+    # present because dual emission is the DEFAULT — see
+    # genai_otel.semconv.genai_semconv_modes. Under an explicit "gen_ai"
+    # (current-only) this drops back to 4; that case is covered by
+    # test_token_attributes_current_only_when_explicitly_requested.
+    assert mock_span.set_attribute.call_count == 6
 
 
 def test_record_result_metrics_with_errors(instrumentor, caplog):
@@ -654,7 +658,14 @@ def test_set_token_usage_attributes_skips_non_positive_and_non_numeric(instrumen
 
 
 def test_set_token_usage_attributes_without_config(instrumentor):
-    """A missing config must not raise; it simply means no dual emission."""
+    """A missing config must not raise, and must fall back to the SAFE default.
+
+    Previously a missing config meant no dual emission. That is the wrong way to
+    fail: an instrumentor that could not resolve its config would silently drop
+    the attribute names a consumer is reading, which reads downstream as zero
+    tokens rather than as a configuration problem. Absent config now resolves the
+    same way an unset env var does — emit both.
+    """
     inst, mock_span = instrumentor
     inst.config = None
 
@@ -663,7 +674,8 @@ def test_set_token_usage_attributes_without_config(instrumentor):
     attrs = {call[0][0]: call[0][1] for call in mock_span.set_attribute.call_args_list}
     assert attrs["gen_ai.usage.input_tokens"] == 3
     assert attrs["gen_ai.usage.output_tokens"] == 4
-    assert "gen_ai.usage.prompt_tokens" not in attrs
+    assert attrs["gen_ai.usage.prompt_tokens"] == 3
+    assert attrs["gen_ai.usage.completion_tokens"] == 4
 
 
 # --- Tests for Streaming Metrics (Phase 3.4) ---

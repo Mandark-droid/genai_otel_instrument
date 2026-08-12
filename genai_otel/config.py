@@ -235,10 +235,16 @@ class OTelConfig:
         default_factory=lambda: os.getenv("GENAI_AIR_GAPPED", "false").lower() == "true"
     )
 
-    # OpenTelemetry semantic convention stability opt-in
-    # Supports "gen_ai" for new conventions, "gen_ai/dup" for dual emission
+    # OpenTelemetry semantic convention stability opt-in.
+    # A COMMA-SEPARATED list shared by every instrumentation area, so parse it
+    # with genai_otel.semconv.genai_semconv_modes() rather than substring checks
+    # ("dup" in "http/dup" is True and has nothing to do with GenAI).
+    #   "gen_ai/dup" -> current + superseded names   (the default)
+    #   "gen_ai"     -> current names only
+    # Defaults to dual emission so an upgrade cannot silently drop an attribute a
+    # consumer is reading. Flips to current-only at 2.0, where breaking belongs.
     semconv_stability_opt_in: str = field(
-        default_factory=lambda: os.getenv("OTEL_SEMCONV_STABILITY_OPT_IN", "gen_ai")
+        default_factory=lambda: os.getenv("OTEL_SEMCONV_STABILITY_OPT_IN", "gen_ai/dup")
     )
 
     # Enable content capture as span events
