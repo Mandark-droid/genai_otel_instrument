@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.2] - 2026-08-12
+
 ### Fixed
 
 - **The four duration-priced entries left unverified in 1.11.1 are now checked
@@ -29,13 +31,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `deepgram/nova`; Deepgram publishes $0.0077/min for Nova-3 pre-recorded
   pay-as-you-go. Found while confirming the multilingual rate above.
 
+### Verified (no change required)
+
+- **Full Deepgram sweep: 26 of 46 rows confirmed against vendor pricing, no
+  corrections needed.** Nova-2 and its 13 variants are $0.0043/min, exactly the
+  stored value. The nine Aura text-to-speech rows are character-priced, not
+  duration-priced, at $0.015 per 1000 characters ($0.030 for `aura-2`) - also
+  exactly as stored. Together with the Nova-3 rows corrected above, that is every
+  Deepgram entry for which Deepgram publishes a rate.
+
 ### Known gaps
 
-- The remaining Deepgram rows (nova-2, nova, enhanced, base and their variants)
-  still carry rates inherited from the upstream price list rather than checked
-  against deepgram.com. The units are correct; the rates are unverified. Nova-3
-  turning out to be stale suggests the rest deserve the same treatment before a
-  Deepgram instrumentor lands.
+- **Deepgram no longer publishes rates for its older tiers**, so 20 rows cannot
+  be checked against a vendor source: `enhanced` (5), `base` (8), the
+  Deepgram-hosted `whisper` variants (6) and `nova-3-medical`. Their current
+  pricing page lists Nova-3 only. The units are correct after 1.11.0 and the
+  rates match what Deepgram published historically, so they are left as-is rather
+  than removed - but they are legacy figures, not confirmed ones, and a customer
+  on a negotiated contract should override them through custom pricing.
 
 ## [1.11.1] - 2026-08-12
 
