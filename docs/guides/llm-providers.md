@@ -1,6 +1,6 @@
 # LLM Providers
 
-TraceVerde auto-instruments 20+ LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
+TraceVerde auto-instruments 21+ LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
 
 ## Providers with Full Cost Tracking
 
@@ -21,7 +21,49 @@ TraceVerde auto-instruments 20+ LLM providers. No code changes are needed - just
 | Vertex AI | Gemini models via Google Cloud | `[vertexai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/vertexai/example.py) |
 | SambaNova | sarvam-m, Saarika, Bulbul (12+) | `[sambanova]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sambanova_example.py) |
 | Sarvam AI | Indian language models | `[sarvamai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/) |
+| ElevenLabs | Text-to-speech + Scribe speech-to-text | `[elevenlabs]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/elevenlabs_example.py) |
 | Replicate | Hardware-based pricing ($/second) | `[replicate]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/replicate/example.py) |
+
+## Audio Providers: Billing by Media, Not Tokens
+
+ElevenLabs is billed per unit of media rather than per token, so its spans carry
+different usage attributes. Text-to-speech is priced per character of input text
+and Scribe speech-to-text per second of audio.
+
+```python
+import genai_otel
+genai_otel.instrument()
+
+from elevenlabs import ElevenLabs
+client = ElevenLabs(api_key="...")
+
+# Text-to-speech: convert() returns an iterator of audio bytes. Draining it is
+# what completes the span and records time-to-first-byte.
+audio = b"".join(client.text_to_speech.convert(
+    voice_id="21m00Tcm4TlvDq8ikWAM",
+    text="Hello from TraceVerde.",
+    model_id="eleven_multilingual_v2",
+))
+
+# Scribe speech-to-text
+transcript = client.speech_to_text.convert(model_id="scribe_v1", file=open("call.mp3", "rb"))
+```
+
+| Attribute | Operation | Meaning |
+|-----------|-----------|---------|
+| `gen_ai.usage.characters` | text_to_speech | Input characters, the billed unit |
+| `gen_ai.server.ttft` | text_to_speech | Time to first audio byte |
+| `gen_ai.request.voice_id` | text_to_speech | Voice used for synthesis |
+| `gen_ai.usage.audio_duration_seconds` | speech_to_text | Audio seconds, the billed unit |
+| `gen_ai.response.transcript_length` | speech_to_text | Characters of transcript returned |
+
+Time-to-first-byte matters more than total duration for voice, since streamed
+synthesis begins playing before generation finishes - it is what the caller
+actually waits for on a voice turn.
+
+**Audio payloads are never attached to spans.** Only sizes and durations are
+recorded. For voice workloads the audio is frequently personal data, so
+reference-only is the default rather than something to opt into.
 
 ## Quick Example: OpenAI
 

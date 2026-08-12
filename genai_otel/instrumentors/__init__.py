@@ -19,6 +19,7 @@ from .cohere_instrumentor import CohereInstrumentor
 from .cometapi_instrumentor import CometAPIInstrumentor
 from .crewai_instrumentor import CrewAIInstrumentor
 from .dspy_instrumentor import DSPyInstrumentor
+from .elevenlabs_instrumentor import ElevenLabsInstrumentor
 from .google_adk_instrumentor import GoogleADKInstrumentor
 from .google_ai_instrumentor import GoogleAIInstrumentor
 from .groq_instrumentor import GroqInstrumentor
@@ -77,5 +78,6 @@ __all__ = [
     "LlamaIndexInstrumentor",
     "HuggingFaceInstrumentor",
     "PydanticAIInstrumentor",
+    "ElevenLabsInstrumentor",
     "SarvamAIInstrumentor",
 ]

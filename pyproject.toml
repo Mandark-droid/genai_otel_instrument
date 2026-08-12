@@ -122,6 +122,7 @@ ollama = ["ollama>=0.1.0"]
 replicate = ["replicate>=0.15.0"]
 sambanova = ["sambanova>=1.0.0"]
 sarvamai = ["sarvamai>=0.1.0"]
+elevenlabs = ["elevenlabs>=1.0.0"]
 
 # LLM Frameworks
 langchain = ["langchain>=0.1.0"]
@@ -213,6 +214,7 @@ all-providers = [
     "replicate>=0.15.0",
     "sambanova>=1.0.0",
     "sarvamai>=0.1.0",
+    "elevenlabs>=1.0.0",
     "langchain>=0.1.0",
     "langgraph>=0.1.0",
     "llama-index>=0.9.0",
@@ -270,6 +272,7 @@ all = [
     "replicate>=0.15.0",
     "sambanova>=1.0.0",
     "sarvamai>=0.1.0",
+    "elevenlabs>=1.0.0",
     "langchain>=0.1.0",
     "langgraph>=0.1.0",
     "llama-index>=0.9.0",
