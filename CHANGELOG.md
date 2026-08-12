@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-08-12
+
+> Minor rather than patch: in the default `gen_ai` mode, spans now carry
+> `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` instead of
+> `gen_ai.usage.prompt_tokens` / `gen_ai.usage.completion_tokens`. Anything
+> querying the superseded names needs updating, or set
+> `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai/dup` to emit both.
+
 ### Fixed
 
 - **Token usage attributes now follow the current GenAI semantic conventions.**
