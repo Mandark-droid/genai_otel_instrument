@@ -6,6 +6,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The four duration-priced entries left unverified in 1.11.1 are now checked
+  against vendor pricing pages**, and three of them were wrong on rate as well as
+  unit:
+
+  | Entry | Was | Now | Source |
+  |---|---|---|---|
+  | `deepgram/nova-3-multilingual` | $0.0092/min | $0.0092/min | deepgram.com - rate confirmed, unit corrected |
+  | `fireworks/whisper-v3` | $0.004/min | $0.0015/min | fireworks.ai - stale and per-minute |
+  | `fireworks/whisper-v3-turbo` | $0.002/min | $0.0009/min | fireworks.ai - stale and per-minute |
+  | `assemblyai/slam-1` | $0.0045/min | unit only | deprecated by AssemblyAI, no published rate |
+
+  `assemblyai/slam-1` is deprecated upstream, which recommends migrating to
+  `universal-3-pro`. Its unit is corrected for consistency with every other
+  AssemblyAI row so it cannot act as a 60x landmine, but the rate is left alone
+  because there is no published figure to check it against.
+
+- **`deepgram/nova-3` and `deepgram/nova-3-general` were carrying Nova-2 era
+  pricing.** Both sat at $0.0043/min, identical to `deepgram/nova-2` and
+  `deepgram/nova`; Deepgram publishes $0.0077/min for Nova-3 pre-recorded
+  pay-as-you-go. Found while confirming the multilingual rate above.
+
+### Known gaps
+
+- The remaining Deepgram rows (nova-2, nova, enhanced, base and their variants)
+  still carry rates inherited from the upstream price list rather than checked
+  against deepgram.com. The units are correct; the rates are unverified. Nova-3
+  turning out to be stale suggests the rest deserve the same treatment before a
+  Deepgram instrumentor lands.
+
 ## [1.11.1] - 2026-08-12
 
 ### Fixed
