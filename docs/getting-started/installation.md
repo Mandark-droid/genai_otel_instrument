@@ -42,6 +42,7 @@ pip install genai-otel-instrument[groq]
 pip install genai-otel-instrument[ollama]
 pip install genai-otel-instrument[together]
 pip install genai-otel-instrument[cometapi]
+pip install genai-otel-instrument[elevenlabs]   # text-to-speech + Scribe speech-to-text
 
 # All providers
 pip install genai-otel-instrument[all-providers]
