@@ -4,6 +4,74 @@ These constants define the metric and attribute names used throughout the
 instrumentation library, following OpenTelemetry GenAI semantic conventions.
 """
 
+from __future__ import annotations
+
+# ---------------------------------------------------------------------------
+# OTEL_SEMCONV_STABILITY_OPT_IN
+#
+# Upstream defines this as a COMMA-SEPARATED list of tokens shared by every
+# instrumentation area -- "http/dup", "database/dup", "gen_ai/dup" and so on
+# can all appear together. Testing it with a substring check therefore reads
+# other areas' opt-ins as our own: `"dup" in "http/dup"` is True, and
+# `"gen_ai" in ...` matches nothing meaningful when a user writes
+# "gen_ai/dup,http". Both mistakes existed before this helper.
+#
+# Worse case the substring check got wrong: "gen_ai,http/dup" means *current
+# GenAI names only* plus an unrelated HTTP opt-in, and was read as dual GenAI
+# emission because the string contains "dup".
+# ---------------------------------------------------------------------------
+_GENAI_CURRENT_ONLY = "gen_ai"
+_GENAI_DUP = "gen_ai/dup"
+
+
+def genai_semconv_modes(opt_in: str | None) -> tuple[bool, bool]:
+    """Return ``(emit_current, emit_superseded)`` for a raw opt-in string.
+
+    * ``gen_ai/dup``  -> both spellings.
+    * ``gen_ai``      -> current names only; the caller has explicitly asked to
+      drop the superseded ones.
+    * anything else, including unset -> **both**.
+
+    That last line is a deliberate departure from upstream's "unset means old
+    only", and it is the transitional default for this library. The GenAI
+    conventions are still Status: Development, so there is no stable tier to
+    fall back to -- and emitting *only* the current names by default is how
+    1.9.0 silently zeroed token counts for every consumer still reading the
+    superseded ones. Two extra integer attributes per span is a much cheaper
+    mistake than a cost dashboard that reads zero and looks measured.
+
+    The default becomes current-only at 2.0, where a breaking change belongs.
+    """
+    tokens = _tokens(opt_in)
+    if _GENAI_DUP in tokens:
+        return True, True
+    if _GENAI_CURRENT_ONLY in tokens:
+        return True, False
+    return True, True
+
+
+def genai_tier_opted_in(opt_in: str | None) -> bool:
+    """True when the caller has opted into the GenAI semconv tier at all.
+
+    Deliberately NOT the same question as :func:`genai_semconv_modes`. That one
+    decides which *names* to use for attributes we emit regardless; this one gates
+    an additional and much heavier payload -- the canonical
+    ``gen_ai.input.messages`` / ``gen_ai.output.messages`` JSON, which carries
+    message content.
+
+    So an explicitly empty opt-in means "do not emit that payload" and must be
+    honoured, whereas for naming an empty value simply falls back to the safe
+    default. Collapsing the two would silently start emitting message content for
+    someone who had opted out of it -- the opposite failure to a dropped
+    attribute, and a far worse one.
+    """
+    return bool(_tokens(opt_in) & {_GENAI_CURRENT_ONLY, _GENAI_DUP})
+
+
+def _tokens(opt_in: str | None) -> set[str]:
+    """Split the comma-separated opt-in list into stripped, non-empty tokens."""
+    return {token.strip() for token in (opt_in or "").split(",") if token.strip()}
+
 
 class SemanticConvention:
     """Semantic convention constants for metric and attribute names."""
@@ -15,6 +83,16 @@ class SemanticConvention:
     GEN_AI_USAGE_COST = "gen_ai.usage.cost"
     GEN_AI_USAGE_INPUT_TOKENS = "gen_ai.usage.input_tokens"
     GEN_AI_USAGE_OUTPUT_TOKENS = "gen_ai.usage.output_tokens"
+    # Superseded by the two above (semantic-conventions v1.27.0). Named here so
+    # the dual-emission policy reads from one place instead of string literals.
+    GEN_AI_USAGE_PROMPT_TOKENS = "gen_ai.usage.prompt_tokens"
+    GEN_AI_USAGE_COMPLETION_TOKENS = "gen_ai.usage.completion_tokens"
+
+    # Model provider. `gen_ai.system` was renamed to `gen_ai.provider.name`;
+    # instrumentors still write the superseded spelling as a raw literal, and
+    # base.py mirrors it onto the current one centrally.
+    GEN_AI_PROVIDER_NAME = "gen_ai.provider.name"
+    GEN_AI_SYSTEM = "gen_ai.system"
     # Upstream-standardised name (in registry at Development stability since
     # open-telemetry/semantic-conventions#3194; migrated to
     # semantic-conventions-genai). The value SHOULD also be included in
