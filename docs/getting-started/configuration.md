@@ -163,8 +163,16 @@ When enabled, these metrics are recorded:
 
 Options:
 
-- `gen_ai` - New conventions only (default): `gen_ai.usage.prompt_tokens`, `gen_ai.usage.completion_tokens`
-- `gen_ai/dup` - Dual emission for migration: emits both new and old attribute names (`gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`)
+- `gen_ai` - Current conventions only (default): `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`
+- `gen_ai/dup` - Dual emission for migration: also emits the superseded names (`gen_ai.usage.prompt_tokens`, `gen_ai.usage.completion_tokens`)
+
+OpenTelemetry semantic conventions v1.27.0 renamed `gen_ai.usage.prompt_tokens`
+to `gen_ai.usage.input_tokens` and `gen_ai.usage.completion_tokens` to
+`gen_ai.usage.output_tokens`
+([semantic-conventions#1200](https://github.com/open-telemetry/semantic-conventions/pull/1200)).
+Backends that consume the current conventions - Arize AX, for example, maps them
+onto `llm.token_count.*` - report zero tokens if only the superseded names are
+present. Set `gen_ai/dup` if you have dashboards still querying the old names.
 
 ## Ollama Server Metrics
 

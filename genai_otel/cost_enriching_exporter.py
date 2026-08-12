@@ -98,16 +98,18 @@ class CostEnrichingSpanExporter(SpanExporter):
                 )
                 return span
 
-            # Extract token usage - support GenAI, OpenInference, and legacy conventions
+            # Extract token usage - support GenAI, OpenInference, and legacy
+            # conventions. The current GenAI names come first; the superseded
+            # prompt_/completion_ names are only emitted under gen_ai/dup.
             prompt_tokens = (
-                attributes.get("gen_ai.usage.prompt_tokens")
-                or attributes.get("gen_ai.usage.input_tokens")
+                attributes.get("gen_ai.usage.input_tokens")
+                or attributes.get("gen_ai.usage.prompt_tokens")  # superseded
                 or attributes.get("llm.token_count.prompt")  # OpenInference
                 or 0
             )
             completion_tokens = (
-                attributes.get("gen_ai.usage.completion_tokens")
-                or attributes.get("gen_ai.usage.output_tokens")
+                attributes.get("gen_ai.usage.output_tokens")
+                or attributes.get("gen_ai.usage.completion_tokens")  # superseded
                 or attributes.get("llm.token_count.completion")  # OpenInference
                 or 0
             )

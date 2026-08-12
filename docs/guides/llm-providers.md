@@ -192,8 +192,8 @@ For every LLM call:
 | `gen_ai.request.model` | Requested model |
 | `gen_ai.response.model` | Actual model used |
 | `gen_ai.request.type` | Call type (chat, embedding) |
-| `gen_ai.usage.prompt_tokens` | Input token count |
-| `gen_ai.usage.completion_tokens` | Output token count |
+| `gen_ai.usage.input_tokens` | Input token count |
+| `gen_ai.usage.output_tokens` | Output token count |
 | `gen_ai.usage.total_tokens` | Total tokens |
 | `gen_ai.cost.amount` | Estimated cost in USD |
 

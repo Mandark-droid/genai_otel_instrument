@@ -33,7 +33,7 @@ class SemanticConvention:
     # per-part attribution. Co-emitted alongside the upstream-canonical
     # `gen_ai.input.messages` / `gen_ai.output.messages` JSON (see media/canonical.py),
     # which conforms to the gen-ai message schemas in semantic-conventions-genai
-    # (PR #142 approved, #143/#144 in review).
+    # (PR #142 merged; #143/#144 in review).
     # Templates take .format(n=<msg_idx>, m=<part_idx>).
     GEN_AI_PROMPT_ROLE = "gen_ai.prompt.{n}.role"
     GEN_AI_PROMPT_CONTENT_TYPE = "gen_ai.prompt.{n}.content.{m}.type"

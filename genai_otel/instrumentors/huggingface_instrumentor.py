@@ -339,10 +339,11 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                     total_tokens = prompt_tokens + completion_tokens
 
                     # Set token usage attributes
-                    if prompt_tokens > 0:
-                        span.set_attribute("gen_ai.usage.prompt_tokens", prompt_tokens)
-                    if completion_tokens > 0:
-                        span.set_attribute("gen_ai.usage.completion_tokens", completion_tokens)
+                    self._set_token_usage_attributes(
+                        span,
+                        prompt_tokens=prompt_tokens,
+                        completion_tokens=completion_tokens,
+                    )
                     if total_tokens > 0:
                         span.set_attribute("gen_ai.usage.total_tokens", total_tokens)
 
@@ -524,10 +525,11 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                 span.set_attribute("gen_ai.usage.image_count", int(image_count))
             if a_seconds and a_seconds > 0:
                 span.set_attribute("gen_ai.usage.audio_seconds", float(a_seconds))
-            if prompt_tokens:
-                span.set_attribute("gen_ai.usage.prompt_tokens", int(prompt_tokens))
-            if completion_tokens:
-                span.set_attribute("gen_ai.usage.completion_tokens", int(completion_tokens))
+            self._set_token_usage_attributes(
+                span,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+            )
             if total_tokens:
                 span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))
             span.set_attribute("gen_ai.usage.token_count_estimated", True)
