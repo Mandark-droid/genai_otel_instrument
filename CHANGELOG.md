@@ -6,6 +6,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-08-12
+
+> Dual emission is now the DEFAULT. Spans carry both the current and the superseded
+> GenAI attribute spellings unless you explicitly set
+> `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai`. This reverses the 1.9.0 default, which
+> dropped the superseded token names and silently zeroed any consumer still reading
+> them. The default flips to current-only at 2.0, where a breaking change belongs.
+
+### Fixed
+
+- **1.9.0 replaced the superseded token names instead of emitting both, which zeroed
+  consumers that read them.** The rename direction in 1.9.0 was right, the migration
+  strategy was not. `gen_ai.usage.prompt_tokens` / `completion_tokens` simply stopped
+  appearing, and an absent attribute reads as *zero tokens* and therefore *zero cost* —
+  never as an error. Anything consuming the superseded names on a minor version bump
+  lost its numbers without a single log line. Dual emission is now the default.
+
+- **`gen_ai.system` -> `gen_ai.provider.name` is now emitted, closing the provider half
+  of the same interop gap.** 1.9.0 fixed tokens; the provider attribute was still only
+  emitted under its superseded spelling, so a backend consuming the current conventions
+  saw **no provider at all**. That is not cosmetic: consumers routinely treat a missing
+  provider as "not a GenAI span" and drop the record rather than showing it unlabelled.
+  Roughly 29 instrumentors write `gen_ai.system` as a raw string literal in their own
+  `_extract_*_attributes`, so `BaseInstrumentor._with_provider_aliases()` mirrors the two
+  spellings centrally, on the two paths every one of those dicts already flows through —
+  fixing all of them without editing any, and keeping the policy in one place. A value an
+  instrumentor set deliberately is never overwritten, and non-GenAI spans are untouched.
+
+- **`OTEL_SEMCONV_STABILITY_OPT_IN` was matched with substring checks.** It is a
+  comma-separated list shared by *every* instrumentation area, so `"dup" in raw` was true
+  for `http/dup` — an unrelated HTTP opt-in switched on GenAI dual emission. The inverse
+  was worse: `"gen_ai,http/dup"` means *current GenAI names only* plus an HTTP opt-in, and
+  was read as dual emission against an explicit request not to. Parsing now happens in
+  `genai_otel.semconv.genai_semconv_modes()`, which tokenises the list properly.
+
+- **A missing config silently disabled dual emission.** `_set_token_usage_attributes()`
+  treated an unresolvable config as "no dual emission", so a configuration problem
+  degraded into missing attributes — i.e. into a wrong number rather than a visible
+  failure. Absent config now resolves the same way an unset env var does.
+
+### Added
+
+- **`genai_semconv_modes()` and `genai_tier_opted_in()`** in `genai_otel.semconv`. The two
+  answer deliberately different questions: the first decides which *names* to use for
+  attributes emitted regardless, and defaults to the safe (dual) value; the second gates
+  the heavier canonical `gen_ai.input.messages` / `output.messages` payload, which carries
+  message **content**, so an explicit opt-out is honoured rather than defaulted. Collapsing
+  them would start emitting message content for someone who had opted out.
+
+- **A "Renaming a span attribute" section in `Contributing.md`.** The root cause of both
+  regressions is structural: the code that reads these attributes generally lives in
+  another repository and fails silently, so a contributor working here cannot see the
+  breakage they cause. The section states the rule — emit both spellings for at least one
+  major version, never replace — and why the failure mode makes it non-negotiable.
+
+### Upgrading
+
+No action required. Spans now carry both spellings, so both old and new consumers work.
+
+To emit only the current names (the 1.9.0 behaviour):
+
+```bash
+export OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai
+```
+
+
 ## [1.9.0] - 2026-08-12
 
 > Minor rather than patch: in the default `gen_ai` mode, spans now carry
