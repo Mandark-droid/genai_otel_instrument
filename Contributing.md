@@ -179,6 +179,45 @@ class XYZInstrumentor(BaseInstrumentor):
         # Implementation
 ```
 
+## Renaming a span attribute (read this before you do)
+
+The OpenTelemetry GenAI conventions are still `Status: Development` and have already
+renamed attributes more than once. When you follow one of those renames, **emit both
+spellings for at least one major version. Never replace.**
+
+This is not tidiness. An attribute rename fails in a uniquely bad way:
+
+- Nothing raises. The old name is simply absent.
+- A consumer reading it gets *zero*, not an error — zero tokens, zero cost, no provider.
+- Many consumers treat a missing provider or missing token count as **"not a GenAI
+  span"** and drop the record entirely rather than showing it unlabelled.
+
+So the failure surfaces as a confident, plausible number on someone's dashboard. That
+survives review in a way an exception never would, and it can run for weeks.
+
+We have shipped this bug twice, in both directions:
+
+- Emitting only the *superseded* token names meant backends consuming the current
+  conventions read zero tokens and derived zero cost (fixed in 1.9.0).
+- Then emitting only the *current* names meant consumers still reading the superseded
+  ones read zero (fixed in 1.10.0 by making dual emission the default).
+
+**The rules:**
+
+1. Put the naming policy in **one place** — `genai_otel/semconv.py` for the constants,
+   a central helper in `instrumentors/base.py` for emission. Instrumentors must not
+   decide naming individually; there are ~29 of them and they will drift.
+2. Default to **dual emission**. Consumers include long-lived on-prem deployments that
+   cannot be upgraded in lockstep with a library release.
+3. Parse `OTEL_SEMCONV_STABILITY_OPT_IN` with `genai_semconv_modes()`. It is a
+   **comma-separated list shared by every instrumentation area** — `"dup" in raw` is
+   true for `http/dup`, which has nothing to do with GenAI.
+4. Drop a superseded name only in a **major** release, and say so in the CHANGELOG
+   under an explicit *Upgrading* heading.
+5. Assume you cannot see your consumers. This library is published; the code that reads
+   these attributes generally lives in another repository, is not in your context, and
+   will not fail loudly. Compatibility is your responsibility here, not theirs.
+
 ## Documentation
 
 - Update README.md for user-facing changes
