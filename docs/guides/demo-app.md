@@ -90,7 +90,7 @@ Open Jaeger at `http://localhost:16686`:
 4. Click any trace to see span details including:
    - `gen_ai.system` - Provider name
    - `gen_ai.request.model` - Model used
-   - `gen_ai.usage.prompt_tokens` / `gen_ai.usage.completion_tokens` - Token counts
+   - `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` - Token counts
    - `gen_ai.usage.cost.total` - Estimated cost in USD
 
 ## Customizing the Demo

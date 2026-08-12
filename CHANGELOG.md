@@ -6,6 +6,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Token usage attributes now follow the current GenAI semantic conventions.**
+  The two conventions were wired up backwards: `gen_ai.usage.prompt_tokens` /
+  `gen_ai.usage.completion_tokens` were emitted unconditionally and treated as
+  current, while `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` were
+  labelled "old semantic convention" and emitted only under
+  `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai/dup`. The rename runs the other way -
+  semantic-conventions v1.27.0 renamed `prompt_tokens` -> `input_tokens` and
+  `completion_tokens` -> `output_tokens`
+  ([semantic-conventions#1200](https://github.com/open-telemetry/semantic-conventions/pull/1200)).
+
+  Consequence: any backend consuming the current conventions read **zero
+  tokens** from our spans. Confirmed against Arize AX, which maps
+  `gen_ai.usage.{input,output}_tokens` onto `llm.token_count.*` and derives cost
+  from them - a default-mode span landed with `llm.token_count.total = 0` and
+  `llm.cost.total = 0` despite carrying correct counts under the superseded
+  names.
+
+  **Behaviour change:** in the default `gen_ai` mode, spans now carry
+  `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` and no longer carry
+  `gen_ai.usage.prompt_tokens` / `gen_ai.usage.completion_tokens`. Dashboards,
+  alerts or aggregation rules querying the superseded names should either be
+  updated, or keep both by setting `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai/dup`.
+  Cost tracking is unaffected - the cost calculator reads the usage payload
+  directly and its span-attribute fallbacks now prefer the current names.
+
+  Emission is centralised in `BaseInstrumentor._set_token_usage_attributes()`,
+  so the naming policy is applied in one place. This also fixes the HuggingFace
+  and Hyperbolic instrumentors, which previously emitted only the superseded
+  names and ignored the opt-in flag entirely.
+
+### Added
+
+- **`examples/arize_ax/`** - end-to-end example exporting to Arize AX over plain
+  OTLP with no Arize or OpenInference packages installed, configured entirely
+  through standard OpenTelemetry environment variables.
+
 ## [1.8.1] - 2026-08-08
 
 ### Fixed

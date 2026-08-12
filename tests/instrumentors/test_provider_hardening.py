@@ -157,7 +157,7 @@ def test_hyperbolic_cost_call_uses_correct_signature():
     # Previously raised TypeError: unexpected keyword argument 'model_name'.
     instrumentor._extract_and_record_response(span, response_data)
 
-    span.set_attribute.assert_any_call("gen_ai.usage.prompt_tokens", 10)
+    span.set_attribute.assert_any_call("gen_ai.usage.input_tokens", 10)
 
 
 def test_hyperbolic_non_json_response_does_not_break_host():

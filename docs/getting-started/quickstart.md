@@ -100,8 +100,8 @@ For every LLM call:
 |------|-----------|---------------|
 | Provider | `gen_ai.system` | `openai` |
 | Model | `gen_ai.request.model` | `gpt-4o-mini` |
-| Prompt tokens | `gen_ai.usage.prompt_tokens` | `125` |
-| Completion tokens | `gen_ai.usage.completion_tokens` | `87` |
+| Input tokens | `gen_ai.usage.input_tokens` | `125` |
+| Output tokens | `gen_ai.usage.output_tokens` | `87` |
 | Total cost | `gen_ai.usage.cost.total` | `0.000315` |
 | Latency | span duration | `1.23s` |
 

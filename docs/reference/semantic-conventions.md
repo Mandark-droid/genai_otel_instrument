@@ -12,8 +12,8 @@ TraceVerde follows OpenTelemetry semantic conventions for GenAI with additional 
 | `gen_ai.request.model` | string | Requested model identifier |
 | `gen_ai.response.model` | string | Actual model used in response |
 | `gen_ai.request.type` | string | Call type ("chat", "embedding", "completion") |
-| `gen_ai.usage.prompt_tokens` | int | Input token count |
-| `gen_ai.usage.completion_tokens` | int | Output token count |
+| `gen_ai.usage.input_tokens` | int | Input token count |
+| `gen_ai.usage.output_tokens` | int | Output token count |
 | `gen_ai.usage.total_tokens` | int | Total token count |
 | `gen_ai.usage.token_count_estimated` | bool | `true` when prompt/completion token counts came from a fallback estimate (e.g. multimodal Ollama responses lacking `prompt_eval_count`, or HuggingFace vision/audio pipelines that don't surface usage). Absent on spans whose tokens come from the provider response. |
 | `gen_ai.usage.image_count` | int | Number of input images counted by the instrumentor for multimodal calls (vision pipelines). |

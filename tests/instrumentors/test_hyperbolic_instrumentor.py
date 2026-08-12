@@ -110,8 +110,8 @@ class TestHyperbolicInstrumentor(unittest.TestCase):
         mock_span.set_attribute.assert_any_call(
             "gen_ai.response.model", "Qwen/Qwen3-Next-80B-A3B-Thinking"
         )
-        mock_span.set_attribute.assert_any_call("gen_ai.usage.prompt_tokens", 10)
-        mock_span.set_attribute.assert_any_call("gen_ai.usage.completion_tokens", 20)
+        mock_span.set_attribute.assert_any_call("gen_ai.usage.input_tokens", 10)
+        mock_span.set_attribute.assert_any_call("gen_ai.usage.output_tokens", 20)
         mock_span.set_attribute.assert_any_call("gen_ai.usage.total_tokens", 30)
 
         # Verify token metrics were recorded
