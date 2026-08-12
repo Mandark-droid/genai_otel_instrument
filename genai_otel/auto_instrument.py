@@ -68,6 +68,7 @@ try:
         CometAPIInstrumentor,
         CrewAIInstrumentor,
         DSPyInstrumentor,
+        ElevenLabsInstrumentor,
         GoogleADKInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
@@ -105,6 +106,7 @@ except ImportError:
         CometAPIInstrumentor,
         CrewAIInstrumentor,
         DSPyInstrumentor,
+        ElevenLabsInstrumentor,
         GoogleADKInstrumentor,
         GoogleAIInstrumentor,
         GroqInstrumentor,
@@ -203,6 +205,7 @@ INSTRUMENTORS = {
     "anyscale": AnyscaleInstrumentor,
     "sambanova": SambaNovaInstrumentor,
     "sarvamai": SarvamAIInstrumentor,  # Sarvam AI sovereign Indian AI platform
+    "elevenlabs": ElevenLabsInstrumentor,  # ElevenLabs TTS + Scribe speech-to-text
     "hyperbolic": HyperbolicInstrumentor,
     "langchain": LangChainInstrumentor,
     "langgraph": LangGraphInstrumentor,  # LangGraph stateful workflow framework

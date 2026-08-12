@@ -47,6 +47,7 @@ DEFAULT_INSTRUMENTORS = [
     "anyscale",
     "sambanova",
     "sarvamai",
+    "elevenlabs",
     "langchain",
     "langgraph",
     "llama_index",

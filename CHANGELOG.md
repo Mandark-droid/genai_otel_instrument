@@ -6,6 +6,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-08-12
+
+### Fixed
+
+- **Duration-priced audio models were stored per minute but priced per second, a
+  latent 60x overcharge.** `CostCalculator._calculate_audio_cost` documents two
+  units - `characters` (price per 1000) and `seconds` (price *per second*) - but
+  42 of the 111 `audio` entries had been imported as LiteLLM's
+  `input_cost_per_second` multiplied by 60. Every transcription model was
+  affected: all 33 Deepgram models, both AssemblyAI models, `azure/whisper`, and
+  both ElevenLabs Scribe models. Only 2 entries were genuinely per-second, so the
+  calculator's assumption matched almost nothing.
+
+  This never mis-billed anyone because no audio provider was instrumented, so
+  nothing ever passed `seconds` - it would have gone live the moment one was
+  added. All 42 are now stored per-second, derived from the upstream value rather
+  than hand-edited. `elevenlabs/scribe_v1` round-trips to $0.21996/hour against
+  ElevenLabs' published $0.22/hour.
+
+- **ElevenLabs text-to-speech rates corrected against the published API price
+  list.** `eleven_multilingual_v2` / `_v1`, `eleven_monolingual_v1` and
+  `eleven_english_v1` were priced at $0.24 per 1000 characters; the pay-as-you-go
+  API rate is $0.10. `eleven_turbo_v2` is on the Flash/Turbo tier at $0.05. The
+  two speech-to-speech models are deliberately left alone - speech-to-speech is
+  not billed per input character and no published rate covers it.
+
+### Added
+
+- **ElevenLabs instrumentor** (`elevenlabs`), covering text-to-speech
+  (`text_to_speech.convert` / `.stream`) and Scribe speech-to-text
+  (`speech_to_text.convert`), on both the sync and async clients.
+
+  Audio providers bill by media rather than tokens, so spans carry
+  `gen_ai.usage.characters` for synthesis and
+  `gen_ai.usage.audio_duration_seconds` for transcription instead of token
+  counts, alongside `gen_ai.request.voice_id` and
+  `gen_ai.response.transcript_length`. Text-to-speech returns an iterator of
+  audio bytes, which is wrapped rather than consumed so `gen_ai.server.ttft`
+  measures time to first audio byte - for a voice turn that is what the caller
+  actually waits for, not total generation time.
+
+  Audio payloads are never attached to spans; only sizes and durations are
+  recorded, since voice audio is frequently personal data.
+
+  The pricing table keys text-to-speech models bare (`eleven_multilingual_v2`)
+  but Scribe by provider (`elevenlabs/scribe_v1`), while the SDK passes the bare
+  `model_id` in both cases. Cost lookup therefore tries the provider-qualified
+  key first and the bare name second - without it, `scribe_v1` matched nothing
+  and every transcription would have been priced at zero.
+
 ## [1.10.0] - 2026-08-12
 
 > Dual emission is now the DEFAULT. Spans carry both the current and the superseded
