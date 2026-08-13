@@ -6,6 +6,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-08-13
+
+### Added
+
+- **Muse Glimmer 30B** - input $0.30/1M, output $1.20/1M. Meta's dense open-weight
+  multimodal model distilled from Muse Spark, released 2026-08-09. Keyed as
+  `muse-glimmer-30b`, `muse-glimmer` and `meta/muse-glimmer-30b`.
+
+- **Nemotron 3.5 Lightning** - input $0.08/1M, output $0.20/1M. NVIDIA open MoE,
+  3B active of 30B, released 2026-08-11. Keyed as `nemotron-3.5-lightning`,
+  `nemotron-3-5-lightning` and `nvidia/nemotron-3.5-lightning`. Being open-weight,
+  its hosted price varies by provider ($0.04-$0.08/1M input observed); the entry
+  records the reference rate and notes the spread.
+
+- **`qwen3.8-2.4t` aliases** pointing at the existing `qwen3.8-max` price. "2.4T"
+  is that model's parameter count rather than a separate model, so the alias is
+  tested to track the canonical entry exactly - a distinct entry would let the two
+  drift and bill one model two ways depending on which id a caller sent.
+
+### Audit note
+
+A comparison against [pydantic/genai-prices](https://github.com/pydantic/genai-prices)
+found 706 model ids they carry that we do not match by name. Almost none turned
+out to be real gaps:
+
+- **328 of their 386 first-party models already price correctly** through our
+  longest-substring lookup, including `global.anthropic.*` Bedrock aliases. Name
+  mismatch is not coverage mismatch.
+- **400 are OpenRouter listings**, excluded on purpose since 1.8.0: gateways
+  re-list the same underlying model at their own markup, so importing them makes
+  the recorded price depend on which aggregator was indexed first.
+- Of the 31 current-looking first-party models left, spot-checking against vendor
+  documentation found most to be stale or retiring rather than missing: the six
+  GLM-4 entries do not appear in Z.ai's current pricing at all (and carry
+  identical input and output prices, which no current Z.ai model does), the
+  `moonshot-v1` series has a platform sunset dated 31 August, and `mistral-saba`
+  is marked deprecated with a retirement date.
+
+They were therefore not imported. Their data is a useful cross-check, but it is a
+third-party aggregate, and this release cycle has already shown three times over
+what happens when aggregate pricing is trusted without a vendor check.
+
 ## [1.12.0] - 2026-08-13
 
 ### Added
