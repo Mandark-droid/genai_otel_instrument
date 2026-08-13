@@ -248,6 +248,26 @@ class OTelConfig:
         default_factory=lambda: os.getenv("OTEL_SEMCONV_STABILITY_OPT_IN", "gen_ai/dup")
     )
 
+    # Flush pending telemetry on SIGTERM.
+    #
+    # The SDK registers an atexit hook, which covers a clean exit and an uncaught
+    # exception. It does NOT cover termination by signal, so `docker stop` and
+    # Kubernetes pod eviction - both SIGTERM - drop whatever is still queued in
+    # the batch processor. Nothing raises; the telemetry is simply short.
+    #
+    # Off by default because installing a signal handler in a library takes over
+    # a slot the host application may want. When enabled, any previously
+    # installed handler is chained rather than replaced.
+    flush_on_sigterm: bool = field(
+        default_factory=lambda: os.getenv("GENAI_FLUSH_ON_SIGTERM", "false").lower() == "true"
+    )
+
+    # Bound on the SIGTERM flush, in seconds. A collector that is itself down
+    # must not turn a pod's grace period into a hang.
+    sigterm_flush_timeout: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_SIGTERM_FLUSH_TIMEOUT", "5.0"))
+    )
+
     # Enable content capture as span events
     # Controls whether request/response content is captured on spans.
     # Set to "true" to enable content capture for full visibility.
