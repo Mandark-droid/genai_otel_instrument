@@ -6,6 +6,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-08-13
+
+### Added
+
+- **Deprecation metadata in the pricing schema**, and two span attributes that
+  surface it: `gen_ai.request.model.deprecated` and
+  `gen_ai.request.model.deprecation_note`.
+
+  A deprecated model is invisible to cost telemetry, because nothing about it is
+  wrong: it bills normally, at a real rate, right until the provider withdraws
+  it. The only prior warning is a line in a vendor changelog. This turns "what
+  are we running that has an end date?" into a query rather than an audit.
+
+  46 entries are marked, all confirmed against vendor documentation during the
+  1.11.x pricing audit: the 10 `moonshot-v1` keys (platform sunset 2026-08-31),
+  `assemblyai/slam-1` (retired, migrate to `universal-3-pro`), 34 Deepgram legacy
+  tiers that no longer appear on Deepgram's pricing page, and the retired
+  `gpt-3.5-turbo-0301` snapshot. The Deepgram set was previously only recorded as
+  prose in the 1.11.2 notes; it is now machine-readable.
+
+  Deprecation is kept deliberately separate from `pricing_source`, which stays
+  `table` for these models. Conflating them would make a retiring model look
+  unpriced while it is still costing money - the inverse of the failure the
+  `pricing_source` attribute exists to prevent.
+
+  The data lives in a top-level `deprecated` map keyed by pricing key rather than
+  as an inline field, because several categories store bare numbers
+  (`"tts-1": 0.015`) that cannot carry a flag without changing their shape and
+  the arithmetic that reads them. The map is excluded from category indexing, so
+  a `call_type` of `"deprecated"` cannot resolve model names against it.
+
+- **`CostCalculator.deprecation(model, call_type)`** returning the reason string
+  or `None`, resolved through the same alias lookup as pricing so a
+  provider-prefixed id gets the same answer as the canonical one.
+
 ## [1.12.1] - 2026-08-13
 
 ### Added

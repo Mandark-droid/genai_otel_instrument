@@ -28,6 +28,8 @@ TraceVerde follows OpenTelemetry semantic conventions for GenAI with additional 
 | `gen_ai.usage.cost.prompt` | float | Prompt token cost |
 | `gen_ai.usage.cost.completion` | float | Completion token cost |
 | `gen_ai.usage.cost.pricing_source` | string | Where the price came from: `table`, `estimated` or `unpriced` |
+| `gen_ai.request.model.deprecated` | bool | Set only when the provider has announced the model's retirement |
+| `gen_ai.request.model.deprecation_note` | string | Retirement date and migration target |
 
 !!! warning "Read `pricing_source` before summing cost"
 

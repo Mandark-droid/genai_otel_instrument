@@ -1184,6 +1184,16 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 self.cost_calculator.pricing_source(model, call_type),
                             )
 
+                            # Flag models the provider has announced the end of.
+                            # These bill normally right up until withdrawal, so
+                            # nothing else in the telemetry distinguishes them -
+                            # the only warning is a vendor changelog. Emitted
+                            # only when set, so active models stay unaffected.
+                            _dep = self.cost_calculator.deprecation(model, call_type)
+                            if _dep:
+                                span.set_attribute("gen_ai.request.model.deprecated", True)
+                                span.set_attribute("gen_ai.request.model.deprecation_note", _dep)
+
                             # Granular costs: span attributes are ALWAYS set (needed for
                             # audit / explainability); the per-breakdown metric counters
                             # are opt-in (_rec_granular) to keep the hot path lean.
