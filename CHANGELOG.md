@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Opt-in SIGTERM flush** (`GENAI_FLUSH_ON_SIGTERM`, default `false`), closing
+  the gap where containerised shutdown silently dropped queued telemetry.
+
+  The SDK's `atexit` hook covers a clean exit and an uncaught exception, because
+  Python runs `atexit` handlers on both. It does not run them when the process is
+  terminated by a signal - and `docker stop` and Kubernetes pod eviction both send
+  SIGTERM. Every rolling restart therefore lost whatever was still queued in the
+  batch processor, up to 5 seconds or 512 spans by default, with nothing raised
+  and nothing logged.
+
+  Verified end to end against a real collector: with the flag off the span never
+  reaches OpenSearch, with it on the span arrives.
+
+  The handler is deliberately conservative. It never replaces an existing SIGTERM
+  handler - whatever was registered before is invoked after the flush - and where
+  none was, it restores the default disposition and re-raises, so the process
+  still exits with the conventional status instead of appearing to ignore the
+  signal. An explicit `SIG_IGN` is honoured. Installing off the main thread, where
+  `signal.signal` cannot work, logs a warning and continues rather than raising
+  into the host application. The flush is bounded by
+  `GENAI_SIGTERM_FLUSH_TIMEOUT` (default 5s) so a collector that is itself down
+  cannot turn a pod's grace period into a hang.
+
+- **`genai_otel.flush_telemetry(timeout_seconds=5.0)`** for applications that
+  already own their shutdown path and would rather drain telemetry themselves than
+  hand a signal slot to the library.
+
+  SIGKILL, out-of-memory kills and segfaults remain unhandleable from inside the
+  process; `OTEL_BSP_SCHEDULE_DELAY` is the lever that bounds exposure there.
+
 ## [1.11.2] - 2026-08-12
 
 ### Fixed

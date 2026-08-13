@@ -155,6 +155,45 @@ When enabled, these metrics are recorded:
 !!! warning "Privacy"
     Content capture records full prompts and responses. This may expose sensitive data. Ensure proper data handling and access controls before enabling in production.
 
+## Shutdown and Flushing
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GENAI_FLUSH_ON_SIGTERM` | `false` | Flush pending telemetry when the process receives SIGTERM |
+| `GENAI_SIGTERM_FLUSH_TIMEOUT` | `5.0` | Seconds to wait for that flush |
+
+The OpenTelemetry SDK registers an `atexit` hook, so a clean exit and an uncaught
+exception both flush already. Signals are the gap: Python does not run `atexit`
+handlers when the process is terminated by one, and **`docker stop` and
+Kubernetes pod eviction both send SIGTERM**. Every rolling restart therefore
+drops whatever is still queued in the batch processor - up to 5 seconds or 512
+spans by default. Nothing raises, so the loss is silent and dashboards simply
+read a little low.
+
+Enable the handler in containerised deployments:
+
+```bash
+export GENAI_FLUSH_ON_SIGTERM=true
+```
+
+It is off by default because installing a signal handler takes over a slot the
+host application may want. When enabled it never replaces an existing handler -
+whatever was registered before is called after the flush - and if nothing was, the
+default disposition is restored and the signal re-raised, so the process still
+exits with the conventional status rather than appearing to ignore SIGTERM.
+
+If your application already owns its shutdown path, drain telemetry directly
+instead and leave the handler off:
+
+```python
+import genai_otel
+genai_otel.flush_telemetry(timeout_seconds=5.0)
+```
+
+SIGKILL, out-of-memory kills and segfaults cannot be handled from inside the
+process. To bound the loss window there, shorten the batch delay with the
+standard `OTEL_BSP_SCHEDULE_DELAY`, trading export frequency for exposure.
+
 ## Semantic Conventions
 
 | Variable | Default | Description |
