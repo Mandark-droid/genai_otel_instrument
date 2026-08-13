@@ -256,3 +256,63 @@ def test_muse_glimmer_does_not_shadow_muse_spark(calc):
     usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
     spark = calc.calculate_granular_cost("muse-spark-1.2", usage, "chat")["total"]
     assert spark == pytest.approx(0.00125 + 0.00425)
+
+
+# --- deprecation registry -------------------------------------------------
+# A deprecated model still has a real price and still bills, so it must stay
+# "table" rather than looking unpriced. What the flag adds is a time signal:
+# the id keeps working right up until the provider withdraws it.
+DEPRECATED_MODELS = [
+    ("moonshot/moonshot-v1-128k", "chat"),
+    ("moonshot/moonshot-v1-8k", "chat"),
+    ("assemblyai/slam-1", "audio"),
+    ("deepgram/nova-2", "audio"),
+    ("deepgram/enhanced", "audio"),
+    ("gpt-3.5-turbo-0301", "chat"),
+]
+
+ACTIVE_MODELS = [
+    ("gpt-4o-mini", "chat"),
+    ("claude-opus-5", "chat"),
+    ("deepgram/nova-3", "audio"),
+    ("elevenlabs/scribe_v1", "audio"),
+    ("muse-glimmer-30b", "chat"),
+]
+
+
+@pytest.mark.parametrize("model,call_type", DEPRECATED_MODELS)
+def test_deprecated_models_report_a_reason(calc, model, call_type):
+    reason = calc.deprecation(model, call_type)
+    assert reason, f"{model} should be flagged deprecated"
+    assert len(reason) > 20, "reason should say why and what to migrate to"
+
+
+@pytest.mark.parametrize("model,call_type", ACTIVE_MODELS)
+def test_active_models_are_not_flagged(calc, model, call_type):
+    assert calc.deprecation(model, call_type) is None
+
+
+@pytest.mark.parametrize("model,call_type", DEPRECATED_MODELS)
+def test_deprecated_models_still_price(calc, model, call_type):
+    """Deprecation must not zero the price - these still cost real money."""
+    assert calc.pricing_source(model, call_type) == "table"
+
+
+def test_deprecated_registry_is_not_a_pricing_category(calc):
+    """The registry is keyed by pricing key, not model name. If it were indexed
+    as a category, a call_type of 'deprecated' would resolve names against it."""
+    assert calc.pricing_source("moonshot/moonshot-v1-8k", "deprecated") in (
+        "table",
+        "unpriced",
+    )
+    assert "deprecated" not in calc._exact_index
+
+
+def test_deprecation_survives_alias_resolution(calc):
+    """Lookup goes through the same alias path as pricing, so a prefixed id and
+    the key it resolves to must agree."""
+    assert calc.deprecation("deepgram/nova-2-phonecall", "audio")
+
+
+def test_unknown_model_is_not_flagged(calc):
+    assert calc.deprecation("some-model-that-does-not-exist-xyz", "chat") is None
