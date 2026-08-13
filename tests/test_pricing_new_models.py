@@ -202,3 +202,57 @@ def test_free_tier_listings_do_not_shadow_paid_pricing(calc, model):
     assert not (
         entry.get("promptPrice") == 0 and entry.get("completionPrice") == 0
     ), f"{model} resolved to {key}, a $0/$0 entry that would report real spend as free"
+
+
+# --- 2026-08-13 additions -------------------------------------------------
+# Muse Glimmer 30B, Nemotron 3.5 Lightning, and the Qwen3.8-2.4T alias.
+# "2.4T" is Qwen3.8-Max's parameter count rather than a separate model, so the
+# alias must land on the same price - a distinct entry would let the two drift.
+AUGUST_2026_MODELS = [
+    ("muse-glimmer-30b", 0.0003, 0.0012),
+    ("muse-glimmer", 0.0003, 0.0012),
+    ("meta/muse-glimmer-30b", 0.0003, 0.0012),
+    ("nemotron-3.5-lightning", 0.00008, 0.0002),
+    ("nemotron-3-5-lightning", 0.00008, 0.0002),
+    ("nvidia/nemotron-3.5-lightning", 0.00008, 0.0002),
+    ("qwen3.8-2.4t", 0.002, 0.006),
+    ("qwen3.8-2-4t", 0.002, 0.006),
+    ("Qwen/Qwen3.8-2.4T", 0.002, 0.006),
+]
+
+
+@pytest.mark.parametrize("model,prompt_price,completion_price", AUGUST_2026_MODELS)
+def test_august_2026_models_priced(calc, model, prompt_price, completion_price):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    granular = calc.calculate_granular_cost(model, usage, "chat")
+    assert granular["total"] == pytest.approx(prompt_price + completion_price)
+
+
+def test_qwen38_2_4t_matches_max(calc):
+    """The alias must track qwen3.8-max exactly; drift would bill the same model
+    two different ways depending on which id the caller happened to send."""
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    alias = calc.calculate_granular_cost("qwen3.8-2.4t", usage, "chat")["total"]
+    canonical = calc.calculate_granular_cost("qwen3.8-max", usage, "chat")["total"]
+    assert alias == pytest.approx(canonical)
+
+
+@pytest.mark.parametrize(
+    "model,expected_key",
+    [
+        # Must not be swallowed by a shorter nemotron sibling.
+        ("nemotron-3.5-lightning", "nemotron-3.5-lightning"),
+        ("nvidia/nemotron-3.5-lightning", "nvidia/nemotron-3.5-lightning"),
+        # Must not resolve to the muse-spark family it was distilled from.
+        ("muse-glimmer-30b", "muse-glimmer-30b"),
+    ],
+)
+def test_august_2026_routing_not_shadowed(calc, model, expected_key):
+    assert calc._normalize_model_name(model, "chat") == expected_key
+
+
+def test_muse_glimmer_does_not_shadow_muse_spark(calc):
+    """Adding muse-glimmer must leave the distilled-from family alone."""
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    spark = calc.calculate_granular_cost("muse-spark-1.2", usage, "chat")["total"]
+    assert spark == pytest.approx(0.00125 + 0.00425)

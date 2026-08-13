@@ -5853,6 +5853,21 @@
       "cacheReadPrice": 2e-06,
       "note": "Muse Spark 1.2 Contributor. input $0.1/1M, output $0.2/1M, cache read $0.002/1M. Released 2026-08-05. 1048576 context. Source: models.dev / meta"
     },
+    "muse-glimmer-30b": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "note": "Muse Glimmer 30B. input $0.30/1M, output $1.20/1M. Dense open-weight multimodal model distilled from Muse Spark. Released 2026-08-09. 131000 context. Source: openrouter.ai/meta/muse-glimmer-30b"
+    },
+    "muse-glimmer": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "note": "Muse Glimmer 30B. input $0.30/1M, output $1.20/1M. Dense open-weight multimodal model distilled from Muse Spark. Released 2026-08-09. 131000 context. Source: openrouter.ai/meta/muse-glimmer-30b"
+    },
+    "meta/muse-glimmer-30b": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "note": "Muse Glimmer 30B. input $0.30/1M, output $1.20/1M. Dense open-weight multimodal model distilled from Muse Spark. Released 2026-08-09. 131000 context. Source: openrouter.ai/meta/muse-glimmer-30b"
+    },
     "nanbeige-4.1-3b": {
       "promptPrice": 0.0003,
       "completionPrice": 0.0006,
@@ -5911,6 +5926,21 @@
       "promptPrice": 6e-05,
       "completionPrice": 0.00024,
       "note": "NVIDIA Nemotron Nano 3 30B. input $0.06/1M, output $0.24/1M. Released 2025-12-23. 128000 context. Source: models.dev / amazon-bedrock"
+    },
+    "nemotron-3.5-lightning": {
+      "promptPrice": 8e-05,
+      "completionPrice": 0.0002,
+      "note": "Nemotron 3.5 Lightning. input $0.08/1M, output $0.20/1M. Open MoE, 3B active of 30B. Released 2026-08-11. 1000000 context. Open-weight, so hosting price varies by provider ($0.04-$0.08/1M input observed); this is the OpenRouter reference rate. Source: openrouter.ai/nvidia/nemotron-3.5-lightning"
+    },
+    "nemotron-3-5-lightning": {
+      "promptPrice": 8e-05,
+      "completionPrice": 0.0002,
+      "note": "Nemotron 3.5 Lightning. input $0.08/1M, output $0.20/1M. Open MoE, 3B active of 30B. Released 2026-08-11. 1000000 context. Open-weight, so hosting price varies by provider ($0.04-$0.08/1M input observed); this is the OpenRouter reference rate. Source: openrouter.ai/nvidia/nemotron-3.5-lightning"
+    },
+    "nvidia/nemotron-3.5-lightning": {
+      "promptPrice": 8e-05,
+      "completionPrice": 0.0002,
+      "note": "Nemotron 3.5 Lightning. input $0.08/1M, output $0.20/1M. Open MoE, 3B active of 30B. Released 2026-08-11. 1000000 context. Open-weight, so hosting price varies by provider ($0.04-$0.08/1M input observed); this is the OpenRouter reference rate. Source: openrouter.ai/nvidia/nemotron-3.5-lightning"
     },
     "nvidia-nemotron-nano-9b-v2": {
       "promptPrice": 6e-05,
@@ -6961,6 +6991,27 @@
       "cacheReadPrice": 0.00025,
       "cacheWritePrice": 0.0025,
       "note": "Qwen3.8 Max. input $2/1M, output $6/1M, cache read $0.25/1M, cache write $2.5/1M. Released 2026-08-03. 1000000 context. Source: models.dev / alibaba"
+    },
+    "qwen3.8-2.4t": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "cacheReadPrice": 0.00025,
+      "cacheWritePrice": 0.0025,
+      "note": "Alias for qwen3.8-max - '2.4T' is the parameter count, same model. input $2/1M, output $6/1M."
+    },
+    "qwen3.8-2-4t": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "cacheReadPrice": 0.00025,
+      "cacheWritePrice": 0.0025,
+      "note": "Alias for qwen3.8-max - '2.4T' is the parameter count, same model. input $2/1M, output $6/1M."
+    },
+    "Qwen/Qwen3.8-2.4T": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "cacheReadPrice": 0.00025,
+      "cacheWritePrice": 0.0025,
+      "note": "Alias for qwen3.8-max - '2.4T' is the parameter count, same model. input $2/1M, output $6/1M."
     },
     "qwen3:14b": {
       "promptPrice": 0.0007,
