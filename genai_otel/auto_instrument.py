@@ -673,6 +673,16 @@ def setup_auto_instrumentation(config: OTelConfig):
         if config.fail_on_error:
             raise
 
+    # Install last, so a handler is only registered once the providers it would
+    # flush actually exist.
+    if config.flush_on_sigterm:
+        try:
+            _install_sigterm_flush_handler(config)
+        except Exception as e:  # noqa: BLE001
+            logger.error("Failed to install SIGTERM flush handler: %s", e, exc_info=True)
+            if config.fail_on_error:
+                raise
+
     _INSTRUMENTATION_INITIALIZED = True
     logger.info("Auto-instrumentation setup complete")
 
@@ -683,6 +693,96 @@ def setup_auto_instrumentation(config: OTelConfig):
         report_usage(config)
     except Exception:
         pass  # Never let telemetry affect instrumentation
+
+
+def flush_telemetry(timeout_seconds: float = 5.0) -> bool:
+    """Force-flush the active providers. Returns True if everything flushed.
+
+    Exposed publicly so an application that already owns its shutdown path can
+    drain telemetry itself instead of enabling the SIGTERM handler.
+    """
+    timeout_ms = max(1, int(timeout_seconds * 1000))
+    ok = True
+    for provider in (_active_tracer_provider, _active_meter_provider):
+        if provider is None:
+            continue
+        try:
+            if provider.force_flush(timeout_ms) is False:
+                ok = False
+        except Exception as e:  # noqa: BLE001
+            logger.debug("force_flush failed during shutdown: %s", e)
+            ok = False
+    return ok
+
+
+def _install_sigterm_flush_handler(config: OTelConfig) -> bool:
+    """Flush pending telemetry when the process is terminated by SIGTERM.
+
+    The SDK's atexit hook covers a clean exit and an uncaught exception, because
+    Python runs atexit handlers on both. It does not run them when the process is
+    killed by a signal, so `docker stop` and Kubernetes pod eviction drop whatever
+    is still queued - silently, which is the point of handling it.
+
+    Returns True when a handler was installed.
+
+    Three things this deliberately does not do:
+
+    * It does not replace an existing handler. Whatever was registered before is
+      called after the flush, so an application with its own graceful shutdown
+      keeps it.
+    * It does not raise when called off the main thread. ``signal.signal`` only
+      works there, and instrumentation must never break the host application, so
+      an unusable slot is logged and skipped.
+    * It does not swallow the signal. After flushing, the default disposition is
+      restored and the signal re-raised, so the process still dies with the
+      conventional 143 exit status instead of appearing to ignore SIGTERM.
+    """
+    import os
+    import signal
+    import threading
+
+    if threading.current_thread() is not threading.main_thread():
+        logger.warning(
+            "GENAI_FLUSH_ON_SIGTERM is set but instrument() was called off the main "
+            "thread, where signal handlers cannot be installed. Telemetry queued at "
+            "SIGTERM will be lost; call genai_otel.flush_telemetry() from your own "
+            "shutdown path instead."
+        )
+        return False
+
+    try:
+        previous = signal.getsignal(signal.SIGTERM)
+    except (ValueError, AttributeError) as e:  # pragma: no cover - platform dependent
+        logger.warning("Cannot install SIGTERM flush handler on this platform: %s", e)
+        return False
+
+    def _on_sigterm(signum, frame):
+        try:
+            flushed = flush_telemetry(config.sigterm_flush_timeout)
+            logger.info(
+                "SIGTERM received, telemetry flush %s", "complete" if flushed else "partial"
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.debug("SIGTERM flush failed: %s", e)
+
+        # Chain to whatever was registered before us, then fall through to the
+        # default so the exit status stays conventional.
+        if callable(previous):
+            previous(signum, frame)
+            return
+        if previous == signal.SIG_IGN:
+            return
+        signal.signal(signum, signal.SIG_DFL)
+        os.kill(os.getpid(), signum)
+
+    try:
+        signal.signal(signal.SIGTERM, _on_sigterm)
+    except (ValueError, OSError, RuntimeError) as e:
+        logger.warning("Failed to install SIGTERM flush handler: %s", e)
+        return False
+
+    logger.info("SIGTERM flush handler installed (timeout %.1fs)", config.sigterm_flush_timeout)
+    return True
 
 
 def instrument(**kwargs):
