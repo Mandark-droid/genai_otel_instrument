@@ -23,6 +23,31 @@ Every LLM span gets these attributes:
 | `gen_ai.usage.cost.prompt` | Prompt token cost | `0.001250` |
 | `gen_ai.usage.cost.completion` | Completion token cost | `0.002000` |
 | `gen_ai.usage.cost.pricing_source` | Where the price came from | `table` |
+| `gen_ai.request.model.deprecated` | Present only when the provider has announced the model's end | `true` |
+| `gen_ai.request.model.deprecation_note` | Why, and what to migrate to | `Moonshot v1 platform sunset 2026-08-31...` |
+
+### Spotting models that are about to stop existing
+
+A deprecated model is not a pricing problem — it bills normally, at a real rate,
+right up until the provider withdraws it. That is exactly what makes it easy to
+miss: nothing in the telemetry looks wrong until the day the calls start failing,
+and the only prior warning was a line in a vendor changelog.
+
+Spans for such models carry `gen_ai.request.model.deprecated`, so the question
+"what are we running that has an end date?" becomes a query instead of an audit:
+
+```python
+retiring = {s.attributes["gen_ai.request.model"]
+            for s in spans if s.attributes.get("gen_ai.request.model.deprecated")}
+```
+
+The attributes are absent on active models, so this costs nothing in the normal
+case. `pricing_source` stays `table` for deprecated models — conflating the two
+would make a retiring model look unpriced when it is still costing money.
+
+Deprecations are recorded in the `deprecated` map in
+`genai_otel/llm_pricing.json`, keyed by pricing key so it covers every category,
+including the ones whose values are bare numbers and cannot carry an inline flag.
 
 ### Telling "free" apart from "not measured"
 

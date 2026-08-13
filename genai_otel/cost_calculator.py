@@ -16,6 +16,10 @@ class CostCalculator:
     """Calculate estimated costs for LLM API calls based on loaded pricing data."""
 
     DEFAULT_PRICING_FILE = "llm_pricing.json"
+    # Top-level key holding deprecation metadata. Keyed by pricing key, so it
+    # spans every category - including ones whose values are bare scalars and
+    # therefore cannot carry an inline flag.
+    DEPRECATED_KEY = "deprecated"
 
     def __init__(self, custom_pricing_json: Optional[str] = None):
         """Initializes the CostCalculator by loading pricing data from a JSON file.
@@ -76,6 +80,11 @@ class CostCalculator:
         self._chat_pricing_cache = {}
         for category, models in self.pricing_data.items():
             if not isinstance(models, dict):
+                continue
+            # "deprecated" is a metadata registry keyed by pricing key, not a
+            # pricing category. Indexing it would let a call_type of "deprecated"
+            # resolve model names against it.
+            if category == self.DEPRECATED_KEY:
                 continue
             lowered = [(str(k).lower(), k) for k in models]
             self._exact_index[category] = {lk: k for lk, k in lowered}
@@ -282,6 +291,42 @@ class CostCalculator:
         if category == "chat" and self._extract_param_count_from_model_name(model) is not None:
             return "estimated"
         return "unpriced"
+
+    def deprecation(self, model: str, call_type: str = "chat") -> Optional[str]:
+        """Return why this model is deprecated, or None if it is not.
+
+        Deliberately separate from :meth:`pricing_source`. A deprecated model
+        still has a real price and still costs real money, so it stays
+        ``"table"`` - conflating the two would make a retiring model look
+        unpriced. What deprecation adds is a *time* signal: this id keeps billing
+        normally right up until the provider withdraws it, and the only warning
+        is in a vendor changelog nobody reads.
+
+        Resolution goes through the same alias lookup as pricing, so a caller
+        sending a provider-prefixed or dated variant gets the same answer as one
+        sending the canonical id.
+
+        Returns the human-readable reason (usually a retirement date and the
+        migration target), or None.
+        """
+        registry = self.pricing_data.get(self.DEPRECATED_KEY)
+        if not isinstance(registry, dict) or not registry:
+            return None
+
+        category = call_type if call_type in self.pricing_data else "chat"
+        key = self._normalize_model_name(model, category)
+        if key and key in registry:
+            return registry[key]
+        # A model may be priced in one category but deprecated under a key
+        # resolved from another (audio entries, for example, are reached with
+        # call_type="audio" but may be probed as chat by generic callers).
+        for other in ("chat", "audio", "embeddings", "images", "speech_to_text"):
+            if other == category or other not in self.pricing_data:
+                continue
+            key = self._normalize_model_name(model, other)
+            if key and key in registry:
+                return registry[key]
+        return None
 
     def _resolve_chat_pricing(self, model: str) -> Optional[Dict[str, Any]]:
         """Resolve the pricing dict for a chat model, memoized per model name.
