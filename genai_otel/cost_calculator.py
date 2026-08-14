@@ -20,6 +20,13 @@ class CostCalculator:
     # spans every category - including ones whose values are bare scalars and
     # therefore cannot carry an inline flag.
     DEPRECATED_KEY = "deprecated"
+    # Records when a price was last confirmed against the vendor's own page,
+    # keyed by pricing key. Absence means "never verified here", not "correct" -
+    # most entries are inherited from an upstream aggregate.
+    PRICES_CHECKED_KEY = "prices_checked"
+    # Metadata registries, not pricing categories. Kept out of the model index so
+    # a call_type matching one of these names cannot resolve against it.
+    METADATA_KEYS = frozenset({DEPRECATED_KEY, PRICES_CHECKED_KEY})
 
     def __init__(self, custom_pricing_json: Optional[str] = None):
         """Initializes the CostCalculator by loading pricing data from a JSON file.
@@ -84,7 +91,7 @@ class CostCalculator:
             # "deprecated" is a metadata registry keyed by pricing key, not a
             # pricing category. Indexing it would let a call_type of "deprecated"
             # resolve model names against it.
-            if category == self.DEPRECATED_KEY:
+            if category in self.METADATA_KEYS:
                 continue
             lowered = [(str(k).lower(), k) for k in models]
             self._exact_index[category] = {lk: k for lk, k in lowered}
@@ -291,6 +298,67 @@ class CostCalculator:
         if category == "chat" and self._extract_param_count_from_model_name(model) is not None:
             return "estimated"
         return "unpriced"
+
+    def price_checked(self, model: str, call_type: str = "chat") -> Optional[str]:
+        """Return the ISO date this model's price was last confirmed, or None.
+
+        Confirmed means someone opened the vendor's own pricing page and read the
+        number. It is not the same as "correct": most of the table is inherited
+        from an upstream aggregate, which is a reasonable starting point and a
+        poor source of truth. Auditing this week found rates that were stale by a
+        full model generation, transposed between tiers, and off by 2.5x - none of
+        which looked wrong in the file.
+
+        None therefore means "never verified here", not "suspect". It is the
+        honest default for an inherited number.
+        """
+        registry = self.pricing_data.get(self.PRICES_CHECKED_KEY)
+        if not isinstance(registry, dict) or not registry:
+            return None
+        category = call_type if call_type in self.pricing_data else "chat"
+        key = self._normalize_model_name(model, category)
+        if key and key in registry:
+            return registry[key]
+        for other in ("chat", "audio", "embeddings", "images", "speech_to_text"):
+            if other == category or other not in self.pricing_data:
+                continue
+            key = self._normalize_model_name(model, other)
+            if key and key in registry:
+                return registry[key]
+        return None
+
+    def stale_prices(self, older_than_days: int = 180, include_unverified: bool = True):
+        """List pricing keys due a re-check, newest-verified last.
+
+        Turns the audit from a manual sweep into a query. Returns
+        ``(pricing_key, iso_date_or_None)`` pairs: entries verified longer ago
+        than ``older_than_days``, plus - unless disabled - every entry that has
+        never been verified at all.
+
+        The unverified set is the large one, and deliberately so. Reporting only
+        aged entries would imply the rest are fine, when in practice most have
+        simply never been looked at.
+        """
+        from datetime import date, timedelta
+
+        registry = self.pricing_data.get(self.PRICES_CHECKED_KEY) or {}
+        cutoff = date.today() - timedelta(days=older_than_days)
+        out = []
+        for category, models in self.pricing_data.items():
+            if category in self.METADATA_KEYS or not isinstance(models, dict):
+                continue
+            for key in models:
+                stamped = registry.get(key)
+                if stamped is None:
+                    if include_unverified:
+                        out.append((key, None))
+                    continue
+                try:
+                    if date.fromisoformat(stamped) < cutoff:
+                        out.append((key, stamped))
+                except ValueError:
+                    out.append((key, stamped))  # unparseable date is itself a problem
+        return sorted(out, key=lambda p: (p[1] or "", p[0]))
 
     def deprecation(self, model: str, call_type: str = "chat") -> Optional[str]:
         """Return why this model is deprecated, or None if it is not.

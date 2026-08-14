@@ -74,6 +74,36 @@ calc.calculate_cost("elevenlabs/scribe_v1", {"characters": 1000}, "audio")  # ->
 A bare number is still accepted for backwards compatibility and for custom
 pricing, and keeps the old inferred-unit behaviour.
 
+### Knowing which prices have actually been checked
+
+Most of the pricing table is inherited from an upstream aggregate. That is a
+reasonable starting point and a poor source of truth — auditing in August 2026
+found rates stale by a full model generation, transposed between tiers, and off
+by 2.5x, none of which looked wrong in the file.
+
+Entries verified against the vendor's own pricing page carry the date that
+happened, in the `prices_checked` map:
+
+```python
+from genai_otel.cost_calculator import CostCalculator
+calc = CostCalculator()
+
+calc.price_checked("elevenlabs/scribe_v1", "audio")   # '2026-08-12'
+calc.price_checked("gpt-4o-mini")                     # None - never verified here
+```
+
+`None` means "nobody has checked this against the vendor", not "suspect". It is
+the honest default for an inherited number, and it makes the audit a query
+instead of a manual sweep:
+
+```python
+for key, checked in calc.stale_prices(older_than_days=180):
+    print(key, checked or "never verified")
+```
+
+Pass `include_unverified=False` to see only entries that were checked once and
+have since aged out.
+
 ### Telling "free" apart from "not measured"
 
 `cost.total = 0.0` means one of two very different things, so every span also

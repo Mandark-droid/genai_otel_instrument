@@ -6,6 +6,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-08-14
+
+### Added
+
+- **`prices_checked` records when a price was last confirmed against the
+  vendor's own page**, and `CostCalculator.price_checked(model, call_type)`
+  reads it back.
+
+  Most of the table is inherited from an upstream aggregate. That is a reasonable
+  starting point and a poor source of truth: this month's audit found rates stale
+  by a full model generation (`deepgram/nova-3` carrying Nova-2 pricing),
+  transposed between tiers (AssemblyAI `best` cheaper than `nano`), and off by
+  2.5x (Fireworks Whisper). None of them looked wrong in the file, because
+  nothing recorded whether anyone had ever checked.
+
+  **51 entries are stamped - 2.9% of 1756 priced entries.** That number is the
+  point. Only rows actually opened against a vendor page this month carry a date;
+  stamping the rest with today's would have made the audit worse than having no
+  dates at all. `None` means "never verified here", not "suspect".
+
+- **`CostCalculator.stale_prices(older_than_days=180)`** turns the audit into a
+  query, returning `(pricing_key, date_or_None)` for entries due a re-check. The
+  unverified set is included by default and is the large one - reporting only
+  aged entries would imply the remainder are fine, when most have simply never
+  been looked at.
+
+  Both `prices_checked` and `deprecated` are metadata registries keyed by pricing
+  key, kept out of the model index so a `call_type` matching either name cannot
+  resolve model names against it.
+
+  The idea is borrowed from [pydantic/genai-prices](https://github.com/pydantic/genai-prices),
+  whose provider YAML carries a `prices_checked:` date per model.
+
 ## [1.15.0] - 2026-08-14
 
 ### Added

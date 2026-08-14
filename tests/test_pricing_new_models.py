@@ -377,3 +377,64 @@ def test_legacy_float_entries_still_price(calc):
     """Backwards compatibility: a bare number still works, including for custom
     pricing supplied by users, and keeps the old inferred-unit behaviour."""
     assert calc.calculate_cost("hume/evi-2", {"seconds": 60}, "audio") > 0
+
+
+# --- prices_checked -------------------------------------------------------
+# Records when a price was last confirmed against the vendor's own page. Absence
+# means "never verified here", not "correct" - most of the table is inherited
+# from an upstream aggregate, which this week's audit showed can be stale by a
+# model generation, transposed between tiers, or off by 2.5x.
+VENDOR_VERIFIED = [
+    ("elevenlabs/scribe_v1", "audio"),
+    ("eleven_multilingual_v2", "audio"),
+    ("deepgram/nova-3", "audio"),
+    ("deepgram/aura-asteria-en", "audio"),
+    ("assemblyai/best", "audio"),
+    ("fireworks/whisper-v3", "audio"),
+    ("deepseek-v4-flash", "chat"),
+    ("muse-glimmer-30b", "chat"),
+]
+
+
+@pytest.mark.parametrize("model,call_type", VENDOR_VERIFIED)
+def test_verified_prices_carry_a_date(calc, model, call_type):
+    from datetime import date
+
+    stamped = calc.price_checked(model, call_type)
+    assert stamped, f"{model} was verified against a vendor page and should say when"
+    date.fromisoformat(stamped)  # must be a parseable ISO date
+
+
+def test_unverified_prices_report_none_rather_than_a_guess(calc):
+    """None is the honest answer for an inherited number. Stamping everything
+    with today's date would make the audit worse than having no dates at all."""
+    assert calc.price_checked("gpt-4o-mini", "chat") is None
+
+
+def test_stale_prices_surfaces_the_unverified_majority(calc):
+    stale = calc.stale_prices()
+    never = [k for k, d in stale if d is None]
+    assert len(never) > 1000, "most of the table has never been vendor-verified"
+    assert "gpt-4o-mini" in never
+    # Anything checked this week is not stale.
+    assert not any(k == "elevenlabs/scribe_v1" for k, _ in stale)
+
+
+def test_stale_prices_can_exclude_the_unverified(calc):
+    aged_only = calc.stale_prices(include_unverified=False)
+    assert all(d is not None for _, d in aged_only)
+
+
+def test_stale_prices_honours_the_age_cutoff(calc):
+    """A zero-day cutoff makes even this week's checks stale, which proves the
+    date is actually being compared rather than ignored."""
+    everything = calc.stale_prices(older_than_days=0, include_unverified=False)
+    assert any(k == "elevenlabs/scribe_v1" for k, _ in everything)
+
+
+def test_metadata_registries_are_not_pricing_categories(calc):
+    """Both prices_checked and deprecated are keyed by pricing key. Indexing
+    either as a category would let a matching call_type resolve against it."""
+    for key in ("prices_checked", "deprecated"):
+        assert key not in calc._exact_index
+        assert key not in calc._substr_index
