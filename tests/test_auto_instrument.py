@@ -674,8 +674,10 @@ class TestAutoInstrumentation:
                     setup_auto_instrumentation(config)
                     # Verify that the OpenAI instrumentor's instrument method was called
                     mock_openai_instance.instrument.assert_called_once_with(config=config)
-                    # Verify that a warning was logged for the unknown instrumentor
-                    mock_logger.warning.assert_called_once_with(
+                    # Assert on the specific warning rather than the total count:
+                    # setup also warns when no collector is listening on the
+                    # default endpoint, which is the normal case under test.
+                    mock_logger.warning.assert_any_call(
                         "Unknown instrumentor '%s' requested.", "unknown_llm"
                     )
 
@@ -724,7 +726,16 @@ class TestAutoInstrumentation:
                         call("Unknown instrumentor '%s' requested.", "unknown2"),
                     ]
                     mock_logger.warning.assert_has_calls(warning_calls, any_order=True)
-                    assert mock_logger.warning.call_count == 2
+                    # Count only the unknown-instrumentor warnings. A bare total
+                    # would also pick up the "no collector listening" warning,
+                    # which fires whenever the default endpoint has nothing
+                    # behind it - true for every test run.
+                    unknown = [
+                        c
+                        for c in mock_logger.warning.call_args_list
+                        if c.args and "Unknown instrumentor" in str(c.args[0])
+                    ]
+                    assert len(unknown) == 2
 
 
 class TestEdgeCases:
@@ -755,10 +766,10 @@ class TestEdgeCases:
                         with patch("genai_otel.auto_instrument.metrics"):
                             setup_auto_instrumentation(config)
 
-            # Should log warning for unknown instrumentor since INSTRUMENTORS is empty
-            mock_logger.warning.assert_called_once_with(
-                "Unknown instrumentor '%s' requested.", "openai"
-            )
+            # Should log warning for unknown instrumentor since INSTRUMENTORS is empty.
+            # assert_any_call rather than assert_called_once_with: setup also warns
+            # when nothing is listening on the default collector endpoint.
+            mock_logger.warning.assert_any_call("Unknown instrumentor '%s' requested.", "openai")
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
     def test_setup_auto_instrumentation_empty_instrumentor_list(self):
