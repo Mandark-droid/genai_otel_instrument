@@ -50,7 +50,9 @@ class MistralAIInstrumentor(BaseInstrumentor):
                 logger.info("MistralAI instrumentation enabled (v1.0+ SDK)")
 
         except ImportError:
-            logger.warning("mistralai package not available, skipping instrumentation")
+            # Debug, not warning, to match every other provider instrumentor. An
+            # absent provider SDK is the normal case - nobody installs all of them.
+            logger.debug("MistralAI library not installed, instrumentation will be skipped")
         except Exception as e:
             logger.error(f"Failed to instrument mistralai: {e}", exc_info=True)
             if config.fail_on_error:
