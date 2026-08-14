@@ -6,6 +6,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-08-14
+
+### Added
+
+- **Audio prices declare their unit.** A bare number cannot say what it is *per*.
+  Text-to-speech bills per character, transcription per second, and some audio
+  models bill per token - but all three were stored as an undifferentiated float,
+  with the unit inferred from whatever the caller happened to pass.
+
+  That inference is what allowed 42 entries to sit at a per-minute rate against a
+  per-second contract for months. Nothing in the data contradicted it, because
+  nothing in the data said what the number meant. Entries now carry the unit in
+  the key:
+
+  ```jsonc
+  "eleven_multilingual_v2":  { "per_1k_chars":  0.10     },
+  "elevenlabs/scribe_v1":    { "per_second":    6.11e-05 },
+  "gpt-4o-transcribe":       { "per_1k_tokens": 0.0025   }
+  ```
+
+  Billing a per-second model by character is now **refused with a warning**
+  rather than silently returning a plausible number. Guessing a conversion is
+  precisely how a 1000x error looks reasonable.
+
+  104 of the 111 audio entries are migrated, each unit taken from the upstream
+  price list's own field or from a vendor page checked during the 1.11.x audit.
+  The seven left as bare numbers are vendors whose billing unit was never
+  established - Cartesia, PlayHT, Hume, and one Gemini live-audio model. They are
+  named in a test, so the set cannot grow silently, and guessing was not on the
+  table.
+
+- **`per_1k_tokens` is now a supported audio unit.** 23 entries are token-billed
+  (`gpt-4o-transcribe`, `gpt-4o-audio-preview`, the Gemini TTS family), and the
+  calculator previously understood only characters and seconds - so those could
+  not be priced correctly by any caller.
+
+  Bare numbers are still accepted, for backwards compatibility and for
+  user-supplied custom pricing, and keep the previous inferred-unit behaviour.
+
+  The idea is borrowed from [pydantic/genai-prices](https://github.com/pydantic/genai-prices),
+  whose schema encodes units in key suffixes (`_mtok`, `_kcount`, `_mchars`) and
+  whose contributor guide warns that a per-Mtok figure under a `_kcount` key "is
+  valid YAML and wrong by 1000x". That is the same failure, described by someone
+  who had evidently met it too.
+
 ## [1.14.1] - 2026-08-14
 
 ### Fixed
