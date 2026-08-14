@@ -49,6 +49,31 @@ Deprecations are recorded in the `deprecated` map in
 `genai_otel/llm_pricing.json`, keyed by pricing key so it covers every category,
 including the ones whose values are bare numbers and cannot carry an inline flag.
 
+### Audio prices declare their unit
+
+A bare number cannot say what it is *per*. Text-to-speech bills per character,
+transcription per second, and some audio models bill per token — so audio entries
+in `genai_otel/llm_pricing.json` state the unit in the key:
+
+```jsonc
+"eleven_multilingual_v2":  { "per_1k_chars":  0.10     },  // synthesis
+"elevenlabs/scribe_v1":    { "per_second":    6.11e-05 },  // transcription
+"gpt-4o-transcribe":       { "per_1k_tokens": 0.0025   }
+```
+
+This is not tidiness. Storing both as an undifferentiated float is what allowed 42
+entries to sit at a per-minute rate against a per-second contract — a 60× error
+that nothing in the data contradicted. With the unit declared, billing a
+per-second model by character is detected and **refused** rather than silently
+producing a plausible number:
+
+```python
+calc.calculate_cost("elevenlabs/scribe_v1", {"characters": 1000}, "audio")  # -> 0.0 + warning
+```
+
+A bare number is still accepted for backwards compatibility and for custom
+pricing, and keeps the old inferred-unit behaviour.
+
 ### Telling "free" apart from "not measured"
 
 `cost.total = 0.0` means one of two very different things, so every span also

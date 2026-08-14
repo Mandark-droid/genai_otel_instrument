@@ -465,8 +465,30 @@ class CostCalculator:
         price_per_image = pricing_info[quality][size]
         return price_per_image * n
 
+    # Audio prices carry their unit in the key, because a bare number cannot say
+    # what it is per. Maps the declared unit to the usage key it bills against and
+    # the divisor applied to that quantity.
+    AUDIO_UNITS = {
+        "per_second": ("seconds", 1),
+        "per_1k_chars": ("characters", 1000),
+        "per_1k_tokens": ("tokens", 1000),
+    }
+
     def _calculate_audio_cost(self, model: str, usage: Dict[str, int]) -> float:
-        """Calculate cost for audio models."""
+        """Calculate cost for audio models.
+
+        An entry is either a declared-unit mapping - ``{"per_second": 6.11e-05}``,
+        ``{"per_1k_chars": 0.10}``, ``{"per_1k_tokens": 0.0025}`` - or a bare
+        number in the legacy shape, where the unit is inferred from whatever the
+        caller passed.
+
+        Inference is what made the audio table wrong for months. Text-to-speech
+        bills per character and transcription per second, but both were stored as
+        an undifferentiated float, so nothing in the data distinguished
+        ``0.10 per 1000 characters`` from ``0.10 per second`` - a factor of
+        thousands, silently. Declaring the unit makes that mismatch detectable
+        instead of plausible.
+        """
         model_key = self._normalize_model_name(model, "audio")
         if not model_key:
             logger.debug("Pricing not found for audio model: %s", model)
@@ -474,11 +496,30 @@ class CostCalculator:
 
         pricing = self.pricing_data["audio"][model_key]
 
+        if isinstance(pricing, dict):
+            for unit, (usage_key, divisor) in self.AUDIO_UNITS.items():
+                if unit not in pricing:
+                    continue
+                if usage_key in usage:
+                    return (usage[usage_key] / divisor) * pricing[unit]
+                # The entry states its unit and the caller billed in another one.
+                # Guessing here is how a 60x error looks reasonable, so refuse and
+                # say so - loudly, because it means the data or the caller is wrong.
+                logger.warning(
+                    "Audio model %s is priced %s but usage supplied %s; refusing to "
+                    "price rather than assume a conversion.",
+                    model_key,
+                    unit,
+                    sorted(usage) or "nothing",
+                )
+                return 0.0
+            logger.warning("Audio model %s has no recognised price unit", model_key)
+            return 0.0
+
+        # Legacy shape: a bare number whose unit is whatever the caller implies.
         if "characters" in usage:
-            # Price is per 1000 characters
             return (usage["characters"] / 1000) * pricing
         if "seconds" in usage:
-            # Price is per second
             return usage["seconds"] * pricing
 
         logger.warning(
