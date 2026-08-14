@@ -6,6 +6,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.1] - 2026-08-14
+
+### Fixed
+
+- **The package-size test measured build artifacts rather than the package.** It
+  walked the directory containing `genai_otel/__init__.py`, which under an
+  editable install is the working tree - where `__pycache__` accumulates a full
+  set of bytecode for every interpreter version used. That reported 5781 KB
+  against a 5120 KB limit and had been failing for some time. Compiled bytecode
+  is now excluded, which is what wheels do: the published 1.14.0 wheel contains
+  **zero** `.pyc` bytes, and its `genai_otel/` is 1592 KB. The test now measures
+  1626 KB, so the limit has roughly 3x headroom and still catches real growth.
+
+  No packaging change - the distribution was never oversized. The measurement was
+  wrong.
+
+- **A test inherited evaluation settings from the developer's shell.**
+  `test_setup_enables_all_components` asserts the span exporter is exactly a
+  `CostEnrichingSpanExporter`, but enabling any evaluation feature wraps another
+  exporter around it. Anyone with `GENAI_ENABLE_PII_DETECTION` (or bias,
+  toxicity, hallucination, prompt-injection, restricted-topics) exported saw this
+  fail while CI passed. Those flags are now pinned in the test's config.
+
+  With both fixed the suite is green in a clean environment and in one with every
+  evaluation feature exported - 1837 passed, 0 failed. Neither of the two
+  long-standing failures was a product defect.
+
 ## [1.14.0] - 2026-08-14
 
 ### Fixed
