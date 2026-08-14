@@ -176,7 +176,11 @@ class GPUMetricsCollector:
         self._init_codecarbon()
 
         if not NVML_AVAILABLE and not (AMDSMI_AVAILABLE and self.amd_collector):
-            logger.warning(
+            # Debug rather than warning: GPU metrics default to on, meaning
+            # "collect them if this machine has a GPU", not "the user asked for
+            # GPU metrics". Most machines do not, and saying so loudly on every
+            # start makes a normal run look like a misconfigured one.
+            logger.debug(
                 "GPU metrics collection not available - neither nvidia-ml-py nor amdsmi installed. "
                 "Install with: pip install genai-otel-instrument[all-gpu]"
             )
@@ -1190,7 +1194,9 @@ class GPUMetricsCollector:
         so we only need to start the CO2 collection thread.
         """
         if not NVML_AVAILABLE and not (AMDSMI_AVAILABLE and self.amd_collector):
-            logger.warning("Cannot start GPU metrics collection - no GPU libraries available")
+            # Second report of the same condition already logged at init; keep it
+            # at debug so a GPU-less machine does not say this twice per start.
+            logger.debug("Cannot start GPU metrics collection - no GPU libraries available")
             return
 
         if not self.gpu_available:

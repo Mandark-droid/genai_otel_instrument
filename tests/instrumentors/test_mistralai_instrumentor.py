@@ -63,8 +63,10 @@ class TestMistralAIInstrumentor(unittest.TestCase):
         with patch("builtins.__import__", side_effect=ImportError("No module named 'mistralai'")):
             instrumentor.instrument(config)
 
-            mock_logger.warning.assert_called_with(
-                "mistralai package not available, skipping instrumentation"
+            # Debug, not warning: an absent provider SDK is the normal case, and
+            # every other provider instrumentor logs it that way.
+            mock_logger.debug.assert_called_with(
+                "MistralAI library not installed, instrumentation will be skipped"
             )
 
     @patch("genai_otel.instrumentors.mistralai_instrumentor.logger")
