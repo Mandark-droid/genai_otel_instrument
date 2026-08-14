@@ -6,6 +6,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-08-14
+
+### Fixed
+
+- **A clean first run no longer looks like a broken one.** `pip install` followed
+  by the two lines from the README printed a page of warnings and errors, then a
+  repeating wall of connection stack traces. Everything worked - exit code 0 -
+  but it read as a broken library, which is a poor thing to hand someone in the
+  first thirty seconds. A default install now prints one actionable line.
+
+- **Six of those were a real logic slip, not cosmetic.** The MCP instrumentors
+  set their class to `None` when the optional package is absent, so calling it
+  raises `TypeError` rather than `ImportError`. That fell past the
+  `except ImportError` guard into the generic handler and was logged as
+  `SQLAlchemy instrumentation failed: 'NoneType' object is not callable` - and
+  the same for PostgreSQL, MongoDB, MySQL, Redis and Kafka. None of those are
+  expected on a default install. Now guarded explicitly and logged at debug.
+
+- **`Unknown instrumentor 'smolagents' requested`** was us warning the user about
+  our own defaults. `smolagents`, `litellm` and `mcp` ship in
+  `DEFAULT_INSTRUMENTORS` but only resolve with the OpenInference extra; absent
+  is expected, not a misconfiguration.
+
+- **`mistralai` logged a warning where every other provider logs debug** for the
+  identical condition. An absent provider SDK is the normal case.
+
+- **GPU unavailability reported twice, at warning level.** GPU metrics default to
+  on, which means "collect if this machine has a GPU", not "the user asked for
+  GPU metrics". Most machines do not have one. Both messages are now debug.
+
+  Warnings for features the user *did* enable are deliberately untouched: set
+  `GENAI_ENABLE_PII_DETECTION=true` without Presidio installed and it still says
+  so, loudly.
+
+### Added
+
+- **A startup check for the default collector.** When the endpoint is the default
+  `http://localhost:4318` and nothing is listening, setup says so once and names
+  the variable to set, instead of leaving the exporter's retry loop to emit
+  connection stack traces indefinitely with no indication of what to do.
+
+  It deliberately does **not** quiet those retries. A silent export failure is how
+  telemetry disappears without anyone noticing - the failure this library exists
+  to prevent. Bounded to a 250 ms probe, skippable with
+  `GENAI_SKIP_COLLECTOR_CHECK=true`, and silent whenever the endpoint was
+  configured to anything else.
+
 ## [1.13.0] - 2026-08-13
 
 ### Added
