@@ -142,6 +142,10 @@ logger = logging.getLogger(__name__)
 # at module import time. They are resolved in setup_auto_instrumentation() instead.
 OPENINFERENCE_AVAILABLE = None  # Tri-state: None=not checked, True/False=result
 
+# Shipped in DEFAULT_INSTRUMENTORS but only resolvable once OpenInference is
+# importable. Absent on a default install, which is expected, not a misconfiguration.
+_OPENINFERENCE_OPTIONAL = frozenset({"smolagents", "litellm", "mcp"})
+
 # Re-entrancy guard to prevent double-instrumentation
 _INSTRUMENTATION_INITIALIZED = False
 # Track active providers/collectors for uninstrument()
@@ -630,7 +634,15 @@ def setup_auto_instrumentation(config: OTelConfig):
                 if config.fail_on_error:
                     raise
         else:
-            logger.warning("Unknown instrumentor '%s' requested.", name)
+            # smolagents/litellm/mcp ship in DEFAULT_INSTRUMENTORS but resolve
+            # only when OpenInference is importable (Python 3.10+ plus the extra).
+            # On a default install they are simply absent, and calling that a
+            # warning made a clean first run look like the user had misconfigured
+            # something. Only warn for a name the user actually asked for.
+            if name in _OPENINFERENCE_OPTIONAL and not _check_openinference():
+                logger.debug("Instrumentor '%s' needs the OpenInference extra; skipping.", name)
+            else:
+                logger.warning("Unknown instrumentor '%s' requested.", name)
 
     # Auto-instrument MCP tools (databases, APIs, etc.)
     # NOTE: OTLP endpoints are excluded via OTEL_PYTHON_REQUESTS_EXCLUDED_URLS set above
@@ -673,6 +685,14 @@ def setup_auto_instrumentation(config: OTelConfig):
         if config.fail_on_error:
             raise
 
+    # One actionable line beats a repeating wall of connection stack traces
+    # from the exporter's retry loop. Checked after setup so it does not delay
+    # instrumentation, and only when the endpoint was never configured.
+    try:
+        _warn_if_default_collector_unreachable(config)
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Collector reachability check skipped: %s", e)
+
     # Install last, so a handler is only registered once the providers it would
     # flush actually exist.
     if config.flush_on_sigterm:
@@ -693,6 +713,58 @@ def setup_auto_instrumentation(config: OTelConfig):
         report_usage(config)
     except Exception:
         pass  # Never let telemetry affect instrumentation
+
+
+DEFAULT_OTLP_ENDPOINT = "http://localhost:4318"
+
+
+def _warn_if_default_collector_unreachable(config: OTelConfig) -> bool:
+    """Say once, clearly, that the default collector is not there.
+
+    Only fires when the endpoint was never configured. Someone who set
+    OTEL_EXPORTER_OTLP_ENDPOINT themselves knows where their collector is and
+    does not need advice; someone who did not is about to receive a repeating
+    wall of connection stack traces from the exporter's retry loop with no
+    indication of what to do about it.
+
+    This deliberately does NOT quiet those retries. A silent export failure is
+    how telemetry disappears without anyone noticing - the same failure this
+    library works to prevent elsewhere. The retries stay loud; this only adds
+    the one line that says what to do.
+
+    Returns True when the warning was emitted.
+    """
+    import os
+    import socket
+    from urllib.parse import urlparse
+
+    if os.getenv("GENAI_SKIP_COLLECTOR_CHECK", "").lower() == "true":
+        return False
+    # Keyed off the resolved endpoint rather than whether the env var is set:
+    # setup_auto_instrumentation writes OTEL_EXPORTER_OTLP_ENDPOINT into the
+    # environment before this runs, so "did the user set it?" cannot be answered
+    # here. Anything other than the default means a deliberate choice, and if
+    # someone did type the default themselves the advice is still correct.
+    if config.endpoint != DEFAULT_OTLP_ENDPOINT:
+        return False
+
+    parsed = urlparse(config.endpoint)
+    host, port = parsed.hostname or "localhost", parsed.port or 4318
+    try:
+        with socket.create_connection((host, port), timeout=0.25):
+            return False  # collector is there; nothing to say
+    except OSError:
+        pass
+
+    logger.warning(
+        "No OTLP collector is listening on %s, which is the default endpoint. "
+        "Spans and metrics will be recorded but every export will fail. "
+        "Start a collector, point OTEL_EXPORTER_OTLP_ENDPOINT at one, or set it "
+        "empty to print telemetry to the console instead. "
+        "Set GENAI_SKIP_COLLECTOR_CHECK=true to silence this check.",
+        config.endpoint,
+    )
+    return True
 
 
 def flush_telemetry(timeout_seconds: float = 5.0) -> bool:

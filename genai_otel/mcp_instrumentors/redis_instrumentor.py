@@ -25,10 +25,17 @@ class RedisInstrumentor:  # pylint: disable=R0903
 
     def instrument(self):
         """Instrument Redis"""
-        try:
-            OTelRedisInstrumentor().instrument()
-            logger.info("Redis instrumentation enabled")
-        except ImportError:
+        # Optional dependency absent: the name is None rather than missing, so
+        # calling it raises TypeError, not ImportError. Without this guard that
+        # fell through to the handler below and logged a warning that reads like
+        # a failure on a fresh install, where none of these are expected.
+        if OTelRedisInstrumentor is None:
             logger.debug("Redis-py not installed, skipping instrumentation.")
-        except Exception as e:
-            logger.warning(f"Redis instrumentation failed: {e}")
+        else:
+            try:
+                OTelRedisInstrumentor().instrument()
+                logger.info("Redis instrumentation enabled")
+            except ImportError:
+                logger.debug("Redis-py not installed, skipping instrumentation.")
+            except Exception as e:
+                logger.warning(f"Redis instrumentation failed: {e}")
