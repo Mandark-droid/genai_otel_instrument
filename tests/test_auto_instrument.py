@@ -102,6 +102,17 @@ class TestAutoInstrumentation:
             enable_gpu_metrics=True,
             enable_mcp_instrumentation=True,
             enabled_instrumentors=["openai", "anthropic"],
+            # Pinned rather than inherited from the environment. This asserts the
+            # exporter is exactly a CostEnrichingSpanExporter, but enabling any
+            # evaluation feature wraps another exporter around it - so a developer
+            # with GENAI_ENABLE_PII_DETECTION exported saw this fail while CI
+            # passed. Tests should not depend on the shell they run in.
+            enable_pii_detection=False,
+            enable_toxicity_detection=False,
+            enable_bias_detection=False,
+            enable_prompt_injection_detection=False,
+            enable_restricted_topics=False,
+            enable_hallucination_detection=False,
         )
         # Mock instances
         mock_resource_instance = MagicMock()
