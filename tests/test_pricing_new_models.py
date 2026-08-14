@@ -316,3 +316,64 @@ def test_deprecation_survives_alias_resolution(calc):
 
 def test_unknown_model_is_not_flagged(calc):
     assert calc.deprecation("some-model-that-does-not-exist-xyz", "chat") is None
+
+
+# --- audio price units ----------------------------------------------------
+# A bare number cannot say what it is per. Text-to-speech bills per character
+# and transcription per second, and storing both as an undifferentiated float
+# is what let 42 entries sit at per-minute against a per-second contract.
+AUDIO_UNIT_CASES = [
+    ("elevenlabs/scribe_v1", {"seconds": 3600}, 0.21996, "per_second"),
+    ("eleven_multilingual_v2", {"characters": 1000}, 0.10, "per_1k_chars"),
+    ("deepgram/nova-3", {"seconds": 60}, 0.0077, "per_second"),
+    ("deepgram/aura-asteria-en", {"characters": 1000}, 0.015, "per_1k_chars"),
+    ("assemblyai/best", {"seconds": 3600}, 0.21, "per_second"),
+    ("gpt-4o-transcribe", {"tokens": 1000}, 0.0025, "per_1k_tokens"),
+]
+
+
+@pytest.mark.parametrize("model,usage,expected,unit", AUDIO_UNIT_CASES)
+def test_audio_declared_units_price_correctly(calc, model, usage, expected, unit):
+    assert calc.calculate_cost(model, usage, "audio") == pytest.approx(expected, rel=1e-4)
+    key = calc._normalize_model_name(model, "audio")
+    assert unit in calc.pricing_data["audio"][key], f"{model} should declare {unit}"
+
+
+@pytest.mark.parametrize(
+    "model,wrong_usage",
+    [
+        ("elevenlabs/scribe_v1", {"characters": 1000}),  # per-second model billed by character
+        ("eleven_multilingual_v2", {"seconds": 3600}),  # per-character model billed by second
+        ("deepgram/nova-3", {"characters": 5000}),
+    ],
+)
+def test_audio_unit_mismatch_refuses_rather_than_guessing(calc, model, wrong_usage):
+    """The whole point of declaring the unit. Converting seconds to characters is
+    not possible, so a silent answer here would be a plausible wrong number -
+    exactly the shape of the 60x error this replaces."""
+    assert calc.calculate_cost(model, wrong_usage, "audio") == 0.0
+
+
+def test_every_audio_entry_declares_a_unit_or_is_a_known_legacy(calc):
+    """New entries must declare a unit. The remaining bare floats are vendors
+    whose billing unit was never established, and are listed explicitly so the
+    set cannot grow silently."""
+    LEGACY_UNVERIFIED = {
+        "cartesia/sonic-2",
+        "cartesia/sonic-english",
+        "cartesia/sonic-multilingual",
+        "gemini-live-2.5-flash-preview-native-audio",
+        "hume/evi-2",
+        "playht/Play3.0-mini",
+        "playht/PlayDialog",
+    }
+    undeclared = {k for k, v in calc.pricing_data["audio"].items() if not isinstance(v, dict)}
+    assert (
+        undeclared <= LEGACY_UNVERIFIED
+    ), f"audio entries without a declared unit: {sorted(undeclared - LEGACY_UNVERIFIED)}"
+
+
+def test_legacy_float_entries_still_price(calc):
+    """Backwards compatibility: a bare number still works, including for custom
+    pricing supplied by users, and keeps the old inferred-unit behaviour."""
+    assert calc.calculate_cost("hume/evi-2", {"seconds": 60}, "audio") > 0
