@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.1] - 2026-08-14
+
+### Fixed
+
+- **The demo OpenSearch pipeline could not chart audio usage, and silently
+  dropped telemetry from clients on current semantic-convention names.**
+  `examples/demo/opensearch-setup.sh` is updated to v2.6.
+
+  Audio duration and character counts only ever reached OpenSearch under
+  `tag.gen_ai@usage@*`, which the index template maps to `keyword` via a blanket
+  `tag.*` dynamic template inherited from Jaeger. Keyword fields cannot be summed
+  or averaged, so audio seconds could be displayed but never charted. They are
+  now promoted to `gen_ai_usage_audio_duration_seconds` (float) and
+  `gen_ai_usage_characters` (long), the same way cost already was.
+
+  More seriously, the extractor read only `gen_ai.system`. That attribute was
+  superseded upstream by `gen_ai.provider.name`, which 1.10.0 began emitting -
+  so a client running `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai` for current-only
+  names recorded **no provider at all**. Dual emission, the default since 1.10.0,
+  is the only reason this was not already visible. `gen_ai.provider.name` is now
+  read, and falls back to populating `gen_ai_system` when the superseded tag is
+  absent.
+
+  Verified with `_ingest/pipeline/_simulate` against a span carrying only the
+  current names: `gen_ai_system` is populated from `gen_ai.provider.name`, and
+  both audio fields come through.
+
+  This is a demo-infrastructure change; the published package is unaffected.
+
 ## [1.16.0] - 2026-08-14
 
 ### Added
