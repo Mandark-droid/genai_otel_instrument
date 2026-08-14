@@ -166,44 +166,72 @@ class DatabaseInstrumentor(BaseMCPInstrumentor):  # pylint: disable=R0903
 
         # Step 1: Use built-in instrumentors for traces/spans
         # SQLAlchemy
-        try:
-            SQLAlchemyInstrumentor().instrument()
-            logger.info("SQLAlchemy instrumentation enabled")
-            instrumented_count += 1
-        except ImportError:
+        # Optional dependency absent: the name is None rather than missing, so
+        # calling it raises TypeError, not ImportError. Without this guard that
+        # fell through to the handler below and logged a warning that reads like
+        # a failure on a fresh install, where none of these are expected.
+        if SQLAlchemyInstrumentor is None:
             logger.debug("SQLAlchemy not installed, skipping instrumentation.")
-        except Exception as e:
-            logger.warning(f"SQLAlchemy instrumentation failed: {e}")
+        else:
+            try:
+                SQLAlchemyInstrumentor().instrument()
+                logger.info("SQLAlchemy instrumentation enabled")
+                instrumented_count += 1
+            except ImportError:
+                logger.debug("SQLAlchemy not installed, skipping instrumentation.")
+            except Exception as e:
+                logger.warning(f"SQLAlchemy instrumentation failed: {e}")
 
         # PostgreSQL (psycopg2)
-        try:
-            Psycopg2Instrumentor().instrument()
-            logger.info("PostgreSQL (psycopg2) instrumentation enabled")
-            instrumented_count += 1
-        except ImportError:
+        # Optional dependency absent: the name is None rather than missing, so
+        # calling it raises TypeError, not ImportError. Without this guard that
+        # fell through to the handler below and logged a warning that reads like
+        # a failure on a fresh install, where none of these are expected.
+        if Psycopg2Instrumentor is None:
             logger.debug("Psycopg2 not installed, skipping instrumentation.")
-        except Exception as e:
-            logger.warning(f"PostgreSQL instrumentation failed: {e}")
+        else:
+            try:
+                Psycopg2Instrumentor().instrument()
+                logger.info("PostgreSQL (psycopg2) instrumentation enabled")
+                instrumented_count += 1
+            except ImportError:
+                logger.debug("Psycopg2 not installed, skipping instrumentation.")
+            except Exception as e:
+                logger.warning(f"PostgreSQL instrumentation failed: {e}")
 
         # MongoDB
-        try:
-            PymongoInstrumentor().instrument()
-            logger.info("MongoDB instrumentation enabled")
-            instrumented_count += 1
-        except ImportError:
+        # Optional dependency absent: the name is None rather than missing, so
+        # calling it raises TypeError, not ImportError. Without this guard that
+        # fell through to the handler below and logged a warning that reads like
+        # a failure on a fresh install, where none of these are expected.
+        if PymongoInstrumentor is None:
             logger.debug("Pymongo not installed, skipping instrumentation.")
-        except Exception as e:
-            logger.warning(f"MongoDB instrumentation failed: {e}")
+        else:
+            try:
+                PymongoInstrumentor().instrument()
+                logger.info("MongoDB instrumentation enabled")
+                instrumented_count += 1
+            except ImportError:
+                logger.debug("Pymongo not installed, skipping instrumentation.")
+            except Exception as e:
+                logger.warning(f"MongoDB instrumentation failed: {e}")
 
         # MySQL
-        try:
-            MySQLInstrumentor().instrument()
-            logger.info("MySQL instrumentation enabled")
-            instrumented_count += 1
-        except ImportError:
+        # Optional dependency absent: the name is None rather than missing, so
+        # calling it raises TypeError, not ImportError. Without this guard that
+        # fell through to the handler below and logged a warning that reads like
+        # a failure on a fresh install, where none of these are expected.
+        if MySQLInstrumentor is None:
             logger.debug("MySQL-python not installed, skipping instrumentation.")
-        except Exception as e:
-            logger.warning(f"MySQL instrumentation failed: {e}")
+        else:
+            try:
+                MySQLInstrumentor().instrument()
+                logger.info("MySQL instrumentation enabled")
+                instrumented_count += 1
+            except ImportError:
+                logger.debug("MySQL-python not installed, skipping instrumentation.")
+            except Exception as e:
+                logger.warning(f"MySQL instrumentation failed: {e}")
 
         # Step 2: Add custom MCP metrics wrappers
         if self.mcp_request_counter is not None:
