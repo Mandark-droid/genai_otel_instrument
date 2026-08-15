@@ -6,6 +6,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.1] - 2026-08-15
+
+### Fixed
+
+- **The demo OpenSearch pipeline could not chart the new streaming-latency
+  fields.** `examples/demo/opensearch-setup.sh` goes to v2.7.
+
+  1.17.0 emits `gen_ai.server.time_to_first_token` and
+  `gen_ai.server.time_per_output_token`, but those arrive under `tag.*`, which
+  the index template maps to `keyword` via the blanket dynamic template
+  inherited from Jaeger. A keyword TTFT can be displayed but never averaged or
+  charted — the same trap that hid audio usage until v2.6.
+
+  Both are now promoted to typed top-level fields
+  (`gen_ai_server_time_to_first_token`, `gen_ai_server_time_per_output_token`,
+  both `double`), along with `gen_ai_streaming_tpot_unavailable_reason`
+  (`keyword`) so "not measured" stays distinguishable from "nobody looked".
+  `gen_ai_server_ttft` — mapped since v2.5 but never populated — is now also
+  back-filled from the semconv name.
+
+  Verified with `_ingest/pipeline/_simulate` against both a streamed span
+  carrying usage and one without: the streamed span yields numeric TTFT and
+  TPOT, and the usage-less span yields TTFT plus the reason and no TPOT.
+
+  Note that this script provisions a demo from scratch: it `PUT`s
+  `genai-ingest-pipeline` wholesale, so it is not a safe upgrade path for a
+  pipeline that has been modified since it was created. Add the new field
+  promotions to your own pipeline instead. Chartability is worth confirming
+  with an `avg` aggregation, which errors on a `keyword` field and is the only
+  unambiguous test.
+
+  This is a demo-infrastructure change. No module under `genai_otel/` differs
+  from 1.17.0, so the installed library is unchanged; the distribution differs
+  only by the bundled `CHANGELOG.md`.
+
 ## [1.17.0] - 2026-08-15
 
 ### Added
