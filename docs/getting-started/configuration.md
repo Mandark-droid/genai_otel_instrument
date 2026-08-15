@@ -37,6 +37,28 @@ A complete `sample.env` template is included in the repository.
 
 Default instrumentors: `openai`, `openrouter`, `cometapi`, `anthropic`, `google.generativeai`, `boto3`, `azure.ai.openai`, `cohere`, `mistralai`, `together`, `groq`, `ollama`, `vertexai`, `replicate`, `anyscale`, `sambanova`, `sarvamai`, `elevenlabs`, `langchain`, `langgraph`, `llama_index`, `transformers`, `autogen`, `autogen_agentchat`, `google_adk`, `pydantic_ai`, `openai_agents`, `bedrock_agents`, `crewai`, `smolagents` (3.10+), `litellm` (3.10+)
 
+**Opt-in instrumentors** (not enabled by default; add them to `GENAI_ENABLED_INSTRUMENTORS` explicitly):
+
+| Name | Purpose |
+|------|---------|
+| `litellm_latency` | Streaming latency (TTFT/TPOT) for litellm routes that bypass provider SDKs |
+
+`litellm` routes OpenAI, Azure and OpenAI-compatible traffic through the OpenAI
+SDK, which is already instrumented, so those calls are measured on the inner
+provider span with no extra configuration. Every other provider (Anthropic,
+Bedrock, Gemini, Cohere, HuggingFace, ...) is implemented with litellm's own
+HTTP client, which no provider instrumentor sees. Enabling `litellm_latency`
+wraps litellm's own entry points so those routes report TTFT/TPOT too:
+
+```bash
+export GENAI_ENABLED_INSTRUMENTORS="openai,anthropic,litellm,litellm_latency"
+```
+
+The span it creates is the parent of any inner provider span. When an inner span
+already measured the request, this one records no tokens, cost or latency of its
+own -- one request is never counted twice. It is opt-in because it participates
+in token and cost accounting for every litellm call.
+
 Example - enable only specific instrumentors:
 
 ```bash

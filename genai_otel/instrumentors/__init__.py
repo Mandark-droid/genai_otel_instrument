@@ -30,6 +30,7 @@ from .hyperbolic_instrumentor import HyperbolicInstrumentor
 from .instructor_instrumentor import InstructorInstrumentor
 from .langchain_instrumentor import LangChainInstrumentor
 from .langgraph_instrumentor import LangGraphInstrumentor
+from .litellm_latency_instrumentor import LiteLLMLatencyInstrumentor
 from .llamaindex_instrumentor import LlamaIndexInstrumentor
 from .mistralai_instrumentor import MistralAIInstrumentor
 from .ollama_instrumentor import OllamaInstrumentor
@@ -75,6 +76,7 @@ __all__ = [
     "HyperbolicInstrumentor",
     "LangChainInstrumentor",
     "LangGraphInstrumentor",
+    "LiteLLMLatencyInstrumentor",
     "LlamaIndexInstrumentor",
     "HuggingFaceInstrumentor",
     "PydanticAIInstrumentor",

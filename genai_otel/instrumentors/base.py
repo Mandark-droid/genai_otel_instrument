@@ -8,6 +8,7 @@ and handling configuration and cost calculation.
 """
 
 import ast
+import contextvars
 import inspect
 import json
 import logging
@@ -158,14 +159,68 @@ class _StreamTiming:
     from "first token was fast".
     """
 
-    __slots__ = ("start_time", "ttft", "last_chunk_time", "chunk_count", "last_chunk")
+    __slots__ = (
+        "start_time",
+        "ttft",
+        "last_chunk_time",
+        "chunk_count",
+        "last_chunk",
+        "emit_measurements",
+    )
 
-    def __init__(self, start_time: float):
+    def __init__(self, start_time: float, emit_measurements: bool = True):
         self.start_time = start_time
         self.ttft: Optional[float] = None
         self.last_chunk_time = start_time
         self.chunk_count = 0
         self.last_chunk: Any = None
+        # False on an outer span whose inner provider span already recorded
+        # this request. The outer span still spans the call - it is the parent -
+        # but publishing the same numbers twice would double-count one request.
+        self.emit_measurements = emit_measurements
+
+
+# Set for the duration of a call by a wrapper that sits *outside* a provider SDK
+# we already instrument -- litellm routes to the OpenAI SDK, for instance. The
+# inner wrapper appends to it when it takes over measurement, so the outer one
+# can tell whether the request is already accounted for. A mutable holder rather
+# than a plain flag so the inner scope's write is visible to the outer one
+# without needing the context to propagate back out.
+_INNER_MEASUREMENT: contextvars.ContextVar = contextvars.ContextVar(
+    "genai_otel_inner_measurement", default=None
+)
+
+
+def inner_measurement_scope():
+    """Open a scope recording whether an inner instrumented span measured.
+
+    Reuses an enclosing scope when one is already open. litellm.acompletion
+    calls litellm.completion internally (run_in_executor over a copied
+    context), so two of our wrappers can be live for a single request.
+    Shadowing the holder there would hide the provider span's note from the
+    outer wrapper and let both publish the same tokens and cost.
+    """
+    existing = _INNER_MEASUREMENT.get()
+    if existing is not None:
+        return existing, None
+    holder: List[bool] = []
+    token = _INNER_MEASUREMENT.set(holder)
+    return holder, token
+
+
+def close_inner_measurement_scope(token) -> None:
+    if token is None:  # reused an enclosing scope; its owner resets it
+        return
+    try:
+        _INNER_MEASUREMENT.reset(token)
+    except (ValueError, LookupError):  # different context; nothing to reset
+        pass
+
+
+def _note_inner_measurement() -> None:
+    holder = _INNER_MEASUREMENT.get()
+    if holder is not None:
+        holder.append(True)
 
 
 class BaseInstrumentor(ABC):  # pylint: disable=R0902
@@ -825,16 +880,16 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             "model", initial_attributes.get("gen_ai.request.model", "unknown")
                         )
                         logger.debug("Detected streaming response for model: %s", stream_model)
-                        if self.request_counter:
-                            self.request_counter.add(1, {"operation": span.name})
-                        # Detach context before returning the streaming wrapper;
-                        # the wrapper owns the span's lifecycle from here.
-                        otel_context.detach(token)
-                        if hasattr(result, "__aiter__") and not hasattr(result, "__iter__"):
-                            return self._wrap_async_streaming_response(
-                                result, span, start_time, stream_model
-                            )
-                        return self._wrap_streaming_response(result, span, start_time, stream_model)
+                        handled, value = self._install_stream_measurement(
+                            span, result, start_time, stream_model, kwargs
+                        )
+                        if handled:
+                            if self.request_counter:
+                                self.request_counter.add(1, {"operation": span.name})
+                            # Detach context before handing the span over; the
+                            # stream wrapper owns its lifecycle from here.
+                            otel_context.detach(token)
+                            return value
 
                     # Handle async generators (e.g. astream(), run_stream())
                     # These return immediately but the actual work happens during
@@ -1149,6 +1204,10 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     usage = est
                     estimated = True
             if usage and isinstance(usage, dict):
+                # This span is accounting for the request. A wrapper further out
+                # (litellm around a provider SDK) reads this and stays silent, so
+                # one request is never billed twice.
+                _note_inner_measurement()
                 if estimated:
                     try:
                         span.set_attribute("gen_ai.usage.token_count_estimated", True)
@@ -1740,7 +1799,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         except Exception as e:
             logger.warning(f"Evaluation checks failed: {e}", exc_info=True)
 
-    def _wrap_streaming_response(self, stream, span, start_time: float, model: str):
+    def _wrap_streaming_response(
+        self, stream, span, start_time: float, model: str, emit_measurements: bool = True
+    ):
         """Wrap a streaming response to capture TTFT, TPOT and end-of-stream usage.
 
         This generator wrapper yields chunks from the streaming response while
@@ -1756,7 +1817,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         Yields:
             Chunks from the original stream
         """
-        timing = _StreamTiming(start_time)
+        timing = _StreamTiming(start_time, emit_measurements)
 
         try:
             for chunk in stream:
@@ -1773,7 +1834,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
         self._finalize_stream(span, timing, model)
 
-    async def _wrap_async_streaming_response(self, stream, span, start_time: float, model: str):
+    async def _wrap_async_streaming_response(
+        self, stream, span, start_time: float, model: str, emit_measurements: bool = True
+    ):
         """Async counterpart of :meth:`_wrap_streaming_response`.
 
         Async SDK calls resolve to the stream object rather than to the answer,
@@ -1791,7 +1854,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         Yields:
             Chunks from the original stream
         """
-        timing = _StreamTiming(start_time)
+        timing = _StreamTiming(start_time, emit_measurements)
 
         try:
             async for chunk in stream:
@@ -1815,8 +1878,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
         if timing.ttft is None:
             timing.ttft = current_time - timing.start_time
-            self._record_time_to_first_token(span, timing.ttft, model)
-        else:
+            if timing.emit_measurements:
+                self._record_time_to_first_token(span, timing.ttft, model)
+        elif timing.emit_measurements:
             tbt = current_time - timing.last_chunk_time
             if self.tbt_histogram:
                 self.tbt_histogram.record(tbt, {"model": model, "operation": span.name})
@@ -1824,26 +1888,122 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         timing.last_chunk_time = current_time
         timing.last_chunk = chunk  # Keep track of last chunk for usage extraction
 
-    def _wrap_stream_if_streaming(self, span, result, start_time: float, model: str, kwargs):
-        """Hand a streamed result to the measuring wrapper, or return None.
+    def _measure_parsed_stream(
+        self, span, parsed, start_time: float, model: str, emit_measurements: bool = True
+    ):
+        """Wrap whatever a raw response's ``parse()`` handed back."""
+        if hasattr(parsed, "__aiter__"):
+            return self._wrap_async_streaming_response(
+                parsed, span, start_time, model, emit_measurements
+            )
+        if hasattr(parsed, "__iter__") and not isinstance(parsed, (str, bytes, dict, list, tuple)):
+            return self._wrap_streaming_response(parsed, span, start_time, model, emit_measurements)
+
+        # Not a stream after all. Close the span rather than leak it, and leave
+        # off the streaming attributes -- nothing was measured.
+        from opentelemetry.trace import Status, StatusCode
+
+        span.set_status(Status(StatusCode.OK))
+        span.end()
+        server_metrics = get_server_metrics()
+        if server_metrics:
+            server_metrics.decrement_requests_running()
+        return parsed
+
+    def _hook_raw_response_stream(
+        self, span, result, start_time: float, model: str, emit_measurements: bool = True
+    ) -> bool:
+        """Measure a stream that only exists once ``.parse()`` is called.
+
+        A caller that wants the provider's response headers -- litellm does, to
+        read rate limits -- reaches the OpenAI SDK through
+        ``with_raw_response.create``. That returns a LegacyAPIResponse (sync
+        ``parse()``) or AsyncAPIResponse (``async parse()``) rather than the
+        stream, so at await time there is nothing iterable to detect and
+        streaming looks exactly like a buffered call. Deferring to ``parse()``
+        is the only point where the stream becomes observable.
+
+        Returns True when the hook is installed, in which case the caller
+        returns the raw response unchanged and must NOT end the span.
+        """
+        parse = getattr(result, "parse", None)
+        if not callable(parse):
+            return False
+
+        if inspect.iscoroutinefunction(parse):
+
+            async def hooked_parse(*args, **kwargs):
+                return self._measure_parsed_stream(
+                    span, await parse(*args, **kwargs), start_time, model, emit_measurements
+                )
+
+        else:
+
+            def hooked_parse(*args, **kwargs):
+                return self._measure_parsed_stream(
+                    span, parse(*args, **kwargs), start_time, model, emit_measurements
+                )
+
+        try:
+            result.parse = hooked_parse
+        except (AttributeError, TypeError):
+            # Frozen or slot-based response object; nothing to hook.
+            return False
+        return True
+
+    def _install_stream_measurement(
+        self,
+        span,
+        result,
+        start_time: float,
+        model: str,
+        kwargs,
+        emit_measurements: bool = True,
+    ):
+        """Arrange for a streamed call to be measured. Returns ``(handled, value)``.
 
         Instrumentors that build their own spans instead of going through
         :meth:`create_span_wrapper` call this straight after invoking the SDK,
-        so every provider reports TTFT/TPOT the same way. When this returns a
-        wrapper the caller must return it and must NOT end the span -- the
-        wrapper owns the span from that point and ends it when iteration
+        so every provider reports TTFT/TPOT the same way. When ``handled`` is
+        True the caller must return ``value`` and must NOT end the span -- the
+        stream wrapper owns it from that point and ends it when iteration
         finishes.
+
+        ``emit_measurements=False`` keeps the span open for the whole stream --
+        so its duration is right and it parents the inner span -- while leaving
+        the numbers to an inner provider span that already recorded them.
         """
         if not kwargs.get("stream", False):
-            return None
+            return False, None
+
+        handled = False
         if hasattr(result, "__aiter__"):
-            return self._wrap_async_streaming_response(result, span, start_time, model)
+            value = self._wrap_async_streaming_response(
+                result, span, start_time, model, emit_measurements
+            )
+            handled = True
         # A buffered response is an object, not an iterator. Strings, dicts and
         # lists are excluded deliberately: iterating them would "measure"
         # characters or keys and invent a TTFT out of nothing.
-        if hasattr(result, "__iter__") and not isinstance(result, (str, bytes, dict, list, tuple)):
-            return self._wrap_streaming_response(result, span, start_time, model)
-        return None
+        elif hasattr(result, "__iter__") and not isinstance(
+            result, (str, bytes, dict, list, tuple)
+        ):
+            value = self._wrap_streaming_response(
+                result, span, start_time, model, emit_measurements
+            )
+            handled = True
+        elif self._hook_raw_response_stream(span, result, start_time, model, emit_measurements):
+            value = result
+            handled = True
+
+        if not handled:
+            return False, None
+
+        if emit_measurements:
+            # Tell any wrapper further out (litellm around a provider SDK) that
+            # this request is already accounted for.
+            _note_inner_measurement()
+        return True, value
 
     def _record_time_to_first_token(self, span, ttft: float, model: str) -> None:
         """Publish a measured TTFT under both attribute spellings.
@@ -1916,6 +2076,21 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         from opentelemetry.trace import Status, StatusCode
 
         duration = time.time() - timing.start_time
+
+        if not timing.emit_measurements:
+            # An inner provider span recorded this request. This span exists to
+            # parent it and to cover the true duration of the call; repeating
+            # the tokens, cost and latency here would count one request twice.
+            span.set_status(Status(StatusCode.OK))
+            span.end()
+            server_metrics = get_server_metrics()
+            if server_metrics:
+                server_metrics.decrement_requests_running()
+            logger.debug(
+                "Streaming completed in %.3fs; measurements left to the inner span", duration
+            )
+            return
+
         if self.latency_histogram:
             self.latency_histogram.record(duration, {"operation": span.name})
         span.set_attribute("gen_ai.streaming.token_count", timing.chunk_count)
