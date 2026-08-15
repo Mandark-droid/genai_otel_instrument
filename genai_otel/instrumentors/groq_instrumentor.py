@@ -130,10 +130,12 @@ class GroqInstrumentor(BaseInstrumentor):
 
                 result = original_create(*args, **kwargs)
 
-                stream = self._wrap_stream_if_streaming(span, result, start_time, model, kwargs)
-                if stream is not None:
+                handled, value = self._install_stream_measurement(
+                    span, result, start_time, model, kwargs
+                )
+                if handled:
                     handed_to_stream = True
-                    return stream
+                    return value
 
                 self._record_result_metrics(span, result, 0)
 

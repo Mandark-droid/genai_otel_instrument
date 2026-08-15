@@ -61,6 +61,14 @@ DEFAULT_INSTRUMENTORS = [
     "crewai",
 ]
 
+# Opt-in only. `litellm_latency` wraps litellm's own entry points to measure
+# streaming latency for the providers litellm reaches over its own HTTP client
+# rather than through a provider SDK. It is deliberately NOT enabled by default:
+# it participates in token/cost accounting for every litellm call, so it earns
+# default-on status only after a release of real-world use.
+# Enable with GENAI_ENABLED_INSTRUMENTORS="...,litellm_latency".
+OPT_IN_INSTRUMENTORS = ["litellm_latency"]
+
 # Add OpenInference instrumentors only for Python >= 3.10
 # IMPORTANT: Order matters! Load in this specific sequence:
 # 1. smolagents - instruments the agent framework
