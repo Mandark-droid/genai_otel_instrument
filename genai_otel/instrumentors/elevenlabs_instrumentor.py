@@ -259,10 +259,10 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
         try:
             async for chunk in stream:
                 if first:
-                    ttft = time.time() - start_time
-                    span.set_attribute("gen_ai.server.ttft", ttft)
-                    if self.ttft_histogram:
-                        self.ttft_histogram.record(ttft, {"model": model, "operation": span.name})
+                    # Time to the first audio byte. TPOT has no meaning here --
+                    # a TTS stream has no output tokens to divide by - so it is
+                    # left off rather than approximated from chunk counts.
+                    self._record_time_to_first_token(span, time.time() - start_time, model)
                     first = False
                 chunks += 1
                 yield chunk

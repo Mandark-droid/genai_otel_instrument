@@ -149,6 +149,25 @@ def find_base_url_claim(base_url: Any) -> Optional[str]:
     return None
 
 
+class _StreamTiming:
+    """Latency bookkeeping for one streamed response.
+
+    Shared by the sync and async stream wrappers so both report identical
+    attributes. ``ttft`` stays None until the first chunk actually arrives,
+    which is what lets the finalizer tell "not streamed / never yielded" apart
+    from "first token was fast".
+    """
+
+    __slots__ = ("start_time", "ttft", "last_chunk_time", "chunk_count", "last_chunk")
+
+    def __init__(self, start_time: float):
+        self.start_time = start_time
+        self.ttft: Optional[float] = None
+        self.last_chunk_time = start_time
+        self.chunk_count = 0
+        self.last_chunk: Any = None
+
+
 class BaseInstrumentor(ABC):  # pylint: disable=R0902
     """Abstract base class for all LLM library instrumentors.
 
@@ -175,6 +194,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     # Streaming metrics (Phase 3.4)
     _shared_ttft_histogram = None
     _shared_tbt_histogram = None
+    # Same measurements under the upstream semconv names (issue #21)
+    _shared_time_to_first_token_histogram = None
+    _shared_time_per_output_token_histogram = None
     # Token distribution histograms
     _shared_prompt_tokens_histogram = None
     _shared_completion_tokens_histogram = None
@@ -227,6 +249,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         # Streaming metrics
         self.ttft_histogram = self._shared_ttft_histogram
         self.tbt_histogram = self._shared_tbt_histogram
+        self.time_to_first_token_histogram = self._shared_time_to_first_token_histogram
+        self.time_per_output_token_histogram = self._shared_time_per_output_token_histogram
         # Token distribution histograms
         self.prompt_tokens_histogram = self._shared_prompt_tokens_histogram
         self.completion_tokens_histogram = self._shared_completion_tokens_histogram
@@ -301,6 +325,19 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     description="Time between tokens in seconds",
                     unit="s",
                 )
+                # Upstream semconv spellings of the same two ideas. Recorded
+                # alongside the abbreviations above so consumers reading either
+                # name get data (issue #21).
+                cls._shared_time_to_first_token_histogram = meter.create_histogram(
+                    SC.GEN_AI_SERVER_TIME_TO_FIRST_TOKEN,
+                    description="Time to first token in seconds",
+                    unit="s",
+                )
+                cls._shared_time_per_output_token_histogram = meter.create_histogram(
+                    SC.GEN_AI_SERVER_TIME_PER_OUTPUT_TOKEN,
+                    description="Time per output token after the first, in seconds",
+                    unit="s",
+                )
                 # Token distribution histograms
                 cls._shared_prompt_tokens_histogram = meter.create_histogram(
                     "gen_ai.client.token.usage.prompt",
@@ -344,6 +381,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 cls._shared_error_counter = None
                 cls._shared_ttft_histogram = None
                 cls._shared_tbt_histogram = None
+                cls._shared_time_to_first_token_histogram = None
+                cls._shared_time_per_output_token_histogram = None
                 cls._shared_prompt_tokens_histogram = None
                 cls._shared_completion_tokens_histogram = None
                 cls._shared_request_finish_counter = None
@@ -696,8 +735,31 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     if inspect.iscoroutine(result):
 
                         async def _async_traced():
+                            handed_to_stream = False
                             try:
                                 actual_result = await result
+
+                                # An async streaming call resolves to the stream
+                                # object, not to the answer: the model has produced
+                                # nothing yet. Closing the span here would time the
+                                # handshake instead of the generation and drop TTFT,
+                                # tokens and cost entirely, which is why async
+                                # clients reported no streaming latency at all.
+                                if is_streaming and hasattr(actual_result, "__aiter__"):
+                                    handed_to_stream = True
+                                    if self.request_counter:
+                                        self.request_counter.add(1, {"operation": span.name})
+                                    return self._wrap_async_streaming_response(
+                                        actual_result,
+                                        span,
+                                        start_time,
+                                        kwargs.get(
+                                            "model",
+                                            initial_attributes.get(
+                                                "gen_ai.request.model", "unknown"
+                                            ),
+                                        ),
+                                    )
 
                                 if self.request_counter:
                                     self.request_counter.add(1, {"operation": span.name})
@@ -742,13 +804,37 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 raise
 
                             finally:
-                                span.end()
                                 otel_context.detach(token)
-                                server_metrics = get_server_metrics()
-                                if server_metrics:
-                                    server_metrics.decrement_requests_running()
+                                # When the stream wrapper took over it owns the
+                                # span's end and the running-requests decrement.
+                                if not handed_to_stream:
+                                    span.end()
+                                    server_metrics = get_server_metrics()
+                                    if server_metrics:
+                                        server_metrics.decrement_requests_running()
 
                         return _async_traced()
+
+                    # Handle streaming responses (Phase 3.4). This has to run
+                    # before the generic generator branches below: a provider
+                    # that returns a bare generator for stream=True (Ollama)
+                    # used to fall into them and be timed but never measured --
+                    # no TTFT, no end-of-stream usage, no cost.
+                    if is_streaming:
+                        stream_model = kwargs.get(
+                            "model", initial_attributes.get("gen_ai.request.model", "unknown")
+                        )
+                        logger.debug("Detected streaming response for model: %s", stream_model)
+                        if self.request_counter:
+                            self.request_counter.add(1, {"operation": span.name})
+                        # Detach context before returning the streaming wrapper;
+                        # the wrapper owns the span's lifecycle from here.
+                        otel_context.detach(token)
+                        if hasattr(result, "__aiter__") and not hasattr(result, "__iter__"):
+                            return self._wrap_async_streaming_response(
+                                result, span, start_time, stream_model
+                            )
+                        return self._wrap_streaming_response(result, span, start_time, stream_model)
 
                     # Handle async generators (e.g. astream(), run_stream())
                     # These return immediately but the actual work happens during
@@ -821,19 +907,6 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
                     if self.request_counter:
                         self.request_counter.add(1, {"operation": span.name})
-
-                    # Handle streaming vs non-streaming responses (Phase 3.4)
-                    if is_streaming:
-                        # For streaming responses, wrap the iterator to capture TTFT/TBT
-                        model = kwargs.get(
-                            "model", initial_attributes.get("gen_ai.request.model", "unknown")
-                        )
-                        logger.debug(f"Detected streaming response for model: {model}")
-                        # Detach context before returning streaming wrapper
-                        # The streaming wrapper manages its own lifecycle
-                        otel_context.detach(token)
-                        # Wrap the streaming response - span will be finalized when iteration completes
-                        return self._wrap_streaming_response(result, span, start_time, model)
 
                     # Non-streaming: record metrics and close span normally
                     try:
@@ -1668,7 +1741,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             logger.warning(f"Evaluation checks failed: {e}", exc_info=True)
 
     def _wrap_streaming_response(self, stream, span, start_time: float, model: str):
-        """Wrap a streaming response to capture TTFT and TBT metrics.
+        """Wrap a streaming response to capture TTFT, TPOT and end-of-stream usage.
 
         This generator wrapper yields chunks from the streaming response while
         measuring time to first token (TTFT) and time between tokens (TBT).
@@ -1683,206 +1756,319 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         Yields:
             Chunks from the original stream
         """
-        from opentelemetry.trace import Status, StatusCode
-
-        first_token = True
-        last_token_time = start_time
-        token_count = 0
-        last_chunk = None  # Store last chunk to extract usage
+        timing = _StreamTiming(start_time)
 
         try:
             for chunk in stream:
-                current_time = time.time()
-                token_count += 1
-
-                if first_token:
-                    # Record Time to First Token
-                    ttft = current_time - start_time
-                    span.set_attribute("gen_ai.server.ttft", ttft)
-                    if self.ttft_histogram:
-                        self.ttft_histogram.record(ttft, {"model": model, "operation": span.name})
-                    logger.debug(f"TTFT for {model}: {ttft:.3f}s")
-                    first_token = False
-                else:
-                    # Record Time Between Tokens
-                    tbt = current_time - last_token_time
-                    if self.tbt_histogram:
-                        self.tbt_histogram.record(tbt, {"model": model, "operation": span.name})
-
-                last_token_time = current_time
-                last_chunk = chunk  # Keep track of last chunk for usage extraction
+                self._observe_stream_chunk(span, timing, chunk, model)
                 yield chunk
-
-            # Stream completed successfully
-            duration = time.time() - start_time
-            if self.latency_histogram:
-                self.latency_histogram.record(duration, {"operation": span.name})
-            span.set_attribute("gen_ai.streaming.token_count", token_count)
-
-            # Extract usage from last chunk and calculate cost
-            # Many providers (OpenAI, Anthropic, etc.) include usage in the final chunk
-            try:
-                if last_chunk is not None:
-                    usage = self._extract_usage(last_chunk)
-                    if usage and isinstance(usage, dict):
-                        # Record token usage metrics and calculate cost
-                        # This will set span attributes and record cost metrics
-                        prompt_tokens = usage.get("prompt_tokens", 0)
-                        completion_tokens = usage.get("completion_tokens", 0)
-                        total_tokens = usage.get("total_tokens", 0)
-
-                        # Record token counts. Attribute naming (current vs
-                        # superseded) is decided centrally by
-                        # _set_token_usage_attributes.
-                        self._set_token_usage_attributes(
-                            span,
-                            prompt_tokens=prompt_tokens,
-                            completion_tokens=completion_tokens,
-                        )
-
-                        if isinstance(prompt_tokens, (int, float)) and prompt_tokens > 0:
-                            if self.token_counter:
-                                self.token_counter.add(
-                                    prompt_tokens, {"token_type": "prompt", "operation": span.name}
-                                )
-                            # Record histogram for distribution analysis
-                            if self.prompt_tokens_histogram:
-                                self.prompt_tokens_histogram.record(
-                                    int(prompt_tokens), {"model": model, "operation": span.name}
-                                )
-
-                        if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
-                            if self.token_counter:
-                                self.token_counter.add(
-                                    completion_tokens,
-                                    {"token_type": "completion", "operation": span.name},
-                                )
-                            # Record histogram for distribution analysis
-                            if self.completion_tokens_histogram:
-                                self.completion_tokens_histogram.record(
-                                    int(completion_tokens), {"model": model, "operation": span.name}
-                                )
-
-                        if isinstance(total_tokens, (int, float)) and total_tokens > 0:
-                            span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))
-
-                        # Calculate and record cost if enabled
-                        if self.config and self.config.enable_cost_tracking:
-                            try:
-                                # Get call_type from span attributes or default to "chat"
-                                call_type = span.attributes.get("gen_ai.request.type", "chat")
-
-                                # Use granular cost calculation for chat requests
-                                if call_type == "chat":
-                                    costs = self.cost_calculator.calculate_granular_cost(
-                                        model, usage, call_type
-                                    )
-                                    total_cost = costs["total"]
-
-                                    # Record total cost
-                                    if total_cost > 0:
-                                        if self.cost_counter:
-                                            self.cost_counter.add(total_cost, {"model": str(model)})
-                                        span.set_attribute("gen_ai.usage.cost.total", total_cost)
-                                        logger.debug(f"Streaming cost: {total_cost} USD")
-
-                                    # See the non-streaming path: a 0.0 cost has
-                                    # to be distinguishable from an unpriced one.
-                                    span.set_attribute(
-                                        "gen_ai.usage.cost.pricing_source",
-                                        self.cost_calculator.pricing_source(model, call_type),
-                                    )
-
-                                    # Record granular costs
-                                    if costs["prompt"] > 0:
-                                        if self.prompt_cost_counter:
-                                            self.prompt_cost_counter.add(
-                                                costs["prompt"], {"model": str(model)}
-                                            )
-                                        span.set_attribute(
-                                            "gen_ai.usage.cost.prompt", costs["prompt"]
-                                        )
-
-                                    if costs["completion"] > 0:
-                                        if self.completion_cost_counter:
-                                            self.completion_cost_counter.add(
-                                                costs["completion"], {"model": str(model)}
-                                            )
-                                        span.set_attribute(
-                                            "gen_ai.usage.cost.completion", costs["completion"]
-                                        )
-
-                                    if costs["reasoning"] > 0:
-                                        if self.reasoning_cost_counter:
-                                            self.reasoning_cost_counter.add(
-                                                costs["reasoning"], {"model": str(model)}
-                                            )
-                                        span.set_attribute(
-                                            "gen_ai.usage.cost.reasoning", costs["reasoning"]
-                                        )
-
-                                    if costs["cache_read"] > 0:
-                                        if self.cache_read_cost_counter:
-                                            self.cache_read_cost_counter.add(
-                                                costs["cache_read"], {"model": str(model)}
-                                            )
-                                        span.set_attribute(
-                                            "gen_ai.usage.cost.cache_read", costs["cache_read"]
-                                        )
-
-                                    if costs["cache_write"] > 0:
-                                        if self.cache_write_cost_counter:
-                                            self.cache_write_cost_counter.add(
-                                                costs["cache_write"], {"model": str(model)}
-                                            )
-                                        span.set_attribute(
-                                            "gen_ai.usage.cost.cache_write", costs["cache_write"]
-                                        )
-                                else:
-                                    # For non-chat requests, use simple cost calculation
-                                    cost = self.cost_calculator.calculate_cost(
-                                        model, usage, call_type
-                                    )
-                                    if cost and cost > 0:
-                                        if self.cost_counter:
-                                            self.cost_counter.add(cost, {"model": str(model)})
-                                        span.set_attribute("gen_ai.usage.cost.total", cost)
-                            except Exception as e:
-                                logger.warning(
-                                    "Failed to calculate cost for streaming response: %s", e
-                                )
-                    else:
-                        logger.debug("No usage information found in streaming response")
-            except Exception as e:
-                logger.warning("Failed to extract usage from streaming response: %s", e)
-
-            span.set_status(Status(StatusCode.OK))
-            span.end()  # Close the span when streaming completes
-
-            # Decrement server metrics: running requests counter (streaming success)
-            server_metrics = get_server_metrics()
-            if server_metrics:
-                server_metrics.decrement_requests_running()
-                logger.debug("Decremented running requests (streaming success)")
-
-            logger.debug(f"Streaming completed: {token_count} chunks in {duration:.3f}s")
-
-        except Exception as e:
-            # Stream failed
-            span.set_status(Status(StatusCode.ERROR, str(e)))
-            span.record_exception(e)
-            span.end()  # Close the span even on error
-
-            # Decrement server metrics: running requests counter (streaming error)
-            server_metrics = get_server_metrics()
-            if server_metrics:
-                server_metrics.decrement_requests_running()
-                logger.debug("Decremented running requests (streaming error)")
-
-            if self.error_counter:
-                self.error_counter.add(1, {"operation": span.name, "error_type": type(e).__name__})
-            logger.warning(f"Error in streaming wrapper: {e}")
+        except GeneratorExit:
+            # Consumer walked away mid-stream (a `break`, or a timeout). Close
+            # the span with what was actually measured instead of leaking it.
+            self._finalize_stream(span, timing, model)
             raise
+        except Exception as e:
+            self._fail_stream(span, e)
+            raise
+
+        self._finalize_stream(span, timing, model)
+
+    async def _wrap_async_streaming_response(self, stream, span, start_time: float, model: str):
+        """Async counterpart of :meth:`_wrap_streaming_response`.
+
+        Async SDK calls resolve to the stream object rather than to the answer,
+        so awaiting the call tells us nothing about the model's latency -- the
+        generation happens while the caller iterates. Wrapping that iteration
+        is the only place TTFT, TPOT and the final usage chunk are observable
+        on an async client.
+
+        Args:
+            stream: The async streaming response iterator
+            span: The OpenTelemetry span for this request
+            start_time: Request start time (for TTFT calculation)
+            model: Model name/identifier for metric attributes
+
+        Yields:
+            Chunks from the original stream
+        """
+        timing = _StreamTiming(start_time)
+
+        try:
+            async for chunk in stream:
+                self._observe_stream_chunk(span, timing, chunk, model)
+                yield chunk
+        except GeneratorExit:
+            # See the sync wrapper: an abandoned stream still gets its span
+            # closed with the measurements taken so far.
+            self._finalize_stream(span, timing, model)
+            raise
+        except Exception as e:
+            self._fail_stream(span, e)
+            raise
+
+        self._finalize_stream(span, timing, model)
+
+    def _observe_stream_chunk(self, span, timing: "_StreamTiming", chunk, model: str) -> None:
+        """Record first-token / inter-token latency for a single streamed chunk."""
+        current_time = time.time()
+        timing.chunk_count += 1
+
+        if timing.ttft is None:
+            timing.ttft = current_time - timing.start_time
+            self._record_time_to_first_token(span, timing.ttft, model)
+        else:
+            tbt = current_time - timing.last_chunk_time
+            if self.tbt_histogram:
+                self.tbt_histogram.record(tbt, {"model": model, "operation": span.name})
+
+        timing.last_chunk_time = current_time
+        timing.last_chunk = chunk  # Keep track of last chunk for usage extraction
+
+    def _wrap_stream_if_streaming(self, span, result, start_time: float, model: str, kwargs):
+        """Hand a streamed result to the measuring wrapper, or return None.
+
+        Instrumentors that build their own spans instead of going through
+        :meth:`create_span_wrapper` call this straight after invoking the SDK,
+        so every provider reports TTFT/TPOT the same way. When this returns a
+        wrapper the caller must return it and must NOT end the span -- the
+        wrapper owns the span from that point and ends it when iteration
+        finishes.
+        """
+        if not kwargs.get("stream", False):
+            return None
+        if hasattr(result, "__aiter__"):
+            return self._wrap_async_streaming_response(result, span, start_time, model)
+        # A buffered response is an object, not an iterator. Strings, dicts and
+        # lists are excluded deliberately: iterating them would "measure"
+        # characters or keys and invent a TTFT out of nothing.
+        if hasattr(result, "__iter__") and not isinstance(result, (str, bytes, dict, list, tuple)):
+            return self._wrap_streaming_response(result, span, start_time, model)
+        return None
+
+    def _record_time_to_first_token(self, span, ttft: float, model: str) -> None:
+        """Publish a measured TTFT under both attribute spellings.
+
+        The upstream semconv name is what downstream platforms look for;
+        ``gen_ai.server.ttft`` is this library's older abbreviation and stays
+        for consumers already reading it. Every streaming path goes through
+        here so all providers report the same names.
+        """
+        span.set_attribute(SC.GEN_AI_SERVER_TIME_TO_FIRST_TOKEN, ttft)
+        span.set_attribute(SC.GEN_AI_SERVER_TTFT, ttft)
+        metric_attrs = {"model": model, "operation": span.name}
+        if self.ttft_histogram:
+            self.ttft_histogram.record(ttft, metric_attrs)
+        if self.time_to_first_token_histogram:
+            self.time_to_first_token_histogram.record(ttft, metric_attrs)
+        logger.debug("TTFT for %s: %.3fs", model, ttft)
+
+    def _record_time_per_output_token(
+        self, span, ttft: Optional[float], duration: float, output_tokens, model: str
+    ) -> None:
+        """Emit TPOT, or record why it could not be measured.
+
+        TPOT is generation speed with the first token's wait removed, so it
+        needs both a measured TTFT and a real output-token count. When the
+        provider sends no usage we emit nothing at all: a zero is
+        indistinguishable from an instant response once averaged, and dividing
+        by the chunk count instead would be wrong by whatever the provider's
+        chunking happens to be. An absent attribute can be reported as "not
+        measured"; a fabricated number cannot be challenged.
+        """
+        if ttft is None:
+            return
+
+        if not isinstance(output_tokens, (int, float)) or output_tokens <= 0:
+            span.set_attribute(
+                SC.GEN_AI_STREAMING_TPOT_UNAVAILABLE_REASON, "output_token_count_unavailable"
+            )
+            return
+
+        # Per OTel GenAI conventions: the first token is excluded, since its
+        # cost is already reported as TTFT.
+        tpot = max(duration - ttft, 0.0) / max(int(output_tokens) - 1, 1)
+        span.set_attribute(SC.GEN_AI_SERVER_TIME_PER_OUTPUT_TOKEN, tpot)
+        if self.time_per_output_token_histogram:
+            self.time_per_output_token_histogram.record(
+                tpot, {"model": model, "operation": span.name}
+            )
+
+    def _fail_stream(self, span, error: Exception) -> None:
+        """Close a span whose stream raised part-way through iteration."""
+        from opentelemetry.trace import Status, StatusCode
+
+        span.set_status(Status(StatusCode.ERROR, str(error)))
+        span.record_exception(error)
+        span.end()  # Close the span even on error
+
+        # Decrement server metrics: running requests counter (streaming error)
+        server_metrics = get_server_metrics()
+        if server_metrics:
+            server_metrics.decrement_requests_running()
+            logger.debug("Decremented running requests (streaming error)")
+
+        if self.error_counter:
+            self.error_counter.add(1, {"operation": span.name, "error_type": type(error).__name__})
+        logger.warning("Error in streaming wrapper: %s", error)
+
+    def _finalize_stream(self, span, timing: "_StreamTiming", model: str) -> None:
+        """Record duration, latency, usage and cost once a stream is exhausted."""
+        from opentelemetry.trace import Status, StatusCode
+
+        duration = time.time() - timing.start_time
+        if self.latency_histogram:
+            self.latency_histogram.record(duration, {"operation": span.name})
+        span.set_attribute("gen_ai.streaming.token_count", timing.chunk_count)
+
+        # Output-token count for TPOT. Stays None unless the provider actually
+        # reported usage, so TPOT is omitted rather than guessed.
+        output_tokens = None
+        last_chunk = timing.last_chunk
+
+        # Extract usage from last chunk and calculate cost
+        # Many providers (OpenAI, Anthropic, etc.) include usage in the final chunk
+        try:
+            if last_chunk is not None:
+                usage = self._extract_usage(last_chunk)
+                if usage and isinstance(usage, dict):
+                    # Record token usage metrics and calculate cost
+                    # This will set span attributes and record cost metrics
+                    prompt_tokens = usage.get("prompt_tokens", 0)
+                    completion_tokens = usage.get("completion_tokens", 0)
+                    total_tokens = usage.get("total_tokens", 0)
+                    output_tokens = completion_tokens
+
+                    # Record token counts. Attribute naming (current vs
+                    # superseded) is decided centrally by
+                    # _set_token_usage_attributes.
+                    self._set_token_usage_attributes(
+                        span,
+                        prompt_tokens=prompt_tokens,
+                        completion_tokens=completion_tokens,
+                    )
+
+                    if isinstance(prompt_tokens, (int, float)) and prompt_tokens > 0:
+                        if self.token_counter:
+                            self.token_counter.add(
+                                prompt_tokens, {"token_type": "prompt", "operation": span.name}
+                            )
+                        # Record histogram for distribution analysis
+                        if self.prompt_tokens_histogram:
+                            self.prompt_tokens_histogram.record(
+                                int(prompt_tokens), {"model": model, "operation": span.name}
+                            )
+
+                    if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
+                        if self.token_counter:
+                            self.token_counter.add(
+                                completion_tokens,
+                                {"token_type": "completion", "operation": span.name},
+                            )
+                        # Record histogram for distribution analysis
+                        if self.completion_tokens_histogram:
+                            self.completion_tokens_histogram.record(
+                                int(completion_tokens), {"model": model, "operation": span.name}
+                            )
+
+                    if isinstance(total_tokens, (int, float)) and total_tokens > 0:
+                        span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))
+
+                    # Calculate and record cost if enabled
+                    if self.config and self.config.enable_cost_tracking:
+                        try:
+                            # Get call_type from span attributes or default to "chat"
+                            call_type = span.attributes.get("gen_ai.request.type", "chat")
+
+                            # Use granular cost calculation for chat requests
+                            if call_type == "chat":
+                                costs = self.cost_calculator.calculate_granular_cost(
+                                    model, usage, call_type
+                                )
+                                total_cost = costs["total"]
+
+                                # Record total cost
+                                if total_cost > 0:
+                                    if self.cost_counter:
+                                        self.cost_counter.add(total_cost, {"model": str(model)})
+                                    span.set_attribute("gen_ai.usage.cost.total", total_cost)
+                                    logger.debug(f"Streaming cost: {total_cost} USD")
+
+                                # See the non-streaming path: a 0.0 cost has
+                                # to be distinguishable from an unpriced one.
+                                span.set_attribute(
+                                    "gen_ai.usage.cost.pricing_source",
+                                    self.cost_calculator.pricing_source(model, call_type),
+                                )
+
+                                # Record granular costs
+                                if costs["prompt"] > 0:
+                                    if self.prompt_cost_counter:
+                                        self.prompt_cost_counter.add(
+                                            costs["prompt"], {"model": str(model)}
+                                        )
+                                    span.set_attribute("gen_ai.usage.cost.prompt", costs["prompt"])
+
+                                if costs["completion"] > 0:
+                                    if self.completion_cost_counter:
+                                        self.completion_cost_counter.add(
+                                            costs["completion"], {"model": str(model)}
+                                        )
+                                    span.set_attribute(
+                                        "gen_ai.usage.cost.completion", costs["completion"]
+                                    )
+
+                                if costs["reasoning"] > 0:
+                                    if self.reasoning_cost_counter:
+                                        self.reasoning_cost_counter.add(
+                                            costs["reasoning"], {"model": str(model)}
+                                        )
+                                    span.set_attribute(
+                                        "gen_ai.usage.cost.reasoning", costs["reasoning"]
+                                    )
+
+                                if costs["cache_read"] > 0:
+                                    if self.cache_read_cost_counter:
+                                        self.cache_read_cost_counter.add(
+                                            costs["cache_read"], {"model": str(model)}
+                                        )
+                                    span.set_attribute(
+                                        "gen_ai.usage.cost.cache_read", costs["cache_read"]
+                                    )
+
+                                if costs["cache_write"] > 0:
+                                    if self.cache_write_cost_counter:
+                                        self.cache_write_cost_counter.add(
+                                            costs["cache_write"], {"model": str(model)}
+                                        )
+                                    span.set_attribute(
+                                        "gen_ai.usage.cost.cache_write", costs["cache_write"]
+                                    )
+                            else:
+                                # For non-chat requests, use simple cost calculation
+                                cost = self.cost_calculator.calculate_cost(model, usage, call_type)
+                                if cost and cost > 0:
+                                    if self.cost_counter:
+                                        self.cost_counter.add(cost, {"model": str(model)})
+                                    span.set_attribute("gen_ai.usage.cost.total", cost)
+                        except Exception as e:
+                            logger.warning("Failed to calculate cost for streaming response: %s", e)
+                else:
+                    logger.debug("No usage information found in streaming response")
+        except Exception as e:
+            logger.warning("Failed to extract usage from streaming response: %s", e)
+
+        self._record_time_per_output_token(span, timing.ttft, duration, output_tokens, model)
+
+        span.set_status(Status(StatusCode.OK))
+        span.end()  # Close the span when streaming completes
+
+        # Decrement server metrics: running requests counter (streaming success)
+        server_metrics = get_server_metrics()
+        if server_metrics:
+            server_metrics.decrement_requests_running()
+            logger.debug("Decremented running requests (streaming success)")
+
+        logger.debug("Streaming completed: %d chunks in %.3fs", timing.chunk_count, duration)
 
     # Phase 4.2: RAG/Embedding Helper Methods
     def add_embedding_attributes(

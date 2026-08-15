@@ -40,6 +40,8 @@ def reset_shared_metrics():
     # Phase 3.4: Streaming metrics
     BaseInstrumentor._shared_ttft_histogram = None
     BaseInstrumentor._shared_tbt_histogram = None
+    BaseInstrumentor._shared_time_to_first_token_histogram = None
+    BaseInstrumentor._shared_time_per_output_token_histogram = None
     # Token distribution histograms
     BaseInstrumentor._shared_prompt_tokens_histogram = None
     BaseInstrumentor._shared_completion_tokens_histogram = None
@@ -80,6 +82,8 @@ def instrumentor(monkeypatch):
         # Phase 3.4: Streaming metrics
         mock_ttft_histogram = MagicMock()
         mock_tbt_histogram = MagicMock()
+        mock_time_to_first_token_histogram = MagicMock()
+        mock_time_per_output_token_histogram = MagicMock()
         # Token distribution histograms
         mock_prompt_tokens_histogram = MagicMock()
         mock_completion_tokens_histogram = MagicMock()
@@ -109,6 +113,8 @@ def instrumentor(monkeypatch):
             mock_latency_histogram,
             mock_ttft_histogram,
             mock_tbt_histogram,
+            mock_time_to_first_token_histogram,
+            mock_time_per_output_token_histogram,
             mock_prompt_tokens_histogram,
             mock_completion_tokens_histogram,
         ]
@@ -137,6 +143,16 @@ def instrumentor(monkeypatch):
         # Phase 3.4: Streaming metrics
         monkeypatch.setattr(BaseInstrumentor, "_shared_ttft_histogram", mock_ttft_histogram)
         monkeypatch.setattr(BaseInstrumentor, "_shared_tbt_histogram", mock_tbt_histogram)
+        monkeypatch.setattr(
+            BaseInstrumentor,
+            "_shared_time_to_first_token_histogram",
+            mock_time_to_first_token_histogram,
+        )
+        monkeypatch.setattr(
+            BaseInstrumentor,
+            "_shared_time_per_output_token_histogram",
+            mock_time_per_output_token_histogram,
+        )
         # Token distribution histograms
         monkeypatch.setattr(
             BaseInstrumentor, "_shared_prompt_tokens_histogram", mock_prompt_tokens_histogram
@@ -740,6 +756,171 @@ def test_streaming_detection_in_wrapper(instrumentor):
 
     # Verify span was created
     inst.tracer.start_span.assert_called_once()
+
+
+# --- Tests for streaming latency semantic conventions (issue #21) ---
+def _span_attrs(mock_span):
+    """Collapse a mock span's set_attribute calls into a dict."""
+    return {
+        c.args[0]: c.args[1] for c in mock_span.set_attribute.call_args_list if len(c.args) == 2
+    }
+
+
+def _fake_clock(monkeypatch, values):
+    """Pin base.time.time() to `values`, holding the last value once exhausted."""
+    seq = list(values)
+
+    def _now():
+        return seq.pop(0) if len(seq) > 1 else seq[0]
+
+    monkeypatch.setattr(
+        base,
+        "time",
+        unittest.mock.MagicMock(time=_now, sleep=time.sleep, monotonic=time.monotonic),
+    )
+
+
+def test_streaming_emits_semconv_ttft_and_tpot(instrumentor, monkeypatch):
+    """Streamed calls carry the semconv TTFT/TPOT attributes, not just the legacy ttft."""
+    inst, mock_span = instrumentor
+    # chunk1 @ +0.5s, chunk2 @ +1.0s, chunk3 @ +2.0s, then the end-of-stream read.
+    _fake_clock(monkeypatch, [1000.5, 1001.0, 1002.0])
+
+    def stream():
+        yield {"delta": "a"}
+        yield {"delta": "b"}
+        yield {"usage": {"prompt_tokens": 3, "completion_tokens": 5, "total_tokens": 8}}
+
+    chunks = list(inst._wrap_streaming_response(stream(), mock_span, 1000.0, "gpt-4o"))
+    assert len(chunks) == 3
+
+    attrs = _span_attrs(mock_span)
+    assert attrs["gen_ai.server.time_to_first_token"] == pytest.approx(0.5)
+    # The pre-existing bespoke name stays for consumers already reading it.
+    assert attrs["gen_ai.server.ttft"] == pytest.approx(0.5)
+    # (total - ttft) / max(output_tokens - 1, 1) == (2.0 - 0.5) / 4
+    assert attrs["gen_ai.server.time_per_output_token"] == pytest.approx(0.375)
+    assert "gen_ai.streaming.tpot_unavailable_reason" not in attrs
+
+    inst.time_to_first_token_histogram.record.assert_called_once()
+    inst.time_per_output_token_histogram.record.assert_called_once()
+
+
+def test_streaming_omits_tpot_when_output_token_count_unknown(instrumentor, monkeypatch):
+    """No usage in the stream means no TPOT at all - never a fabricated zero."""
+    inst, mock_span = instrumentor
+    _fake_clock(monkeypatch, [1000.5, 1001.0, 1002.0])
+
+    def stream():
+        yield {"delta": "a"}
+        yield {"delta": "b"}
+
+    list(inst._wrap_streaming_response(stream(), mock_span, 1000.0, "gpt-4o"))
+
+    attrs = _span_attrs(mock_span)
+    assert attrs["gen_ai.server.time_to_first_token"] == pytest.approx(0.5)
+    assert "gen_ai.server.time_per_output_token" not in attrs
+    assert attrs["gen_ai.streaming.tpot_unavailable_reason"] == "output_token_count_unavailable"
+    inst.time_per_output_token_histogram.record.assert_not_called()
+
+
+def test_non_streaming_call_omits_streaming_latency_attributes(instrumentor):
+    """A non-streamed call must not carry TTFT/TPOT - absent beats zero."""
+    inst, mock_span = instrumentor
+
+    def create(**kwargs):
+        return {"usage": {"prompt_tokens": 3, "completion_tokens": 5, "total_tokens": 8}}
+
+    wrapped = inst.create_span_wrapper(span_name="chat")(create)
+    wrapped(model="gpt-4o")
+
+    attrs = _span_attrs(mock_span)
+    assert "gen_ai.server.time_to_first_token" not in attrs
+    assert "gen_ai.server.time_per_output_token" not in attrs
+    assert "gen_ai.server.ttft" not in attrs
+    assert "gen_ai.streaming.tpot_unavailable_reason" not in attrs
+
+
+def test_streaming_generator_result_is_measured(instrumentor):
+    """A provider returning a bare generator for stream=True is still measured."""
+    inst, mock_span = instrumentor
+
+    def create(**kwargs):
+        yield {"delta": "a"}
+        yield {"usage": {"prompt_tokens": 2, "completion_tokens": 3, "total_tokens": 5}}
+
+    wrapped = inst.create_span_wrapper(span_name="chat")(create)
+    chunks = list(wrapped(model="llama3", stream=True))
+
+    assert len(chunks) == 2
+    attrs = _span_attrs(mock_span)
+    assert "gen_ai.server.time_to_first_token" in attrs
+    assert "gen_ai.server.time_per_output_token" in attrs
+    assert attrs["gen_ai.streaming.token_count"] == 2
+    mock_span.end.assert_called_once()
+
+
+def test_async_streaming_defers_span_end_and_records_latency(instrumentor):
+    """An async stream must keep the span open until the caller finishes iterating."""
+    inst, mock_span = instrumentor
+
+    class FakeAsyncStream:
+        def __aiter__(self):
+            return self._chunks()
+
+        async def _chunks(self):
+            yield {"delta": "a"}
+            yield {"usage": {"prompt_tokens": 2, "completion_tokens": 3, "total_tokens": 5}}
+
+    async def create(**kwargs):
+        return FakeAsyncStream()
+
+    wrapped = inst.create_span_wrapper(span_name="chat")(create)
+
+    async def run():
+        stream = await wrapped(model="gpt-4o", stream=True)
+        # Awaiting only hands back the iterator; the model has produced nothing
+        # yet, so closing the span here would time the handshake and lose usage.
+        assert not mock_span.end.called
+        return [chunk async for chunk in stream]
+
+    chunks = asyncio.run(run())
+
+    assert len(chunks) == 2
+    mock_span.end.assert_called_once()
+    attrs = _span_attrs(mock_span)
+    assert attrs["gen_ai.server.time_to_first_token"] >= 0
+    assert "gen_ai.server.time_per_output_token" in attrs
+    assert attrs["gen_ai.usage.total_tokens"] == 5
+
+
+def test_async_streaming_error_ends_span_once(instrumentor):
+    """A stream that raises mid-iteration still closes its span exactly once."""
+    inst, mock_span = instrumentor
+
+    class ExplodingAsyncStream:
+        def __aiter__(self):
+            return self._chunks()
+
+        async def _chunks(self):
+            yield {"delta": "a"}
+            raise RuntimeError("connection reset")
+
+    async def create(**kwargs):
+        return ExplodingAsyncStream()
+
+    wrapped = inst.create_span_wrapper(span_name="chat")(create)
+
+    async def run():
+        stream = await wrapped(model="gpt-4o", stream=True)
+        async for _ in stream:
+            pass
+
+    with pytest.raises(RuntimeError, match="connection reset"):
+        asyncio.run(run())
+
+    mock_span.end.assert_called_once()
+    assert mock_span.record_exception.called
 
 
 # --- Tests for Granular Cost Tracking (Phase 3.2) ---

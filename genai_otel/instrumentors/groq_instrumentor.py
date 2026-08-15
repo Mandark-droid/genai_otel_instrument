@@ -5,7 +5,12 @@ capturing relevant attributes such as the model name and token usage.
 """
 
 import logging
+import time
 from typing import Any, Dict, Optional
+
+from opentelemetry import context as otel_context
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 
 from ..config import OTelConfig
 from .base import BaseInstrumentor
@@ -97,7 +102,14 @@ class GroqInstrumentor(BaseInstrumentor):
         original_create = client.chat.completions.create
 
         def wrapped_create(*args, **kwargs):
-            with self.tracer.start_as_current_span("groq.chat.completions") as span:
+            # Started explicitly rather than with `with`: a streamed call
+            # outlives this function, and the context manager would close the
+            # span before the first token arrived.
+            span = self.tracer.start_span("groq.chat.completions")
+            token = otel_context.attach(trace.set_span_in_context(span))
+            start_time = time.time()
+            handed_to_stream = False
+            try:
                 model = kwargs.get("model", "unknown")
 
                 span.set_attribute("gen_ai.system", "groq")
@@ -117,6 +129,12 @@ class GroqInstrumentor(BaseInstrumentor):
                     self.request_counter.add(1, {"model": model, "provider": "groq"})
 
                 result = original_create(*args, **kwargs)
+
+                stream = self._wrap_stream_if_streaming(span, result, start_time, model, kwargs)
+                if stream is not None:
+                    handed_to_stream = True
+                    return stream
+
                 self._record_result_metrics(span, result, 0)
 
                 # Capture response content for evaluation support
@@ -125,6 +143,15 @@ class GroqInstrumentor(BaseInstrumentor):
                     span.set_attribute(key, value)
 
                 return result
+            except Exception as e:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                raise
+            finally:
+                otel_context.detach(token)
+                # The stream wrapper owns the span's end once it takes over.
+                if not handed_to_stream:
+                    span.end()
 
         client.chat.completions.create = wrapped_create
 
