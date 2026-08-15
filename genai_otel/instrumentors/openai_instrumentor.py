@@ -169,6 +169,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
         import asyncio
         import time
 
+        from opentelemetry import context as otel_context
         from opentelemetry import trace
         from opentelemetry.trace import SpanKind, Status, StatusCode
 
@@ -177,7 +178,14 @@ class OpenAIInstrumentor(BaseInstrumentor):
         def decorator(func):
             async def async_wrapper(*args, **kwargs):
                 tracer = trace.get_tracer(__name__)
-                with tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT) as span:
+                is_streaming = bool(kwargs.get("stream", False))
+                # Started explicitly rather than via start_as_current_span: a
+                # streamed call outlives this coroutine, and the context
+                # manager would close the span at the `await` below.
+                span = tracer.start_span(span_name, kind=SpanKind.CLIENT)
+                token = otel_context.attach(trace.set_span_in_context(span))
+                handed_to_stream = False
+                try:
                     if extract_attributes:
                         attrs = extract_attributes(None, args, kwargs)
                         for key, value in attrs.items():
@@ -186,6 +194,19 @@ class OpenAIInstrumentor(BaseInstrumentor):
                     start_time = time.time()
                     try:
                         result = await func(*args, **kwargs)
+
+                        # Awaiting a streamed call yields the iterator, not the
+                        # answer: the generation - and with it TTFT, the final
+                        # usage chunk and the true duration - happens while the
+                        # caller iterates. Closing the span here timed the
+                        # handshake instead, which is why async clients
+                        # reported no streaming latency and no token usage.
+                        if is_streaming and hasattr(result, "__aiter__"):
+                            handed_to_stream = True
+                            return instrumentor._wrap_async_streaming_response(
+                                result, span, start_time, kwargs.get("model", "unknown")
+                            )
+
                         duration = time.time() - start_time
                         span.set_attribute("gen_ai.latency", duration)
 
@@ -206,6 +227,11 @@ class OpenAIInstrumentor(BaseInstrumentor):
                         span.set_status(Status(StatusCode.ERROR, str(e)))
                         span.record_exception(e)
                         raise
+                finally:
+                    otel_context.detach(token)
+                    # The stream wrapper owns the span's end once it takes over.
+                    if not handed_to_stream:
+                        span.end()
 
             return async_wrapper
 

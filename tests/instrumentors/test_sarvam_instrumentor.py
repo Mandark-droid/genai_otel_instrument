@@ -182,7 +182,7 @@ class TestSarvamAIInstrumentor(unittest.TestCase):
 
         mock_span = MagicMock()
         instrumentor.tracer = MagicMock()
-        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.tracer.start_span.return_value = mock_span
         instrumentor.request_counter = MagicMock()
         instrumentor._record_result_metrics = MagicMock()
 
@@ -192,7 +192,7 @@ class TestSarvamAIInstrumentor(unittest.TestCase):
             model="sarvam-m", messages=[{"role": "user", "content": "Namaste"}]
         )
 
-        instrumentor.tracer.start_as_current_span.assert_called_once_with("sarvam.chat.completions")
+        instrumentor.tracer.start_span.assert_called_once_with("sarvam.chat.completions")
 
         mock_span.set_attribute.assert_any_call("gen_ai.system", "sarvam")
         mock_span.set_attribute.assert_any_call("gen_ai.request.model", "sarvam-m")
@@ -310,7 +310,7 @@ class TestSarvamAIInstrumentor(unittest.TestCase):
 
         mock_span = MagicMock()
         instrumentor.tracer = MagicMock()
-        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.tracer.start_span.return_value = mock_span
         instrumentor.request_counter = MagicMock()
         instrumentor._record_result_metrics = MagicMock()
 
@@ -390,7 +390,7 @@ class TestSarvamAIInstrumentor(unittest.TestCase):
 
         mock_span = MagicMock()
         instrumentor.tracer = MagicMock()
-        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.tracer.start_span.return_value = mock_span
         instrumentor.request_counter = MagicMock()
         instrumentor._record_result_metrics = MagicMock()
         instrumentor._extract_response_attributes = MagicMock(return_value={})

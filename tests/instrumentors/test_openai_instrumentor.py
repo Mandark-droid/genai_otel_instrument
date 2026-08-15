@@ -614,6 +614,143 @@ class TestOpenAIInstrumentor(unittest.TestCase):
 
             self.assertEqual(result, mock_result)
 
+    def test_async_streaming_records_ttft_and_tpot(self):
+        """An async stream keeps its span open and reports TTFT/TPOT (issue #21).
+
+        Awaiting an async streaming call only yields the stream object - the
+        model has generated nothing yet - so a span closed at that point times
+        the handshake and reports no streaming latency at all.
+        """
+        import asyncio
+
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+
+        captured = []
+
+        class _Capture(SimpleSpanProcessor):
+            def __init__(self):  # pylint: disable=super-init-not-called
+                pass
+
+            def on_start(self, span, parent_context=None):
+                pass
+
+            def on_end(self, span):
+                captured.append(span)
+
+            def shutdown(self):
+                pass
+
+            def force_flush(self, timeout_millis=30000):
+                return True
+
+        provider = TracerProvider()
+        provider.add_span_processor(_Capture())
+
+        class FakeAsyncStream:
+            def __aiter__(self):
+                return self._chunks()
+
+            async def _chunks(self):
+                usage = MagicMock()
+                usage.prompt_tokens = 4
+                usage.completion_tokens = 6
+                usage.total_tokens = 10
+                first = MagicMock()
+                first.usage = None
+                last = MagicMock()
+                last.usage = usage
+                yield first
+                yield last
+
+        async def mock_create(*args, **kwargs):
+            return FakeAsyncStream()
+
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+            with patch(
+                "opentelemetry.trace.get_tracer",
+                return_value=provider.get_tracer(__name__),
+            ):
+                wrapped = instrumentor._create_async_span_wrapper(
+                    span_name="openai.chat.completion",
+                    extract_attributes=instrumentor._extract_openai_attributes,
+                )(mock_create)
+
+                async def run():
+                    stream = await wrapped(
+                        model="gpt-4o-mini",
+                        messages=[{"role": "user", "content": "hi"}],
+                        stream=True,
+                    )
+                    self.assertEqual(captured, [], "span closed before the stream was consumed")
+                    return [chunk async for chunk in stream]
+
+                chunks = asyncio.run(run())
+
+        self.assertEqual(len(chunks), 2)
+        self.assertEqual(len(captured), 1)
+        attrs = dict(captured[0].attributes or {})
+        self.assertIn("gen_ai.server.time_to_first_token", attrs)
+        self.assertIn("gen_ai.server.time_per_output_token", attrs)
+        self.assertEqual(attrs.get("gen_ai.streaming.token_count"), 2)
+
+    def test_async_non_streaming_omits_streaming_latency(self):
+        """A non-streamed async call must carry neither TTFT nor TPOT."""
+        import asyncio
+
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+
+        captured = []
+
+        class _Capture(SimpleSpanProcessor):
+            def __init__(self):  # pylint: disable=super-init-not-called
+                pass
+
+            def on_start(self, span, parent_context=None):
+                pass
+
+            def on_end(self, span):
+                captured.append(span)
+
+            def shutdown(self):
+                pass
+
+            def force_flush(self, timeout_millis=30000):
+                return True
+
+        provider = TracerProvider()
+        provider.add_span_processor(_Capture())
+
+        mock_result = MagicMock()
+        mock_result.usage = None
+        mock_result.choices = []
+
+        async def mock_create(*args, **kwargs):
+            return mock_result
+
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenAIInstrumentor()
+            with patch(
+                "opentelemetry.trace.get_tracer",
+                return_value=provider.get_tracer(__name__),
+            ):
+                wrapped = instrumentor._create_async_span_wrapper(
+                    span_name="openai.chat.completion",
+                    extract_attributes=instrumentor._extract_openai_attributes,
+                )(mock_create)
+                asyncio.run(
+                    wrapped(model="gpt-4o-mini", messages=[{"role": "user", "content": "hi"}])
+                )
+
+        self.assertEqual(len(captured), 1)
+        attrs = dict(captured[0].attributes or {})
+        self.assertNotIn("gen_ai.server.time_to_first_token", attrs)
+        self.assertNotIn("gen_ai.server.time_per_output_token", attrs)
+        self.assertNotIn("gen_ai.server.ttft", attrs)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

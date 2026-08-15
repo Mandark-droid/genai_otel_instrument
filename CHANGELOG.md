@@ -6,6 +6,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-08-15
+
+### Added
+
+- **Streaming spans now carry time-to-first-token and time-per-output-token
+  under the OTel GenAI semantic-convention names.** Resolves #21.
+
+  Streamed calls now set:
+
+  | Attribute | Meaning |
+  |-----------|---------|
+  | `gen_ai.server.time_to_first_token` | Seconds to the first streamed chunk |
+  | `gen_ai.server.time_per_output_token` | `(duration - ttft) / max(output_tokens - 1, 1)` |
+
+  Both are also recorded as histograms of the same names. The library's older
+  `gen_ai.server.ttft` spelling is still emitted, so nothing reading it breaks.
+
+  **Absent, never zero.** Non-streamed calls carry neither attribute. TPOT
+  additionally requires a real output-token count, so when a provider sends no
+  usage in the stream the span gets TTFT plus
+  `gen_ai.streaming.tpot_unavailable_reason=output_token_count_unavailable` and
+  no TPOT — the chunk count is deliberately *not* used as a stand-in, since
+  chunks are not tokens. A zero TTFT is indistinguishable from an instant first
+  token and quietly drags down any average it enters; an absent attribute can be
+  reported as "not measured".
+
+### Fixed
+
+- **Async streaming calls were mistimed and lost their token usage entirely.**
+  Awaiting an async streaming call returns the stream object, not the answer —
+  the model does its work while the caller iterates. The span was closed at the
+  `await`, so it recorded the handshake (~0.7s in testing) as the whole call and
+  never saw the final usage chunk, leaving async streamed requests with no
+  tokens, no cost and no TTFT. The span is now handed to the streaming wrapper
+  and closed when iteration finishes.
+
+- **Providers returning a bare generator for `stream=True` were timed but never
+  measured.** Streaming detection now runs before the generic generator
+  handling in `create_span_wrapper`, so these calls get TTFT, end-of-stream
+  usage and cost like any other stream.
+
+- **Groq, Azure OpenAI and Sarvam chat completions ignored streaming
+  altogether.** Each built its own span with `start_as_current_span`, which
+  closed it the moment the SDK handed back an iterator. All three now route
+  through the shared streaming wrapper.
+
+- **A stream abandoned part-way through (a `break`, or a timeout) leaked its
+  span.** The span is now closed with whatever was measured instead of being
+  left open with the running-requests counter still incremented.
+
 ## [1.16.1] - 2026-08-14
 
 ### Fixed

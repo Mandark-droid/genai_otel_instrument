@@ -117,7 +117,7 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
             # Mock tracer and span
             mock_span = MagicMock()
             mock_tracer = MagicMock()
-            mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            mock_tracer.start_span.return_value = mock_span
             instrumentor.tracer = mock_tracer
 
             # Mock request_counter
@@ -135,7 +135,7 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
             result = client.complete(model="gpt-4")
 
             # Verify span was created
-            mock_tracer.start_as_current_span.assert_called_with("azure.openai.complete")
+            mock_tracer.start_span.assert_called_with("azure.openai.complete")
 
             # Verify span attributes were set
             mock_span.set_attribute.assert_any_call("gen_ai.system", "azure_openai")
@@ -173,7 +173,7 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
             # Mock tracer and span
             mock_span = MagicMock()
             mock_tracer = MagicMock()
-            mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            mock_tracer.start_span.return_value = mock_span
             instrumentor.tracer = mock_tracer
 
             # Mock request_counter
@@ -271,7 +271,7 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
             # Mock tracer and span
             mock_span = MagicMock()
             mock_tracer = MagicMock()
-            mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            mock_tracer.start_span.return_value = mock_span
             instrumentor.tracer = mock_tracer
             instrumentor.request_counter = MagicMock()
             instrumentor._record_result_metrics = MagicMock()
@@ -319,7 +319,7 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
             # Mock tracer and span
             mock_span = MagicMock()
             mock_tracer = MagicMock()
-            mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+            mock_tracer.start_span.return_value = mock_span
             instrumentor.tracer = mock_tracer
             instrumentor.request_counter = MagicMock()
             instrumentor._record_result_metrics = MagicMock()

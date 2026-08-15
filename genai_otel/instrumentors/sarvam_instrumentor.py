@@ -12,6 +12,10 @@ import logging
 import time
 from typing import Any, Dict, Optional
 
+from opentelemetry import context as otel_context
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
+
 from ..config import OTelConfig
 from .base import BaseInstrumentor
 
@@ -203,8 +207,14 @@ class SarvamAIInstrumentor(BaseInstrumentor):
             instrumentor = self
 
             def wrapped_completions(*args, **kwargs):
-                with instrumentor.tracer.start_as_current_span("sarvam.chat.completions") as span:
-                    start_time = time.time()
+                # Started explicitly rather than with `with`: a streamed call
+                # outlives this function, and the context manager would close
+                # the span before the first token arrived.
+                span = instrumentor.tracer.start_span("sarvam.chat.completions")
+                token = otel_context.attach(trace.set_span_in_context(span))
+                start_time = time.time()
+                handed_to_stream = False
+                try:
                     model = kwargs.get("model", "sarvam-m")
                     span.set_attribute("gen_ai.system", "sarvam")
                     span.set_attribute("gen_ai.request.model", model)
@@ -224,6 +234,14 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                         instrumentor.request_counter.add(1, {"model": model, "provider": "sarvam"})
 
                     result = original_completions(*args, **kwargs)
+
+                    stream = instrumentor._wrap_stream_if_streaming(
+                        span, result, start_time, model, kwargs
+                    )
+                    if stream is not None:
+                        handed_to_stream = True
+                        return stream
+
                     instrumentor._record_result_metrics(span, result, start_time)
 
                     response_attrs = instrumentor._extract_response_attributes(result)
@@ -231,6 +249,15 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                         span.set_attribute(key, value)
 
                     return result
+                except Exception as e:
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
+                    span.record_exception(e)
+                    raise
+                finally:
+                    otel_context.detach(token)
+                    # The stream wrapper owns the span's end once it takes over.
+                    if not handed_to_stream:
+                        span.end()
 
             client.chat.completions = wrapped_completions
 

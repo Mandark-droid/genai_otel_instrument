@@ -147,7 +147,7 @@ class TestGroqInstrumentor(unittest.TestCase):
         # Mock tracer and metrics
         mock_span = MagicMock()
         instrumentor.tracer = MagicMock()
-        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.tracer.start_span.return_value = mock_span
         instrumentor.request_counter = MagicMock()
         instrumentor._record_result_metrics = MagicMock()
 
@@ -158,7 +158,7 @@ class TestGroqInstrumentor(unittest.TestCase):
         result = mock_client.chat.completions.create(model="llama-3.1-70b")
 
         # Verify tracer was called
-        instrumentor.tracer.start_as_current_span.assert_called_once_with("groq.chat.completions")
+        instrumentor.tracer.start_span.assert_called_once_with("groq.chat.completions")
 
         # Verify span attributes were set
         mock_span.set_attribute.assert_any_call("gen_ai.system", "groq")
@@ -187,7 +187,7 @@ class TestGroqInstrumentor(unittest.TestCase):
         # Mock tracer and metrics
         mock_span = MagicMock()
         instrumentor.tracer = MagicMock()
-        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.tracer.start_span.return_value = mock_span
         instrumentor.request_counter = MagicMock()
         instrumentor._record_result_metrics = MagicMock()
 
@@ -242,7 +242,7 @@ class TestGroqInstrumentor(unittest.TestCase):
         # Mock tracer and metrics
         mock_span = MagicMock()
         instrumentor.tracer = MagicMock()
-        instrumentor.tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        instrumentor.tracer.start_span.return_value = mock_span
         instrumentor.request_counter = MagicMock()
         instrumentor._record_result_metrics = MagicMock()
         instrumentor._extract_response_attributes = MagicMock(return_value={})
