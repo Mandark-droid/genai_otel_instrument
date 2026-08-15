@@ -102,6 +102,18 @@ class SemanticConvention:
     # GenAI Server metrics (streaming)
     GEN_AI_SERVER_TTFT = "gen_ai.server.ttft"
     GEN_AI_SERVER_TBT = "gen_ai.server.tbt"
+    # The two names above are this library's own abbreviations and predate the
+    # upstream spelling; the ones below are what the GenAI conventions define
+    # and what downstream platforms actually look for. Emitted as both metrics
+    # and span attributes, and only ever on a streamed call -- an absent
+    # attribute reads as "not measured", whereas a zero TTFT is
+    # indistinguishable from a very fast first token and silently drags any
+    # average that includes it.
+    GEN_AI_SERVER_TIME_TO_FIRST_TOKEN = "gen_ai.server.time_to_first_token"
+    GEN_AI_SERVER_TIME_PER_OUTPUT_TOKEN = "gen_ai.server.time_per_output_token"
+    # Set only when TTFT was measured but the provider gave us no output-token
+    # count to divide by, so TPOT is omitted rather than estimated.
+    GEN_AI_STREAMING_TPOT_UNAVAILABLE_REASON = "gen_ai.streaming.tpot_unavailable_reason"
 
     # DB metrics
     DB_CLIENT_OPERATION_DURATION = "db.client.operation.duration"

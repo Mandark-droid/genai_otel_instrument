@@ -52,7 +52,7 @@ transcript = client.speech_to_text.convert(model_id="scribe_v1", file=open("call
 | Attribute | Operation | Meaning |
 |-----------|-----------|---------|
 | `gen_ai.usage.characters` | text_to_speech | Input characters, the billed unit |
-| `gen_ai.server.ttft` | text_to_speech | Time to first audio byte |
+| `gen_ai.server.time_to_first_token` | text_to_speech | Time to first audio byte (also emitted as `gen_ai.server.ttft`) |
 | `gen_ai.request.voice_id` | text_to_speech | Voice used for synthesis |
 | `gen_ai.usage.audio_duration_seconds` | speech_to_text | Audio seconds, the billed unit |
 | `gen_ai.response.transcript_length` | speech_to_text | Characters of transcript returned |

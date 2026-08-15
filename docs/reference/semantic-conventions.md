@@ -46,6 +46,39 @@ TraceVerde follows OpenTelemetry semantic conventions for GenAI with additional 
     A dashboard that sums `cost.total` without filtering on `pricing_source`
     will silently under-report spend for every unpriced model.
 
+### Streaming Latency
+
+Emitted **only on streamed calls**. On a non-streamed call these attributes are
+absent, not zero.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `gen_ai.server.time_to_first_token` | float | Seconds from request start to the first streamed chunk (TTFT) |
+| `gen_ai.server.time_per_output_token` | float | Seconds per output token after the first (TPOT), `(duration - ttft) / max(output_tokens - 1, 1)` |
+| `gen_ai.server.ttft` | float | Superseded spelling of TTFT, still emitted for consumers already reading it |
+| `gen_ai.streaming.token_count` | int | Number of chunks yielded by the stream (chunks, not tokens) |
+| `gen_ai.streaming.tpot_unavailable_reason` | string | Why TPOT was omitted; currently only `output_token_count_unavailable` |
+
+!!! warning "An absent TTFT is not a zero"
+
+    Span duration cannot substitute for TTFT: a fast-starting long answer and a
+    slow-starting short one can share a duration. But a fabricated `0` is worse
+    than nothing — it is indistinguishable from an instant first token and drags
+    down every average it enters.
+
+    So these attributes are omitted whenever they were not genuinely measured:
+
+    - **Non-streamed calls** carry neither attribute.
+    - **TPOT needs a real output-token count.** Some providers only send usage
+      in the final chunk when asked. With OpenAI, for example, pass
+      `stream_options={"include_usage": True}`; without it the span gets TTFT
+      plus `gen_ai.streaming.tpot_unavailable_reason`, and no TPOT. The chunk
+      count is *not* used as a stand-in — chunks are not tokens.
+    - **Text-to-speech streams** report TTFT (time to first audio byte) and
+      never TPOT, having no output tokens to divide by.
+
+    Report a missing attribute as "not measured" rather than substituting zero.
+
 ### Session Tracking
 
 | Attribute | Type | Description |
@@ -74,6 +107,10 @@ TraceVerde follows OpenTelemetry semantic conventions for GenAI with additional 
 | `gen_ai.client.operation.duration` | Histogram | seconds | Request latency |
 | `gen_ai.cost` | Counter | USD | Estimated costs |
 | `gen_ai.errors` | Counter | errors | Error count by type |
+| `gen_ai.server.time_to_first_token` | Histogram | seconds | TTFT, recorded on streamed calls only |
+| `gen_ai.server.time_per_output_token` | Histogram | seconds | TPOT, recorded when the output-token count is known |
+| `gen_ai.server.ttft` | Histogram | seconds | Superseded spelling of TTFT |
+| `gen_ai.server.tbt` | Histogram | seconds | Time between consecutive streamed chunks |
 
 ### GPU Metrics
 

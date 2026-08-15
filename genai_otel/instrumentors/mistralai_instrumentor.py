@@ -222,7 +222,16 @@ class MistralAIInstrumentor(BaseInstrumentor):
                 try:
                     # Set TTFT if we got any chunks
                     if self._ttft is not None:
-                        self._span.set_attribute("gen_ai.server.ttft", self._ttft)
+                        self._instrumentor._record_time_to_first_token(
+                            self._span, self._ttft, self._model
+                        )
+                    self._instrumentor._record_time_per_output_token(
+                        self._span,
+                        self._ttft,
+                        time.time() - self._start_time,
+                        self._usage["completion_tokens"],
+                        self._model,
+                    )
 
                     # Record usage metrics if available
                     if self._usage["total_tokens"] > 0:
