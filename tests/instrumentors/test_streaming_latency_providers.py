@@ -2,13 +2,14 @@
 
 Most instrumentors get streaming measurement from
 ``BaseInstrumentor.create_span_wrapper``. These three build their own spans, so
-they route through ``_wrap_stream_if_streaming`` instead - and used to close
+they route through ``_install_stream_measurement`` instead - and used to close
 the span the moment the SDK handed back an iterator, which reported the
 handshake as the whole call and lost TTFT, token usage and cost.
 
-See issue #21.
+See issues #21 and #22.
 """
 
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -171,7 +172,160 @@ def test_streaming_helper_ignores_non_iterator_results():
     # Strings, dicts and lists iterate, but iterating them would invent a TTFT
     # out of characters or keys.
     for buffered in ("some text", {"choices": []}, [1, 2, 3], (1, 2)):
-        assert inst._wrap_stream_if_streaming(span, buffered, 0.0, "m", {"stream": True}) is None
+        handled, _ = inst._install_stream_measurement(span, buffered, 0.0, "m", {"stream": True})
+        assert handled is False
 
     # And nothing is wrapped when the call was not streamed at all.
-    assert inst._wrap_stream_if_streaming(span, _stream_of([]), 0.0, "m", {}) is None
+    handled, _ = inst._install_stream_measurement(span, _stream_of([]), 0.0, "m", {})
+    assert handled is False
+
+
+# --- Raw-response streams (issue #22) -------------------------------------
+# A caller that wants the provider's response headers - litellm does, to read
+# rate limits - reaches the OpenAI SDK through `with_raw_response.create`. That
+# returns a LegacyAPIResponse/AsyncAPIResponse, so at await time there is
+# nothing iterable to detect; the stream only exists once `.parse()` is called.
+
+
+class _RawResponse:
+    """Stands in for LegacyAPIResponse: sync .parse() yielding the stream."""
+
+    def __init__(self, parsed):
+        self._parsed = parsed
+        self.headers = {"x-ratelimit-remaining-requests": "42"}
+
+    def parse(self):
+        return self._parsed
+
+
+class _AsyncRawResponse(_RawResponse):
+    """Stands in for AsyncAPIResponse, whose .parse() is a coroutine."""
+
+    async def parse(self):  # type: ignore[override]
+        return self._parsed
+
+
+class _FakeAsyncStream:
+    def __init__(self, chunks):
+        self._chunks = chunks
+
+    def __aiter__(self):
+        return self._gen()
+
+    async def _gen(self):
+        for chunk in self._chunks:
+            yield chunk
+
+
+@contextmanager
+def _openai_async_wrapper(provider, func):
+    """Yield the wrapped call with the patched tracer still active.
+
+    The wrapper resolves its tracer when it is *called*, not when it is built,
+    so the patch has to stay in scope for the duration of the test.
+    """
+    from genai_otel.instrumentors.openai_instrumentor import OpenAIInstrumentor
+
+    with patch.dict("sys.modules", {"openai": MagicMock()}):
+        inst = OpenAIInstrumentor()
+    inst.config = OTelConfig()
+    with patch("opentelemetry.trace.get_tracer", return_value=provider.get_tracer(__name__)):
+        yield inst._create_async_span_wrapper(
+            span_name="openai.chat.completion",
+            extract_attributes=inst._extract_openai_attributes,
+        )(func)
+
+
+@pytest.mark.parametrize("raw_cls", [_RawResponse, _AsyncRawResponse])
+def test_raw_response_stream_is_measured(captured, raw_cls):
+    """The litellm path: TTFT/TPOT land once .parse() hands over the stream."""
+    import asyncio
+
+    spans, provider = captured
+    stream = _FakeAsyncStream([_plain_chunk(), _usage_chunk()])
+
+    async def create(**kwargs):
+        return raw_cls(stream)
+
+    with _openai_async_wrapper(provider, create) as wrapped:
+
+        async def run():
+            raw = await wrapped(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": "hi"}],
+                stream=True,
+                stream_options={"include_usage": True},
+            )
+            assert spans == [], "span closed before the stream was parsed"
+            # Callers read the headers, then parse - exactly what litellm does.
+            assert raw.headers["x-ratelimit-remaining-requests"] == "42"
+            parsed = raw.parse()
+            if asyncio.iscoroutine(parsed):
+                parsed = await parsed
+            return [chunk async for chunk in parsed]
+
+        chunks = asyncio.run(run())
+
+    assert len(chunks) == 2
+    assert len(spans) == 1
+    attrs = dict(spans[0].attributes or {})
+    assert TTFT in attrs
+    assert TPOT in attrs
+    assert attrs["gen_ai.streaming.token_count"] == 2
+
+
+def test_raw_response_that_is_not_a_stream_still_closes_its_span(captured):
+    """A raw response whose parse() yields a plain object must not leak the span."""
+    import asyncio
+
+    spans, provider = captured
+
+    class _BufferedCompletion:
+        """A real buffered response is a plain model object - not iterable.
+
+        Deliberately not a MagicMock: those auto-implement __aiter__ and would
+        be mistaken for a stream here.
+        """
+
+        def __init__(self):
+            self.usage = None
+            self.choices = []
+
+    async def create(**kwargs):
+        return _RawResponse(_BufferedCompletion())  # buffered body, not a stream
+
+    with _openai_async_wrapper(provider, create) as wrapped:
+
+        async def run():
+            raw = await wrapped(
+                model="gpt-4o-mini", messages=[{"role": "user", "content": "hi"}], stream=True
+            )
+            return raw.parse()
+
+        asyncio.run(run())
+
+    assert len(spans) == 1, "span was leaked"
+    attrs = dict(spans[0].attributes or {})
+    assert TTFT not in attrs
+    assert TPOT not in attrs
+
+
+def test_sync_raw_response_stream_is_measured(captured):
+    """Same deal on the sync path (litellm.completion -> with_raw_response)."""
+    spans, provider = captured
+    with patch.dict("sys.modules", {"groq": MagicMock()}):
+        inst = _prepare(GroqInstrumentor(), provider)
+        client = MagicMock()
+        client.chat.completions.create = lambda **kw: _RawResponse(
+            _stream_of([_plain_chunk(), _usage_chunk()])
+        )
+        inst._instrument_client(client)
+
+        raw = client.chat.completions.create(model="llama-3.3-70b", stream=True)
+        assert spans == [], "span closed before the stream was parsed"
+        assert len(list(raw.parse())) == 2
+
+    assert len(spans) == 1
+    attrs = dict(spans[0].attributes or {})
+    assert TTFT in attrs
+    assert TPOT in attrs

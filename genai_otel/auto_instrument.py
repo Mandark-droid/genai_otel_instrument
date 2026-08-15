@@ -79,6 +79,7 @@ try:
         InstructorInstrumentor,
         LangChainInstrumentor,
         LangGraphInstrumentor,
+        LiteLLMLatencyInstrumentor,
         LlamaIndexInstrumentor,
         MistralAIInstrumentor,
         OllamaInstrumentor,
@@ -117,6 +118,7 @@ except ImportError:
         InstructorInstrumentor,
         LangChainInstrumentor,
         LangGraphInstrumentor,
+        LiteLLMLatencyInstrumentor,
         LlamaIndexInstrumentor,
         MistralAIInstrumentor,
         OllamaInstrumentor,
@@ -196,6 +198,9 @@ INSTRUMENTORS = {
     "bedrock_agents": BedrockAgentsInstrumentor,  # AWS Bedrock Agents
     "cohere": CohereInstrumentor,
     "crewai": CrewAIInstrumentor,  # CrewAI multi-agent framework
+    # Streaming latency for litellm routes that bypass provider SDKs (issue #22).
+    # Distinct from the OpenInference "litellm" entry, which stays as-is.
+    "litellm_latency": LiteLLMLatencyInstrumentor,
     "dspy": DSPyInstrumentor,  # DSPy declarative LM programming framework
     "mistralai": MistralAIInstrumentor,
     "together": TogetherAIInstrumentor,

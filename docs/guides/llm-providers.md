@@ -214,7 +214,10 @@ See [Google GenAI example](https://github.com/Mandark-droid/genai_otel_instrumen
 pip install genai-otel-instrument[openinference]
 ```
 
-LiteLLM enables cost tracking across 100+ providers via a single proxy. See [LiteLLM example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/litellm/example.py).
+LiteLLM enables cost tracking across 100+ providers via a single proxy. Streaming latency
+is reported automatically for routes litellm sends through the OpenAI SDK; for
+routes it serves with its own HTTP client, enable the opt-in `litellm_latency`
+instrumentor (see [Configuration](../getting-started/configuration.md)). See [LiteLLM example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/litellm/example.py).
 
 ### Smolagents (HuggingFace Agents)
 

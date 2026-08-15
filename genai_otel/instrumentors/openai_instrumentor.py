@@ -201,11 +201,16 @@ class OpenAIInstrumentor(BaseInstrumentor):
                         # caller iterates. Closing the span here timed the
                         # handshake instead, which is why async clients
                         # reported no streaming latency and no token usage.
-                        if is_streaming and hasattr(result, "__aiter__"):
+                        #
+                        # This also covers callers that ask for response headers
+                        # via with_raw_response (litellm does), where the stream
+                        # only appears once .parse() is called.
+                        handled, value = instrumentor._install_stream_measurement(
+                            span, result, start_time, kwargs.get("model", "unknown"), kwargs
+                        )
+                        if handled:
                             handed_to_stream = True
-                            return instrumentor._wrap_async_streaming_response(
-                                result, span, start_time, kwargs.get("model", "unknown")
-                            )
+                            return value
 
                         duration = time.time() - start_time
                         span.set_attribute("gen_ai.latency", duration)

@@ -235,12 +235,12 @@ class SarvamAIInstrumentor(BaseInstrumentor):
 
                     result = original_completions(*args, **kwargs)
 
-                    stream = instrumentor._wrap_stream_if_streaming(
+                    handled, value = instrumentor._install_stream_measurement(
                         span, result, start_time, model, kwargs
                     )
-                    if stream is not None:
+                    if handled:
                         handed_to_stream = True
-                        return stream
+                        return value
 
                     instrumentor._record_result_metrics(span, result, start_time)
 

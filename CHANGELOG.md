@@ -6,6 +6,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.0] - 2026-08-15
+
+### Fixed
+
+- **Streamed calls made through a raw-response wrapper reported no latency,
+  tokens or cost.** Resolves #22.
+
+  A caller that wants the provider's response headers reaches the OpenAI SDK
+  through `with_raw_response.create`, which returns a `LegacyAPIResponse` /
+  `AsyncAPIResponse` instead of the stream. The stream only exists once
+  `.parse()` is called, so at await time there was nothing iterable to detect
+  and a streamed call was indistinguishable from a buffered one. Streaming
+  detection now defers to `.parse()`, handling both its sync and async forms.
+
+  litellm takes exactly this path, so `litellm.acompletion(stream=True)` against
+  OpenAI, Azure and OpenAI-compatible endpoints now reports
+  `gen_ai.server.time_to_first_token`, `gen_ai.server.time_per_output_token`,
+  token usage and cost. All four were missing before, not just the latency.
+
+### Added
+
+- **`litellm_latency`, an opt-in instrumentor for litellm routes that bypass
+  provider SDKs.**
+
+  litellm sends OpenAI, Azure and OpenAI-compatible traffic through the OpenAI
+  SDK, which is already instrumented. Every other provider (Anthropic, Bedrock,
+  Gemini, Cohere, HuggingFace, ...) is implemented with litellm's own HTTP
+  client, which no provider instrumentor ever sees, so streaming latency was
+  absent for that whole set regardless of the fix above. Wrapping litellm's own
+  entry points catches every route, because litellm returns a
+  `CustomStreamWrapper` whatever the transport underneath.
+
+  The span it creates is the parent of any inner provider span. **When an inner
+  span already measured the request, this one records no tokens, cost or latency
+  of its own** -- `litellm.acompletion` re-enters `litellm.completion`
+  internally, so without that rule a single request would be billed more than
+  once.
+
+  **Opt-in, not on by default.** It participates in token and cost accounting
+  for every litellm call, so it earns default-on status only after a release of
+  real-world use:
+
+  ```bash
+  export GENAI_ENABLED_INSTRUMENTORS="openai,anthropic,litellm,litellm_latency"
+  ```
+
+  Verified end to end against live endpoints on all four combinations of
+  provider-SDK vs own-HTTP-client and streamed vs non-streamed, asserting that
+  exactly one span carries cost per request and that non-streamed calls carry no
+  TTFT at all.
+
 ## [1.17.1] - 2026-08-15
 
 ### Fixed
