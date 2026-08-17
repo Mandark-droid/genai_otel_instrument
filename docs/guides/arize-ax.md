@@ -89,6 +89,23 @@ if hasattr(provider, "force_flush"):
 For long-running services, use the SIGTERM flush described in
 [Configuration](../getting-started/configuration.md) instead.
 
+## Metrics go somewhere else
+
+`OTEL_EXPORTER_OTLP_ENDPOINT` applies to every signal, and Arize's OTLP endpoint
+ingests traces. Metric batches sent to it are rejected, which surfaces as a
+retry loop in the log:
+
+```
+Transient error Bad Gateway encountered while exporting metrics batch, retrying in 1.15s.
+```
+
+Traces are unaffected. Point metrics at their own destination with the standard
+signal-specific variable, which takes precedence over the generic one:
+
+```bash
+OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://localhost:4318/v1/metrics
+```
+
 ## What Arize AX does with the spans
 
 AX normalises the GenAI conventions onto its own OpenInference model at
