@@ -126,6 +126,54 @@ class TestHyperbolicInstrumentor(unittest.TestCase):
 
         self.assertIsNone(usage)
 
+    def _record_with_cost(self, cost_counter):
+        """Run a priced response through the recorder and return set attributes."""
+        instrumentor = HyperbolicInstrumentor()
+        instrumentor.config = OTelConfig(enable_cost_tracking=True)
+        instrumentor.token_counter = MagicMock()
+        instrumentor.cost_counter = cost_counter
+
+        captured = {}
+        mock_span = MagicMock()
+        mock_span.attributes = {"gen_ai.request.model": "meta-llama/Llama-3.3-70B-Instruct"}
+        mock_span.set_attribute.side_effect = lambda k, v: captured.__setitem__(k, v)
+
+        instrumentor._extract_and_record_response(
+            mock_span,
+            {
+                "id": "resp-1",
+                "model": "meta-llama/Llama-3.3-70B-Instruct",
+                "choices": [{"finish_reason": "stop", "message": {"content": "hi"}}],
+                "usage": {
+                    "prompt_tokens": 1000,
+                    "completion_tokens": 1000,
+                    "total_tokens": 2000,
+                },
+            },
+        )
+        return captured
+
+    def test_cost_emitted_under_the_standard_attribute(self):
+        """Hyperbolic must report cost where every other instrumentor does.
+
+        Anything aggregating spend across providers reads
+        gen_ai.usage.cost.total; emitting only gen_ai.cost.amount made
+        Hyperbolic spans invisible to those queries.
+        """
+        captured = self._record_with_cost(MagicMock())
+
+        self.assertGreater(captured.get("gen_ai.usage.cost.total", 0), 0)
+        # The legacy name stays so existing dashboards keep working.
+        self.assertEqual(
+            captured.get("gen_ai.cost.amount"), captured.get("gen_ai.usage.cost.total")
+        )
+
+    def test_cost_attribute_set_without_a_cost_counter(self):
+        """A missing metric counter must not drop cost from the span too."""
+        captured = self._record_with_cost(None)
+
+        self.assertGreater(captured.get("gen_ai.usage.cost.total", 0), 0)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

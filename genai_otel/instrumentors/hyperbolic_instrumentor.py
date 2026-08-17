@@ -229,11 +229,22 @@ class HyperbolicInstrumentor(BaseInstrumentor):
                 # Real signature is calculate_cost(model, usage: dict, call_type).
                 cost = cost_calc.calculate_cost(model, usage_dict, "chat")
 
-                if cost > 0 and self.cost_counter:
+                if cost > 0:
+                    # `gen_ai.usage.cost.total` is what every other instrumentor
+                    # emits, so anything aggregating cost across providers reads
+                    # that name. This instrumentor predates it and emitted only
+                    # `gen_ai.cost.amount`, which made Hyperbolic spans invisible
+                    # to those queries; the legacy name is kept alongside so
+                    # existing dashboards keep working.
+                    span.set_attribute("gen_ai.usage.cost.total", cost)
                     span.set_attribute("gen_ai.cost.amount", cost)
-                    self.cost_counter.add(
-                        cost, {"model": model, "provider": "hyperbolic", "call_type": "chat"}
-                    )
+                    # The attribute is set whether or not the counter exists -
+                    # previously a missing counter dropped the cost from the
+                    # span as well as from the metric.
+                    if self.cost_counter:
+                        self.cost_counter.add(
+                            cost, {"model": model, "provider": "hyperbolic", "call_type": "chat"}
+                        )
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from response.

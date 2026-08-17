@@ -163,6 +163,26 @@ evaluation.toxicity.prompt.detected      = False
 evaluation.hallucination.response.score  = 0.0
 ```
 
+## RAG traces
+
+Embedding calls produce their own spans, so a retrieval-augmented trace arrives
+in Arize with both legs intact - the lookup and the generation - rather than the
+generation alone. Grouping them under a parent span sends the pipeline as one
+trace:
+
+```python
+with tracer.start_as_current_span("rag.pipeline"):
+    client.embeddings.create(model="text-embedding-3-small", input=chunks)
+    client.embeddings.create(model="text-embedding-3-small", input=question)
+    client.chat.completions.create(model="gpt-4o-mini", messages=messages)
+```
+
+The embedding spans carry `gen_ai.request.input_count`,
+`gen_ai.response.vector_size` and their own token counts and cost, priced from
+the embeddings table. The embedded text is attached as `embedding.text` only
+when `GENAI_ENABLE_CONTENT_CAPTURE=true`; retrieval inputs routinely contain
+user data, so it is off by default.
+
 ## Verifying a trace landed
 
 ```bash
