@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.jpg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -679,6 +679,56 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Cost Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#spotting-models-that-are-about-to-stop-existing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spotting models that are about to stop existing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-prices-declare-their-unit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio prices declare their unit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#knowing-which-prices-have-actually-been-checked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Knowing which prices have actually been checked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#telling-free-apart-from-not-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telling "free" apart from "not measured"
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -855,6 +905,34 @@
     
   
     Sarvam AI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../arize-ax/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arize AX
   
 
     
@@ -1239,6 +1317,56 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Cost Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#spotting-models-that-are-about-to-stop-existing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spotting models that are about to stop existing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-prices-declare-their-unit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio prices declare their unit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#knowing-which-prices-have-actually-been-checked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Knowing which prices have actually been checked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#telling-free-apart-from-not-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telling "free" apart from "not measured"
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1328,7 +1456,7 @@
 
 
 <h1 id="cost-tracking">Cost Tracking<a class="headerlink" href="#cost-tracking" title="Permanent link">&para;</a></h1>
-<p>TraceVerde includes automatic cost tracking with pricing data for <strong>1,050+ models</strong> across <strong>30+ providers</strong>. Every LLM call is enriched with per-request cost breakdown.</p>
+<p>TraceVerde includes automatic cost tracking with pricing data for <strong>1,700+ models</strong> across <strong>40+ providers</strong>. Every LLM call is enriched with per-request cost breakdown.</p>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <p>Cost tracking is enabled by default. For every LLM call, TraceVerde:</p>
 <ol>
@@ -1364,9 +1492,104 @@
 <td>Completion token cost</td>
 <td><code>0.002000</code></td>
 </tr>
+<tr>
+<td><code>gen_ai.usage.cost.pricing_source</code></td>
+<td>Where the price came from</td>
+<td><code>table</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.request.model.deprecated</code></td>
+<td>Present only when the provider has announced the model's end</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.request.model.deprecation_note</code></td>
+<td>Why, and what to migrate to</td>
+<td><code>Moonshot v1 platform sunset 2026-08-31...</code></td>
+</tr>
 </tbody>
 </table>
+<h3 id="spotting-models-that-are-about-to-stop-existing">Spotting models that are about to stop existing<a class="headerlink" href="#spotting-models-that-are-about-to-stop-existing" title="Permanent link">&para;</a></h3>
+<p>A deprecated model is not a pricing problem — it bills normally, at a real rate,
+right up until the provider withdraws it. That is exactly what makes it easy to
+miss: nothing in the telemetry looks wrong until the day the calls start failing,
+and the only prior warning was a line in a vendor changelog.</p>
+<p>Spans for such models carry <code>gen_ai.request.model.deprecated</code>, so the question
+"what are we running that has an end date?" becomes a query instead of an audit:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">retiring</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="o">.</span><span class="n">attributes</span><span class="p">[</span><span class="s2">&quot;gen_ai.request.model&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">spans</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gen_ai.request.model.deprecated&quot;</span><span class="p">)}</span>
+</code></pre></div>
+<p>The attributes are absent on active models, so this costs nothing in the normal
+case. <code>pricing_source</code> stays <code>table</code> for deprecated models — conflating the two
+would make a retiring model look unpriced when it is still costing money.</p>
+<p>Deprecations are recorded in the <code>deprecated</code> map in
+<code>genai_otel/llm_pricing.json</code>, keyed by pricing key so it covers every category,
+including the ones whose values are bare numbers and cannot carry an inline flag.</p>
+<h3 id="audio-prices-declare-their-unit">Audio prices declare their unit<a class="headerlink" href="#audio-prices-declare-their-unit" title="Permanent link">&para;</a></h3>
+<p>A bare number cannot say what it is <em>per</em>. Text-to-speech bills per character,
+transcription per second, and some audio models bill per token — so audio entries
+in <code>genai_otel/llm_pricing.json</code> state the unit in the key:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>&quot;eleven_multilingual_v2&quot;:  { &quot;per_1k_chars&quot;:  0.10     },  // synthesis
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>&quot;elevenlabs/scribe_v1&quot;:    { &quot;per_second&quot;:    6.11e-05 },  // transcription
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>&quot;gpt-4o-transcribe&quot;:       { &quot;per_1k_tokens&quot;: 0.0025   }
+</code></pre></div>
+<p>This is not tidiness. Storing both as an undifferentiated float is what allowed 42
+entries to sit at a per-minute rate against a per-second contract — a 60× error
+that nothing in the data contradicted. With the unit declared, billing a
+per-second model by character is detected and <strong>refused</strong> rather than silently
+producing a plausible number:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">calc</span><span class="o">.</span><span class="n">calculate_cost</span><span class="p">(</span><span class="s2">&quot;elevenlabs/scribe_v1&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;characters&quot;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">},</span> <span class="s2">&quot;audio&quot;</span><span class="p">)</span>  <span class="c1"># -&gt; 0.0 + warning</span>
+</code></pre></div>
+<p>A bare number is still accepted for backwards compatibility and for custom
+pricing, and keeps the old inferred-unit behaviour.</p>
+<h3 id="knowing-which-prices-have-actually-been-checked">Knowing which prices have actually been checked<a class="headerlink" href="#knowing-which-prices-have-actually-been-checked" title="Permanent link">&para;</a></h3>
+<p>Most of the pricing table is inherited from an upstream aggregate. That is a
+reasonable starting point and a poor source of truth — auditing in August 2026
+found rates stale by a full model generation, transposed between tiers, and off
+by 2.5x, none of which looked wrong in the file.</p>
+<p>Entries verified against the vendor's own pricing page carry the date that
+happened, in the <code>prices_checked</code> map:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">genai_otel.cost_calculator</span><span class="w"> </span><span class="kn">import</span> <span class="n">CostCalculator</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">calc</span> <span class="o">=</span> <span class="n">CostCalculator</span><span class="p">()</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">calc</span><span class="o">.</span><span class="n">price_checked</span><span class="p">(</span><span class="s2">&quot;elevenlabs/scribe_v1&quot;</span><span class="p">,</span> <span class="s2">&quot;audio&quot;</span><span class="p">)</span>   <span class="c1"># &#39;2026-08-12&#39;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">calc</span><span class="o">.</span><span class="n">price_checked</span><span class="p">(</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">)</span>                     <span class="c1"># None - never verified here</span>
+</code></pre></div>
+<p><code>None</code> means "nobody has checked this against the vendor", not "suspect". It is
+the honest default for an inherited number, and it makes the audit a query
+instead of a manual sweep:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">checked</span> <span class="ow">in</span> <span class="n">calc</span><span class="o">.</span><span class="n">stale_prices</span><span class="p">(</span><span class="n">older_than_days</span><span class="o">=</span><span class="mi">180</span><span class="p">):</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">checked</span> <span class="ow">or</span> <span class="s2">&quot;never verified&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>Pass <code>include_unverified=False</code> to see only entries that were checked once and
+have since aged out.</p>
+<h3 id="telling-free-apart-from-not-measured">Telling "free" apart from "not measured"<a class="headerlink" href="#telling-free-apart-from-not-measured" title="Permanent link">&para;</a></h3>
+<p><code>cost.total = 0.0</code> means one of two very different things, so every span also
+carries <code>gen_ai.usage.cost.pricing_source</code>:</p>
+<ul>
+<li><strong><code>table</code></strong> — matched the shipped pricing file. Billable.</li>
+<li><strong><code>estimated</code></strong> — no entry for this model, so the price was inferred from the
+  parameter count in its name (e.g. <code>...-7b</code>) via the local-model size tier.
+  Useful for relative comparison, not for a bill.</li>
+<li><strong><code>unpriced</code></strong> — no price could be determined at all.</li>
+</ul>
+<p>Filter on this before aggregating. Summing <code>cost.total</code> across all spans without
+it under-reports spend, because every unpriced model contributes <code>0.0</code> and looks
+identical to a genuinely free call:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Spend you can defend, plus an explicit count of what could not be priced.</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">billable</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">spans</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gen_ai.usage.cost.pricing_source&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;table&quot;</span><span class="p">]</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">unpriced</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">spans</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gen_ai.usage.cost.pricing_source&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;unpriced&quot;</span><span class="p">]</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;$</span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">attributes</span><span class="p">[</span><span class="s1">&#39;gen_ai.usage.cost.total&#39;</span><span class="p">]</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">billable</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>      <span class="sa">f</span><span class="s2">&quot; across </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">billable</span><span class="p">)</span><span class="si">}</span><span class="s2"> calls; </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">unpriced</span><span class="p">)</span><span class="si">}</span><span class="s2"> calls could not be priced&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>If <code>unpriced</code> is large, the model is missing from <code>genai_otel/llm_pricing.json</code> —
+add it via <code>custom_pricing_json</code> or open an issue.</p>
 <h2 id="supported-providers">Supported Providers<a class="headerlink" href="#supported-providers" title="Permanent link">&para;</a></h2>
+<p>The pricing file carries <strong>1400+ chat models</strong>, covering roughly 83% of the
+priced catalogue on models.dev. Coverage is deliberately limited to first-party
+providers and the major clouds that resell under their own SKUs — gateway and
+router listings are excluded, because they re-price the same underlying model
+and the recorded cost would then depend on which aggregator was indexed first.</p>
 <table>
 <thead>
 <tr>
@@ -1383,12 +1606,12 @@
 </tr>
 <tr>
 <td>Anthropic</td>
-<td>Claude Sonnet 5, Claude Fable 5, Claude Opus 4.8, Claude Sonnet 4.6, Claude 3.5/3 series (15+)</td>
+<td>Claude Opus 5, Claude Sonnet 5, Claude Fable 5, Claude Opus 4.8, Claude Sonnet 4.6, Claude 3.5/3 series (20+)</td>
 <td>Per token + cache pricing</td>
 </tr>
 <tr>
 <td>Google AI</td>
-<td>Gemini 3.5 Flash, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (30+)</td>
+<td>Gemini 3.6 Flash, Gemini 3.5 Flash / Flash Lite, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (35+)</td>
 <td>Per token</td>
 </tr>
 <tr>
@@ -1413,8 +1636,18 @@
 </tr>
 <tr>
 <td>Moonshot AI</td>
-<td>Kimi K2.7 Code, K2.6, K2.5, Kimi Latest (15+)</td>
+<td>Kimi K3, Kimi K2.7 Code, K2.6, K2.5, Kimi Latest (20+)</td>
 <td>Per token + cache pricing</td>
+</tr>
+<tr>
+<td>Alibaba / Qwen</td>
+<td>Qwen3.8-Max, Qwen3.7 Flash/Max, Qwen3.6 series (40+)</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Thinking Machines</td>
+<td>Inkling, Inkling Small</td>
+<td>Per token</td>
 </tr>
 <tr>
 <td>Xiaomi</td>
@@ -1532,21 +1765,21 @@
 </ul>
 <h2 id="custom-model-pricing">Custom Model Pricing<a class="headerlink" href="#custom-model-pricing" title="Permanent link">&para;</a></h2>
 <p>For models not in the pricing database:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Chat models</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{&quot;chat&quot;:{&quot;my-model&quot;:{&quot;promptPrice&quot;:0.001,&quot;completionPrice&quot;:0.002}}}&#39;</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Embeddings</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{&quot;embeddings&quot;:{&quot;my-embed&quot;:0.00005}}&#39;</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Multiple categories</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="s1">  &quot;chat&quot;: {</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="s1">    &quot;my-custom-chat&quot;: {&quot;promptPrice&quot;: 0.001, &quot;completionPrice&quot;: 0.002}</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="s1">  },</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="s1">  &quot;embeddings&quot;: {</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="s1">    &quot;my-custom-embed&quot;: 0.00005</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="s1">  }</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="s1">}&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Chat models</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{&quot;chat&quot;:{&quot;my-model&quot;:{&quot;promptPrice&quot;:0.001,&quot;completionPrice&quot;:0.002}}}&#39;</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Embeddings</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{&quot;embeddings&quot;:{&quot;my-embed&quot;:0.00005}}&#39;</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># Multiple categories</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="s1">  &quot;chat&quot;: {</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="s1">    &quot;my-custom-chat&quot;: {&quot;promptPrice&quot;: 0.001, &quot;completionPrice&quot;: 0.002}</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="s1">  },</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="s1">  &quot;embeddings&quot;: {</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="s1">    &quot;my-custom-embed&quot;: 0.00005</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="s1">  }</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="s1">}&#39;</span>
 </code></pre></div>
 <p>Custom prices merge with defaults. If you provide pricing for an existing model, the custom price overrides the default.</p>
 <p><strong>Pricing format:</strong></p>
@@ -1563,10 +1796,10 @@
 <li><code>openinference.span.kind</code> -&gt; call type (LLM, EMBEDDING, etc.)</li>
 </ul>
 <h2 id="disable-cost-tracking">Disable Cost Tracking<a class="headerlink" href="#disable-cost-tracking" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_COST_TRACKING</span><span class="o">=</span><span class="nb">false</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_COST_TRACKING</span><span class="o">=</span><span class="nb">false</span>
 </code></pre></div>
 <p>Or programmatically:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span><span class="n">enable_cost_tracking</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span><span class="n">enable_cost_tracking</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="grafana-dashboard">Grafana Dashboard<a class="headerlink" href="#grafana-dashboard" title="Permanent link">&para;</a></h2>
 <p>Import the pre-built <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/dashboards/grafana/genai-overview.json">GenAI overview dashboard</a> to visualize costs over time by provider and model.</p>
@@ -1666,7 +1899,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

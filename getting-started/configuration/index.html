@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.jpg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -608,6 +608,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#shutdown-and-flushing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shutdown and Flushing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#semantic-conventions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1087,6 +1098,34 @@
     
   
     Sarvam AI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/arize-ax/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arize AX
   
 
     
@@ -1601,6 +1640,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#shutdown-and-flushing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shutdown and Flushing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#semantic-conventions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1910,9 +1960,36 @@
 </tr>
 </tbody>
 </table>
-<p>Default instrumentors: <code>openai</code>, <code>openrouter</code>, <code>cometapi</code>, <code>anthropic</code>, <code>google.generativeai</code>, <code>boto3</code>, <code>azure.ai.openai</code>, <code>cohere</code>, <code>mistralai</code>, <code>together</code>, <code>groq</code>, <code>ollama</code>, <code>vertexai</code>, <code>replicate</code>, <code>anyscale</code>, <code>sambanova</code>, <code>sarvamai</code>, <code>langchain</code>, <code>langgraph</code>, <code>llama_index</code>, <code>transformers</code>, <code>autogen</code>, <code>autogen_agentchat</code>, <code>google_adk</code>, <code>pydantic_ai</code>, <code>openai_agents</code>, <code>bedrock_agents</code>, <code>crewai</code>, <code>smolagents</code> (3.10+), <code>litellm</code> (3.10+)</p>
+<p>Default instrumentors: <code>openai</code>, <code>openrouter</code>, <code>cometapi</code>, <code>anthropic</code>, <code>google.generativeai</code>, <code>boto3</code>, <code>azure.ai.openai</code>, <code>cohere</code>, <code>mistralai</code>, <code>together</code>, <code>groq</code>, <code>ollama</code>, <code>vertexai</code>, <code>replicate</code>, <code>anyscale</code>, <code>sambanova</code>, <code>sarvamai</code>, <code>elevenlabs</code>, <code>langchain</code>, <code>langgraph</code>, <code>llama_index</code>, <code>transformers</code>, <code>autogen</code>, <code>autogen_agentchat</code>, <code>google_adk</code>, <code>pydantic_ai</code>, <code>openai_agents</code>, <code>bedrock_agents</code>, <code>crewai</code>, <code>smolagents</code> (3.10+), <code>litellm</code> (3.10+)</p>
+<p><strong>Opt-in instrumentors</strong> (not enabled by default; add them to <code>GENAI_ENABLED_INSTRUMENTORS</code> explicitly):</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>litellm_latency</code></td>
+<td>Streaming latency (TTFT/TPOT) for litellm routes that bypass provider SDKs</td>
+</tr>
+</tbody>
+</table>
+<p><code>litellm</code> routes OpenAI, Azure and OpenAI-compatible traffic through the OpenAI
+SDK, which is already instrumented, so those calls are measured on the inner
+provider span with no extra configuration. Every other provider (Anthropic,
+Bedrock, Gemini, Cohere, HuggingFace, ...) is implemented with litellm's own
+HTTP client, which no provider instrumentor sees. Enabling <code>litellm_latency</code>
+wraps litellm's own entry points so those routes report TTFT/TPOT too:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span><span class="s2">&quot;openai,anthropic,litellm,litellm_latency&quot;</span>
+</code></pre></div>
+<p>The span it creates is the parent of any inner provider span. When an inner span
+already measured the request, this one records no tokens, cost or latency of its
+own -- one request is never counted twice. It is opt-in because it participates
+in token and cost accounting for every litellm call.</p>
 <p>Example - enable only specific instrumentors:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span>openai,anthropic,crewai
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span>openai,anthropic,crewai
 </code></pre></div>
 <h2 id="sampling">Sampling<a class="headerlink" href="#sampling" title="Permanent link">&para;</a></h2>
 <table>
@@ -1932,7 +2009,7 @@
 </tbody>
 </table>
 <p>Use lower values in high-traffic production to reduce telemetry volume:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_SAMPLING_RATE</span><span class="o">=</span><span class="m">0</span>.1<span class="w">  </span><span class="c1"># Sample 10% of traces</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_SAMPLING_RATE</span><span class="o">=</span><span class="m">0</span>.1<span class="w">  </span><span class="c1"># Sample 10% of traces</span>
 </code></pre></div>
 <h2 id="cost-tracking">Cost Tracking<a class="headerlink" href="#cost-tracking" title="Permanent link">&para;</a></h2>
 <table>
@@ -1956,7 +2033,7 @@
 </tr>
 </tbody>
 </table>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{&quot;chat&quot;:{&quot;my-model&quot;:{&quot;promptPrice&quot;:0.001,&quot;completionPrice&quot;:0.002}}}&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{&quot;chat&quot;:{&quot;my-model&quot;:{&quot;promptPrice&quot;:0.001,&quot;completionPrice&quot;:0.002}}}&#39;</span>
 </code></pre></div>
 <h2 id="gpu-metrics">GPU Metrics<a class="headerlink" href="#gpu-metrics" title="Permanent link">&para;</a></h2>
 <table>
@@ -1990,8 +2067,8 @@
 <p>TraceVerde can track CO2 emissions from GPU power consumption. Two modes are available:</p>
 <p><strong>Manual mode</strong>: Uses a fixed carbon intensity value you provide.
 <strong>Codecarbon mode</strong>: Uses <a href="https://github.com/mlco2/codecarbon">codecarbon</a> for automatic region-based carbon intensity lookup.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>co2<span class="o">]</span><span class="w">  </span><span class="c1"># Install codecarbon</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>co2<span class="o">]</span><span class="w">  </span><span class="c1"># Install codecarbon</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
 <h3 id="co2-configuration">CO2 Configuration<a class="headerlink" href="#co2-configuration" title="Permanent link">&para;</a></h3>
 <table>
@@ -2056,19 +2133,19 @@
 </tbody>
 </table>
 <h3 id="example-co2-tracking-for-us-west-coast">Example: CO2 Tracking for US West Coast<a class="headerlink" href="#example-co2-tracking-for-us-west-coast" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_COUNTRY_ISO_CODE</span><span class="o">=</span>USA
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_REGION</span><span class="o">=</span>california
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_COUNTRY_ISO_CODE</span><span class="o">=</span>USA
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_REGION</span><span class="o">=</span>california
 </code></pre></div>
 <h3 id="example-co2-tracking-on-aws">Example: CO2 Tracking on AWS<a class="headerlink" href="#example-co2-tracking-on-aws" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_CLOUD_PROVIDER</span><span class="o">=</span>aws
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_CLOUD_REGION</span><span class="o">=</span>us-east-1
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_CLOUD_PROVIDER</span><span class="o">=</span>aws
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_CLOUD_REGION</span><span class="o">=</span>us-east-1
 </code></pre></div>
 <h3 id="example-manual-carbon-intensity">Example: Manual Carbon Intensity<a class="headerlink" href="#example-manual-carbon-intensity" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_USE_MANUAL</span><span class="o">=</span><span class="nb">true</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CARBON_INTENSITY</span><span class="o">=</span><span class="m">56</span>.0<span class="w">   </span><span class="c1"># France (mostly nuclear)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CO2_TRACKING</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CO2_USE_MANUAL</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CARBON_INTENSITY</span><span class="o">=</span><span class="m">56</span>.0<span class="w">   </span><span class="c1"># France (mostly nuclear)</span>
 </code></pre></div>
 <p>Reference carbon intensity values (gCO2e/kWh):
 - France: ~56 (nuclear)
@@ -2131,6 +2208,51 @@
 <p class="admonition-title">Privacy</p>
 <p>Content capture records full prompts and responses. This may expose sensitive data. Ensure proper data handling and access controls before enabling in production.</p>
 </div>
+<h2 id="shutdown-and-flushing">Shutdown and Flushing<a class="headerlink" href="#shutdown-and-flushing" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_FLUSH_ON_SIGTERM</code></td>
+<td><code>false</code></td>
+<td>Flush pending telemetry when the process receives SIGTERM</td>
+</tr>
+<tr>
+<td><code>GENAI_SIGTERM_FLUSH_TIMEOUT</code></td>
+<td><code>5.0</code></td>
+<td>Seconds to wait for that flush</td>
+</tr>
+</tbody>
+</table>
+<p>The OpenTelemetry SDK registers an <code>atexit</code> hook, so a clean exit and an uncaught
+exception both flush already. Signals are the gap: Python does not run <code>atexit</code>
+handlers when the process is terminated by one, and <strong><code>docker stop</code> and
+Kubernetes pod eviction both send SIGTERM</strong>. Every rolling restart therefore
+drops whatever is still queued in the batch processor - up to 5 seconds or 512
+spans by default. Nothing raises, so the loss is silent and dashboards simply
+read a little low.</p>
+<p>Enable the handler in containerised deployments:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_FLUSH_ON_SIGTERM</span><span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
+<p>It is off by default because installing a signal handler takes over a slot the
+host application may want. When enabled it never replaces an existing handler -
+whatever was registered before is called after the flush - and if nothing was, the
+default disposition is restored and the signal re-raised, so the process still
+exits with the conventional status rather than appearing to ignore SIGTERM.</p>
+<p>If your application already owns its shutdown path, drain telemetry directly
+instead and leave the handler off:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">flush_telemetry</span><span class="p">(</span><span class="n">timeout_seconds</span><span class="o">=</span><span class="mf">5.0</span><span class="p">)</span>
+</code></pre></div>
+<p>SIGKILL, out-of-memory kills and segfaults cannot be handled from inside the
+process. To bound the loss window there, shorten the batch delay with the
+standard <code>OTEL_BSP_SCHEDULE_DELAY</code>, trading export frequency for exposure.</p>
 <h2 id="semantic-conventions">Semantic Conventions<a class="headerlink" href="#semantic-conventions" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2143,16 +2265,26 @@
 <tbody>
 <tr>
 <td><code>OTEL_SEMCONV_STABILITY_OPT_IN</code></td>
-<td><code>gen_ai</code></td>
+<td><code>gen_ai/dup</code></td>
 <td>Semantic convention mode</td>
 </tr>
 </tbody>
 </table>
 <p>Options:</p>
 <ul>
-<li><code>gen_ai</code> - New conventions only (default): <code>gen_ai.usage.prompt_tokens</code>, <code>gen_ai.usage.completion_tokens</code></li>
-<li><code>gen_ai/dup</code> - Dual emission for migration: emits both new and old attribute names (<code>gen_ai.usage.input_tokens</code>, <code>gen_ai.usage.output_tokens</code>)</li>
+<li><code>gen_ai/dup</code> - Dual emission (default): emits the current names <em>and</em> the superseded ones (<code>gen_ai.usage.prompt_tokens</code>, <code>gen_ai.usage.completion_tokens</code>), so existing dashboards keep working during migration</li>
+<li><code>gen_ai</code> - Current conventions only: <code>gen_ai.usage.input_tokens</code>, <code>gen_ai.usage.output_tokens</code></li>
 </ul>
+<p>OpenTelemetry semantic conventions v1.27.0 renamed <code>gen_ai.usage.prompt_tokens</code>
+to <code>gen_ai.usage.input_tokens</code> and <code>gen_ai.usage.completion_tokens</code> to
+<code>gen_ai.usage.output_tokens</code>
+(<a href="https://github.com/open-telemetry/semantic-conventions/pull/1200">semantic-conventions#1200</a>).
+Backends that consume the current conventions - Arize AX, for example, maps them
+onto <code>llm.token_count.*</code> - report zero tokens if only the superseded names are
+present. Dual emission is therefore the default: both spellings are sent, so
+such backends resolve tokens and cost while dashboards still querying the old
+names keep working. Set <code>gen_ai</code> once nothing depends on the superseded names.
+See the <a href="../../guides/arize-ax/">Arize AX guide</a> for a worked example.</p>
 <h2 id="ollama-server-metrics">Ollama Server Metrics<a class="headerlink" href="#ollama-server-metrics" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2480,52 +2612,52 @@ for per-call overhead numbers and the measurement tooling.</p>
 <p>See <code>genai_otel/telemetry.py</code> for details on what is collected.</p>
 <h2 id="programmatic-configuration">Programmatic Configuration<a class="headerlink" href="#programmatic-configuration" title="Permanent link">&para;</a></h2>
 <p>All environment variables can be set programmatically:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="c1"># Core</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;my-app&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">endpoint</span><span class="o">=</span><span class="s2">&quot;http://localhost:4318&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;openai&quot;</span><span class="p">,</span> <span class="s2">&quot;anthropic&quot;</span><span class="p">,</span> <span class="s2">&quot;crewai&quot;</span><span class="p">],</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="n">fail_on_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    <span class="c1"># Features</span>
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="n">enable_gpu_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="n">enable_cost_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="n">enable_mcp_instrumentation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    <span class="n">enable_content_capture</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>
-<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>    <span class="c1"># CO2 tracking</span>
-<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>    <span class="n">enable_co2_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>    <span class="n">co2_country_iso_code</span><span class="o">=</span><span class="s2">&quot;USA&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>    <span class="n">co2_region</span><span class="o">=</span><span class="s2">&quot;california&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
-<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>    <span class="c1"># GPU</span>
-<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>    <span class="n">gpu_collection_interval</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
-<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>    <span class="n">power_cost_per_kwh</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>
-<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>
-<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>    <span class="c1"># Evaluation</span>
-<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>    <span class="n">enable_pii_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a>    <span class="n">pii_mode</span><span class="o">=</span><span class="s2">&quot;redact&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a>    <span class="n">pii_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-<a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a>    <span class="n">pii_gdpr_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a>
-<a id="__codelineno-7-32" name="__codelineno-7-32" href="#__codelineno-7-32"></a>    <span class="n">enable_toxicity_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-7-33" name="__codelineno-7-33" href="#__codelineno-7-33"></a>    <span class="n">toxicity_threshold</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
-<a id="__codelineno-7-34" name="__codelineno-7-34" href="#__codelineno-7-34"></a>
-<a id="__codelineno-7-35" name="__codelineno-7-35" href="#__codelineno-7-35"></a>    <span class="n">enable_bias_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-7-36" name="__codelineno-7-36" href="#__codelineno-7-36"></a>    <span class="n">bias_threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
-<a id="__codelineno-7-37" name="__codelineno-7-37" href="#__codelineno-7-37"></a>
-<a id="__codelineno-7-38" name="__codelineno-7-38" href="#__codelineno-7-38"></a>    <span class="n">enable_prompt_injection_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-7-39" name="__codelineno-7-39" href="#__codelineno-7-39"></a>    <span class="n">prompt_injection_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-<a id="__codelineno-7-40" name="__codelineno-7-40" href="#__codelineno-7-40"></a>
-<a id="__codelineno-7-41" name="__codelineno-7-41" href="#__codelineno-7-41"></a>    <span class="n">enable_restricted_topics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-7-42" name="__codelineno-7-42" href="#__codelineno-7-42"></a>    <span class="n">restricted_topics_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-<a id="__codelineno-7-43" name="__codelineno-7-43" href="#__codelineno-7-43"></a>
-<a id="__codelineno-7-44" name="__codelineno-7-44" href="#__codelineno-7-44"></a>    <span class="n">enable_hallucination_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-7-45" name="__codelineno-7-45" href="#__codelineno-7-45"></a>    <span class="n">hallucination_threshold</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
-<a id="__codelineno-7-46" name="__codelineno-7-46" href="#__codelineno-7-46"></a><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="c1"># Core</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;my-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">endpoint</span><span class="o">=</span><span class="s2">&quot;http://localhost:4318&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;openai&quot;</span><span class="p">,</span> <span class="s2">&quot;anthropic&quot;</span><span class="p">,</span> <span class="s2">&quot;crewai&quot;</span><span class="p">],</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="n">fail_on_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>    <span class="c1"># Features</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>    <span class="n">enable_gpu_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>    <span class="n">enable_cost_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>    <span class="n">enable_mcp_instrumentation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>    <span class="n">enable_content_capture</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>    <span class="c1"># CO2 tracking</span>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>    <span class="n">enable_co2_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>    <span class="n">co2_country_iso_code</span><span class="o">=</span><span class="s2">&quot;USA&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>    <span class="n">co2_region</span><span class="o">=</span><span class="s2">&quot;california&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>
+<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>    <span class="c1"># GPU</span>
+<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>    <span class="n">gpu_collection_interval</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>    <span class="n">power_cost_per_kwh</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>
+<a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>
+<a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>    <span class="c1"># Evaluation</span>
+<a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a>    <span class="n">enable_pii_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>    <span class="n">pii_mode</span><span class="o">=</span><span class="s2">&quot;redact&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>    <span class="n">pii_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a>    <span class="n">pii_gdpr_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a>
+<a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a>    <span class="n">enable_toxicity_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a>    <span class="n">toxicity_threshold</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+<a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a>
+<a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a>    <span class="n">enable_bias_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a>    <span class="n">bias_threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
+<a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a>
+<a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a>    <span class="n">enable_prompt_injection_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a>    <span class="n">prompt_injection_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a>
+<a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a>    <span class="n">enable_restricted_topics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a>    <span class="n">restricted_topics_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a>
+<a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a>    <span class="n">enable_hallucination_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a>    <span class="n">hallucination_threshold</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+<a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a><span class="p">)</span>
 </code></pre></div>
 <h2 id="multimodal-observability">Multimodal Observability<a class="headerlink" href="#multimodal-observability" title="Permanent link">&para;</a></h2>
 <p>Capture image/audio/document content parts on spans. See the
@@ -2594,10 +2726,10 @@ for per-call overhead numbers and the measurement tooling.</p>
 <p>The default <code>off</code> keeps text-only behaviour byte-identical with pre-1.0.0.</p>
 <h2 id="session-and-user-tracking">Session and User Tracking<a class="headerlink" href="#session-and-user-tracking" title="Permanent link">&para;</a></h2>
 <p>For programmatic session/user tracking, provide extractor callables:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">session_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;session_id&quot;</span><span class="p">),</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">user_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">),</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">session_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;session_id&quot;</span><span class="p">),</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">user_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">),</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="p">)</span>
 </code></pre></div>
 <p>CrewAI, LangGraph, and LangChain have built-in automatic session ID propagation. See the <a href="../../guides/multi-agent-frameworks/">Multi-Agent Frameworks guide</a> for details.</p>
 
@@ -2696,7 +2828,7 @@ for per-call overhead numbers and the measurement tooling.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

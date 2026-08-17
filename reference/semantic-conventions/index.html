@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.jpg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -733,6 +733,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/arize-ax/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arize AX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -972,6 +1000,17 @@
     <span class="md-ellipsis">
       
         Cost Attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#streaming-latency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streaming Latency
       
     </span>
   </a>
@@ -1288,6 +1327,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#streaming-latency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streaming Latency
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#session-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1429,12 +1479,12 @@
 <td>Call type ("chat", "embedding", "completion")</td>
 </tr>
 <tr>
-<td><code>gen_ai.usage.prompt_tokens</code></td>
+<td><code>gen_ai.usage.input_tokens</code></td>
 <td>int</td>
 <td>Input token count</td>
 </tr>
 <tr>
-<td><code>gen_ai.usage.completion_tokens</code></td>
+<td><code>gen_ai.usage.output_tokens</code></td>
 <td>int</td>
 <td>Output token count</td>
 </tr>
@@ -1490,8 +1540,111 @@
 <td>float</td>
 <td>Completion token cost</td>
 </tr>
+<tr>
+<td><code>gen_ai.usage.cost.pricing_source</code></td>
+<td>string</td>
+<td>Where the price came from: <code>table</code>, <code>estimated</code> or <code>unpriced</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.request.model.deprecated</code></td>
+<td>bool</td>
+<td>Set only when the provider has announced the model's retirement</td>
+</tr>
+<tr>
+<td><code>gen_ai.request.model.deprecation_note</code></td>
+<td>string</td>
+<td>Retirement date and migration target</td>
+</tr>
 </tbody>
 </table>
+<div class="admonition warning">
+<p class="admonition-title">Read <code>pricing_source</code> before summing cost</p>
+<p>A <code>gen_ai.usage.cost.total</code> of <code>0.0</code> is ambiguous on its own — it means
+either "this call really was free" or "no price could be found for this
+model". Always read <code>pricing_source</code> alongside it:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>table</code></td>
+<td>Matched an entry in the shipped pricing file. Billable.</td>
+</tr>
+<tr>
+<td><code>estimated</code></td>
+<td>No entry; price inferred from the parameter count in the model name via the local-model size tier. <strong>Indicative only</strong> — do not treat as a billable figure.</td>
+</tr>
+<tr>
+<td><code>unpriced</code></td>
+<td>No price could be determined. <code>cost.total</code> will be <code>0.0</code> and must not be counted as free spend.</td>
+</tr>
+</tbody>
+</table>
+<p>A dashboard that sums <code>cost.total</code> without filtering on <code>pricing_source</code>
+will silently under-report spend for every unpriced model.</p>
+</div>
+<h3 id="streaming-latency">Streaming Latency<a class="headerlink" href="#streaming-latency" title="Permanent link">&para;</a></h3>
+<p>Emitted <strong>only on streamed calls</strong>. On a non-streamed call these attributes are
+absent, not zero.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gen_ai.server.time_to_first_token</code></td>
+<td>float</td>
+<td>Seconds from request start to the first streamed chunk (TTFT)</td>
+</tr>
+<tr>
+<td><code>gen_ai.server.time_per_output_token</code></td>
+<td>float</td>
+<td>Seconds per output token after the first (TPOT), <code>(duration - ttft) / max(output_tokens - 1, 1)</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.server.ttft</code></td>
+<td>float</td>
+<td>Superseded spelling of TTFT, still emitted for consumers already reading it</td>
+</tr>
+<tr>
+<td><code>gen_ai.streaming.token_count</code></td>
+<td>int</td>
+<td>Number of chunks yielded by the stream (chunks, not tokens)</td>
+</tr>
+<tr>
+<td><code>gen_ai.streaming.tpot_unavailable_reason</code></td>
+<td>string</td>
+<td>Why TPOT was omitted; currently only <code>output_token_count_unavailable</code></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">An absent TTFT is not a zero</p>
+<p>Span duration cannot substitute for TTFT: a fast-starting long answer and a
+slow-starting short one can share a duration. But a fabricated <code>0</code> is worse
+than nothing — it is indistinguishable from an instant first token and drags
+down every average it enters.</p>
+<p>So these attributes are omitted whenever they were not genuinely measured:</p>
+<ul>
+<li><strong>Non-streamed calls</strong> carry neither attribute.</li>
+<li><strong>TPOT needs a real output-token count.</strong> Some providers only send usage
+  in the final chunk when asked. With OpenAI, for example, pass
+  <code>stream_options={"include_usage": True}</code>; without it the span gets TTFT
+  plus <code>gen_ai.streaming.tpot_unavailable_reason</code>, and no TPOT. The chunk
+  count is <em>not</em> used as a stand-in — chunks are not tokens.</li>
+<li><strong>Text-to-speech streams</strong> report TTFT (time to first audio byte) and
+  never TPOT, having no output tokens to divide by.</li>
+</ul>
+<p>Report a missing attribute as "not measured" rather than substituting zero.</p>
+</div>
 <h3 id="session-tracking">Session Tracking<a class="headerlink" href="#session-tracking" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1586,6 +1739,30 @@
 <td>Counter</td>
 <td>errors</td>
 <td>Error count by type</td>
+</tr>
+<tr>
+<td><code>gen_ai.server.time_to_first_token</code></td>
+<td>Histogram</td>
+<td>seconds</td>
+<td>TTFT, recorded on streamed calls only</td>
+</tr>
+<tr>
+<td><code>gen_ai.server.time_per_output_token</code></td>
+<td>Histogram</td>
+<td>seconds</td>
+<td>TPOT, recorded when the output-token count is known</td>
+</tr>
+<tr>
+<td><code>gen_ai.server.ttft</code></td>
+<td>Histogram</td>
+<td>seconds</td>
+<td>Superseded spelling of TTFT</td>
+</tr>
+<tr>
+<td><code>gen_ai.server.tbt</code></td>
+<td>Histogram</td>
+<td>seconds</td>
+<td>Time between consecutive streamed chunks</td>
 </tr>
 </tbody>
 </table>
@@ -1750,7 +1927,7 @@ Default behaviour (<code>off</code>) emits nothing additional.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
