@@ -88,6 +88,56 @@ print(f"Tokens used: {response.usage.total_tokens}")
 # Traces, metrics, and costs are automatically captured
 ```
 
+## Quick Example: Embeddings and RAG
+
+Embedding calls are traced as their own spans, so a retrieval-augmented call
+shows both of its legs: the lookup that chose the context and the generation
+that used it. Without the embedding span, the retrieval step is invisible and
+its tokens and cost go unrecorded.
+
+```python
+import genai_otel
+genai_otel.instrument()
+
+from openai import OpenAI
+from opentelemetry import trace
+
+client = OpenAI()
+tracer = trace.get_tracer("rag.demo")
+
+with tracer.start_as_current_span("rag.pipeline"):
+    # 1. Index - one span, input_count = number of chunks
+    indexed = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=["chunk one", "chunk two", "chunk three"],
+    )
+
+    # 2. Retrieve - one span for the query embedding
+    query = client.embeddings.create(
+        model="text-embedding-3-small",
+        input="what did chunk two say?",
+    )
+
+    # 3. Generate - the chat span, as usual
+    client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "Answer from the retrieved context."}],
+    )
+```
+
+Wrapping the three calls in a parent span groups them into a single trace, so
+the whole pipeline is one unit in the UI rather than three unrelated calls.
+
+Embedding spans carry `gen_ai.request.input_count`,
+`gen_ai.response.embedding_count` and `gen_ai.response.vector_size` alongside
+the usual token and cost attributes, priced against the embeddings table. The
+embedded text itself is recorded as `embedding.text` only when
+`GENAI_ENABLE_CONTENT_CAPTURE=true`, since retrieval inputs frequently contain
+user data. Vectors stay off entirely unless explicitly requested - they would
+otherwise dominate span size. See the
+[semantic conventions reference](../reference/semantic-conventions.md#embeddings)
+for the full attribute list.
+
 ## Quick Example: Anthropic
 
 ```python
@@ -240,7 +290,7 @@ For every LLM call:
 | `gen_ai.usage.input_tokens` | Input token count |
 | `gen_ai.usage.output_tokens` | Output token count |
 | `gen_ai.usage.total_tokens` | Total tokens |
-| `gen_ai.cost.amount` | Estimated cost in USD |
+| `gen_ai.usage.cost.total` | Estimated cost in USD |
 
 ## All Examples
 

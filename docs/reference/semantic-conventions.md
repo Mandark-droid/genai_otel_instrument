@@ -18,7 +18,36 @@ TraceVerde follows OpenTelemetry semantic conventions for GenAI with additional 
 | `gen_ai.usage.token_count_estimated` | bool | `true` when prompt/completion token counts came from a fallback estimate (e.g. multimodal Ollama responses lacking `prompt_eval_count`, or HuggingFace vision/audio pipelines that don't surface usage). Absent on spans whose tokens come from the provider response. |
 | `gen_ai.usage.image_count` | int | Number of input images counted by the instrumentor for multimodal calls (vision pipelines). |
 | `gen_ai.usage.audio_seconds` | float | Total input audio duration in seconds for ASR / audio pipelines. |
-| `gen_ai.cost.amount` | float | Estimated cost in USD |
+| `gen_ai.operation.name` | string | Operation being performed (`chat`, `embeddings`) |
+
+!!! note "Cost lives under `gen_ai.usage.cost.*`"
+
+    Earlier revisions of this page listed `gen_ai.cost.amount` as the cost
+    attribute. Cost is reported under
+    [`gen_ai.usage.cost.total`](#cost-attributes) and its breakdown. Only the
+    Hyperbolic instrumentor also emits `gen_ai.cost.amount`, for backwards
+    compatibility with dashboards built against it; do not query it as a
+    general cost attribute, because no other provider sets it.
+
+### Embeddings
+
+Emitted on embedding spans (`openai.embeddings`), which are the retrieval half
+of a RAG trace.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `gen_ai.request.type` | string | `embedding` - the value cost lookup dispatches on |
+| `gen_ai.request.input_count` | int | Number of texts in the request; a batch of chunks counts each one, pre-tokenised input counts as one |
+| `gen_ai.request.dimensions` | int | Requested vector dimension, when the caller asked for one |
+| `gen_ai.request.encoding_format` | string | Requested encoding format, when set |
+| `gen_ai.response.embedding_count` | int | Number of vectors returned |
+| `gen_ai.response.vector_size` | int | Dimension of the returned vectors |
+| `embedding.model_name` | string | Embedding model; set only when content capture is enabled |
+| `embedding.text` | string | The embedded text, truncated to `GENAI_CONTENT_MAX_LENGTH`; set only when content capture is enabled |
+| `embedding.vector` | string | JSON-encoded vector; off unless `capture_embedding_vectors` is set, since vectors dominate span size |
+
+Token usage and cost are recorded exactly as for chat, priced against the
+`embeddings` table rather than the chat one.
 
 ### Cost Attributes
 
