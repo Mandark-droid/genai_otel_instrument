@@ -36,6 +36,31 @@ python example.py
 
 5. Open the project in Arize AX. It is created on first export.
 
+## RAG example
+
+`rag_example.py` sends a full retrieval pipeline as a single trace:
+
+```
+rag.pipeline
+  openai.embeddings       index the corpus  (gen_ai.request.input_count = 3)
+  openai.embeddings       embed the query   (gen_ai.request.input_count = 1)
+  openai.chat.completion  generate the answer
+```
+
+Embedding calls are traced as their own spans, so the lookup that selected the
+context is visible and its tokens and cost are recorded, rather than the trace
+showing only the generation half. The parent span is what groups the three
+calls into one trace; without it they arrive as three unrelated traces.
+
+```bash
+python rag_example.py
+```
+
+The example enables `GENAI_ENABLE_CONTENT_CAPTURE` so the embedded text appears
+on the span as `embedding.text`. That is off by default, because retrieval
+inputs routinely carry user data. Embedding vectors stay off regardless unless
+`capture_embedding_vectors` is set - they would otherwise dominate span size.
+
 ## The configuration
 
 ```bash
