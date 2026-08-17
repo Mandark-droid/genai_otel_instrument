@@ -84,6 +84,15 @@ Two details are easy to get wrong:
 Short-lived scripts must `force_flush()` before exiting or the batch span
 processor is torn down with spans still queued.
 
+`OTEL_EXPORTER_OTLP_ENDPOINT` applies to every signal, and the Arize endpoint
+ingests traces, so metric batches are rejected and retried (`Transient error
+Bad Gateway ... exporting metrics batch`). Traces are unaffected. Send metrics
+elsewhere with the standard signal-specific variable, which takes precedence:
+
+```bash
+OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://localhost:4318/v1/metrics
+```
+
 ## What Arize AX does with the spans
 
 AX normalises the GenAI conventions onto its own OpenInference model at
