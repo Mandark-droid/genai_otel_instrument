@@ -220,12 +220,12 @@ standard `OTEL_BSP_SCHEDULE_DELAY`, trading export frequency for exposure.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OTEL_SEMCONV_STABILITY_OPT_IN` | `gen_ai` | Semantic convention mode |
+| `OTEL_SEMCONV_STABILITY_OPT_IN` | `gen_ai/dup` | Semantic convention mode |
 
 Options:
 
-- `gen_ai` - Current conventions only (default): `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`
-- `gen_ai/dup` - Dual emission for migration: also emits the superseded names (`gen_ai.usage.prompt_tokens`, `gen_ai.usage.completion_tokens`)
+- `gen_ai/dup` - Dual emission (default): emits the current names *and* the superseded ones (`gen_ai.usage.prompt_tokens`, `gen_ai.usage.completion_tokens`), so existing dashboards keep working during migration
+- `gen_ai` - Current conventions only: `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`
 
 OpenTelemetry semantic conventions v1.27.0 renamed `gen_ai.usage.prompt_tokens`
 to `gen_ai.usage.input_tokens` and `gen_ai.usage.completion_tokens` to
@@ -233,7 +233,10 @@ to `gen_ai.usage.input_tokens` and `gen_ai.usage.completion_tokens` to
 ([semantic-conventions#1200](https://github.com/open-telemetry/semantic-conventions/pull/1200)).
 Backends that consume the current conventions - Arize AX, for example, maps them
 onto `llm.token_count.*` - report zero tokens if only the superseded names are
-present. Set `gen_ai/dup` if you have dashboards still querying the old names.
+present. Dual emission is therefore the default: both spellings are sent, so
+such backends resolve tokens and cost while dashboards still querying the old
+names keep working. Set `gen_ai` once nothing depends on the superseded names.
+See the [Arize AX guide](../guides/arize-ax.md) for a worked example.
 
 ## Ollama Server Metrics
 
