@@ -97,7 +97,7 @@ ingestion. Sending nothing but `gen_ai.*`, a chat completion span arrives with:
 | Arize field | Derived from |
 |---|---|
 | `openinference.span.kind = LLM` | inferred; TraceVerde never sends a span kind |
-| `llm.provider`, `llm.system` | `gen_ai.provider.name` |
+| `llm.provider`, `llm.system` | `gen_ai.system` |
 | `llm.model_name` | `gen_ai.request.model` |
 | `llm.finish_reason` | `gen_ai.response.finish_reason` |
 | `llm.invocation_parameters` | `gen_ai.request.*` |
