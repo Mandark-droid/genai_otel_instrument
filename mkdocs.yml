@@ -84,6 +84,7 @@ nav:
     - Evaluation & Safety: guides/evaluation.md
     - Multimodal Observability: guides/multimodal.md
     - Sarvam AI: guides/sarvam-ai.md
+    - Arize AX: guides/arize-ax.md
   - Reference:
     - Performance Tuning: reference/performance-tuning.md
     - Python Compatibility: reference/python-compatibility.md
