@@ -866,6 +866,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#rag-traces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RAG traces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verifying-a-trace-landed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1314,6 +1325,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#rag-traces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RAG traces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verifying-a-trace-landed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1526,11 +1548,26 @@ the same span as ordinary attributes and land in Arize with no extra wiring:</p>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>evaluation.toxicity.prompt.detected      = False
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>evaluation.hallucination.response.score  = 0.0
 </code></pre></div>
+<h2 id="rag-traces">RAG traces<a class="headerlink" href="#rag-traces" title="Permanent link">&para;</a></h2>
+<p>Embedding calls produce their own spans, so a retrieval-augmented trace arrives
+in Arize with both legs intact - the lookup and the generation - rather than the
+generation alone. Grouping them under a parent span sends the pipeline as one
+trace:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">with</span> <span class="n">tracer</span><span class="o">.</span><span class="n">start_as_current_span</span><span class="p">(</span><span class="s2">&quot;rag.pipeline&quot;</span><span class="p">):</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="n">chunks</span><span class="p">)</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="n">question</span><span class="p">)</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">)</span>
+</code></pre></div>
+<p>The embedding spans carry <code>gen_ai.request.input_count</code>,
+<code>gen_ai.response.vector_size</code> and their own token counts and cost, priced from
+the embeddings table. The embedded text is attached as <code>embedding.text</code> only
+when <code>GENAI_ENABLE_CONTENT_CAPTURE=true</code>; retrieval inputs routinely contain
+user data, so it is off by default.</p>
 <h2 id="verifying-a-trace-landed">Verifying a trace landed<a class="headerlink" href="#verifying-a-trace-landed" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>pip<span class="w"> </span>install<span class="w"> </span>arize-ax-cli
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>ax<span class="w"> </span>profiles<span class="w"> </span>create<span class="w"> </span>--api-key<span class="w"> </span><span class="nv">$ARIZE_API_KEY</span><span class="w"> </span>--auth-method<span class="w"> </span>api-key
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>ax<span class="w"> </span>projects<span class="w"> </span>list<span class="w"> </span>-l<span class="w"> </span><span class="m">100</span><span class="w"> </span>-o<span class="w"> </span>json
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>ax<span class="w"> </span>spans<span class="w"> </span><span class="nb">export</span><span class="w"> </span>&lt;project-id&gt;<span class="w"> </span>--trace-id<span class="w"> </span>&lt;trace-id&gt;<span class="w"> </span>--output-dir<span class="w"> </span>.arize-tmp-traces
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span>arize-ax-cli
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>ax<span class="w"> </span>profiles<span class="w"> </span>create<span class="w"> </span>--api-key<span class="w"> </span><span class="nv">$ARIZE_API_KEY</span><span class="w"> </span>--auth-method<span class="w"> </span>api-key
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>ax<span class="w"> </span>projects<span class="w"> </span>list<span class="w"> </span>-l<span class="w"> </span><span class="m">100</span><span class="w"> </span>-o<span class="w"> </span>json
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>ax<span class="w"> </span>spans<span class="w"> </span><span class="nb">export</span><span class="w"> </span>&lt;project-id&gt;<span class="w"> </span>--trace-id<span class="w"> </span>&lt;trace-id&gt;<span class="w"> </span>--output-dir<span class="w"> </span>.arize-tmp-traces
 </code></pre></div>
 <p>Trace-ID lookups are immediately consistent once ingested. If a trace is
 missing, check that the exporter flushed, that the endpoint region matches your
