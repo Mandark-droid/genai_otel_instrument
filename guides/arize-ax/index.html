@@ -833,6 +833,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#metrics-go-somewhere-else" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics go somewhere else
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-arize-ax-does-with-the-spans" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1292,6 +1303,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#metrics-go-somewhere-else" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics go somewhere else
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-arize-ax-does-with-the-spans" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1462,6 +1484,16 @@ torn down with spans still queued:</p>
 </code></pre></div>
 <p>For long-running services, use the SIGTERM flush described in
 <a href="../../getting-started/configuration/">Configuration</a> instead.</p>
+<h2 id="metrics-go-somewhere-else">Metrics go somewhere else<a class="headerlink" href="#metrics-go-somewhere-else" title="Permanent link">&para;</a></h2>
+<p><code>OTEL_EXPORTER_OTLP_ENDPOINT</code> applies to every signal, and Arize's OTLP endpoint
+ingests traces. Metric batches sent to it are rejected, which surfaces as a
+retry loop in the log:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Transient error Bad Gateway encountered while exporting metrics batch, retrying in 1.15s.
+</code></pre></div>
+<p>Traces are unaffected. Point metrics at their own destination with the standard
+signal-specific variable, which takes precedence over the generic one:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">OTEL_EXPORTER_OTLP_METRICS_ENDPOINT</span><span class="o">=</span>http://localhost:4318/v1/metrics
+</code></pre></div>
 <h2 id="what-arize-ax-does-with-the-spans">What Arize AX does with the spans<a class="headerlink" href="#what-arize-ax-does-with-the-spans" title="Permanent link">&para;</a></h2>
 <p>AX normalises the GenAI conventions onto its own OpenInference model at
 ingestion. Sending nothing but <code>gen_ai.*</code>, a chat completion span arrives with:</p>
@@ -1519,44 +1551,44 @@ correctly. Only the superseded-names-only configuration would report zero tokens
 in AX.</p>
 <h2 id="what-a-real-span-carries">What a real span carries<a class="headerlink" href="#what-a-real-span-carries" title="Permanent link">&para;</a></h2>
 <p>A single <code>gpt-4o-mini</code> chat completion, exported with no Arize-specific code:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>gen_ai.operation.name        = chat
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>gen_ai.provider.name         = openai
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>gen_ai.system                = openai
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>gen_ai.request.model         = gpt-4o-mini
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>gen_ai.response.model        = gpt-4o-mini-2024-07-18
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>gen_ai.request.max_tokens    = 60
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>gen_ai.response.finish_reason= length
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>gen_ai.usage.input_tokens    = 14
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>gen_ai.usage.output_tokens   = 60
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>gen_ai.usage.total_tokens    = 74
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>gen_ai.usage.prompt_tokens   = 14      # dual emission
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>gen_ai.usage.completion_tokens = 60    # dual emission
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>gen_ai.usage.cost.prompt     = 2.1e-06
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>gen_ai.usage.cost.completion = 3.6e-05
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>gen_ai.usage.cost.total      = 3.81e-05
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>gen_ai.usage.cost.pricing_source = table
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>gen_ai.operation.name        = chat
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>gen_ai.provider.name         = openai
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>gen_ai.system                = openai
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>gen_ai.request.model         = gpt-4o-mini
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>gen_ai.response.model        = gpt-4o-mini-2024-07-18
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>gen_ai.request.max_tokens    = 60
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>gen_ai.response.finish_reason= length
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>gen_ai.usage.input_tokens    = 14
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>gen_ai.usage.output_tokens   = 60
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>gen_ai.usage.total_tokens    = 74
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>gen_ai.usage.prompt_tokens   = 14      # dual emission
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>gen_ai.usage.completion_tokens = 60    # dual emission
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>gen_ai.usage.cost.prompt     = 2.1e-06
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>gen_ai.usage.cost.completion = 3.6e-05
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>gen_ai.usage.cost.total      = 3.81e-05
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>gen_ai.usage.cost.pricing_source = table
 </code></pre></div>
 <p>Streamed calls add the server-timing conventions, which AX charts alongside
 overall latency:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>gen_ai.server.time_to_first_token  = 2.117
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>gen_ai.server.time_per_output_token = 0.0115
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>gen_ai.server.time_to_first_token  = 2.117
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>gen_ai.server.time_per_output_token = 0.0115
 </code></pre></div>
 <p>If the <a href="../evaluation/">evaluation features</a> are enabled, their verdicts ride on
 the same span as ordinary attributes and land in Arize with no extra wiring:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>evaluation.pii.prompt.detected           = False
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>evaluation.prompt_injection.detected     = False
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>evaluation.toxicity.prompt.detected      = False
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>evaluation.hallucination.response.score  = 0.0
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>evaluation.pii.prompt.detected           = False
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>evaluation.prompt_injection.detected     = False
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>evaluation.toxicity.prompt.detected      = False
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>evaluation.hallucination.response.score  = 0.0
 </code></pre></div>
 <h2 id="rag-traces">RAG traces<a class="headerlink" href="#rag-traces" title="Permanent link">&para;</a></h2>
 <p>Embedding calls produce their own spans, so a retrieval-augmented trace arrives
 in Arize with both legs intact - the lookup and the generation - rather than the
 generation alone. Grouping them under a parent span sends the pipeline as one
 trace:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">with</span> <span class="n">tracer</span><span class="o">.</span><span class="n">start_as_current_span</span><span class="p">(</span><span class="s2">&quot;rag.pipeline&quot;</span><span class="p">):</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="n">chunks</span><span class="p">)</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="n">question</span><span class="p">)</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">with</span> <span class="n">tracer</span><span class="o">.</span><span class="n">start_as_current_span</span><span class="p">(</span><span class="s2">&quot;rag.pipeline&quot;</span><span class="p">):</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="n">chunks</span><span class="p">)</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="n">question</span><span class="p">)</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">)</span>
 </code></pre></div>
 <p>The embedding spans carry <code>gen_ai.request.input_count</code>,
 <code>gen_ai.response.vector_size</code> and their own token counts and cost, priced from
@@ -1564,10 +1596,10 @@ the embeddings table. The embedded text is attached as <code>embedding.text</cod
 when <code>GENAI_ENABLE_CONTENT_CAPTURE=true</code>; retrieval inputs routinely contain
 user data, so it is off by default.</p>
 <h2 id="verifying-a-trace-landed">Verifying a trace landed<a class="headerlink" href="#verifying-a-trace-landed" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span>arize-ax-cli
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>ax<span class="w"> </span>profiles<span class="w"> </span>create<span class="w"> </span>--api-key<span class="w"> </span><span class="nv">$ARIZE_API_KEY</span><span class="w"> </span>--auth-method<span class="w"> </span>api-key
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>ax<span class="w"> </span>projects<span class="w"> </span>list<span class="w"> </span>-l<span class="w"> </span><span class="m">100</span><span class="w"> </span>-o<span class="w"> </span>json
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>ax<span class="w"> </span>spans<span class="w"> </span><span class="nb">export</span><span class="w"> </span>&lt;project-id&gt;<span class="w"> </span>--trace-id<span class="w"> </span>&lt;trace-id&gt;<span class="w"> </span>--output-dir<span class="w"> </span>.arize-tmp-traces
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>pip<span class="w"> </span>install<span class="w"> </span>arize-ax-cli
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>ax<span class="w"> </span>profiles<span class="w"> </span>create<span class="w"> </span>--api-key<span class="w"> </span><span class="nv">$ARIZE_API_KEY</span><span class="w"> </span>--auth-method<span class="w"> </span>api-key
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>ax<span class="w"> </span>projects<span class="w"> </span>list<span class="w"> </span>-l<span class="w"> </span><span class="m">100</span><span class="w"> </span>-o<span class="w"> </span>json
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>ax<span class="w"> </span>spans<span class="w"> </span><span class="nb">export</span><span class="w"> </span>&lt;project-id&gt;<span class="w"> </span>--trace-id<span class="w"> </span>&lt;trace-id&gt;<span class="w"> </span>--output-dir<span class="w"> </span>.arize-tmp-traces
 </code></pre></div>
 <p>Trace-ID lookups are immediately consistent once ingested. If a trace is
 missing, check that the exporter flushed, that the endpoint region matches your
