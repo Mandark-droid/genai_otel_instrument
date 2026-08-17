@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **Arize AX guide** (`docs/guides/arize-ax.md`). The export path was only
+  documented in `examples/arize_ax/README.md`, which is not on the docs site.
+  Covers the four-variable setup, the regional endpoints, the two
+  misconfigurations that silently drop spans (a path on the endpoint, a missing
+  project-name resource attribute), how AX normalises `gen_ai.*` onto its
+  OpenInference model, and how to verify a trace landed.
+
+- **Corrected the documented default for `OTEL_SEMCONV_STABILITY_OPT_IN`.**
+  Configuration reference stated `gen_ai`; the actual default has been
+  `gen_ai/dup` since dual emission was made the default, and the surrounding
+  guidance still told readers to opt into a setting they already had.
+
 ## [1.18.0] - 2026-08-15
 
 ### Fixed
