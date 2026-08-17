@@ -996,6 +996,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Embeddings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cost-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1316,6 +1327,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Embeddings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cost-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1509,12 +1531,82 @@
 <td>Total input audio duration in seconds for ASR / audio pipelines.</td>
 </tr>
 <tr>
-<td><code>gen_ai.cost.amount</code></td>
-<td>float</td>
-<td>Estimated cost in USD</td>
+<td><code>gen_ai.operation.name</code></td>
+<td>string</td>
+<td>Operation being performed (<code>chat</code>, <code>embeddings</code>)</td>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Cost lives under <code>gen_ai.usage.cost.*</code></p>
+<p>Earlier revisions of this page listed <code>gen_ai.cost.amount</code> as the cost
+attribute. Cost is reported under
+<a href="#cost-attributes"><code>gen_ai.usage.cost.total</code></a> and its breakdown. Only the
+Hyperbolic instrumentor also emits <code>gen_ai.cost.amount</code>, for backwards
+compatibility with dashboards built against it; do not query it as a
+general cost attribute, because no other provider sets it.</p>
+</div>
+<h3 id="embeddings">Embeddings<a class="headerlink" href="#embeddings" title="Permanent link">&para;</a></h3>
+<p>Emitted on embedding spans (<code>openai.embeddings</code>), which are the retrieval half
+of a RAG trace.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gen_ai.request.type</code></td>
+<td>string</td>
+<td><code>embedding</code> - the value cost lookup dispatches on</td>
+</tr>
+<tr>
+<td><code>gen_ai.request.input_count</code></td>
+<td>int</td>
+<td>Number of texts in the request; a batch of chunks counts each one, pre-tokenised input counts as one</td>
+</tr>
+<tr>
+<td><code>gen_ai.request.dimensions</code></td>
+<td>int</td>
+<td>Requested vector dimension, when the caller asked for one</td>
+</tr>
+<tr>
+<td><code>gen_ai.request.encoding_format</code></td>
+<td>string</td>
+<td>Requested encoding format, when set</td>
+</tr>
+<tr>
+<td><code>gen_ai.response.embedding_count</code></td>
+<td>int</td>
+<td>Number of vectors returned</td>
+</tr>
+<tr>
+<td><code>gen_ai.response.vector_size</code></td>
+<td>int</td>
+<td>Dimension of the returned vectors</td>
+</tr>
+<tr>
+<td><code>embedding.model_name</code></td>
+<td>string</td>
+<td>Embedding model; set only when content capture is enabled</td>
+</tr>
+<tr>
+<td><code>embedding.text</code></td>
+<td>string</td>
+<td>The embedded text, truncated to <code>GENAI_CONTENT_MAX_LENGTH</code>; set only when content capture is enabled</td>
+</tr>
+<tr>
+<td><code>embedding.vector</code></td>
+<td>string</td>
+<td>JSON-encoded vector; off unless <code>capture_embedding_vectors</code> is set, since vectors dominate span size</td>
+</tr>
+</tbody>
+</table>
+<p>Token usage and cost are recorded exactly as for chat, priced against the
+<code>embeddings</code> table rather than the chat one.</p>
 <h3 id="cost-attributes">Cost Attributes<a class="headerlink" href="#cost-attributes" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
