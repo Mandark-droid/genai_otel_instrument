@@ -6,7 +6,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.0] - 2026-08-17
+
+### Added
+
+- **OpenAI embeddings are instrumented.** `client.embeddings.create` produced no
+  span at all: only `chat.completions.create` was wrapped, so a
+  retrieval-augmented call was traced as its generation half alone. The lookup
+  that selected the context was invisible, and its tokens and cost went
+  unrecorded even though the embeddings pricing table was already present.
+
+  Both the sync and async clients are covered. Embedding spans are named
+  `openai.embeddings` and carry `gen_ai.operation.name=embeddings`,
+  `gen_ai.request.type=embedding`, `gen_ai.request.input_count`,
+  `gen_ai.response.embedding_count` and `gen_ai.response.vector_size`, plus the
+  usual token and cost attributes priced against the `embeddings` table rather
+  than the chat one. Batched requests count each text; pre-tokenised input
+  counts as one.
+
+  The embedded text is recorded as `embedding.text` only when
+  `GENAI_ENABLE_CONTENT_CAPTURE=true`, and is truncated by
+  `GENAI_CONTENT_MAX_LENGTH` like any other captured content - retrieval inputs
+  routinely carry user data. Vectors remain off unless
+  `capture_embedding_vectors` is set, since they would dominate span size.
+
+  Clients pointed at an aggregator are skipped exactly as they are for chat, so
+  no duplicate spans or double-counted cost.
+
+### Fixed
+
+- **Hyperbolic reported cost under an attribute nothing else uses.** It set
+  `gen_ai.cost.amount` while every other instrumentor sets
+  `gen_ai.usage.cost.total`, so Hyperbolic spend was missing from any
+  cross-provider cost query. It now emits the standard attribute, keeping the
+  legacy one alongside for dashboards already built on it. The span attribute is
+  also no longer skipped when no cost metric counter is configured, which
+  previously dropped cost from the span as well as the metric.
+
 ### Documentation
+
+- **Embeddings and RAG guidance** in the provider guide and the semantic
+  conventions reference, including the full embedding attribute list.
+
+- **Corrected the documented cost attribute.** The reference and provider guide
+  both presented `gen_ai.cost.amount` as the cost attribute; it is
+  `gen_ai.usage.cost.total`, and `gen_ai.cost.amount` was only ever emitted by
+  Hyperbolic.
 
 - **Arize AX guide** (`docs/guides/arize-ax.md`). The export path was only
   documented in `examples/arize_ax/README.md`, which is not on the docs site.
