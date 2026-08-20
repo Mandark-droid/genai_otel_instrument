@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.1] - 2026-08-20
+
+### Added
+
+- Closed the last provider gap from upstream issue #23: Replicate embedding
+  models (BGE, E5, GTE, MPNet, MiniLM families, or any model reference
+  containing "embed") are now classified and traced as `embeddings` calls,
+  with input counting and response vector-size/embedding-count attributes.
+  Replicate's generic `run()` has no fixed schema, so non-embedding models
+  are traced exactly as before - a plain `replicate.run` span.
+- The shared embedding content-capture fallback now unwraps Replicate's
+  nested `input={"text": ...}` payload shape, so embedding text capture
+  (under `GENAI_ENABLE_CONTENT_CAPTURE`) works for Replicate too.
+
 ## [1.20.0] - 2026-08-20
 
 ### Added

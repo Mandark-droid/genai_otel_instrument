@@ -22,7 +22,14 @@ TraceVerde auto-instruments 21+ LLM providers. No code changes are needed - just
 | SambaNova | sarvam-m, Saarika, Bulbul (12+) | `[sambanova]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sambanova_example.py) |
 | Sarvam AI | Indian language models | `[sarvamai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/) |
 | ElevenLabs | Text-to-speech + Scribe speech-to-text | `[elevenlabs]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/elevenlabs_example.py) |
-| Replicate | Hardware-based pricing ($/second) | `[replicate]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/replicate/example.py) |
+| Replicate | Hardware-based pricing ($/second), embeddings (BGE/E5/GTE/MPNet/MiniLM families) | `[replicate]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/replicate/example.py) |
+
+Replicate hosts arbitrary community models behind one generic `run()` call,
+with no fixed input/output schema and no dedicated embeddings endpoint to
+hook. Embedding calls are recognized by matching the model reference against
+known embedding-only model families (BGE, E5, GTE, MPNet, MiniLM, and any
+model whose name contains "embed"); a model outside those families is traced
+as a plain `replicate.run` span, cost tracking excluded, same as before.
 
 ## Audio Providers: Billing by Media, Not Tokens
 

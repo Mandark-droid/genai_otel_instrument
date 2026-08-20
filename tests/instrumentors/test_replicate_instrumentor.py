@@ -127,6 +127,90 @@ class TestReplicateInstrumentor(unittest.TestCase):
 
         self.assertIsNone(result)
 
+    def test_extract_run_attributes_chat_model(self):
+        """A non-embedding model reference stays classified as a plain run."""
+        instrumentor = ReplicateInstrumentor()
+        attrs = instrumentor._extract_run_attributes(
+            None, ("stability-ai/stable-diffusion:model-version",), {}
+        )
+
+        self.assertEqual(attrs["gen_ai.system"], "replicate")
+        self.assertEqual(attrs["gen_ai.operation.name"], "run")
+        self.assertNotIn("gen_ai.request.type", attrs)
+
+    def test_extract_run_attributes_embedding_model(self):
+        """A known embedding model family (here BGE) is classified as an
+        embedding call, even without the literal substring "embed" - real
+        Replicate embedding models are commonly named after their model
+        family (bge/e5/gte/mpnet/minilm) rather than "embed" itself."""
+        instrumentor = ReplicateInstrumentor()
+        attrs = instrumentor._extract_run_attributes(
+            None,
+            ("nateraw/bge-large-en-v1.5",),
+            {"input": {"text": "hello world"}},
+        )
+
+        self.assertEqual(attrs["gen_ai.operation.name"], "embeddings")
+        self.assertEqual(attrs["gen_ai.request.type"], "embedding")
+        self.assertEqual(attrs["gen_ai.request.input_count"], 1)
+
+    def test_extract_run_attributes_embedding_model_literal_embed(self):
+        """A model reference containing the literal substring "embed" too."""
+        instrumentor = ReplicateInstrumentor()
+        attrs = instrumentor._extract_run_attributes(
+            None, ("nomic-ai/nomic-embed-text-v1.5",), {"input": {"text": "hi"}}
+        )
+
+        self.assertEqual(attrs["gen_ai.operation.name"], "embeddings")
+        self.assertEqual(attrs["gen_ai.request.type"], "embedding")
+
+    def test_count_inputs(self):
+        instrumentor = ReplicateInstrumentor()
+        self.assertEqual(instrumentor._count_inputs({"text": "hi"}), 1)
+        self.assertEqual(instrumentor._count_inputs({"texts": ["a", "b", "c"]}), 3)
+        self.assertEqual(instrumentor._count_inputs({"inputs": ["a", "b"]}), 2)
+        self.assertEqual(instrumentor._count_inputs({"unrelated": True}), 0)
+        self.assertEqual(instrumentor._count_inputs("raw string"), 1)
+        self.assertEqual(instrumentor._count_inputs(None), 0)
+
+    def test_extract_response_attributes_single_vector(self):
+        """A flat list of numbers from an embedding call is one vector."""
+        instrumentor = ReplicateInstrumentor()
+        instrumentor._extract_run_attributes(None, ("nateraw/bge-large-en-v1.5",), {})
+
+        attrs = instrumentor._extract_response_attributes([0.1, 0.2, 0.3, 0.4])
+
+        self.assertEqual(attrs["gen_ai.response.embedding_count"], 1)
+        self.assertEqual(attrs["gen_ai.response.vector_size"], 4)
+
+    def test_extract_response_attributes_batch(self):
+        """A list of vectors from a batched embedding call."""
+        instrumentor = ReplicateInstrumentor()
+        instrumentor._extract_run_attributes(None, ("nateraw/bge-large-en-v1.5",), {})
+
+        attrs = instrumentor._extract_response_attributes([[0.1, 0.2], [0.3, 0.4]])
+
+        self.assertEqual(attrs["gen_ai.response.embedding_count"], 2)
+        self.assertEqual(attrs["gen_ai.response.vector_size"], 2)
+
+    def test_extract_response_attributes_non_embedding_call_is_not_mislabeled(self):
+        """A non-embedding model's list-shaped output (e.g. audio samples,
+        bounding boxes) must not be reported as an embedding, even though the
+        raw shape looks identical to an embedding vector."""
+        instrumentor = ReplicateInstrumentor()
+        instrumentor._extract_run_attributes(None, ("stability-ai/some-audio-model",), {})
+
+        attrs = instrumentor._extract_response_attributes([0.1, 0.2, 0.3, 0.4])
+
+        self.assertEqual(attrs, {})
+
+    def test_extract_response_attributes_non_list_result(self):
+        instrumentor = ReplicateInstrumentor()
+        instrumentor._extract_run_attributes(None, ("nateraw/bge-large-en-v1.5",), {})
+
+        self.assertEqual(instrumentor._extract_response_attributes("not a list"), {})
+        self.assertEqual(instrumentor._extract_response_attributes([]), {})
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
