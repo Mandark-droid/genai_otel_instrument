@@ -280,6 +280,7 @@ TraceVerde is used by developers and teams building production GenAI application
 - [Discord](https://discord.gg/6SVz6VKK) - Chat with the community
 - [GitHub Issues](https://github.com/Mandark-droid/genai_otel_instrument/issues) - Bug reports and feature requests
 - [Contributing](https://mandark-droid.github.io/genai_otel_instrument/community/contributing/) - How to contribute
+- [Human and LLM agent contributions](https://mandark-droid.github.io/genai_otel_instrument/community/agent-contributions/) - How agents can report gaps or submit focused fixes
 
 ## License
 
