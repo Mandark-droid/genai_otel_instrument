@@ -18,6 +18,7 @@ TraceVerde follows OpenTelemetry semantic conventions for GenAI with additional 
 | `gen_ai.usage.token_count_estimated` | bool | `true` when prompt/completion token counts came from a fallback estimate (e.g. multimodal Ollama responses lacking `prompt_eval_count`, or HuggingFace vision/audio pipelines that don't surface usage). Absent on spans whose tokens come from the provider response. |
 | `gen_ai.usage.image_count` | int | Number of input images counted by the instrumentor for multimodal calls (vision pipelines). |
 | `gen_ai.usage.audio_seconds` | float | Total input audio duration in seconds for ASR / audio pipelines. |
+| `gen_ai.usage.audio_duration_seconds` | float | Canonical total input audio duration in seconds for speech-to-text and audio pipelines. |
 | `gen_ai.operation.name` | string | Operation being performed (`chat`, `embeddings`) |
 
 !!! note "Cost lives under `gen_ai.usage.cost.*`"
@@ -48,6 +49,24 @@ of a RAG trace.
 
 Token usage and cost are recorded exactly as for chat, priced against the
 `embeddings` table rather than the chat one.
+
+### Retrieval quality
+
+The `rag.*` attributes are additive to `retrieval.*` and `db.vector.*`. They
+describe embedding provenance, score quality, corpus version, and downstream
+context policy. `top_k` and result count remain `db.vector.top_k` and
+`retrieval.document_count`; see the [retrieval quality guide](../guides/retrieval-quality.md).
+
+`gen_ai.rag.context` is application-owned input for evaluation processors. The
+library reads it when present but does not emit it automatically.
+
+### Degradation events
+
+Capability downgrades are recorded as a `gen_ai.degraded` span event rather
+than an error. The event attributes are `gen_ai.degraded.component`,
+`gen_ai.degraded.from`, `gen_ai.degraded.to`, `gen_ai.degraded.reason`, and
+`gen_ai.degraded.recoverable`. The span status remains `OK` when the request
+successfully completes through the degraded path.
 
 ### Cost Attributes
 

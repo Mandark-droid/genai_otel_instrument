@@ -212,12 +212,10 @@ class TestAWSBedrockInstrumentor(unittest.TestCase):
 
         usage = instrumentor._extract_usage(result)
 
-        # Note: The code uses getattr on a dict, which doesn't work
-        # This test demonstrates the current behavior (returns 0s)
         self.assertIsNotNone(usage)
-        self.assertEqual(usage["prompt_tokens"], 0)
-        self.assertEqual(usage["completion_tokens"], 0)
-        self.assertEqual(usage["total_tokens"], 0)
+        self.assertEqual(usage["prompt_tokens"], 10)
+        self.assertEqual(usage["completion_tokens"], 20)
+        self.assertEqual(usage["total_tokens"], 30)
 
     def test_extract_usage_with_usage_metadata_field(self):
         """Test that _extract_usage extracts from 'usageMetadata' field."""
@@ -238,12 +236,10 @@ class TestAWSBedrockInstrumentor(unittest.TestCase):
 
         usage = instrumentor._extract_usage(result)
 
-        # Note: The code uses getattr on a dict, which doesn't work
-        # This test demonstrates the current behavior (returns 0s)
         self.assertIsNotNone(usage)
-        self.assertEqual(usage["prompt_tokens"], 0)
-        self.assertEqual(usage["completion_tokens"], 0)
-        self.assertEqual(usage["total_tokens"], 0)
+        self.assertEqual(usage["prompt_tokens"], 15)
+        self.assertEqual(usage["completion_tokens"], 25)
+        self.assertEqual(usage["total_tokens"], 40)
 
     def test_extract_usage_without_json_content_type(self):
         """Test that _extract_usage returns None for non-JSON content."""

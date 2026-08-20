@@ -69,6 +69,10 @@ class LiteLLMLatencyInstrumentor(BaseInstrumentor):
                 litellm.acompletion = self._wrap_async(litellm.acompletion, "litellm.acompletion")
             if hasattr(litellm, "completion"):
                 litellm.completion = self._wrap_sync(litellm.completion, "litellm.completion")
+            if hasattr(litellm, "aembedding"):
+                litellm.aembedding = self._wrap_async(litellm.aembedding, "litellm.embeddings")
+            if hasattr(litellm, "embedding"):
+                litellm.embedding = self._wrap_sync(litellm.embedding, "litellm.embeddings")
 
             try:
                 litellm._genai_otel_latency_instrumented = True
@@ -87,8 +91,18 @@ class LiteLLMLatencyInstrumentor(BaseInstrumentor):
         model = kwargs.get("model", "unknown")
         span.set_attribute("gen_ai.system", "litellm")
         span.set_attribute("gen_ai.request.model", str(model))
-        span.set_attribute("gen_ai.operation.name", "chat")
-        span.set_attribute("gen_ai.request.type", "chat")
+        is_embedding = "embedding" in span_name
+        span.set_attribute("gen_ai.operation.name", "embeddings" if is_embedding else "chat")
+        span.set_attribute("gen_ai.request.type", "embedding" if is_embedding else "chat")
+        if is_embedding:
+            value = kwargs.get("input")
+            if isinstance(value, str):
+                count = 1
+            elif isinstance(value, (list, tuple)):
+                count = 1 if value and all(isinstance(item, int) for item in value) else len(value)
+            else:
+                count = 1 if value is not None else 0
+            span.set_attribute("gen_ai.request.input_count", count)
         return span, model
 
     def _wrap_sync(self, original, span_name: str):
@@ -193,3 +207,26 @@ class LiteLLMLatencyInstrumentor(BaseInstrumentor):
             "completion_tokens": int(completion or 0),
             "total_tokens": int(total or ((prompt or 0) + (completion or 0))),
         }
+
+    def _extract_response_attributes(self, result) -> Dict[str, Any]:
+        """Extract embedding count and vector size from LiteLLM responses."""
+        if result is None:
+            return {}
+        data = result.get("data") if isinstance(result, dict) else getattr(result, "data", None)
+        if data is None:
+            return {}
+        try:
+            items = list(data)
+            attrs: Dict[str, Any] = {"gen_ai.response.embedding_count": len(items)}
+            if items:
+                first = items[0]
+                vector = (
+                    first.get("embedding")
+                    if isinstance(first, dict)
+                    else getattr(first, "embedding", None)
+                )
+                if isinstance(vector, (list, tuple)):
+                    attrs["gen_ai.response.vector_size"] = len(vector)
+            return attrs
+        except (TypeError, AttributeError, ValueError):
+            return {}

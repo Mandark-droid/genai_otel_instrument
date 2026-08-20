@@ -38,6 +38,18 @@ class TogetherAIInstrumentor(BaseInstrumentor):
                     self._instrument_client(instance)
 
                 together.Together.__init__ = wrapped_init
+                async_client = getattr(together, "AsyncTogether", None)
+                if isinstance(async_client, type) and not getattr(
+                    async_client, "_genai_otel_together_instrumented", False
+                ):
+                    original_async_init = async_client.__init__
+
+                    def wrapped_async_init(instance, *args, **kwargs):
+                        original_async_init(instance, *args, **kwargs)
+                        self._instrument_client(instance)
+
+                    async_client.__init__ = wrapped_async_init
+                    async_client._genai_otel_together_instrumented = True
                 self._instrumented = True
                 logger.info("Together AI instrumentation enabled (client-based API)")
             # Fallback to older Complete API if available
@@ -77,6 +89,42 @@ class TogetherAIInstrumentor(BaseInstrumentor):
             )(original_create)
 
             client.chat.completions.create = wrapped_create
+
+        embeddings = getattr(client, "embeddings", None)
+        if embeddings is not None and hasattr(embeddings, "create"):
+            original_create = embeddings.create
+            embeddings.create = self.create_span_wrapper(
+                span_name="together.embeddings",
+                extract_attributes=self._extract_embedding_attributes,
+            )(original_create)
+
+    @staticmethod
+    def _count_embedding_inputs(value: Any) -> int:
+        if isinstance(value, str):
+            return 1
+        if isinstance(value, (list, tuple)):
+            if not value:
+                return 0
+            if all(isinstance(item, int) for item in value):
+                return 1
+            return len(value)
+        return 1 if value is not None else 0
+
+    def _extract_embedding_attributes(
+        self, instance: Any, args: Any, kwargs: Any
+    ) -> Dict[str, Any]:
+        """Extract canonical attributes from Together's embeddings endpoint."""
+        model = kwargs.get("model", "unknown")
+        value = kwargs.get("input")
+        if value is None and args:
+            value = args[0]
+        return {
+            "gen_ai.system": "together",
+            "gen_ai.request.model": str(model),
+            "gen_ai.operation.name": "embeddings",
+            "gen_ai.request.type": "embedding",
+            "gen_ai.request.input_count": self._count_embedding_inputs(value),
+        }
 
     def _extract_chat_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Together AI chat completion call.
@@ -156,3 +204,32 @@ class TogetherAIInstrumentor(BaseInstrumentor):
         except Exception as e:
             logger.debug("Failed to extract usage from Together AI response: %s", e)
             return None
+
+    def _extract_response_attributes(self, result) -> Dict[str, Any]:
+        """Extract response model and embedding dimensions when available."""
+        attrs: Dict[str, Any] = {}
+        try:
+            if isinstance(result, dict):
+                data = result.get("data", result.get("embeddings"))
+            else:
+                data = getattr(result, "data", getattr(result, "embeddings", None))
+            if data is not None:
+                items = list(data)
+                attrs["gen_ai.response.embedding_count"] = len(items)
+                if items:
+                    first = items[0]
+                    vector = (
+                        first.get("embedding")
+                        if isinstance(first, dict)
+                        else getattr(first, "embedding", first)
+                    )
+                    if isinstance(vector, (list, tuple)):
+                        attrs["gen_ai.response.vector_size"] = len(vector)
+            model = (
+                result.get("model") if isinstance(result, dict) else getattr(result, "model", None)
+            )
+            if model:
+                attrs["gen_ai.response.model"] = str(model)
+        except (TypeError, AttributeError, ValueError) as e:
+            logger.debug("Failed to extract Together embedding response: %s", e)
+        return attrs
