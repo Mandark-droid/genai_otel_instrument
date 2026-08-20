@@ -162,36 +162,47 @@ class TestOpenRouterInstrumentor(unittest.TestCase):
             self.assertFalse(result)
 
     def test_instrument_client(self):
-        """Test that _instrument_client wraps the chat.completions.create method."""
+        """Test that _instrument_client wraps chat.completions.create AND
+        embeddings.create (OpenRouter has a real OpenAI-compatible
+        /v1/embeddings endpoint: https://openrouter.ai/docs/api_reference/embeddings)."""
         with patch.dict("sys.modules", {"openai": MagicMock()}):
             instrumentor = OpenRouterInstrumentor()
 
-            # Create mock client with chat.completions.create
+            # Create mock client with chat.completions.create and embeddings.create
             mock_client = MagicMock()
-            original_create = MagicMock()
-            mock_client.chat.completions.create = original_create
+            original_chat_create = MagicMock()
+            mock_client.chat.completions.create = original_chat_create
+            original_embeddings_create = MagicMock()
+            mock_client.embeddings.create = original_embeddings_create
 
             # Create mock wrapper
             mock_wrapper = MagicMock()
             # create_span_wrapper returns a decorator, so we need to return a callable
-            # that when called with original_create returns mock_wrapper
+            # that when called with the original returns mock_wrapper
             mock_decorator = MagicMock(return_value=mock_wrapper)
             instrumentor.create_span_wrapper = MagicMock(return_value=mock_decorator)
 
             # Act
             instrumentor._instrument_client(mock_client)
 
-            # Assert that create_span_wrapper was called with correct arguments
-            instrumentor.create_span_wrapper.assert_called_once_with(
+            # Assert that create_span_wrapper was called for both endpoints
+            instrumentor.create_span_wrapper.assert_any_call(
                 span_name="openrouter.chat.completion",
                 extract_attributes=instrumentor._extract_openrouter_attributes,
             )
+            instrumentor.create_span_wrapper.assert_any_call(
+                span_name="openrouter.embeddings",
+                extract_attributes=instrumentor._extract_embedding_attributes,
+            )
+            self.assertEqual(instrumentor.create_span_wrapper.call_count, 2)
 
-            # Assert that the decorator was called with original_create
-            mock_decorator.assert_called_once_with(original_create)
+            # Assert that the decorator was called with each original method
+            mock_decorator.assert_any_call(original_chat_create)
+            mock_decorator.assert_any_call(original_embeddings_create)
 
-            # Assert that the create method was replaced with mock_wrapper
+            # Assert that both create methods were replaced with mock_wrapper
             self.assertEqual(mock_client.chat.completions.create, mock_wrapper)
+            self.assertEqual(mock_client.embeddings.create, mock_wrapper)
 
     def test_extract_openrouter_attributes_with_messages(self):
         """Test that _extract_openrouter_attributes extracts attributes correctly."""
@@ -327,6 +338,135 @@ class TestOpenRouterInstrumentor(unittest.TestCase):
             finish_reason = instrumentor._extract_finish_reason(mock_result)
 
             self.assertIsNone(finish_reason)
+
+    def test_count_embedding_inputs(self):
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenRouterInstrumentor()
+
+            self.assertEqual(instrumentor._count_embedding_inputs(None), 0)
+            self.assertEqual(instrumentor._count_embedding_inputs("hello"), 1)
+            self.assertEqual(instrumentor._count_embedding_inputs(["a", "b", "c"]), 3)
+            # A list of ints is one pre-tokenised input, not N inputs.
+            self.assertEqual(instrumentor._count_embedding_inputs([1, 2, 3]), 1)
+            self.assertEqual(instrumentor._count_embedding_inputs([]), 0)
+
+    def test_extract_embedding_attributes(self):
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenRouterInstrumentor()
+
+            kwargs = {
+                "model": "openai/text-embedding-3-small",
+                "input": ["first text", "second text"],
+                "encoding_format": "float",
+            }
+
+            attrs = instrumentor._extract_embedding_attributes(None, [], kwargs)
+
+            self.assertEqual(attrs["gen_ai.system"], "openrouter")
+            self.assertEqual(attrs["gen_ai.request.model"], "openai/text-embedding-3-small")
+            self.assertEqual(attrs["gen_ai.operation.name"], "embeddings")
+            self.assertEqual(attrs["gen_ai.request.type"], "embedding")
+            self.assertEqual(attrs["gen_ai.request.input_count"], 2)
+            self.assertEqual(attrs["gen_ai.request.encoding_format"], "float")
+
+    def test_instrument_client_embeddings_call_produces_embedding_attrs(self):
+        """End-to-end sanity: the wrapped embeddings.create actually reports
+        as an embeddings call, not a chat one, when driven for real through
+        _extract_embedding_attributes (not just asserting the wrap happened)."""
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenRouterInstrumentor()
+
+            attrs = instrumentor._extract_embedding_attributes(
+                None, [], {"model": "cohere/embed-v4.0", "input": "just one string"}
+            )
+
+            self.assertEqual(attrs["gen_ai.operation.name"], "embeddings")
+            self.assertEqual(attrs["gen_ai.request.type"], "embedding")
+            self.assertEqual(attrs["gen_ai.request.input_count"], 1)
+
+    def test_embedding_items_valid_response(self):
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenRouterInstrumentor()
+
+            mock_item = MagicMock()
+            mock_item.embedding = [0.1, 0.2, 0.3]
+            mock_result = MagicMock()
+            mock_result.data = [mock_item]
+
+            items = instrumentor._embedding_items(mock_result)
+
+            self.assertEqual(items, [mock_item])
+
+    def test_embedding_items_non_embedding_response_returns_none(self):
+        """A chat response's `.data` (or lack thereof) must not be mistaken
+        for embeddings - items without an `.embedding` attribute don't count."""
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenRouterInstrumentor()
+
+            mock_choice = MagicMock(spec=["finish_reason"])
+            mock_result = MagicMock()
+            mock_result.data = [mock_choice]
+
+            self.assertIsNone(instrumentor._embedding_items(mock_result))
+            self.assertIsNone(instrumentor._embedding_items(MagicMock(data=None)))
+            self.assertIsNone(instrumentor._embedding_items(MagicMock(data=[])))
+
+    def test_extract_response_attributes_embedding_response(self):
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenRouterInstrumentor()
+
+            mock_item = MagicMock()
+            mock_item.embedding = [0.1, 0.2, 0.3, 0.4]
+            mock_result = MagicMock()
+            mock_result.id = "resp-1"
+            mock_result.model = "openai/text-embedding-3-small"
+            mock_result.data = [mock_item, mock_item]
+            mock_result.choices = None
+
+            attrs = instrumentor._extract_response_attributes(mock_result)
+
+            self.assertEqual(attrs["gen_ai.response.embedding_count"], 2)
+            self.assertEqual(attrs["gen_ai.response.vector_size"], 4)
+            self.assertNotIn("gen_ai.response.finish_reasons", attrs)
+
+    def test_add_content_events_routes_embeddings_to_embedding_content(self):
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenRouterInstrumentor()
+            instrumentor.config = OTelConfig(service_name="test")
+
+            mock_span = MagicMock()
+            mock_item = MagicMock()
+            mock_item.embedding = [0.1, 0.2]
+            mock_result = MagicMock()
+            mock_result.data = [mock_item]
+
+            instrumentor._add_content_events(
+                mock_span, mock_result, {"model": "openai/text-embedding-3-small", "input": "hi"}
+            )
+
+            mock_span.set_attribute.assert_any_call(
+                "embedding.model_name", "openai/text-embedding-3-small"
+            )
+            mock_span.set_attribute.assert_any_call("embedding.text", "hi")
+
+    def test_add_embedding_content_vector_capture(self):
+        with patch.dict("sys.modules", {"openai": MagicMock()}):
+            instrumentor = OpenRouterInstrumentor()
+            config = OTelConfig(service_name="test")
+            config.capture_embedding_vectors = True
+            instrumentor.config = config
+
+            mock_span = MagicMock()
+            mock_item = MagicMock()
+            mock_item.embedding = [0.1, 0.2, 0.3]
+            mock_result = MagicMock()
+            mock_result.data = [mock_item]
+
+            instrumentor._add_embedding_content(
+                mock_span, mock_result, {"model": "m", "input": "hi"}, config
+            )
+
+            mock_span.set_attribute.assert_any_call("embedding.vector.dimension", 3)
 
 
 if __name__ == "__main__":

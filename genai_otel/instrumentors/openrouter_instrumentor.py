@@ -134,6 +134,19 @@ class OpenRouterInstrumentor(BaseInstrumentor):
             )(original_create)
             client.chat.completions.create = instrumented_create_method
 
+        # OpenRouter exposes an OpenAI-compatible /v1/embeddings endpoint
+        # (https://openrouter.ai/docs/api_reference/embeddings). Without this,
+        # the generic OpenAI instrumentor's own embeddings wrapping never
+        # fires for an OpenRouter client either - find_base_url_claim() skips
+        # it in favor of this dedicated instrumentor - so embedding calls
+        # through OpenRouter produced no span at all.
+        if hasattr(client, "embeddings") and hasattr(client.embeddings, "create"):
+            original_embeddings_create = client.embeddings.create
+            client.embeddings.create = self.create_span_wrapper(
+                span_name="openrouter.embeddings",
+                extract_attributes=self._extract_embedding_attributes,
+            )(original_embeddings_create)
+
     def _extract_openrouter_attributes(
         self, instance: Any, args: Any, kwargs: Any
     ) -> Dict[str, Any]:
@@ -188,6 +201,60 @@ class OpenRouterInstrumentor(BaseInstrumentor):
 
         return attrs
 
+    @staticmethod
+    def _count_embedding_inputs(value: Any) -> int:
+        """Count how many texts an embeddings request covers.
+
+        The API accepts a string, a list of strings, a list of token ids, or a
+        list of token-id lists. A list of ints is one pre-tokenised input, not
+        N inputs, so counting it by length would overstate a batch of one.
+        """
+        if value is None:
+            return 0
+        if isinstance(value, str):
+            return 1
+        if isinstance(value, (list, tuple)):
+            if not value:
+                return 0
+            if all(isinstance(item, int) for item in value):
+                return 1
+            return len(value)
+        return 1
+
+    def _extract_embedding_attributes(
+        self, instance: Any, args: Any, kwargs: Any
+    ) -> Dict[str, Any]:
+        """Extract attributes from an OpenRouter embeddings call."""
+        model = kwargs.get("model", "unknown")
+
+        attrs: Dict[str, Any] = {
+            "gen_ai.system": "openrouter",
+            "gen_ai.request.model": model,
+            "gen_ai.operation.name": "embeddings",
+            # "embedding", singular, is the value CostCalculator.calculate_cost
+            # dispatches on; the pricing table's category is "embeddings".
+            "gen_ai.request.type": "embedding",
+            "gen_ai.request.input_count": self._count_embedding_inputs(kwargs.get("input")),
+        }
+
+        if "encoding_format" in kwargs:
+            attrs["gen_ai.request.encoding_format"] = kwargs["encoding_format"]
+
+        return attrs
+
+    @staticmethod
+    def _embedding_items(result) -> Optional[list]:
+        """Return the embedding items of a response, or None if not embeddings.
+
+        Deliberately strict about the list type: a mock or a chat response
+        would otherwise satisfy a bare ``hasattr(result, "data")`` and get
+        embedding attributes attached to it.
+        """
+        data = getattr(result, "data", None)
+        if isinstance(data, (list, tuple)) and data and hasattr(data[0], "embedding"):
+            return list(data)
+        return None
+
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from OpenRouter response.
 
@@ -236,6 +303,16 @@ class OpenRouterInstrumentor(BaseInstrumentor):
         if hasattr(result, "model"):
             attrs["gen_ai.response.model"] = result.model
 
+        # Embeddings responses carry vectors instead of choices.
+        items = self._embedding_items(result)
+        if items is not None:
+            attrs["gen_ai.response.embedding_count"] = len(items)
+            try:
+                attrs["gen_ai.response.vector_size"] = len(items[0].embedding)
+            except (TypeError, AttributeError) as e:
+                logger.debug("Failed to measure embedding vector: %s", e)
+            return attrs
+
         # Finish reasons
         if hasattr(result, "choices") and result.choices:
             finish_reasons = [
@@ -274,6 +351,11 @@ class OpenRouterInstrumentor(BaseInstrumentor):
         """
         config = getattr(self, "config", None)
 
+        # Embeddings requests carry `input` rather than `messages`.
+        if "input" in request_kwargs and not request_kwargs.get("messages"):
+            self._add_embedding_content(span, result, request_kwargs, config)
+            return
+
         # Add prompt content events
         messages = request_kwargs.get("messages", [])
         for idx, message in enumerate(messages):
@@ -309,6 +391,41 @@ class OpenRouterInstrumentor(BaseInstrumentor):
             # Set as attribute for evaluation processor
             if response_text:
                 span.set_attribute("gen_ai.response", response_text)
+
+    def _add_embedding_content(self, span, result, request_kwargs: dict, config):
+        """Attach the embedded text (and optionally vectors) to a span."""
+        model = request_kwargs.get("model", "unknown")
+        span.set_attribute("embedding.model_name", model)
+
+        raw_input = request_kwargs.get("input")
+        if isinstance(raw_input, str):
+            texts = [raw_input]
+        elif isinstance(raw_input, (list, tuple)) and not all(
+            isinstance(item, int) for item in raw_input
+        ):
+            texts = [item for item in raw_input if isinstance(item, str)]
+        else:
+            # Pre-tokenised input: there is no text to record.
+            texts = []
+
+        if texts:
+            span.set_attribute("embedding.text", _cap_content(config, texts[0]))
+            for idx, text in enumerate(texts):
+                span.add_event(
+                    f"gen_ai.embedding.{idx}",
+                    attributes={"gen_ai.embedding.content": _cap_content(config, text)},
+                )
+
+        # Vectors are large enough to dominate a span and are rarely wanted, so
+        # they stay off unless explicitly requested.
+        if config is not None and getattr(config, "capture_embedding_vectors", False):
+            items = self._embedding_items(result)
+            if items:
+                try:
+                    span.set_attribute("embedding.vector", json.dumps(list(items[0].embedding)))
+                    span.set_attribute("embedding.vector.dimension", len(items[0].embedding))
+                except (TypeError, ValueError, AttributeError) as e:
+                    logger.debug("Failed to serialize embedding vector: %s", e)
 
     def _extract_finish_reason(self, result) -> Optional[str]:
         """Extract finish reason from OpenRouter response.
