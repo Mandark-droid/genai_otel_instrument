@@ -131,6 +131,37 @@ def test_google_inline_data_audio_classified(fake_span):
     assert a["gen_ai.prompt.0.content.1.media_mime_type"] == "audio/wav"
 
 
+def test_openai_input_audio_classified_as_audio_not_image(fake_span):
+    """OpenAI voice input must remain audio in the emitted content-part shape."""
+    from genai_otel.instrumentors.openai_instrumentor import OpenAIInstrumentor
+
+    inst = OpenAIInstrumentor()
+    inst.config = _Cfg()
+    audio_b64 = base64.b64encode(b"RIFF....WAVE").decode()
+    inst._emit_media_attributes(
+        fake_span,
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "check my payment status"},
+                        {
+                            "type": "input_audio",
+                            "input_audio": {"data": audio_b64, "format": "wav"},
+                        },
+                    ],
+                }
+            ]
+        },
+        result=None,
+    )
+    a = fake_span.attributes
+    assert a["gen_ai.prompt.0.content.1.type"] == "audio"
+    assert a["gen_ai.prompt.0.content.1.media_mime_type"] == "audio/wav"
+    assert a["gen_ai.prompt.0.content.1.type"] != "image"
+
+
 def test_groq_uses_openai_path(fake_span):
     from genai_otel.instrumentors.groq_instrumentor import GroqInstrumentor
 
