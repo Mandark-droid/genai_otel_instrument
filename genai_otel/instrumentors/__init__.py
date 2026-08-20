@@ -13,6 +13,7 @@ from .anyscale_instrumentor import AnyscaleInstrumentor
 from .autogen_agentchat_instrumentor import AutoGenAgentChatInstrumentor
 from .autogen_instrumentor import AutoGenInstrumentor
 from .aws_bedrock_instrumentor import AWSBedrockInstrumentor
+from .azure_ai_inference_instrumentor import AzureAIInferenceInstrumentor
 from .azure_openai_instrumentor import AzureOpenAIInstrumentor
 from .bedrock_agents_instrumentor import BedrockAgentsInstrumentor
 from .cohere_instrumentor import CohereInstrumentor
@@ -30,6 +31,7 @@ from .hyperbolic_instrumentor import HyperbolicInstrumentor
 from .instructor_instrumentor import InstructorInstrumentor
 from .langchain_instrumentor import LangChainInstrumentor
 from .langgraph_instrumentor import LangGraphInstrumentor
+from .liquid_audio_instrumentor import LiquidAudioInstrumentor
 from .litellm_latency_instrumentor import LiteLLMLatencyInstrumentor
 from .llamaindex_instrumentor import LlamaIndexInstrumentor
 from .mistralai_instrumentor import MistralAIInstrumentor
@@ -43,6 +45,7 @@ from .pydantic_ai_instrumentor import PydanticAIInstrumentor
 from .replicate_instrumentor import ReplicateInstrumentor
 from .sambanova_instrumentor import SambaNovaInstrumentor
 from .sarvam_instrumentor import SarvamAIInstrumentor
+from .sentence_transformers_instrumentor import SentenceTransformersInstrumentor
 from .togetherai_instrumentor import TogetherAIInstrumentor
 from .vertexai_instrumentor import VertexAIInstrumentor
 
@@ -54,6 +57,7 @@ __all__ = [
     "GoogleADKInstrumentor",
     "GoogleAIInstrumentor",
     "AWSBedrockInstrumentor",
+    "AzureAIInferenceInstrumentor",
     "AzureOpenAIInstrumentor",
     "AutoGenAgentChatInstrumentor",
     "AutoGenInstrumentor",
@@ -77,9 +81,11 @@ __all__ = [
     "LangChainInstrumentor",
     "LangGraphInstrumentor",
     "LiteLLMLatencyInstrumentor",
+    "LiquidAudioInstrumentor",
     "LlamaIndexInstrumentor",
     "HuggingFaceInstrumentor",
     "PydanticAIInstrumentor",
     "ElevenLabsInstrumentor",
     "SarvamAIInstrumentor",
+    "SentenceTransformersInstrumentor",
 ]
