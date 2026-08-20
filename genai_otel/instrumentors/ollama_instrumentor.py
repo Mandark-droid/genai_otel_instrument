@@ -41,6 +41,8 @@ class OllamaInstrumentor(BaseInstrumentor):
         self._ollama_module = None
         self._original_generate = None
         self._original_chat = None
+        self._original_embed = None
+        self._original_embeddings = None
         self._check_availability()
 
     def _check_availability(self):
@@ -87,6 +89,59 @@ class OllamaInstrumentor(BaseInstrumentor):
                 extract_attributes=self._extract_chat_attributes,
             )(self._original_chat)
             self._ollama_module.chat = wrapped_chat
+
+            # Ollama exposes both spellings across client generations. Keep
+            # each available entry point wrapped so upgrading the SDK does not
+            # silently remove the retrieval span.
+            for method_name in ("embed", "embeddings"):
+                original = getattr(self._ollama_module, method_name, None)
+                if not callable(original):
+                    continue
+                setattr(self, f"_original_{method_name}", original)
+                setattr(
+                    self._ollama_module,
+                    method_name,
+                    self.create_span_wrapper(
+                        span_name="ollama.embeddings",
+                        extract_attributes=self._extract_embedding_attributes,
+                    )(original),
+                )
+
+            async_client = getattr(self._ollama_module, "AsyncClient", None)
+            if isinstance(async_client, type) and not getattr(
+                async_client, "_genai_otel_ollama_instrumented", False
+            ):
+                original_async_init = async_client.__init__
+
+                def wrapped_async_init(instance, *args, **kwargs):
+                    original_async_init(instance, *args, **kwargs)
+                    for method_name, extractor, operation in (
+                        ("generate", self._extract_generate_attributes, "ollama.generate"),
+                        ("chat", self._extract_chat_attributes, "ollama.chat"),
+                        (
+                            "embed",
+                            self._extract_embedding_attributes,
+                            "ollama.embeddings",
+                        ),
+                        (
+                            "embeddings",
+                            self._extract_embedding_attributes,
+                            "ollama.embeddings",
+                        ),
+                    ):
+                        original = getattr(instance, method_name, None)
+                        if callable(original):
+                            setattr(
+                                instance,
+                                method_name,
+                                self.create_span_wrapper(
+                                    span_name=operation,
+                                    extract_attributes=extractor,
+                                )(original),
+                            )
+
+                async_client.__init__ = wrapped_async_init
+                async_client._genai_otel_ollama_instrumented = True
 
             try:
                 self._ollama_module._genai_otel_ollama_instrumented = True
@@ -184,6 +239,37 @@ class OllamaInstrumentor(BaseInstrumentor):
             attrs["gen_ai.request.first_message"] = first_message
 
         return attrs
+
+    @staticmethod
+    def _count_embedding_inputs(value: Any) -> int:
+        """Count text inputs while treating a token/id vector as one input."""
+        if isinstance(value, str):
+            return 1
+        if isinstance(value, (list, tuple)):
+            if not value:
+                return 0
+            if all(isinstance(item, int) for item in value):
+                return 1
+            return len(value)
+        return 1 if value is not None else 0
+
+    def _extract_embedding_attributes(
+        self, instance: Any, args: Any, kwargs: Any
+    ) -> Dict[str, Any]:
+        """Extract canonical attributes from Ollama embed/embeddings calls."""
+        model = kwargs.get("model", "unknown")
+        value = kwargs.get("input")
+        if value is None:
+            value = kwargs.get("prompt")
+        if value is None and args:
+            value = args[-1]
+        return {
+            "gen_ai.system": "ollama",
+            "gen_ai.request.model": str(model),
+            "gen_ai.operation.name": "embeddings",
+            "gen_ai.request.type": "embedding",
+            "gen_ai.request.input_count": self._count_embedding_inputs(value),
+        }
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from Ollama response.
@@ -354,6 +440,15 @@ class OllamaInstrumentor(BaseInstrumentor):
                         if isinstance(content, str):
                             attrs["gen_ai.response.length"] = len(content)
 
+                vectors = result.get("embeddings")
+                if vectors is None and result.get("embedding") is not None:
+                    vectors = [result["embedding"]]
+                if vectors is not None:
+                    vectors = list(vectors)
+                    attrs["gen_ai.response.embedding_count"] = len(vectors)
+                    if vectors and isinstance(vectors[0], (list, tuple)):
+                        attrs["gen_ai.response.vector_size"] = len(vectors[0])
+
             elif hasattr(result, "model"):
                 # Object-like response
                 if hasattr(result, "model"):
@@ -373,6 +468,15 @@ class OllamaInstrumentor(BaseInstrumentor):
                         content = message.content
                         if isinstance(content, str):
                             attrs["gen_ai.response.length"] = len(content)
+
+                vectors = getattr(result, "embeddings", None)
+                if vectors is None and hasattr(result, "embedding"):
+                    vectors = [result.embedding]
+                if vectors is not None:
+                    vectors = list(vectors)
+                    attrs["gen_ai.response.embedding_count"] = len(vectors)
+                    if vectors and isinstance(vectors[0], (list, tuple)):
+                        attrs["gen_ai.response.vector_size"] = len(vectors[0])
 
         except Exception as e:
             logger.debug("Failed to extract response attributes from Ollama response: %s", e)

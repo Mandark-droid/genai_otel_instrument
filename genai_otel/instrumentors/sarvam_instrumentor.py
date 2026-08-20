@@ -533,6 +533,9 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     span.set_attribute("sarvam.target_language", str(target_lang))
                     speaker = _safe_kwarg(kwargs, "speaker", "unknown")
                     span.set_attribute("sarvam.speaker", str(speaker))
+                    if speaker and speaker != "unknown":
+                        span.set_attribute("gen_ai.request.voice_id", str(speaker))
+                    span.set_attribute("gen_ai.request.streamed", bool(kwargs.get("stream", False)))
 
                     text = kwargs.get("text", "")
                     char_count = len(text) if text else 0
@@ -555,6 +558,9 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     speech_sample_rate = _safe_kwarg(kwargs, "speech_sample_rate")
                     if speech_sample_rate is not None:
                         span.set_attribute("sarvam.tts.speech_sample_rate", int(speech_sample_rate))
+                        span.set_attribute(
+                            "gen_ai.request.audio.sample_rate", int(speech_sample_rate)
+                        )
                     enable_preprocessing = _safe_kwarg(kwargs, "enable_preprocessing")
                     if enable_preprocessing is not None:
                         span.set_attribute(
@@ -563,6 +569,7 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     output_audio_codec = _safe_kwarg(kwargs, "output_audio_codec")
                     if output_audio_codec:
                         span.set_attribute("sarvam.tts.output_audio_codec", str(output_audio_codec))
+                        span.set_attribute("gen_ai.response.output_format", str(output_audio_codec))
 
                     if instrumentor.request_counter:
                         instrumentor.request_counter.add(
@@ -571,12 +578,72 @@ class SarvamAIInstrumentor(BaseInstrumentor):
 
                     result = original_convert(*args, **kwargs)
 
+                    duration = None
+                    if isinstance(result, dict):
+                        duration = result.get("audio_duration_seconds") or result.get("duration")
+                    else:
+                        duration = getattr(result, "audio_duration_seconds", None) or getattr(
+                            result, "duration", None
+                        )
+                    if isinstance(duration, (int, float)) and duration > 0:
+                        span.set_attribute("gen_ai.usage.audio_duration_seconds", float(duration))
+
                     # Record latency and character-based cost
                     instrumentor._record_sarvam_cost(span, model, char_count, start_time)
 
                     return result
 
             client.text_to_speech.convert = wrapped_convert
+
+        # Some Sarvam SDK versions expose a dedicated streaming method. Keep
+        # the span open until the caller drains the audio iterator so TTFT is
+        # measured at the first audio chunk rather than at method return.
+        if hasattr(client, "text_to_speech") and callable(
+            getattr(client.text_to_speech, "stream", None)
+        ):
+            original_stream = client.text_to_speech.stream
+            instrumentor = self
+
+            def wrapped_stream(*args, **kwargs):
+                span = instrumentor.tracer.start_span("sarvam.text_to_speech.stream")
+                start_time = time.time()
+                try:
+                    raw_model = _safe_kwarg(kwargs, "model", "bulbul-v2")
+                    model = instrumentor._normalize_sarvam_tts_model(str(raw_model))
+                    text = kwargs.get("text", "") or ""
+                    span.set_attribute("gen_ai.system", "sarvam")
+                    span.set_attribute("gen_ai.operation.name", "text_to_speech")
+                    span.set_attribute("gen_ai.request.type", "text_to_speech")
+                    span.set_attribute("gen_ai.request.model", model)
+                    span.set_attribute("gen_ai.request.streamed", True)
+                    speaker = _safe_kwarg(kwargs, "speaker")
+                    if speaker:
+                        span.set_attribute("gen_ai.request.voice_id", str(speaker))
+                    sample_rate = _safe_kwarg(kwargs, "speech_sample_rate")
+                    if sample_rate is not None:
+                        span.set_attribute("gen_ai.request.audio.sample_rate", int(sample_rate))
+                    output_format = _safe_kwarg(kwargs, "output_audio_codec")
+                    if output_format:
+                        span.set_attribute("gen_ai.response.output_format", str(output_format))
+                    instrumentor._record_sarvam_cost(span, model, len(text), start_time)
+                    result = original_stream(*args, **kwargs)
+                    if hasattr(result, "__aiter__"):
+                        return instrumentor._wrap_async_streaming_response(
+                            result, span, start_time, model
+                        )
+                    if hasattr(result, "__iter__") and not isinstance(
+                        result, (str, bytes, dict, list, tuple)
+                    ):
+                        return instrumentor._wrap_streaming_response(
+                            result, span, start_time, model
+                        )
+                    span.end()
+                    return result
+                except Exception:
+                    span.end()
+                    raise
+
+            client.text_to_speech.stream = wrapped_stream
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from Sarvam AI response.

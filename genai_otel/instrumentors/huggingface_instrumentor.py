@@ -160,8 +160,42 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
 
                             span.set_attribute("gen_ai.system", "huggingface")
                             span.set_attribute("gen_ai.request.model", model)
-                            span.set_attribute("gen_ai.operation.name", task)
+                            normalized_task = str(task).lower()
+                            operation = (
+                                "embeddings" if normalized_task == "feature-extraction" else task
+                            )
+                            if normalized_task == "automatic-speech-recognition":
+                                operation = "speech_to_text"
+                                span.set_attribute("gen_ai.request.type", "speech_to_text")
+                            elif normalized_task == "feature-extraction":
+                                span.set_attribute("gen_ai.request.type", "embedding")
+                            span.set_attribute("gen_ai.operation.name", operation)
                             span.set_attribute("huggingface.task", task)
+
+                            if normalized_task in {
+                                "feature-extraction",
+                                "automatic-speech-recognition",
+                            }:
+                                input_value = call_kwargs.get("inputs") if call_kwargs else None
+                                if input_value is None and call_args:
+                                    input_value = call_args[0]
+                                if normalized_task == "feature-extraction":
+                                    span.set_attribute(
+                                        "gen_ai.request.input_count",
+                                        instrumentor._count_pipeline_inputs(input_value),
+                                    )
+                                sampling_rate = getattr(
+                                    getattr(self._original_pipe, "feature_extractor", None),
+                                    "sampling_rate",
+                                    None,
+                                )
+                                if (
+                                    normalized_task == "automatic-speech-recognition"
+                                    and sampling_rate
+                                ):
+                                    span.set_attribute(
+                                        "gen_ai.request.audio.sample_rate", int(sampling_rate)
+                                    )
 
                             if instrumentor.request_counter:
                                 instrumentor.request_counter.add(
@@ -190,6 +224,18 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                                 )
                             except Exception as e:  # noqa: BLE001
                                 logger.debug("HF pipeline usage/cost recording failed: %s", e)
+
+                            try:
+                                instrumentor._record_pipeline_task_attributes(
+                                    span,
+                                    task=str(task),
+                                    call_args=call_args,
+                                    call_kwargs=call_kwargs,
+                                    result=result,
+                                    duration=duration,
+                                )
+                            except Exception as e:  # noqa: BLE001
+                                logger.debug("HF pipeline task attributes failed: %s", e)
 
                             # End span manually
                             span.end()
@@ -276,6 +322,12 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                 if hasattr(instance.config, "_name_or_path"):
                     model_name = instance.config._name_or_path
 
+                model_type = str(getattr(getattr(instance, "config", None), "model_type", ""))
+                is_asr_model = any(
+                    marker in model_type.lower()
+                    for marker in ("whisper", "wav2vec", "speech", "audio")
+                )
+
                 # Get input token count and retrieve original text from thread-local
                 input_ids = kwargs.get("input_ids") or (args[0] if args else None)
                 prompt_tokens = 0
@@ -298,8 +350,29 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                     # Set attributes
                     span.set_attribute("gen_ai.system", "huggingface")
                     span.set_attribute("gen_ai.request.model", model_name)
-                    span.set_attribute("gen_ai.operation.name", "text_generation")
-                    span.set_attribute("gen_ai.request.type", "chat")
+                    span.set_attribute(
+                        "gen_ai.operation.name",
+                        "speech_to_text" if is_asr_model else "text_generation",
+                    )
+                    span.set_attribute(
+                        "gen_ai.request.type", "speech_to_text" if is_asr_model else "chat"
+                    )
+                    if is_asr_model:
+                        sampling_rate = kwargs.get("sampling_rate")
+                        if sampling_rate is not None:
+                            span.set_attribute(
+                                "gen_ai.request.audio.sample_rate", int(sampling_rate)
+                            )
+                        try:
+                            from ..cost_estimation import audio_seconds
+
+                            seconds = audio_seconds(args, kwargs)
+                        except Exception:  # noqa: BLE001
+                            seconds = 0.0
+                        if seconds > 0:
+                            span.set_attribute(
+                                "gen_ai.usage.audio_duration_seconds", float(seconds)
+                            )
 
                     # Set first message for evaluation if we decoded the input
                     if input_text:
@@ -381,7 +454,9 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                             }
 
                             costs = instrumentor.cost_calculator.calculate_granular_cost(
-                                model=model_name, usage=usage, call_type="chat"
+                                model=model_name,
+                                usage=usage,
+                                call_type="speech_to_text" if is_asr_model else "chat",
                             )
 
                             if costs["total"] > 0:
@@ -525,6 +600,7 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                 span.set_attribute("gen_ai.usage.image_count", int(image_count))
             if a_seconds and a_seconds > 0:
                 span.set_attribute("gen_ai.usage.audio_seconds", float(a_seconds))
+                span.set_attribute("gen_ai.usage.audio_duration_seconds", float(a_seconds))
             self._set_token_usage_attributes(
                 span,
                 prompt_tokens=prompt_tokens,
@@ -561,8 +637,13 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                     "completion_tokens": completion_tokens,
                     "total_tokens": total_tokens,
                 }
+                call_type = (
+                    "speech_to_text"
+                    if "speech" in str(task).lower() or "recognition" in str(task).lower()
+                    else "chat"
+                )
                 costs = self.cost_calculator.calculate_granular_cost(
-                    model=model, usage=usage, call_type="chat"
+                    model=model, usage=usage, call_type=call_type
                 )
                 if costs.get("total", 0) > 0:
                     if self.cost_counter:
@@ -574,6 +655,55 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
                         span.set_attribute("gen_ai.usage.cost.completion", costs["completion"])
         except Exception as e:  # noqa: BLE001
             logger.debug("HF pipeline cost calculation failed: %s", e)
+
+    @staticmethod
+    def _count_pipeline_inputs(value) -> int:
+        if isinstance(value, str):
+            return 1
+        if isinstance(value, (list, tuple)):
+            return len(value)
+        return 1 if value is not None else 0
+
+    @staticmethod
+    def _record_pipeline_task_attributes(
+        span, task: str, call_args, call_kwargs, result, duration: float
+    ):
+        """Record ASR quality and feature-extraction response dimensions."""
+        task = (task or "").lower()
+        if task == "automatic-speech-recognition":
+            items = result if isinstance(result, list) else [result]
+            for item in items[:1]:
+                if not isinstance(item, dict):
+                    continue
+                text = item.get("text")
+                if isinstance(text, str):
+                    span.set_attribute("gen_ai.response.transcript_length", len(text))
+                language = item.get("language") or item.get("language_code")
+                if language:
+                    span.set_attribute("gen_ai.response.language_code", str(language))
+                confidence = item.get("confidence")
+                if isinstance(confidence, (int, float)):
+                    span.set_attribute("gen_ai.response.transcript_confidence", float(confidence))
+
+            # Use the same estimator as cost tracking so RTF is based on the
+            # actual payload shape and not on a guessed fixed duration.
+            from ..cost_estimation import audio_seconds
+
+            seconds = audio_seconds(call_args, call_kwargs or {})
+            if seconds > 0:
+                span.set_attribute("gen_ai.usage.audio_duration_seconds", float(seconds))
+                span.set_attribute("gen_ai.audio.real_time_factor", float(duration / seconds))
+        elif task == "feature-extraction":
+            if not isinstance(result, (list, tuple)) or not result:
+                return
+            first = result[0]
+            if isinstance(first, (list, tuple)):
+                if first and isinstance(first[0], (list, tuple)):
+                    span.set_attribute("gen_ai.response.embedding_count", len(result))
+                    span.set_attribute("gen_ai.response.vector_size", len(first[0]))
+                elif first:
+                    span.set_attribute("gen_ai.response.embedding_count", 1)
+                    span.set_attribute("gen_ai.response.vector_size", len(first))
 
     def _extract_inference_client_attributes(self, instance, args, kwargs) -> Dict[str, str]:
         """Extract attributes from Inference API call."""

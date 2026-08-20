@@ -387,6 +387,45 @@ def test_weaviate_query_execution(vector_db_instrumentor, mock_tracer):
         mock_tracer.start_as_current_span.assert_called_once_with("weaviate.query")
 
 
+def test_extract_scores_weaviate_graphql_response():
+    """Weaviate's real query() response nests scores under
+    data.Get.<ClassName>[]._additional.{distance,certainty}, unlike every other
+    backend's flatter shape. _extract_scores must descend into that structure
+    instead of returning [] for a populated Weaviate response."""
+    result = {
+        "data": {
+            "Get": {
+                "Article": [
+                    {"title": "a", "_additional": {"distance": 0.1, "certainty": 0.95}},
+                    {"title": "b", "_additional": {"distance": 0.3, "certainty": 0.85}},
+                ]
+            }
+        },
+        "errors": None,
+    }
+
+    scores = VectorDBInstrumentor._extract_scores(result)
+
+    # "distance" is checked first and is present on both objects.
+    assert scores == [0.1, 0.3]
+
+
+def test_extract_scores_weaviate_certainty_only():
+    """Falls back to "certainty" when "distance" isn't present on the object."""
+    result = {"data": {"Get": {"Article": [{"_additional": {"certainty": 0.9}}]}}}
+
+    scores = VectorDBInstrumentor._extract_scores(result)
+
+    assert scores == [0.9]
+
+
+def test_extract_scores_weaviate_empty_response():
+    """An empty/error Weaviate response yields no scores, not an exception."""
+    assert VectorDBInstrumentor._extract_scores({"data": {"Get": {}}}) == []
+    assert VectorDBInstrumentor._extract_scores({"data": None}) == []
+    assert VectorDBInstrumentor._extract_scores({}) == []
+
+
 def test_qdrant_search_execution(vector_db_instrumentor, mock_tracer):
     """Test that Qdrant search wrapper executes and creates spans with attributes."""
     from unittest.mock import MagicMock

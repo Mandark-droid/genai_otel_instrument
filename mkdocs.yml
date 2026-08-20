@@ -77,6 +77,9 @@ nav:
     - Demo App: guides/demo-app.md
   - Guides:
     - LLM Providers: guides/llm-providers.md
+    - Retrieval Quality: guides/retrieval-quality.md
+    - Speech telemetry: guides/speech.md
+    - Real-world examples: guides/real-world-examples.md
     - Multi-Agent Frameworks: guides/multi-agent-frameworks.md
     - MCP Tools: guides/mcp-tools.md
     - Cost Tracking: guides/cost-tracking.md
@@ -93,4 +96,5 @@ nav:
     - Multimodal Proposal (OTel): proposals/otel_genai_multimodal_content_parts.md
   - Community:
     - Contributing: community/contributing.md
+    - Human and LLM agent contributions: community/agent-contributions.md
     - Changelog: community/changelog.md

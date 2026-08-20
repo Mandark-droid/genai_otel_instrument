@@ -114,6 +114,7 @@ aws = ["boto3>=1.28.0"]
 # does not exist on PyPI (dependency-confusion / name-planting risk), so this
 # extra intentionally pulls in `openai` only.
 azure = ["openai>=1.0.0"]
+azure-ai-inference = ["azure-ai-inference>=1.0.0"]
 cohere = ["cohere>=4.0.0"]
 mistral = ["mistralai>=0.4.2"]
 together = ["together>=0.2.0"]
@@ -123,12 +124,14 @@ replicate = ["replicate>=0.15.0"]
 sambanova = ["sambanova>=1.0.0"]
 sarvamai = ["sarvamai>=0.1.0"]
 elevenlabs = ["elevenlabs>=1.0.0"]
+liquid-audio = ["liquid-audio>=1.2.0"]
 
 # LLM Frameworks
 langchain = ["langchain>=0.1.0"]
 langgraph = ["langgraph>=0.1.0"]
 llamaindex = ["llama-index>=0.9.0"]
-huggingface = ["transformers>=4.30.0"]
+huggingface = ["transformers>=4.30.0", "sentence-transformers>=2.2.0"]
+sentence-transformers = ["sentence-transformers>=2.2.0"]
 crewai = ["crewai>=0.1.0"]
 autogen = ["pyautogen>=0.2.0"]
 autogen-agentchat = ["autogen-agentchat>=0.4.0"]
@@ -196,6 +199,7 @@ multimodal = [
     "pypdf>=4.0.0",
     "opencv-python-headless>=4.8.0",
     "boto3>=1.28.0",
+    "azure-ai-inference>=1.0.0",
 ]
 
 # All LLM providers
@@ -204,6 +208,7 @@ all-providers = [
     "anthropic>=0.18.0",
     "google-generativeai>=0.3.0",
     "boto3>=1.28.0",
+    "azure-ai-inference>=1.0.0",
     # Azure OpenAI uses the `openai` package (already listed above); there is no
     # separate `azure-ai-openai` PyPI package.
     "cohere>=4.0.0",
@@ -219,6 +224,8 @@ all-providers = [
     "langgraph>=0.1.0",
     "llama-index>=0.9.0",
     "transformers>=4.30.0",
+    "sentence-transformers>=2.2.0",
+    "liquid-audio>=1.2.0",
     "litellm>=1.0.0,!=1.82.7,!=1.82.8",
     "crewai>=0.1.0",
     "pyautogen>=0.2.0",
@@ -277,6 +284,8 @@ all = [
     "langgraph>=0.1.0",
     "llama-index>=0.9.0",
     "transformers>=4.30.0",
+    "sentence-transformers>=2.2.0",
+    "liquid-audio>=1.2.0",
     "nvidia-ml-py>=11.495.46",
     "amdsmi>=7.0.0",
     "codecarbon>=2.3.0",
