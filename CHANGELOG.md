@@ -28,6 +28,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Embedding content and vector capture now honor the actual configuration
   flags instead of treating an unset vector-capture attribute as enabled.
 - Bedrock embedding usage extraction handles mapping-shaped usage payloads.
+- Bedrock Titan Text generation calls were misclassified as embeddings
+  because the heuristic keyed on the shared `inputText` body field; it now
+  decides via the model-ID family so mainstream chat calls no longer get
+  priced against the embeddings table.
+- Azure AI Inference embedding calls resolved to no pricing entry at all
+  (silently billed as $0) because the pricing table only had the
+  `azure_ai/`-prefixed catalog names, not the bare deployment model name the
+  SDK actually reports.
+- `capture_embedding_vectors` behaved inconsistently across providers after
+  this release's refactor tightened one call site to a strict boolean check;
+  it's back to a plain truthy check everywhere.
+- SentenceTransformers `encode()` on a single string reported
+  `embedding_count` as the vector dimension instead of `1`.
+- Weaviate query spans never got `rag.result.score_*` attributes because the
+  score extractor didn't match Weaviate's actual GraphQL response shape.
 
 ## [1.19.0] - 2026-08-17
 
