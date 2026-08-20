@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.2] - 2026-08-20
+
+### Added
+
+- OpenRouter and CometAPI clients now trace embedding calls too. Both are
+  OpenAI-compatible aggregators with a real `/v1/embeddings` endpoint, but
+  their dedicated instrumentors only wrapped `chat.completions.create`; since
+  the generic OpenAI instrumentor deliberately skips clients claimed by an
+  aggregator (to avoid double-instrumenting), embedding calls through either
+  produced no span at all. Follows the same `gen_ai.request.type=embedding`
+  contract as every other provider: input counting, response
+  embedding_count/vector_size, and content/vector capture gated the same way.
+
+### Fixed
+
+- The sdist no longer bundles internal planning documents or IDE
+  configuration (`.idea/`). `setuptools_scm`'s file-finder adds every
+  git-tracked file to the sdist by default, which silently overrides
+  `MANIFEST.in`'s intended minimal file list; `MANIFEST.in` now carries
+  explicit `exclude`/`prune` rules for the files that should never have
+  shipped. v1.20.0 and v1.20.1 were pulled from PyPI for this reason - please
+  upgrade directly to this version.
+
 ## [1.20.1] - 2026-08-20
 
 ### Added

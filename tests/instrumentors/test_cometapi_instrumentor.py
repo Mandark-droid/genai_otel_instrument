@@ -2,6 +2,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from genai_otel.config import OTelConfig
 from genai_otel.instrumentors.cometapi_instrumentor import CometAPIInstrumentor
 
 
@@ -205,13 +206,16 @@ class TestCometAPIInstrumentor(unittest.TestCase):
             self.assertFalse(instrumentor._is_cometapi_client(mock_client))
 
     def test_instrument_openai_client(self):
-        """Test that _instrument_openai_client wraps chat.completions.create."""
+        """Test that _instrument_openai_client wraps chat.completions.create
+        AND embeddings.create (CometAPI is OpenAI-compatible for both)."""
         with patch.dict("sys.modules", {"openai": MagicMock(), "anthropic": MagicMock()}):
             instrumentor = CometAPIInstrumentor()
 
             mock_client = MagicMock()
-            original_create = MagicMock()
-            mock_client.chat.completions.create = original_create
+            original_chat_create = MagicMock()
+            mock_client.chat.completions.create = original_chat_create
+            original_embeddings_create = MagicMock()
+            mock_client.embeddings.create = original_embeddings_create
 
             mock_wrapper = MagicMock()
             mock_decorator = MagicMock(return_value=mock_wrapper)
@@ -219,12 +223,19 @@ class TestCometAPIInstrumentor(unittest.TestCase):
 
             instrumentor._instrument_openai_client(mock_client)
 
-            instrumentor.create_span_wrapper.assert_called_once_with(
+            instrumentor.create_span_wrapper.assert_any_call(
                 span_name="cometapi.chat.completion",
                 extract_attributes=instrumentor._extract_cometapi_attributes,
             )
-            mock_decorator.assert_called_once_with(original_create)
+            instrumentor.create_span_wrapper.assert_any_call(
+                span_name="cometapi.embeddings",
+                extract_attributes=instrumentor._extract_embedding_attributes,
+            )
+            self.assertEqual(instrumentor.create_span_wrapper.call_count, 2)
+            mock_decorator.assert_any_call(original_chat_create)
+            mock_decorator.assert_any_call(original_embeddings_create)
             self.assertEqual(mock_client.chat.completions.create, mock_wrapper)
+            self.assertEqual(mock_client.embeddings.create, mock_wrapper)
 
     def test_instrument_anthropic_client(self):
         """Test that _instrument_anthropic_client wraps messages.create."""
@@ -427,6 +438,121 @@ class TestCometAPIInstrumentor(unittest.TestCase):
 
             self.assertEqual(mock_span.add_event.call_count, 2)
             mock_span.set_attribute.assert_called_once_with("gen_ai.response", "Hi there!")
+
+    def test_count_embedding_inputs(self):
+        with patch.dict("sys.modules", {"openai": MagicMock(), "anthropic": MagicMock()}):
+            instrumentor = CometAPIInstrumentor()
+
+            self.assertEqual(instrumentor._count_embedding_inputs(None), 0)
+            self.assertEqual(instrumentor._count_embedding_inputs("hello"), 1)
+            self.assertEqual(instrumentor._count_embedding_inputs(["a", "b", "c"]), 3)
+            # A list of ints is one pre-tokenised input, not N inputs.
+            self.assertEqual(instrumentor._count_embedding_inputs([1, 2, 3]), 1)
+            self.assertEqual(instrumentor._count_embedding_inputs([]), 0)
+
+    def test_extract_embedding_attributes(self):
+        with patch.dict("sys.modules", {"openai": MagicMock(), "anthropic": MagicMock()}):
+            instrumentor = CometAPIInstrumentor()
+
+            kwargs = {
+                "model": "text-embedding-3-small",
+                "input": ["first text", "second text"],
+                "encoding_format": "float",
+            }
+
+            attrs = instrumentor._extract_embedding_attributes(None, [], kwargs)
+
+            self.assertEqual(attrs["gen_ai.system"], "cometapi")
+            self.assertEqual(attrs["gen_ai.request.model"], "text-embedding-3-small")
+            self.assertEqual(attrs["gen_ai.operation.name"], "embeddings")
+            self.assertEqual(attrs["gen_ai.request.type"], "embedding")
+            self.assertEqual(attrs["gen_ai.request.input_count"], 2)
+            self.assertEqual(attrs["gen_ai.request.encoding_format"], "float")
+
+    def test_embedding_items_valid_response(self):
+        with patch.dict("sys.modules", {"openai": MagicMock(), "anthropic": MagicMock()}):
+            instrumentor = CometAPIInstrumentor()
+
+            mock_item = MagicMock()
+            mock_item.embedding = [0.1, 0.2, 0.3]
+            mock_result = MagicMock()
+            mock_result.data = [mock_item]
+
+            items = instrumentor._embedding_items(mock_result)
+
+            self.assertEqual(items, [mock_item])
+
+    def test_embedding_items_non_embedding_response_returns_none(self):
+        """An Anthropic-style response (content blocks, no `.embedding`
+        attribute anywhere) must not be mistaken for an embedding response."""
+        with patch.dict("sys.modules", {"openai": MagicMock(), "anthropic": MagicMock()}):
+            instrumentor = CometAPIInstrumentor()
+
+            mock_result = SimpleNamespace(
+                content=[SimpleNamespace(text="hello")], stop_reason="end_turn"
+            )
+
+            self.assertIsNone(instrumentor._embedding_items(mock_result))
+            self.assertIsNone(instrumentor._embedding_items(MagicMock(data=None)))
+            self.assertIsNone(instrumentor._embedding_items(MagicMock(data=[])))
+
+    def test_extract_response_attributes_embedding_response(self):
+        with patch.dict("sys.modules", {"openai": MagicMock(), "anthropic": MagicMock()}):
+            instrumentor = CometAPIInstrumentor()
+
+            mock_item = MagicMock()
+            mock_item.embedding = [0.1, 0.2, 0.3, 0.4]
+            mock_result = MagicMock()
+            mock_result.id = "resp-1"
+            mock_result.model = "text-embedding-3-small"
+            mock_result.data = [mock_item, mock_item]
+            mock_result.choices = None
+            mock_result.stop_reason = None
+
+            attrs = instrumentor._extract_response_attributes(mock_result)
+
+            self.assertEqual(attrs["gen_ai.response.embedding_count"], 2)
+            self.assertEqual(attrs["gen_ai.response.vector_size"], 4)
+            self.assertNotIn("gen_ai.response.finish_reasons", attrs)
+
+    def test_add_content_events_routes_embeddings_to_embedding_content(self):
+        with patch.dict("sys.modules", {"openai": MagicMock(), "anthropic": MagicMock()}):
+            instrumentor = CometAPIInstrumentor()
+            instrumentor.config = OTelConfig(service_name="test")
+
+            mock_span = MagicMock()
+            mock_item = MagicMock()
+            mock_item.embedding = [0.1, 0.2]
+            mock_result = MagicMock()
+            mock_result.data = [mock_item]
+
+            instrumentor._add_content_events(
+                mock_span, mock_result, {"model": "text-embedding-3-small", "input": "hi"}
+            )
+
+            mock_span.set_attribute.assert_any_call(
+                "embedding.model_name", "text-embedding-3-small"
+            )
+            mock_span.set_attribute.assert_any_call("embedding.text", "hi")
+
+    def test_add_embedding_content_vector_capture(self):
+        with patch.dict("sys.modules", {"openai": MagicMock(), "anthropic": MagicMock()}):
+            instrumentor = CometAPIInstrumentor()
+            config = OTelConfig(service_name="test")
+            config.capture_embedding_vectors = True
+            instrumentor.config = config
+
+            mock_span = MagicMock()
+            mock_item = MagicMock()
+            mock_item.embedding = [0.1, 0.2, 0.3]
+            mock_result = MagicMock()
+            mock_result.data = [mock_item]
+
+            instrumentor._add_embedding_content(
+                mock_span, mock_result, {"model": "m", "input": "hi"}, config
+            )
+
+            mock_span.set_attribute.assert_any_call("embedding.vector.dimension", 3)
 
 
 if __name__ == "__main__":
