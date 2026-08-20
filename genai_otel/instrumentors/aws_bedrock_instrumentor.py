@@ -104,8 +104,23 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                 else:
                     body_dict = body
 
-                is_embedding = "embed" in str(model_id).lower() or any(
-                    key in body_dict for key in ("inputText", "texts", "inputs")
+                # "inputText" alone is not a reliable embedding signal: Titan Text
+                # generation requests use the same {"inputText": ...} body shape, and
+                # textGenerationConfig is optional there (defaults apply if omitted), so
+                # its absence can't be used to rule out a Titan Text call either. Titan
+                # Text and Titan Embed model IDs are unambiguous ("amazon.titan-text-*"
+                # vs "amazon.titan-embed-*"), so use the model family as the deciding
+                # signal for a bare inputText body instead.
+                model_id_lower = str(model_id).lower()
+                is_embedding = (
+                    "embed" in model_id_lower
+                    or any(key in body_dict for key in ("texts", "inputs"))
+                    or (
+                        "inputText" in body_dict
+                        and "titan-text" not in model_id_lower
+                        and "textGenerationConfig" not in body_dict
+                        and "messages" not in body_dict
+                    )
                 )
                 attrs["gen_ai.operation.name"] = "embeddings" if is_embedding else "chat"
                 attrs["gen_ai.request.type"] = "embedding" if is_embedding else "chat"

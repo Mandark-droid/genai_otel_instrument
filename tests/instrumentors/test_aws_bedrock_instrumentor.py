@@ -420,6 +420,50 @@ class TestAWSBedrockInstrumentor(unittest.TestCase):
         self.assertIn("gen_ai.request.first_message", attrs)
         self.assertIn("deep learning", attrs["gen_ai.request.first_message"])
 
+    def test_titan_text_generation_is_not_misclassified_as_embedding(self):
+        """A Titan Text chat call must stay classified as chat, not embeddings.
+
+        Titan Text and Titan Embed share the same {"inputText": ...} body shape,
+        so the model family (not the body keys) must decide the classification.
+        """
+        instrumentor = AWSBedrockInstrumentor()
+
+        body_data = {
+            "inputText": "What is deep learning?",
+            "textGenerationConfig": {"maxTokenCount": 100},
+        }
+        kwargs = {"modelId": "amazon.titan-text-express-v1", "body": json.dumps(body_data)}
+
+        attrs = instrumentor._extract_aws_bedrock_attributes(None, None, kwargs)
+
+        self.assertEqual(attrs["gen_ai.operation.name"], "chat")
+        self.assertEqual(attrs["gen_ai.request.type"], "chat")
+
+    def test_titan_text_generation_without_config_is_still_chat(self):
+        """textGenerationConfig is optional on Titan Text requests, so its absence
+        alone must not flip the call to embeddings either."""
+        instrumentor = AWSBedrockInstrumentor()
+
+        body_data = {"inputText": "What is deep learning?"}
+        kwargs = {"modelId": "amazon.titan-text-express-v1", "body": json.dumps(body_data)}
+
+        attrs = instrumentor._extract_aws_bedrock_attributes(None, None, kwargs)
+
+        self.assertEqual(attrs["gen_ai.operation.name"], "chat")
+        self.assertEqual(attrs["gen_ai.request.type"], "chat")
+
+    def test_titan_embed_is_classified_as_embedding(self):
+        """Titan Embed calls (same bare-inputText body shape) must stay embeddings."""
+        instrumentor = AWSBedrockInstrumentor()
+
+        body_data = {"inputText": "What is deep learning?"}
+        kwargs = {"modelId": "amazon.titan-embed-text-v1", "body": json.dumps(body_data)}
+
+        attrs = instrumentor._extract_aws_bedrock_attributes(None, None, kwargs)
+
+        self.assertEqual(attrs["gen_ai.operation.name"], "embeddings")
+        self.assertEqual(attrs["gen_ai.request.type"], "embedding")
+
     def test_evaluation_support_response_capture_with_content_list(self):
         """Test that response content is captured for evaluation support with Claude content format."""
         instrumentor = AWSBedrockInstrumentor()
