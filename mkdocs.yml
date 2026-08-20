@@ -95,4 +95,5 @@ nav:
     - Multimodal Proposal (OTel): proposals/otel_genai_multimodal_content_parts.md
   - Community:
     - Contributing: community/contributing.md
+    - Human and LLM agent contributions: community/agent-contributions.md
     - Changelog: community/changelog.md
