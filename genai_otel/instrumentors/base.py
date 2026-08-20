@@ -2260,6 +2260,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             value = request_kwargs.get(
                 "texts", request_kwargs.get("text", request_kwargs.get("prompt"))
             )
+        if isinstance(value, dict):
+            # Replicate's `run(model, input={...})` nests the actual text one
+            # level deeper than every other provider's flat `input=`/`texts=`
+            # kwarg, since `input` there is the whole model payload.
+            value = value.get("text") or value.get("texts") or value.get("prompt")
         if isinstance(value, (list, tuple)):
             value = value[0] if value else ""
         if value is None or not isinstance(value, str):

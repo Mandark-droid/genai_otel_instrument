@@ -207,3 +207,57 @@ class TestRAGEmbeddingAttributes:
 
         # Verify query was truncated to 500 chars
         assert len(query_call[0][1]) == 500
+
+
+class TestGenericEmbeddingContentCapture:
+    """Tests for _add_generic_embedding_content, the shared content-capture
+    fallback used by providers (e.g. Replicate) that don't set embedding.text
+    themselves. Replicate nests the text one level inside `input={...}`,
+    unlike every other provider's flat `input=`/`texts=` kwarg."""
+
+    def test_flat_input_string(self):
+        instrumentor = ConcreteInstrumentor()
+        instrumentor.config = OTelConfig(service_name="test")
+        mock_span = Mock()
+        mock_span.attributes = {"gen_ai.request.model": "text-embedding-3-small"}
+
+        instrumentor._add_generic_embedding_content(mock_span, {}, {"input": "hello world"})
+
+        mock_span.set_attribute.assert_any_call("embedding.text", "hello world")
+
+    def test_dict_input_with_nested_text(self):
+        """Replicate's `input={"text": "..."}` shape must be unwrapped."""
+        instrumentor = ConcreteInstrumentor()
+        instrumentor.config = OTelConfig(service_name="test")
+        mock_span = Mock()
+        mock_span.attributes = {"gen_ai.request.model": "nateraw/bge-large-en-v1.5"}
+
+        instrumentor._add_generic_embedding_content(
+            mock_span, [0.1, 0.2], {"input": {"text": "hello world"}}
+        )
+
+        mock_span.set_attribute.assert_any_call("embedding.text", "hello world")
+
+    def test_dict_input_with_nested_texts_list(self):
+        instrumentor = ConcreteInstrumentor()
+        instrumentor.config = OTelConfig(service_name="test")
+        mock_span = Mock()
+        mock_span.attributes = {"gen_ai.request.model": "nateraw/bge-large-en-v1.5"}
+
+        instrumentor._add_generic_embedding_content(
+            mock_span, [[0.1], [0.2]], {"input": {"texts": ["first", "second"]}}
+        )
+
+        mock_span.set_attribute.assert_any_call("embedding.text", "first")
+
+    def test_dict_input_without_recognizable_text_field_is_a_noop(self):
+        instrumentor = ConcreteInstrumentor()
+        instrumentor.config = OTelConfig(service_name="test")
+        mock_span = Mock()
+        mock_span.attributes = {"gen_ai.request.model": "some/model"}
+
+        instrumentor._add_generic_embedding_content(
+            mock_span, [0.1], {"input": {"seed": 42, "width": 512}}
+        )
+
+        mock_span.set_attribute.assert_not_called()

@@ -8,6 +8,7 @@ not token-based pricing. Cost tracking is not applicable as the pricing model
 is fundamentally different from token-based LLM APIs.
 """
 
+import contextvars
 import logging
 from typing import Any, Dict, Optional
 
@@ -15,6 +16,35 @@ from ..config import OTelConfig
 from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
+
+# Replicate model references are freeform "owner/repo" slugs with no naming
+# convention Replicate itself enforces, so "embed" alone misses real,
+# commonly-deployed embedding models (e.g. "nateraw/bge-large-en-v1.5" has no
+# "embed" substring at all). These additional markers are established
+# embedding-only model architecture families (BAAI BGE, intfloat E5, Alibaba
+# GTE, sentence-transformers MPNet/MiniLM) that aren't used for chat/generation,
+# so matching on them doesn't risk misclassifying a generation model the way a
+# broader guess (e.g. "text") would.
+_EMBEDDING_MODEL_MARKERS = (
+    "embed",
+    "bge-",
+    "e5-",
+    "gte-",
+    "mpnet-base",
+    "minilm",
+    "sentence-transformers",
+)
+
+# Replicate's `run()` is a single generic entry point for any model, so a
+# response shaped like a bare list of numbers is genuinely ambiguous - it
+# could be an embedding vector, audio samples, bounding boxes, or numeric
+# predictions. _extract_response_attributes() has no access to the request,
+# so this carries the classification decided in _extract_run_attributes()
+# across to it, scoped per call (thread/task) like base.py's own
+# _INNER_MEASUREMENT contextvar.
+_LAST_REQUEST_IS_EMBEDDING: contextvars.ContextVar = contextvars.ContextVar(
+    "genai_otel_replicate_is_embedding", default=False
+)
 
 
 class ReplicateInstrumentor(BaseInstrumentor):
@@ -75,9 +105,72 @@ class ReplicateInstrumentor(BaseInstrumentor):
 
         attrs["gen_ai.system"] = "replicate"
         attrs["gen_ai.request.model"] = model
-        attrs["gen_ai.operation.name"] = "run"
+
+        # Replicate's `run()` is a single generic entry point for any hosted
+        # model, so there's no dedicated embeddings method to hook the way
+        # other providers' SDKs offer. The model reference is the only
+        # available classification signal.
+        model_input = kwargs.get("input")
+        if model_input is None and len(args) > 1:
+            model_input = args[1]
+        model_lower = str(model).lower()
+        is_embedding = any(marker in model_lower for marker in _EMBEDDING_MODEL_MARKERS)
+        _LAST_REQUEST_IS_EMBEDDING.set(is_embedding)
+        if is_embedding:
+            attrs["gen_ai.operation.name"] = "embeddings"
+            attrs["gen_ai.request.type"] = "embedding"
+            attrs["gen_ai.request.input_count"] = self._count_inputs(model_input)
+        else:
+            attrs["gen_ai.operation.name"] = "run"
 
         return attrs
+
+    @staticmethod
+    def _count_inputs(model_input: Any) -> int:
+        """Count embedding inputs from a Replicate `input={...}` payload.
+
+        Replicate has no fixed input schema (it's per-model), so this only
+        recognizes the field names embedding models conventionally use.
+        """
+        if not isinstance(model_input, dict):
+            return 1 if model_input is not None else 0
+        for key in ("texts", "inputs"):
+            value = model_input.get(key)
+            if isinstance(value, (list, tuple)):
+                return len(value)
+        for key in ("text", "input", "prompt"):
+            if model_input.get(key) is not None:
+                return 1
+        return 0
+
+    def _extract_response_attributes(self, result) -> Dict[str, Any]:
+        """Extract embedding response shape for embedding model runs.
+
+        A Replicate embedding model's `run()` result is typically the raw
+        vector itself (a flat list of numbers) for a single input, or a list
+        of vectors for a batch - there's no wrapper object to introspect. Only
+        applies this interpretation when the request was itself classified as
+        an embedding call (see `_LAST_REQUEST_IS_EMBEDDING`); otherwise a
+        non-embedding model's list-shaped output (audio samples, bounding
+        boxes, numeric predictions, ...) would be mislabeled the same way.
+        """
+        if not _LAST_REQUEST_IS_EMBEDDING.get():
+            return {}
+        if not isinstance(result, (list, tuple)) or not result:
+            return {}
+        first = result[0]
+        if isinstance(first, (list, tuple)):
+            attrs: Dict[str, Any] = {"gen_ai.response.embedding_count": len(result)}
+            if first:
+                attrs["gen_ai.response.vector_size"] = len(first)
+            return attrs
+        if isinstance(first, (int, float)):
+            # A single flat vector, not a batch of them.
+            return {
+                "gen_ai.response.embedding_count": 1,
+                "gen_ai.response.vector_size": len(result),
+            }
+        return {}
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from Replicate response.
