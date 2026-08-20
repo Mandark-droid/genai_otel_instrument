@@ -2300,11 +2300,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         span.set_attribute("embedding.model_name", model)
         span.set_attribute("embedding.text", input_text[:500])  # Truncate to avoid large spans
 
-        if (
-            vector
-            and self.config
-            and getattr(self.config, "capture_embedding_vectors", False) is True
-        ):
+        if vector and self.config and getattr(self.config, "capture_embedding_vectors", False):
             # Only capture vectors if explicitly enabled (they can be very large)
             span.set_attribute("embedding.vector", json.dumps(vector))
             span.set_attribute("embedding.vector.dimension", len(vector))
