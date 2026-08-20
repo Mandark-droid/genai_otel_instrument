@@ -23,7 +23,33 @@ python examples/real_world/voice_rag_replay.py `
 ```
 
 The example does not claim to call an ASR, embedding, vector database, or LLM
-vendor. It validates the telemetry path with the actual application payloads
-while remaining runnable without paid credentials. A live deployment can
-replace the local adapters with its provider SDKs and retain the same span
-contract.
+vendor. It validates the telemetry path with the application payload shape
+while remaining runnable without paid credentials. The checked-in Chaos Lab
+WAV and corpus are deterministic lab fixtures, not production customer data.
+
+## TraceSense document OCR
+
+The companion replay covers the other multimodal workflow already implemented
+in the Chaos Lab: PDF/image ingestion and structured document extraction.
+
+```powershell
+python examples/real_world/document_ocr_replay.py `
+  --document D:/Projects/traceverse-chaos-lab/apps/tracesense/data/samples/documents/invoice_001.pdf `
+  --endpoint http://192.168.18.128:4318
+```
+
+The emitted OCR span must report `type=document` and
+`media_mime_type=application/pdf` for a PDF. An image input must report
+`type=image` and its image MIME type. Use `--no-export` for a local shape-only
+check. This replay validates file handling and telemetry; it does not claim
+that a provider-backed OCR model ran. For the provider-backed path, run the
+Chaos Lab's `apps/tracesense/tools/extract_document.py` with Ollama available.
+
+The broader application workflow is documented in the Chaos Lab's
+`apps/tracesense/agents/voice_retrieval_agent.py` and
+`apps/tracesense/tools/extract_document.py`: Voice RAG runs ASR → embedding →
+Qdrant retrieval → reranking → grounded answer → TTS, while OCR runs
+document bytes through multimodal extraction. The lab's `apps/traceinsure`
+document processor is a separate insurance workflow and currently uses
+simulated claim-field extraction, so it should not be presented as a live OCR
+provider trace.
