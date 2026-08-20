@@ -25,12 +25,17 @@ The checkout now implements and tests the concrete gaps described here:
 
 The remaining issue-23 follow-up is provider-specific HTTP instrumentation for applications that call
 an embedding service directly without an instrumented SDK; this release covers the SDK entry points
-owned by this repository. After the tag is published, the suggested comment below should be posted on
-#23 with the release link and the issue can be closed or split into that HTTP follow-up.
+owned by this repository. The implementation and validation are in
+[PR #25](https://github.com/Mandark-droid/genai_otel_instrument/pull/25), and the
+issue alignment comment has been posted on
+[#23](https://github.com/Mandark-droid/genai_otel_instrument/issues/23#issuecomment-5352281588).
+After the tag is published, update that comment with the release link and close
+the issue or split the remaining raw-HTTP follow-up.
 
 Each `##` section below is one GitHub issue. The `### Title` line goes in the title field; everything
-under it goes in the body. Nothing here has been filed — `gh` was not available in the session that
-produced this file.
+under it goes in the body. U1/#23 is an existing issue and its suggested
+alignment comment is already filed; the remaining sections are draft issue
+content unless marked otherwise.
 
 ---
 
