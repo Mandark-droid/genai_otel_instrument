@@ -1174,6 +1174,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 and self.config.enable_content_capture
             ):
                 self._add_content_events(span, result, request_kwargs or {})
+            if (
+                self.config
+                and self.config.enable_content_capture
+                and getattr(span, "attributes", {}).get("gen_ai.request.type") == "embedding"
+                and not getattr(span, "attributes", {}).get("embedding.text")
+            ):
+                self._add_generic_embedding_content(span, result, request_kwargs or {})
         except Exception as e:
             logger.warning("Failed to add content events for span '%s': %s", span.name, e)
 
@@ -2246,6 +2253,39 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         logger.debug("Streaming completed: %d chunks in %.3fs", timing.chunk_count, duration)
 
     # Phase 4.2: RAG/Embedding Helper Methods
+    def _add_generic_embedding_content(self, span, result, request_kwargs: dict):
+        """Capture bounded embedding text for providers without custom content hooks."""
+        value = request_kwargs.get("input")
+        if value is None:
+            value = request_kwargs.get(
+                "texts", request_kwargs.get("text", request_kwargs.get("prompt"))
+            )
+        if isinstance(value, (list, tuple)):
+            value = value[0] if value else ""
+        if value is None or not isinstance(value, str):
+            return
+        attributes = getattr(span, "attributes", {}) or {}
+        model = attributes.get("gen_ai.request.model", "unknown")
+        vector = None
+        try:
+            data = result.get("data") if isinstance(result, dict) else getattr(result, "data", None)
+            if data:
+                first = data[0]
+                vector = (
+                    first.get("embedding")
+                    if isinstance(first, dict)
+                    else getattr(first, "embedding", None)
+                )
+            if vector is None:
+                vector = (
+                    result.get("embedding")
+                    if isinstance(result, dict)
+                    else getattr(result, "embedding", None)
+                )
+        except (IndexError, AttributeError, TypeError):
+            vector = None
+        self.add_embedding_attributes(span, str(model), value, vector=vector)
+
     def add_embedding_attributes(
         self, span, model: str, input_text: str, vector: Optional[List[float]] = None
     ):
@@ -2260,7 +2300,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         span.set_attribute("embedding.model_name", model)
         span.set_attribute("embedding.text", input_text[:500])  # Truncate to avoid large spans
 
-        if vector and self.config and hasattr(self.config, "capture_embedding_vectors"):
+        if vector and self.config and getattr(self.config, "capture_embedding_vectors", False):
             # Only capture vectors if explicitly enabled (they can be very large)
             span.set_attribute("embedding.vector", json.dumps(vector))
             span.set_attribute("embedding.vector.dimension", len(vector))
@@ -2309,6 +2349,108 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     span.set_attribute(f"{prefix}.metadata.{safe_key}", safe_value)
 
         span.set_attribute("retrieval.document_count", len(documents))
+
+    def add_retrieval_quality_attributes(self, span, **kwargs):
+        """Add optional, additive quality signals to a retrieval span.
+
+        Supported keyword arguments are ``embedding_model``,
+        ``index_embedding_model``, ``embedding_dim``, ``score_floor``,
+        ``distance``, ``scores`` (an iterable of numeric result scores),
+        ``score_max``, ``score_min``, ``score_mean``, ``score_margin``,
+        ``corpus_version``, ``context_tokens_est``, ``context_truncated``,
+        and ``answer_refused``.  The helper never emits ``top_k`` or result
+        count; callers should continue using ``db.vector.top_k`` and
+        ``retrieval.document_count`` for those values.
+        """
+        embedding_model = kwargs.get("embedding_model")
+        index_embedding_model = kwargs.get("index_embedding_model")
+        if embedding_model is not None:
+            span.set_attribute("rag.embedding.model", str(embedding_model))
+        if index_embedding_model is not None:
+            span.set_attribute("rag.embedding.index_model", str(index_embedding_model))
+        if embedding_model is not None and index_embedding_model is not None:
+            span.set_attribute(
+                "rag.embedding.model_match", str(embedding_model) == str(index_embedding_model)
+            )
+
+        scalar_attributes = {
+            "embedding_dim": "rag.embedding.dim",
+            "score_floor": "rag.search.score_floor",
+            "distance": "rag.search.distance",
+            "score_max": "rag.result.score_max",
+            "score_min": "rag.result.score_min",
+            "score_mean": "rag.result.score_mean",
+            "score_margin": "rag.result.score_margin",
+            "corpus_version": "rag.corpus.version",
+            "context_tokens_est": "rag.context.tokens_est",
+            "context_truncated": "rag.context.truncated",
+            "answer_refused": "rag.answer.refused",
+        }
+        for argument, attribute in scalar_attributes.items():
+            value = kwargs.get(argument)
+            if value is None:
+                continue
+            if argument in {"embedding_dim", "context_tokens_est"}:
+                value = int(value)
+            elif argument in {
+                "score_floor",
+                "score_max",
+                "score_min",
+                "score_mean",
+                "score_margin",
+            }:
+                value = float(value)
+            elif argument in {"context_truncated", "answer_refused"}:
+                value = bool(value)
+            else:
+                value = str(value)
+            span.set_attribute(attribute, value)
+
+        scores = kwargs.get("scores")
+        if scores is not None:
+            try:
+                numeric_scores = [float(score) for score in scores]
+                if numeric_scores:
+                    derived = {
+                        "rag.result.score_max": max(numeric_scores),
+                        "rag.result.score_min": min(numeric_scores),
+                        "rag.result.score_mean": sum(numeric_scores) / len(numeric_scores),
+                    }
+                    if len(numeric_scores) >= 2:
+                        ordered = sorted(numeric_scores, reverse=True)
+                        derived["rag.result.score_margin"] = ordered[0] - ordered[1]
+                    explicit_arguments = {
+                        "rag.result.score_max": "score_max",
+                        "rag.result.score_min": "score_min",
+                        "rag.result.score_mean": "score_mean",
+                        "rag.result.score_margin": "score_margin",
+                    }
+                    for attribute, value in derived.items():
+                        if kwargs.get(explicit_arguments[attribute]) is None:
+                            span.set_attribute(attribute, value)
+            except (TypeError, ValueError):
+                logger.debug("Could not derive retrieval score statistics from %r", scores)
+
+    @staticmethod
+    def record_degradation(
+        span,
+        component: str,
+        from_value: str,
+        to_value: str,
+        reason: str,
+        recoverable: bool,
+    ):
+        """Record a non-error capability downgrade on an active span."""
+        span.add_event(
+            "gen_ai.degraded",
+            attributes={
+                "gen_ai.degraded.component": str(component),
+                "gen_ai.degraded.from": str(from_value),
+                "gen_ai.degraded.to": str(to_value),
+                "gen_ai.degraded.reason": str(reason),
+                "gen_ai.degraded.recoverable": bool(recoverable),
+            },
+        )
 
     @abstractmethod
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:

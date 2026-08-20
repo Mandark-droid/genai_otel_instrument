@@ -71,6 +71,19 @@ class CohereInstrumentor(BaseInstrumentor):
                 cohere.Client._genai_otel_cohere_instrumented = True
             except Exception:  # noqa: BLE001
                 pass
+
+            async_client = getattr(cohere, "AsyncClient", None)
+            if isinstance(async_client, type) and not getattr(
+                async_client, "_genai_otel_cohere_instrumented", False
+            ):
+                original_async_init = async_client.__init__
+
+                def wrapped_async_init(instance, *args, **kwargs):
+                    original_async_init(instance, *args, **kwargs)
+                    self._instrument_client(instance)
+
+                async_client.__init__ = wrapped_async_init
+                async_client._genai_otel_cohere_instrumented = True
             self._instrumented = True
             logger.info("Cohere instrumentation enabled")
 
@@ -81,15 +94,55 @@ class CohereInstrumentor(BaseInstrumentor):
 
     def _instrument_client(self, client):
         """Instrument Cohere client methods."""
-        original_generate = client.generate
+        original_generate = getattr(client, "generate", None)
 
-        # Wrap using create_span_wrapper
-        wrapped_generate = self.create_span_wrapper(
-            span_name="cohere.generate",
-            extract_attributes=self._extract_generate_attributes,
-        )(original_generate)
+        if callable(original_generate):
+            # Wrap using create_span_wrapper
+            wrapped_generate = self.create_span_wrapper(
+                span_name="cohere.generate",
+                extract_attributes=self._extract_generate_attributes,
+            )(original_generate)
 
-        client.generate = wrapped_generate
+            client.generate = wrapped_generate
+
+        # Cohere's RAG API is exposed as Client.embed in current SDKs. Keep
+        # this on the existing provider instrumentor so the optional extra and
+        # idempotency guard remain unchanged.
+        original_embed = getattr(client, "embed", None)
+        if callable(original_embed):
+            client.embed = self.create_span_wrapper(
+                span_name="cohere.embeddings",
+                extract_attributes=self._extract_embedding_attributes,
+            )(original_embed)
+
+    @staticmethod
+    def _count_embedding_inputs(value: Any) -> int:
+        """Count text inputs without treating token/id vectors as a batch."""
+        if isinstance(value, str):
+            return 1
+        if isinstance(value, (list, tuple)):
+            if not value:
+                return 0
+            if all(isinstance(item, int) for item in value):
+                return 1
+            return len(value)
+        return 1 if value is not None else 0
+
+    def _extract_embedding_attributes(
+        self, instance: Any, args: Any, kwargs: Any
+    ) -> Dict[str, Any]:
+        """Extract canonical attributes from ``CohereClient.embed``."""
+        model = kwargs.get("model") or (args[0] if args and isinstance(args[0], str) else "unknown")
+        texts = kwargs.get("texts", kwargs.get("text"))
+        if texts is None and len(args) > 1:
+            texts = args[1]
+        return {
+            "gen_ai.system": "cohere",
+            "gen_ai.request.model": str(model),
+            "gen_ai.operation.name": "embeddings",
+            "gen_ai.request.type": "embedding",
+            "gen_ai.request.input_count": self._count_embedding_inputs(texts),
+        }
 
     def _extract_generate_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Cohere generate call.
@@ -190,5 +243,26 @@ class CohereInstrumentor(BaseInstrumentor):
                         )
         except (IndexError, AttributeError) as e:
             logger.debug("Failed to extract response content: %s", e)
+
+        vectors = None
+        try:
+            embeddings = getattr(result, "embeddings", None)
+            if embeddings is None and isinstance(result, dict):
+                embeddings = result.get("embeddings")
+            if hasattr(embeddings, "float"):
+                embeddings = embeddings.float
+            if embeddings is not None:
+                vectors = embeddings
+            elif hasattr(result, "embedding"):
+                vectors = [result.embedding]
+            elif isinstance(result, dict) and result.get("embedding") is not None:
+                vectors = [result["embedding"]]
+            if vectors is not None:
+                vectors = list(vectors)
+                attrs["gen_ai.response.embedding_count"] = len(vectors)
+                if vectors and isinstance(vectors[0], (list, tuple)):
+                    attrs["gen_ai.response.vector_size"] = len(vectors[0])
+        except (TypeError, AttributeError, ValueError) as e:
+            logger.debug("Failed to extract Cohere embedding response: %s", e)
 
         return attrs

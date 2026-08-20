@@ -146,6 +146,26 @@ class GoogleAIInstrumentor(BaseInstrumentor):
                     span_name="google.genai.models.generate_content",
                     extract_attributes=self._extract_google_ai_attributes_new_sdk,
                 )(original_generate)
+            if hasattr(client.models, "embed_content"):
+                original_embed = client.models.embed_content
+                client.models.embed_content = self.create_span_wrapper(
+                    span_name="google.genai.models.embeddings",
+                    extract_attributes=self._extract_google_embedding_attributes_new_sdk,
+                )(original_embed)
+
+        # google-genai also exposes async methods under client.aio.models.
+        aio_models = getattr(getattr(client, "aio", None), "models", None)
+        if aio_models is not None:
+            if callable(getattr(aio_models, "generate_content", None)):
+                aio_models.generate_content = self.create_span_wrapper(
+                    span_name="google.genai.aio.models.generate_content",
+                    extract_attributes=self._extract_google_ai_attributes_new_sdk,
+                )(aio_models.generate_content)
+            if callable(getattr(aio_models, "embed_content", None)):
+                aio_models.embed_content = self.create_span_wrapper(
+                    span_name="google.genai.aio.models.embeddings",
+                    extract_attributes=self._extract_google_embedding_attributes_new_sdk,
+                )(aio_models.embed_content)
 
     def _instrument_legacy_sdk(self):
         """Instrument the legacy google-generativeai SDK."""
@@ -164,6 +184,13 @@ class GoogleAIInstrumentor(BaseInstrumentor):
                     span_name="google.generativeai.generate_content",
                     extract_attributes=self._extract_google_ai_attributes,
                 )(original_generate)
+
+        if hasattr(genai, "embed_content"):
+            original_embed = genai.embed_content
+            genai.embed_content = self.create_span_wrapper(
+                span_name="google.generativeai.embeddings",
+                extract_attributes=self._extract_google_embedding_attributes,
+            )(original_embed)
 
         try:
             genai._genai_otel_google_instrumented = True
@@ -242,6 +269,58 @@ class GoogleAIInstrumentor(BaseInstrumentor):
 
         return attrs
 
+    @staticmethod
+    def _count_embedding_inputs(value: Any) -> int:
+        if isinstance(value, str):
+            return 1
+        if isinstance(value, (list, tuple)):
+            if not value:
+                return 0
+            if all(isinstance(item, int) for item in value):
+                return 1
+            return len(value)
+        return 1 if value is not None else 0
+
+    def _extract_google_embedding_attributes(
+        self, instance: Any, args: Any, kwargs: Any
+    ) -> Dict[str, Any]:
+        """Extract attributes from legacy ``google.generativeai.embed_content``."""
+        model = kwargs.get("model") or (args[0] if args else "unknown")
+        content = kwargs.get("content")
+        if content is None and len(args) > 1:
+            content = args[1]
+        return {
+            "gen_ai.system": "google",
+            "gen_ai.request.model": str(model),
+            "gen_ai.operation.name": "embeddings",
+            "gen_ai.request.type": "embedding",
+            "gen_ai.request.input_count": self._count_embedding_inputs(content),
+        }
+
+    def _extract_embedding_attributes(
+        self, instance: Any, args: Any, kwargs: Any
+    ) -> Dict[str, Any]:
+        """Expose the provider-neutral embedding extractor contract."""
+        if "contents" in kwargs:
+            return self._extract_google_embedding_attributes_new_sdk(instance, args, kwargs)
+        return self._extract_google_embedding_attributes(instance, args, kwargs)
+
+    def _extract_google_embedding_attributes_new_sdk(
+        self, instance: Any, args: Any, kwargs: Any
+    ) -> Dict[str, Any]:
+        """Extract attributes from the new ``google-genai`` embed API."""
+        model = kwargs.get("model", "unknown")
+        content = kwargs.get("contents", kwargs.get("content"))
+        if content is None and args:
+            content = args[0]
+        return {
+            "gen_ai.system": "google",
+            "gen_ai.request.model": str(model),
+            "gen_ai.operation.name": "embeddings",
+            "gen_ai.request.type": "embedding",
+            "gen_ai.request.input_count": self._count_embedding_inputs(content),
+        }
+
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from Google AI response.
 
@@ -312,6 +391,24 @@ class GoogleAIInstrumentor(BaseInstrumentor):
                         category = getattr(rating, "category", "unknown")
                         probability = getattr(rating, "probability", "unknown")
                         attrs[f"gen_ai.safety.{category}"] = str(probability)
+
+        vectors = None
+        try:
+            if isinstance(result, dict):
+                vectors = result.get("embeddings")
+                if vectors is None and result.get("embedding") is not None:
+                    vectors = [result["embedding"]]
+            else:
+                vectors = getattr(result, "embeddings", None)
+                if vectors is None and hasattr(result, "embedding"):
+                    vectors = [result.embedding]
+            if vectors is not None:
+                vectors = list(vectors)
+                attrs["gen_ai.response.embedding_count"] = len(vectors)
+                if vectors and isinstance(vectors[0], (list, tuple)):
+                    attrs["gen_ai.response.vector_size"] = len(vectors[0])
+        except (TypeError, AttributeError, ValueError) as e:
+            logger.debug("Failed to extract Google embedding response: %s", e)
 
         return attrs
 

@@ -104,6 +104,36 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                 else:
                     body_dict = body
 
+                # "inputText" alone is not a reliable embedding signal: Titan Text
+                # generation requests use the same {"inputText": ...} body shape, and
+                # textGenerationConfig is optional there (defaults apply if omitted), so
+                # its absence can't be used to rule out a Titan Text call either. Titan
+                # Text and Titan Embed model IDs are unambiguous ("amazon.titan-text-*"
+                # vs "amazon.titan-embed-*"), so use the model family as the deciding
+                # signal for a bare inputText body instead.
+                model_id_lower = str(model_id).lower()
+                is_embedding = (
+                    "embed" in model_id_lower
+                    or any(key in body_dict for key in ("texts", "inputs"))
+                    or (
+                        "inputText" in body_dict
+                        and "titan-text" not in model_id_lower
+                        and "textGenerationConfig" not in body_dict
+                        and "messages" not in body_dict
+                    )
+                )
+                attrs["gen_ai.operation.name"] = "embeddings" if is_embedding else "chat"
+                attrs["gen_ai.request.type"] = "embedding" if is_embedding else "chat"
+                if is_embedding:
+                    values = body_dict.get(
+                        "texts", body_dict.get("inputs", body_dict.get("inputText"))
+                    )
+                    if isinstance(values, (list, tuple)):
+                        count = len(values)
+                    else:
+                        count = 1 if values is not None else 0
+                    attrs["gen_ai.request.input_count"] = count
+
                 # Extract content based on model family
                 # Claude format: messages array
                 if "messages" in body_dict and body_dict["messages"]:
@@ -139,18 +169,23 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                     body = json.loads(body_str)
                     if "usage" in body and isinstance(body["usage"], dict):
                         usage = body["usage"]
+                        input_tokens = usage.get("inputTokens", 0)
+                        output_tokens = usage.get("outputTokens", 0)
                         return {
-                            "prompt_tokens": getattr(usage, "inputTokens", 0),
-                            "completion_tokens": getattr(usage, "outputTokens", 0),
-                            "total_tokens": getattr(usage, "inputTokens", 0)
-                            + getattr(usage, "outputTokens", 0),
+                            "prompt_tokens": input_tokens,
+                            "completion_tokens": output_tokens,
+                            "total_tokens": input_tokens + output_tokens,
                         }
                     elif "usageMetadata" in body and isinstance(body["usageMetadata"], dict):
                         usage = body["usageMetadata"]
+                        input_tokens = usage.get("promptTokenCount", 0)
+                        output_tokens = usage.get("candidatesTokenCount", 0)
                         return {
-                            "prompt_tokens": getattr(usage, "promptTokenCount", 0),
-                            "completion_tokens": getattr(usage, "candidatesTokenCount", 0),
-                            "total_tokens": getattr(usage, "totalTokenCount", 0),
+                            "prompt_tokens": input_tokens,
+                            "completion_tokens": output_tokens,
+                            "total_tokens": usage.get(
+                                "totalTokenCount", input_tokens + output_tokens
+                            ),
                         }
                 except json.JSONDecodeError:
                     logger.debug("Failed to parse Bedrock response body as JSON.")
@@ -211,6 +246,15 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                         first_result = body["results"][0]
                         if isinstance(first_result, dict) and "outputText" in first_result:
                             attrs["gen_ai.response"] = first_result["outputText"]
+
+                    vectors = body.get("embeddings")
+                    if vectors is None and body.get("embedding") is not None:
+                        vectors = [body["embedding"]]
+                    if vectors is not None:
+                        vectors = list(vectors)
+                        attrs["gen_ai.response.embedding_count"] = len(vectors)
+                        if vectors and isinstance(vectors[0], (list, tuple)):
+                            attrs["gen_ai.response.vector_size"] = len(vectors[0])
         except (json.JSONDecodeError, AttributeError, KeyError, IndexError) as e:
             logger.debug("Failed to extract response content: %s", e)
 
