@@ -45,9 +45,13 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
 
-  # Secret scanning - block hardcoded API keys/tokens/credentials pre-commit.
-  # gitleaks scans the staged diff and needs no baseline file to run. Keep `rev`
-  # current; SHA-pinning the rev is preferred for a fully reproducible hook.
+  # Secret scanning - block hardcoded API keys/tokens/credentials pre-commit,
+  # plus personal filesystem paths (see .gitleaks.toml's local-filesystem-path
+  # rule - a private lab directory name and a Windows username both leaked
+  # into commits before this was added). gitleaks scans the staged diff and
+  # auto-discovers .gitleaks.toml from the repo root; needs no baseline file
+  # to run. Keep `rev` current; SHA-pinning the rev is preferred for a fully
+  # reproducible hook.
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.4
     hooks:

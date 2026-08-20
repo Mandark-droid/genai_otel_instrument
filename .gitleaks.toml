@@ -1,0 +1,36 @@
+title = "genai-otel-instrument gitleaks config"
+
+# Keep gitleaks' built-in secret/credential rules (API keys, tokens, etc.)
+# and add project-specific rules on top of them.
+[extend]
+useDefault = true
+
+# Personal machine filesystem paths have leaked into commits before (a
+# private lab project's directory name, a Windows username, a non-system
+# drive letter) via example commands, default env-var values, and
+# accidentally-committed pytest output. None of that belongs in a public
+# repo. This rule blocks it at commit time rather than relying on catching
+# it in review.
+[[rules]]
+id = "local-filesystem-path"
+description = "Personal local filesystem path (reveals machine/user directory structure)"
+# Three patterns, alternated:
+#  1. Any Windows drive letter other than C: (C: is near-universal/generic
+#     on Windows - C:\Windows, C:\Python312, C:\Program Files - and rarely
+#     personal; D:, E:, H:, ... are much more likely to be a personal
+#     secondary drive naming a real local project).
+#  2. A Windows user home directory (C:\Users\<name>\...), which reveals the
+#     actual Windows username regardless of drive letter.
+#  3. A Unix/macOS home directory (/home/<user>/... or /Users/<user>/...).
+regex = '''(?i)\b[d-z]:[\\/][A-Za-z][\w .\\/-]{2,80}|[A-Za-z]:[\\/]Users[\\/][A-Za-z0-9_.-]+|/home/[a-z][\w-]{1,32}/|/Users/[A-Za-z0-9_.-]+/'''
+
+[allowlist]
+regexes = [
+  # Well-known generic system paths that legitimately show up in examples,
+  # tracebacks, and docs - not personal or identifying.
+  '''(?i)C:\\Windows''',
+  '''(?i)C:\\Program Files''',
+  '''(?i)C:\\Python\d*''',
+  '''(?i)/home/runner/''',      # GitHub Actions runner (CI logs/examples)
+  '''(?i)/home/user/''',        # generic placeholder used in some docs
+]
