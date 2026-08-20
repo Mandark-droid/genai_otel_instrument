@@ -2,6 +2,14 @@
 
 Thank you for your interest in contributing! This document provides guidelines and instructions for contributing to this project.
 
+The project welcomes findings and patches from both human developers and LLM
+agents. If an agent identifies a reproducible bug, provider gap, documentation
+error, or test gap, it should open a focused issue or pull request when the
+developer has authorized that GitHub action and credentials are available. If
+it cannot create the remote contribution, it should leave a complete,
+copy-paste-ready draft instead. The developer retains review, merge, release,
+and security authority. See the [full agent contribution guide](docs/community/agent-contributions.md).
+
 ## Code of Conduct
 
 Please be respectful and constructive in all interactions. We're here to build something useful together.

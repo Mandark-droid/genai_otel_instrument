@@ -2,6 +2,22 @@
 
 Contributions are welcome. Here's how to get started.
 
+## Contributions from humans and LLM agents
+
+If you or an LLM agent finds a reproducible bug, provider gap, documentation
+error, or test shortcoming, please turn it into a maintainer-actionable issue
+or focused pull request. Search first for duplicates and include the affected
+version or commit, reproduction, expected versus observed behavior, exact
+file/symbol references, validation results, and known limitations.
+
+Use an issue when the fix needs discussion or cannot yet be safely validated;
+use a PR when the fix is implemented with tests and documentation. An agent
+must have explicit authorization and working GitHub access before creating an
+issue or PR. Otherwise it should provide a complete copy-paste-ready draft and
+must not claim that a remote issue, PR, release, or deployment exists.
+
+See the full [human and LLM agent contribution guide](agent-contributions.md).
+
 ## Development Setup
 
 ```bash
