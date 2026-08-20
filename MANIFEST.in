@@ -9,3 +9,11 @@ exclude tests/__pycache__
 exclude genai_otel/__pycache__
 global-exclude *.pyc
 global-exclude __pycache__
+
+# setuptools_scm's file-finder adds every git-tracked file to the sdist by
+# default, overriding the minimal `include` list above rather than being
+# limited by it. `exclude`/`prune` are the only directives that win against
+# that: internal planning docs and IDE config have no reason to ship, and
+# have accidentally ended up in past sdists as a result.
+exclude UPSTREAM_ISSUES_DRAFT.md
+prune .idea
