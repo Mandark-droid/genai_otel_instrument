@@ -62,6 +62,7 @@ try:
         AutoGenAgentChatInstrumentor,
         AutoGenInstrumentor,
         AWSBedrockInstrumentor,
+        AzureAIInferenceInstrumentor,
         AzureOpenAIInstrumentor,
         BedrockAgentsInstrumentor,
         CohereInstrumentor,
@@ -80,6 +81,7 @@ try:
         LangChainInstrumentor,
         LangGraphInstrumentor,
         LiteLLMLatencyInstrumentor,
+        LiquidAudioInstrumentor,
         LlamaIndexInstrumentor,
         MistralAIInstrumentor,
         OllamaInstrumentor,
@@ -90,6 +92,7 @@ try:
         ReplicateInstrumentor,
         SambaNovaInstrumentor,
         SarvamAIInstrumentor,
+        SentenceTransformersInstrumentor,
         TogetherAIInstrumentor,
         VertexAIInstrumentor,
     )
@@ -101,6 +104,7 @@ except ImportError:
         AutoGenAgentChatInstrumentor,
         AutoGenInstrumentor,
         AWSBedrockInstrumentor,
+        AzureAIInferenceInstrumentor,
         AzureOpenAIInstrumentor,
         BedrockAgentsInstrumentor,
         CohereInstrumentor,
@@ -119,6 +123,7 @@ except ImportError:
         LangChainInstrumentor,
         LangGraphInstrumentor,
         LiteLLMLatencyInstrumentor,
+        LiquidAudioInstrumentor,
         LlamaIndexInstrumentor,
         MistralAIInstrumentor,
         OllamaInstrumentor,
@@ -129,6 +134,7 @@ except ImportError:
         ReplicateInstrumentor,
         SambaNovaInstrumentor,
         SarvamAIInstrumentor,
+        SentenceTransformersInstrumentor,
         TogetherAIInstrumentor,
         VertexAIInstrumentor,
     )
@@ -192,6 +198,7 @@ INSTRUMENTORS = {
     "google.generativeai": GoogleAIInstrumentor,
     "google_adk": GoogleADKInstrumentor,  # Google Agent Development Kit
     "boto3": AWSBedrockInstrumentor,
+    "azure.ai.inference": AzureAIInferenceInstrumentor,
     "azure.ai.openai": AzureOpenAIInstrumentor,
     "autogen": AutoGenInstrumentor,  # AutoGen multi-agent framework (legacy)
     "autogen_agentchat": AutoGenAgentChatInstrumentor,  # AutoGen AgentChat v0.4+
@@ -221,6 +228,8 @@ INSTRUMENTORS = {
     "llama_index": LlamaIndexInstrumentor,
     "pydantic_ai": PydanticAIInstrumentor,  # Pydantic AI type-safe agent framework
     "transformers": HuggingFaceInstrumentor,
+    "sentence_transformers": SentenceTransformersInstrumentor,
+    "liquid_audio": LiquidAudioInstrumentor,
     # MCP client attribution (mcp.* / commerce.* semantic conventions). Opt-in
     # rather than default: it is most useful with a tool schema map attached,
     # which only the application can supply. See genai_otel.mcp_semconv.

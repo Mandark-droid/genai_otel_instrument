@@ -77,6 +77,8 @@ nav:
     - Demo App: guides/demo-app.md
   - Guides:
     - LLM Providers: guides/llm-providers.md
+    - Retrieval Quality: guides/retrieval-quality.md
+    - Speech telemetry: guides/speech.md
     - Multi-Agent Frameworks: guides/multi-agent-frameworks.md
     - MCP Tools: guides/mcp-tools.md
     - Cost Tracking: guides/cost-tracking.md

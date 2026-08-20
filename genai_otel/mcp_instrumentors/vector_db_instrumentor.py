@@ -24,9 +24,17 @@ back-compat:
                               concept; this library is the reference implementation
                               for a proposed addition to
                               `open-telemetry/semantic-conventions-genai`.
+- `rag.result.score_*`       — optional score distribution derived from a
+                              response when the backend returns numeric scores.
+
+Qdrant coverage includes both `QdrantClient` and `AsyncQdrantClient` for
+`query_points`, with the legacy `search` method used when `query_points` is not
+available. Retrieval quality attributes are additive; callers may continue to
+use `retrieval.*` and `db.vector.*`.
 """
 
 import logging
+from numbers import Real
 from typing import Any, Dict, Optional
 
 import wrapt
@@ -163,6 +171,7 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
             ) as span:
                 try:
                     result = wrapped(*args, **kwargs)
+                    self._set_score_attributes(span, self._extract_scores(result))
                     span.set_status(Status(StatusCode.OK))
                     return result
                 except Exception as e:
@@ -184,6 +193,7 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
             ) as span:
                 try:
                     result = original_method(*args, **kwargs)
+                    self._set_score_attributes(span, self._extract_scores(result))
                     span.set_status(Status(StatusCode.OK))
                     return result
                 except Exception as e:
@@ -204,6 +214,7 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     span.set_attribute("db.system", "weaviate")
                     span.set_attribute("db.operation", "query")
                     result = wrapped(*args, **kwargs)
+                    self._set_score_attributes(span, self._extract_scores(result))
                     return result
 
             weaviate.Client.query = wrapped_query(weaviate.Client.query)  # pylint: disable=E1120
@@ -222,20 +233,36 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
             instrumented = False
             has_query_points = hasattr(qdrant_client.QdrantClient, "query_points")
 
+            def set_score_attributes(span, result):
+                scores = self._extract_scores(result)
+                if not scores:
+                    return
+                span.set_attribute("rag.result.score_max", max(scores))
+                span.set_attribute("rag.result.score_min", min(scores))
+                span.set_attribute("rag.result.score_mean", sum(scores) / len(scores))
+                if len(scores) >= 2:
+                    ordered = sorted(scores, reverse=True)
+                    span.set_attribute("rag.result.score_margin", ordered[0] - ordered[1])
+
+            def set_qdrant_request_attributes(span, operation, args, kwargs):
+                span.set_attribute("db.system", "qdrant")
+                span.set_attribute("db.operation", operation)
+                collection = kwargs.get("collection_name", args[0] if args else "unknown")
+                span.set_attribute("vector.collection", collection)
+                span.set_attribute("db.collection.name", collection)
+                limit = kwargs.get("limit", 10)
+                span.set_attribute("vector.limit", limit)
+                span.set_attribute("db.vector.top_k", limit)
+
             # New API (qdrant-client 1.10+): query_points replaces search
             if has_query_points:
 
                 def wrapped_query_points(wrapped, instance, args, kwargs):
                     with tracer.start_as_current_span("qdrant.query_points") as span:
-                        span.set_attribute("db.system", "qdrant")
-                        span.set_attribute("db.operation", "query_points")
-                        collection = kwargs.get("collection_name", args[0] if args else "unknown")
-                        span.set_attribute("vector.collection", collection)
-                        span.set_attribute("db.collection.name", collection)
-                        limit = kwargs.get("limit", 10)
-                        span.set_attribute("vector.limit", limit)
-                        span.set_attribute("db.vector.top_k", limit)
-                        return wrapped(*args, **kwargs)
+                        set_qdrant_request_attributes(span, "query_points", args, kwargs)
+                        result = wrapped(*args, **kwargs)
+                        set_score_attributes(span, result)
+                        return result
 
                 try:
                     wrapt.wrap_function_wrapper(
@@ -252,15 +279,10 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
 
                 def wrapped_search(wrapped, instance, args, kwargs):
                     with tracer.start_as_current_span("qdrant.search") as span:
-                        span.set_attribute("db.system", "qdrant")
-                        span.set_attribute("db.operation", "search")
-                        collection = kwargs.get("collection_name", args[0] if args else "unknown")
-                        span.set_attribute("vector.collection", collection)
-                        span.set_attribute("db.collection.name", collection)
-                        limit = kwargs.get("limit", 10)
-                        span.set_attribute("vector.limit", limit)
-                        span.set_attribute("db.vector.top_k", limit)
-                        return wrapped(*args, **kwargs)
+                        set_qdrant_request_attributes(span, "search", args, kwargs)
+                        result = wrapped(*args, **kwargs)
+                        set_score_attributes(span, result)
+                        return result
 
                 try:
                     wrapt.wrap_function_wrapper(
@@ -269,6 +291,43 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     instrumented = True
                 except (AttributeError, ImportError) as e:
                     logger.debug("Failed to wrap QdrantClient.search: %s", e)
+
+            async_client = getattr(qdrant_client, "AsyncQdrantClient", None)
+            if async_client is not None:
+                if hasattr(async_client, "query_points"):
+
+                    async def wrapped_async_query_points(wrapped, instance, args, kwargs):
+                        with tracer.start_as_current_span("qdrant.query_points") as span:
+                            set_qdrant_request_attributes(span, "query_points", args, kwargs)
+                            result = await wrapped(*args, **kwargs)
+                            set_score_attributes(span, result)
+                            return result
+
+                    try:
+                        wrapt.wrap_function_wrapper(
+                            "qdrant_client",
+                            "AsyncQdrantClient.query_points",
+                            wrapped_async_query_points,
+                        )
+                        instrumented = True
+                    except (AttributeError, ImportError) as e:
+                        logger.debug("Failed to wrap AsyncQdrantClient.query_points: %s", e)
+                elif hasattr(async_client, "search"):
+
+                    async def wrapped_async_search(wrapped, instance, args, kwargs):
+                        with tracer.start_as_current_span("qdrant.search") as span:
+                            set_qdrant_request_attributes(span, "search", args, kwargs)
+                            result = await wrapped(*args, **kwargs)
+                            set_score_attributes(span, result)
+                            return result
+
+                    try:
+                        wrapt.wrap_function_wrapper(
+                            "qdrant_client", "AsyncQdrantClient.search", wrapped_async_search
+                        )
+                        instrumented = True
+                    except (AttributeError, ImportError) as e:
+                        logger.debug("Failed to wrap AsyncQdrantClient.search: %s", e)
 
             if instrumented:
                 logger.info("Qdrant instrumentation enabled")
@@ -297,7 +356,9 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     n_results = kwargs.get("n_results", 10)
                     span.set_attribute("vector.n_results", n_results)
                     span.set_attribute("db.vector.top_k", n_results)
-                    return wrapped(*args, **kwargs)
+                    result = wrapped(*args, **kwargs)
+                    self._set_score_attributes(span, self._extract_scores(result))
+                    return result
 
             wrapt.wrap_function_wrapper("chromadb", "Collection.query", wrapped_query)
             logger.info("ChromaDB instrumentation enabled")
@@ -305,6 +366,57 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
 
         except ImportError:
             return False
+
+    @staticmethod
+    def _extract_scores(result):
+        """Extract numeric similarity scores from common vector responses."""
+        if result is None:
+            return []
+        if isinstance(result, Real):
+            return [float(result)]
+        if isinstance(result, dict):
+            for key in ("scores", "distances", "matches", "points", "results"):
+                if key in result:
+                    return VectorDBInstrumentor._extract_scores(result[key])
+            if "score" in result:
+                try:
+                    return [float(result["score"])]
+                except (TypeError, ValueError):
+                    return []
+            return []
+        if isinstance(result, (list, tuple)):
+            scores = []
+            for item in result:
+                scores.extend(VectorDBInstrumentor._extract_scores(item))
+            return scores
+        if result.__class__.__module__.startswith("numpy"):
+            try:
+                return VectorDBInstrumentor._extract_scores(result.tolist())
+            except (AttributeError, TypeError, ValueError):
+                return []
+        for attribute in ("score", "distance"):
+            value = getattr(result, attribute, None)
+            if value is not None:
+                try:
+                    return [float(value)]
+                except (TypeError, ValueError):
+                    return []
+        for attribute in ("points", "matches", "results", "distances"):
+            value = getattr(result, attribute, None)
+            if value is not None:
+                return VectorDBInstrumentor._extract_scores(value)
+        return []
+
+    @staticmethod
+    def _set_score_attributes(span, scores):
+        if not scores:
+            return
+        span.set_attribute("rag.result.score_max", max(scores))
+        span.set_attribute("rag.result.score_min", min(scores))
+        span.set_attribute("rag.result.score_mean", sum(scores) / len(scores))
+        if len(scores) >= 2:
+            ordered = sorted(scores, reverse=True)
+            span.set_attribute("rag.result.score_margin", ordered[0] - ordered[1])
 
     def _instrument_milvus(self):
         """Instrument Milvus"""
@@ -321,7 +433,9 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     limit = kwargs.get("limit", 10)
                     span.set_attribute("vector.limit", limit)
                     span.set_attribute("db.vector.top_k", limit)
-                    return wrapped(*args, **kwargs)
+                    result = wrapped(*args, **kwargs)
+                    self._set_score_attributes(span, self._extract_scores(result))
+                    return result
 
             wrapt.wrap_function_wrapper("pymilvus", "Collection.search", wrapped_search)
             logger.info("Milvus instrumentation enabled")
@@ -342,7 +456,10 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     k = args[1] if len(args) > 1 else kwargs.get("k", 10)
                     span.set_attribute("vector.k", k)
                     span.set_attribute("db.vector.top_k", k)
-                    return wrapped(*args, **kwargs)
+                    result = wrapped(*args, **kwargs)
+                    score_result = result[0] if isinstance(result, tuple) and result else result
+                    self._set_score_attributes(span, self._extract_scores(score_result))
+                    return result
 
             wrapt.wrap_function_wrapper("faiss", "Index.search", wrapped_search)
             logger.info("FAISS instrumentation enabled")
@@ -365,7 +482,9 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     if instance and hasattr(instance, "name"):
                         span.set_attribute("vector.table", instance.name)
                         span.set_attribute("db.collection.name", instance.name)
-                    return wrapped(*args, **kwargs)
+                    result = wrapped(*args, **kwargs)
+                    self._set_score_attributes(span, self._extract_scores(result))
+                    return result
 
             def wrapped_add(wrapped, instance, args, kwargs):
                 with tracer.start_as_current_span("lancedb.add") as span:

@@ -83,11 +83,16 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
             instrumentor.instrument(config)
 
             # Verify create_span_wrapper was called
-            instrumentor.create_span_wrapper.assert_called_once()
-            call_kwargs = instrumentor.create_span_wrapper.call_args[1]
-            self.assertEqual(call_kwargs["span_name"], "google.generativeai.generate_content")
+            self.assertEqual(instrumentor.create_span_wrapper.call_count, 2)
+            calls = instrumentor.create_span_wrapper.call_args_list
+            self.assertEqual(calls[0].kwargs["span_name"], "google.generativeai.generate_content")
             self.assertEqual(
-                call_kwargs["extract_attributes"], instrumentor._extract_google_ai_attributes
+                calls[0].kwargs["extract_attributes"], instrumentor._extract_google_ai_attributes
+            )
+            self.assertEqual(calls[1].kwargs["span_name"], "google.generativeai.embeddings")
+            self.assertEqual(
+                calls[1].kwargs["extract_attributes"],
+                instrumentor._extract_google_embedding_attributes,
             )
 
             # Verify generate_content was replaced

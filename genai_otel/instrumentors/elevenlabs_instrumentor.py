@@ -176,7 +176,7 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
         if stt is not None and hasattr(stt, "convert"):
             self._wrap_stt(stt, is_async)
 
-    def _tts_span_setup(self, span, args, kwargs):
+    def _tts_span_setup(self, span, args, kwargs, streamed: bool = False):
         """Populate a text-to-speech span and return ``(model, character count)``."""
         model = str(_arg(kwargs, args, "model_id", 6, DEFAULT_TTS_MODEL))
         voice_id = _arg(kwargs, args, "voice_id", 0)
@@ -193,6 +193,8 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
         output_format = _arg(kwargs, args, "output_format", 4)
         if output_format:
             span.set_attribute("elevenlabs.output_format", str(output_format))
+            span.set_attribute("gen_ai.response.output_format", str(output_format))
+        span.set_attribute("gen_ai.request.streamed", bool(streamed))
 
         if self.request_counter:
             self.request_counter.add(1, {"model": model, "provider": PROVIDER})
@@ -219,7 +221,7 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
                 span = instrumentor.tracer.start_span(span_name)
                 start_time = time.time()
                 try:
-                    model = instrumentor._tts_span_setup(span, args, kwargs)
+                    model = instrumentor._tts_span_setup(span, args, kwargs, streamed=True)
                     stream = original(*args, **kwargs)
                     if hasattr(stream, "__aiter__"):
                         return instrumentor._wrap_async_audio_stream(
@@ -239,7 +241,7 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
             span = instrumentor.tracer.start_span(span_name)
             start_time = time.time()
             try:
-                model = instrumentor._tts_span_setup(span, args, kwargs)
+                model = instrumentor._tts_span_setup(span, args, kwargs, streamed=True)
                 stream = original(*args, **kwargs)
             except Exception:
                 span.end()

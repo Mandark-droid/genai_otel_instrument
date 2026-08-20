@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.0] - 2026-08-20
+
+### Added
+
+- Closed the provider-coverage slice for embedding telemetry tracked by
+  upstream issue #23: Cohere, Google GenAI, Ollama, Together, Bedrock,
+  LiteLLM, Azure AI Inference, Hugging Face feature extraction,
+  SentenceTransformers, and shared embedding response dimensions now use the
+  common `embeddings` contract.
+- Added additive retrieval-quality attributes and a public helper, including
+  score distributions from vector responses and async Qdrant query coverage.
+- Added ASR attributes for Hugging Face pipelines and direct audio model
+  generation, an optional Liquid Audio instrumentor, and shared TTS fields for
+  Sarvam and ElevenLabs streaming paths.
+- Added the public `gen_ai.degraded` span-event helper and documentation for
+  retrieval, speech, audio, and degradation telemetry.
+
+### Fixed
+
+- Embedding content and vector capture now honor the actual configuration
+  flags instead of treating an unset vector-capture attribute as enabled.
+- Bedrock embedding usage extraction handles mapping-shaped usage payloads.
+
 ## [1.19.0] - 2026-08-17
 
 ### Added
