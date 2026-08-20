@@ -4,6 +4,9 @@ These examples demonstrate the multimodal observability features added in genai-
 images, audio, video, and document content parts captured as OpenTelemetry spans, with optional offload to
 a configured blob store (MinIO / S3 / filesystem / HTTP).
 
+For a real application trace using an actual voice recording and banking
+knowledge-base corpus, see `../real_world/voice_rag_replay.py`.
+
 ## Setup
 
 ```bash
@@ -41,8 +44,9 @@ export GENAI_OTEL_MEDIA_STORE_ENDPOINT=./.genai-otel-media
 | `document_extraction.py` | Anthropic document (PDF) content block |
 | `redactor_face_blur.py` | Plug in `face_blur` redactor before MinIO upload |
 
-Each example sets up a console exporter so you can see the resulting span attributes
-(`gen_ai.prompt.0.content.1.type=image`, `media_uri=...`, `media_mime_type=...`).
+Each example sets up a console exporter so you can see the resulting span attributes. The content type
+must match the payload: image inputs emit `type=image`, audio inputs emit `type=audio`, video inputs emit
+`type=video`, and documents emit `type=document`.
 
 ## Capture modes
 
