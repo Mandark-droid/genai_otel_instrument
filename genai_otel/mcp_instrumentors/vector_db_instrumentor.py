@@ -383,6 +383,28 @@ class VectorDBInstrumentor:  # pylint: disable=R0903
                     return [float(result["score"])]
                 except (TypeError, ValueError):
                     return []
+            if "_additional" in result:
+                additional = result["_additional"]
+                if isinstance(additional, dict):
+                    for key in ("distance", "certainty", "score"):
+                        if key in additional:
+                            try:
+                                return [float(additional[key])]
+                            except (TypeError, ValueError):
+                                return []
+                return []
+            # Weaviate's GraphQL response shape:
+            # {"data": {"Get": {"<ClassName>": [{..., "_additional": {...}}, ...]}}}
+            # The class name is caller-defined, so descend into whatever keys
+            # "Get" holds rather than matching a fixed key name.
+            data = result.get("data")
+            if isinstance(data, dict):
+                get_block = data.get("Get")
+                if isinstance(get_block, dict):
+                    scores = []
+                    for class_results in get_block.values():
+                        scores.extend(VectorDBInstrumentor._extract_scores(class_results))
+                    return scores
             return []
         if isinstance(result, (list, tuple)):
             scores = []

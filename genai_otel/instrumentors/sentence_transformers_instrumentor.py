@@ -77,8 +77,13 @@ class SentenceTransformersInstrumentor(BaseInstrumentor):
             try:
                 dims = tuple(int(value) for value in shape)
                 if dims:
-                    attrs["gen_ai.response.embedding_count"] = dims[0]
-                    if len(dims) > 1:
+                    if len(dims) == 1:
+                        # A 1D array is a single embedding vector (e.g.
+                        # encode("one sentence")), not `dims[0]` embeddings.
+                        attrs["gen_ai.response.embedding_count"] = 1
+                        attrs["gen_ai.response.vector_size"] = dims[0]
+                    else:
+                        attrs["gen_ai.response.embedding_count"] = dims[0]
                         attrs["gen_ai.response.vector_size"] = dims[-1]
                     return attrs
             except (TypeError, ValueError):
