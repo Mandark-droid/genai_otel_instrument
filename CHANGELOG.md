@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+### Fixed
+
+- **A misconfigured carbon country code silently produced a global average instead of a
+  regional measurement.** codecarbon's offline dataset is keyed by ALPHA-3 ISO codes. Given
+  the intuitive 2-letter form it logs `Does not support country with ISO code IN` and then
+  emits **475.0 gCO2e/kWh** — byte-identical to this library's own manual fallback constant,
+  and still labelled `source: codecarbon`. Measured on codecarbon 3.2.8:
+
+  | code | applied factor |
+  |---|---:|
+  | `IN` (unsupported) | 475.0 gCO2e/kWh |
+  | `IND` | **713.4** gCO2e/kWh |
+  | `USA` | 369.5 gCO2e/kWh |
+  | `FRA` | 56.0 gCO2e/kWh |
+
+  An operator setting `IN` therefore got numbers indistinguishable from having codecarbon
+  switched off, plus an error log that reads as noise. `normalize_country_iso_code()` now
+  repairs the common alpha-2 case (`IN` → `IND`) and **refuses** anything codecarbon cannot
+  resolve, validated against codecarbon's own `global_energy_mix.json` (213 countries)
+  rather than a duplicate list that would drift. A misconfigured code now disables the
+  integration with an explicit error instead of degrading it invisibly.
+
+- The unset-country default now warns rather than logging at debug: falling back to `USA`
+  (369.5 gCO2e/kWh) is almost always wrong and previously happened silently.
+
 ## [1.20.2] - 2026-08-20
 
 ### Added

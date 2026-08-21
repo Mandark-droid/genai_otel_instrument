@@ -13,6 +13,7 @@ CO2 emissions tracking is provided via codecarbon integration, which offers:
 import logging
 import threading
 import time
+from functools import lru_cache
 from typing import Optional
 
 from opentelemetry.metrics import Meter, ObservableCounter, ObservableGauge, Observation
@@ -48,6 +49,116 @@ except ImportError:
     EmissionsTracker = None  # type: ignore
     OfflineEmissionsTracker = None  # type: ignore
     logger.debug("codecarbon not available, will use manual CO2 calculation")
+
+
+#: codecarbon's offline dataset is keyed by ALPHA-3 ISO codes. Given an alpha-2 code it
+#: logs an error and silently falls back to a 475.0 gCO2e/kWh global average -- the same
+#: constant this library uses when codecarbon is switched off entirely. Measured on
+#: codecarbon 3.x: IN -> 475.0 (wrong), IND -> 713.4 (correct India factor), USA -> 369.5,
+#: FRA -> 56.0. So the intuitive two-letter code produces numbers indistinguishable from
+#: no integration at all, while still being labelled `source: codecarbon`.
+#:
+#: Rather than require operators to know that, repair the common alpha-2 case and REFUSE
+#: anything genuinely unusable, so a bad code stops the integration instead of quietly
+#: degrading it.
+_ALPHA2_TO_ALPHA3: dict[str, str] = {
+    "IN": "IND",
+    "US": "USA",
+    "GB": "GBR",
+    "DE": "DEU",
+    "FR": "FRA",
+    "JP": "JPN",
+    "CN": "CHN",
+    "AU": "AUS",
+    "CA": "CAN",
+    "BR": "BRA",
+    "SG": "SGP",
+    "AE": "ARE",
+    "ZA": "ZAF",
+    "NL": "NLD",
+    "IE": "IRL",
+    "SE": "SWE",
+    "NO": "NOR",
+    "ES": "ESP",
+    "IT": "ITA",
+    "PL": "POL",
+    "CH": "CHE",
+    "KR": "KOR",
+    "MX": "MEX",
+    "ID": "IDN",
+}
+
+
+@lru_cache(maxsize=1)
+def _codecarbon_supported_countries() -> "frozenset[str]":
+    """ALPHA-3 codes codecarbon can actually resolve, read from its own dataset.
+
+    codecarbon is the authority on what codecarbon supports, so this reads
+    ``data/private_infra/global_energy_mix.json`` rather than carrying a duplicate list
+    that would drift. Returns an empty set when codecarbon is not installed or its layout
+    changes -- in which case codecarbon is not in use and shape validation is sufficient.
+    """
+    try:
+        import json
+        import os
+
+        import codecarbon
+
+        root = os.path.join(os.path.dirname(codecarbon.__file__), "data")
+        for dirpath, _dirnames, filenames in os.walk(root):
+            if "global_energy_mix.json" in filenames:
+                with open(os.path.join(dirpath, "global_energy_mix.json"), encoding="utf-8") as fh:
+                    return frozenset(json.load(fh).keys())
+    except Exception:  # pragma: no cover - absence is a valid state, not a failure
+        pass
+    return frozenset()
+
+
+def normalize_country_iso_code(code: "str | None") -> "str | None":
+    """Return a codecarbon-usable ALPHA-3 ISO code, or raise if it cannot be one.
+
+    ``None``/blank is returned unchanged: unset is a legitimate state and the caller
+    decides the default. Anything else must end up as a plausible alpha-3 code, because
+    the failure mode this guards against is silent: codecarbon accepts an unusable code,
+    logs an error nobody reads, and emits a global-average constant that looks like a
+    measurement.
+    """
+    if code is None:
+        return None
+    cleaned = str(code).strip().upper()
+    if not cleaned:
+        return None
+
+    if len(cleaned) == 2:
+        mapped = _ALPHA2_TO_ALPHA3.get(cleaned)
+        if mapped:
+            return mapped
+        raise ValueError(
+            f"Carbon country code {cleaned!r} is a 2-letter ISO code that this library "
+            "cannot map to the 3-letter form codecarbon requires. Set "
+            "GENAI_CO2_COUNTRY_ISO_CODE to the 3-letter code (e.g. IND, USA, GBR). "
+            "An unmapped code would make codecarbon fall back to a 475 gCO2e/kWh global "
+            "average that is reported as if it were a regional measurement."
+        )
+
+    if len(cleaned) == 3 and cleaned.isalpha():
+        supported = _codecarbon_supported_countries()
+        # Only assert membership when codecarbon's own dataset is readable. If it is not,
+        # codecarbon is not in use either, so shape validation is all that is meaningful.
+        if supported and cleaned not in supported:
+            raise ValueError(
+                f"Carbon country code {cleaned!r} is a well-formed 3-letter code but is not "
+                "in codecarbon's global_energy_mix dataset, so codecarbon would silently "
+                "substitute a 475 gCO2e/kWh global average and report it as a regional "
+                "measurement. Use a supported 3-letter code (e.g. IND, USA, GBR)."
+            )
+        return cleaned
+
+    raise ValueError(
+        f"Carbon country code {cleaned!r} is not a valid ISO 3166-1 alpha-3 code. "
+        "codecarbon requires the 3-letter form (e.g. IND, USA, GBR); an invalid code is "
+        "silently replaced by a 475 gCO2e/kWh global average rather than rejected."
+    )
 
 
 class GPUMetricsCollector:
@@ -480,14 +591,23 @@ class GPUMetricsCollector:
             # Tracking mode: "machine" (all processes) or "process" (current only)
             tracker_kwargs["tracking_mode"] = self.config.co2_tracking_mode
 
-            # Determine country code for offline mode
-            country_code = self.config.co2_country_iso_code
+            # Determine country code for offline mode.
+            #
+            # Validated, not trusted: codecarbon accepts an unusable code, logs an error,
+            # and then emits a 475 gCO2e/kWh global average -- identical to this library's
+            # own manual fallback -- while still labelling the metric `source: codecarbon`.
+            # A wrong carbon figure that claims a regional measurement is worse than an
+            # honest constant, so an unusable code disables codecarbon rather than
+            # degrading it invisibly.
+            country_code = normalize_country_iso_code(self.config.co2_country_iso_code)
             if self.config.co2_offline_mode and not country_code:
                 # Default to USA if not specified in offline mode
                 country_code = "USA"
-                logger.debug(
-                    "No country ISO code specified for offline mode, defaulting to USA. "
-                    "Set GENAI_CO2_COUNTRY_ISO_CODE for accurate carbon intensity."
+                logger.warning(
+                    "No carbon country ISO code set; defaulting to USA "
+                    "(%.0f gCO2e/kWh) which is almost certainly wrong for this estate. "
+                    "Set GENAI_CO2_COUNTRY_ISO_CODE to your 3-letter code (e.g. IND).",
+                    369.5,
                 )
 
             # Use OfflineEmissionsTracker for offline mode, EmissionsTracker otherwise
@@ -522,6 +642,17 @@ class GPUMetricsCollector:
                 country_code or "auto-detect",
                 self.config.co2_region or "auto-detect",
             )
+        except ValueError as e:
+            # A misconfigured country code is an operator error, not an environment
+            # problem. Falling back silently here is exactly the behaviour being fixed:
+            # it would emit the manual constant under a codecarbon label.
+            logger.error(
+                "Carbon tracking is MISCONFIGURED and codecarbon will not be used: %s "
+                "CO2 figures will fall back to the manual GENAI_CARBON_INTENSITY constant "
+                "and must not be read as a regional measurement.",
+                e,
+            )
+            self._use_codecarbon = False
         except Exception as e:
             logger.warning(
                 "Failed to initialize codecarbon, falling back to manual CO2 calculation: %s", e
