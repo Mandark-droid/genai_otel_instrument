@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+### Added
+
+- **The OpenAI Responses API is now traced** (#26). `openai_instrumentor` wrapped
+  `chat.completions.create` and `embeddings.create` only, so any caller on
+  `client.responses.create` produced **no LLM span at all** -- no model, no tokens,
+  no cost, no tool calls. The instrumentor loaded, reported success, and captured
+  nothing. This is not an edge case: Chat Completions rejects function tools combined
+  with reasoning on GPT-5.6+, so agent runtimes on native OpenAI models route through
+  `/v1/responses` by default.
+
+  `responses.create` is now wrapped on both sync and async clients as an
+  `openai.responses` span. The Responses shape differs from Chat Completions in every
+  field the instrumentation reads, and each is mapped onto the existing semantic
+  conventions so the two stay comparable:
+
+  | Responses | Chat Completions |
+  |---|---|
+  | `input` (string or list), `instructions` | `messages` |
+  | `max_output_tokens` | `max_tokens` |
+  | `output[]` items | `choices[]` |
+  | `usage.input_tokens` / `output_tokens` | `usage.prompt_tokens` / `completion_tokens` |
+  | `status` / `incomplete_details.reason` | `choices[].finish_reason` |
+
+  Reasoning tokens are attributed as output because that is how they are billed;
+  cached prompt tokens are recorded under the same canonical key as Anthropic's cache
+  reads; `response.id` is captured so `store=true` responses stay joinable. Streaming
+  reports TTFT and inter-token latency on the same terms as every other provider.
+
+### Fixed
+
+- **A Responses call was recorded as an embedding.** Content capture routed to the
+  embeddings path whenever a request carried `input` and no `messages` -- but the
+  Responses API keys on `input` too. The completion was dropped and the span was
+  labelled `embedding.model_name`. Routing now decides on the *response* shape, which
+  is unambiguous, rather than on a request key both APIs share.
+
+
 ### Removed
 
 - **`docs/proposals/` removed and stripped from all git history.** The folder held

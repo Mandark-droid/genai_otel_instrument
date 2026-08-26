@@ -26,6 +26,25 @@ def _cap_content(config, text):
     return text
 
 
+def _responses_content_to_text(content: Any) -> str:
+    """Flatten a Responses content value to plain text.
+
+    A content field is either a bare string or a list of typed parts
+    (``input_text``, ``output_text``, ...). Only the textual parts carry
+    anything worth putting on a span.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, (list, tuple)):
+        parts = []
+        for part in content:
+            text = part.get("text") if isinstance(part, dict) else getattr(part, "text", None)
+            if isinstance(text, str):
+                parts.append(text)
+        return "".join(parts)
+    return ""
+
+
 class OpenAIInstrumentor(BaseInstrumentor):
     """Instrumentor for OpenAI SDK"""
 
@@ -148,6 +167,17 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 extract_attributes=self._extract_embedding_attributes,
             )(original_embeddings_create)
 
+        # The Responses API is the default path for native GPT-5.6+ models --
+        # Chat Completions rejects function tools combined with reasoning, so
+        # agent runtimes route there. Unwrapped it produced no span at all: the
+        # instrumentor loaded, reported success, and captured nothing (#26).
+        if hasattr(client, "responses") and hasattr(client.responses, "create"):
+            original_responses_create = client.responses.create
+            client.responses.create = self.create_span_wrapper(
+                span_name="openai.responses",
+                extract_attributes=self._extract_responses_attributes,
+            )(original_responses_create)
+
     def _instrument_async_client(self, client):
         """Instrument AsyncOpenAI client methods.
 
@@ -172,6 +202,13 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 span_name="openai.embeddings",
                 extract_attributes=self._extract_embedding_attributes,
             )(original_embeddings_create)
+
+        if hasattr(client, "responses") and hasattr(client.responses, "create"):
+            original_responses_create = client.responses.create
+            client.responses.create = self._create_async_span_wrapper(
+                span_name="openai.responses",
+                extract_attributes=self._extract_responses_attributes,
+            )(original_responses_create)
 
     def _create_async_span_wrapper(self, span_name, extract_attributes=None):
         """Create an async wrapper that adds OpenTelemetry spans around async calls.
@@ -372,6 +409,112 @@ class OpenAIInstrumentor(BaseInstrumentor):
             return list(data)
         return None
 
+    @staticmethod
+    def _responses_output_items(result) -> Optional[list]:
+        """Return the Responses ``output`` items, or None if not that shape.
+
+        Checked against ``choices`` first so a Chat Completions response can
+        never be read as a Responses one.
+        """
+        if getattr(result, "choices", None):
+            return None
+        output = getattr(result, "output", None)
+        if isinstance(output, (list, tuple)):
+            return list(output)
+        return None
+
+    @staticmethod
+    def _responses_input_as_messages(raw_input: Any) -> list:
+        """Normalise a Responses ``input`` onto the chat ``messages`` shape.
+
+        ``input`` is either a bare string or a list of typed items. Mapping it
+        onto the message shape lets the existing content-capture and
+        first-message machinery apply unchanged.
+        """
+        if raw_input is None:
+            return []
+        if isinstance(raw_input, str):
+            return [{"role": "user", "content": raw_input}]
+        if isinstance(raw_input, (list, tuple)):
+            messages = []
+            for item in raw_input:
+                if isinstance(item, dict):
+                    messages.append(
+                        {
+                            "role": item.get("role", "user"),
+                            "content": _responses_content_to_text(item.get("content", "")),
+                        }
+                    )
+                else:
+                    role = getattr(item, "role", None)
+                    if role is not None:
+                        messages.append(
+                            {
+                                "role": role,
+                                "content": _responses_content_to_text(getattr(item, "content", "")),
+                            }
+                        )
+            return messages
+        return []
+
+    @staticmethod
+    def _count_responses_input(raw_input: Any) -> int:
+        """Count the messages a Responses request carries."""
+        if raw_input is None:
+            return 0
+        if isinstance(raw_input, str):
+            return 1
+        if isinstance(raw_input, (list, tuple)):
+            return len(raw_input)
+        return 1
+
+    def _extract_responses_attributes(
+        self, instance: Any, args: Any, kwargs: Any
+    ) -> Dict[str, Any]:
+        """Extract span attributes from a Responses API call.
+
+        Args:
+            instance: The client instance.
+            args: Positional arguments.
+            kwargs: Keyword arguments.
+
+        Returns:
+            Dict[str, Any]: Dictionary of attributes to set on the span.
+        """
+        attrs: Dict[str, Any] = {}
+        raw_input = kwargs.get("input")
+
+        attrs["gen_ai.system"] = "openai"
+        attrs["gen_ai.request.model"] = kwargs.get("model", "unknown")
+        attrs["gen_ai.operation.name"] = "chat"
+        attrs["gen_ai.request.message_count"] = self._count_responses_input(raw_input)
+
+        config = getattr(self, "config", None)
+        instructions = kwargs.get("instructions")
+        if instructions:
+            attrs["gen_ai.request.instructions"] = _cap_content(config, instructions)
+
+        if "temperature" in kwargs:
+            attrs["gen_ai.request.temperature"] = kwargs["temperature"]
+        if "top_p" in kwargs:
+            attrs["gen_ai.request.top_p"] = kwargs["top_p"]
+        # Responses spells the output cap `max_output_tokens`; the semantic
+        # convention attribute stays `gen_ai.request.max_tokens`.
+        if "max_output_tokens" in kwargs:
+            attrs["gen_ai.request.max_tokens"] = kwargs["max_output_tokens"]
+
+        if "tools" in kwargs:
+            try:
+                attrs["llm.tools"] = json.dumps(kwargs["tools"])
+            except (TypeError, ValueError) as e:
+                logger.debug("Failed to serialize tools: %s", e)
+
+        first_message = self._build_first_message(self._responses_input_as_messages(raw_input))
+        if first_message:
+            attrs["gen_ai.request.first_message"] = first_message
+
+        return attrs
+
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from OpenAI response.
 
@@ -383,6 +526,30 @@ class OpenAIInstrumentor(BaseInstrumentor):
         """
         if hasattr(result, "usage") and result.usage:
             usage = result.usage
+
+            # The Responses API reports input_tokens/output_tokens where Chat
+            # Completions reports prompt_tokens/completion_tokens. Map onto the
+            # canonical keys base.py consumes -- it emits both spellings. If
+            # this returned None instead, base.py would treat the span as
+            # having no usage and price it at zero rather than flag it.
+            if getattr(usage, "prompt_tokens", None) is None and hasattr(usage, "input_tokens"):
+                responses_usage: Dict[str, Any] = {
+                    "prompt_tokens": getattr(usage, "input_tokens", 0) or 0,
+                    "completion_tokens": getattr(usage, "output_tokens", 0) or 0,
+                    "total_tokens": getattr(usage, "total_tokens", 0) or 0,
+                }
+                # Reasoning tokens are billed as output, so they are attributed
+                # there rather than tracked as a separate bucket.
+                out_details = getattr(usage, "output_tokens_details", None)
+                reasoning = getattr(out_details, "reasoning_tokens", 0) if out_details else 0
+                if reasoning:
+                    responses_usage["completion_tokens_details"] = {"reasoning_tokens": reasoning}
+                in_details = getattr(usage, "input_tokens_details", None)
+                cached = getattr(in_details, "cached_tokens", None) if in_details else None
+                if cached:
+                    responses_usage["cache_read_input_tokens"] = cached
+                return responses_usage
+
             usage_dict = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
@@ -444,6 +611,31 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 logger.debug("Failed to measure embedding vector: %s", e)
             return attrs
 
+        # Responses carries output[] rather than choices[]: the completion,
+        # the tool calls and the reasoning items all live there.
+        output_items = self._responses_output_items(result)
+        if output_items is not None:
+            finish_reason = self._extract_finish_reason(result)
+            if finish_reason:
+                attrs["gen_ai.response.finish_reasons"] = [finish_reason]
+
+            tc_idx = 0
+            for item in output_items:
+                if getattr(item, "type", None) != "function_call":
+                    continue
+                prefix = f"llm.output_messages.0.message.tool_calls.{tc_idx}"
+                call_id = getattr(item, "call_id", None) or getattr(item, "id", None)
+                if call_id:
+                    attrs[f"{prefix}.tool_call.id"] = call_id
+                name = getattr(item, "name", None)
+                if name:
+                    attrs[f"{prefix}.tool_call.function.name"] = name
+                arguments = getattr(item, "arguments", None)
+                if arguments is not None:
+                    attrs[f"{prefix}.tool_call.function.arguments"] = arguments
+                tc_idx += 1
+            return attrs
+
         # Finish reasons
         if hasattr(result, "choices") and result.choices:
             finish_reasons = [
@@ -487,8 +679,23 @@ class OpenAIInstrumentor(BaseInstrumentor):
         # you can see that a lookup happened but not what it looked for.
         # Reached only when enable_content_capture is on; base.py gates the
         # call to this method on it.
-        if "input" in request_kwargs and not request_kwargs.get("messages"):
+        #
+        # The Responses API also keys on `input`, so the request alone cannot
+        # tell the two apart -- routing on it sent every Responses call down
+        # the retrieval path, dropping the completion and labelling the span
+        # `embedding.model_name`. Decide on the response shape, which is
+        # unambiguous.
+        if (
+            "input" in request_kwargs
+            and not request_kwargs.get("messages")
+            and self._embedding_items(result) is not None
+        ):
             self._add_embedding_content(span, result, request_kwargs, config)
+            return
+
+        output_items = self._responses_output_items(result)
+        if output_items is not None:
+            self._add_responses_content(span, result, request_kwargs, config, output_items)
             return
 
         # Add prompt content events
@@ -526,6 +733,59 @@ class OpenAIInstrumentor(BaseInstrumentor):
             # Set as attribute for evaluation processor
             if response_text:
                 span.set_attribute("gen_ai.response", response_text)
+
+    def _add_responses_content(self, span, result, request_kwargs: dict, config, output_items):
+        """Attach Responses prompts and completions to a span.
+
+        Prompts come from `input` (normalised onto the message shape) and the
+        completion from the `message` items of `output[]`; `reasoning` and
+        `function_call` items carry no user-visible text and are recorded as
+        attributes elsewhere.
+        """
+        instructions = request_kwargs.get("instructions")
+        if instructions:
+            span.add_event(
+                "gen_ai.prompt.system",
+                attributes={
+                    "gen_ai.prompt.role": "system",
+                    "gen_ai.prompt.content": _cap_content(config, instructions),
+                },
+            )
+
+        for idx, message in enumerate(
+            self._responses_input_as_messages(request_kwargs.get("input"))
+        ):
+            span.add_event(
+                f"gen_ai.prompt.{idx}",
+                attributes={
+                    "gen_ai.prompt.role": message["role"],
+                    "gen_ai.prompt.content": _cap_content(config, message["content"]),
+                },
+            )
+
+        response_text = None
+        completion_idx = 0
+        for item in output_items:
+            if getattr(item, "type", None) != "message":
+                continue
+            text = _responses_content_to_text(getattr(item, "content", ""))
+            if not text:
+                continue
+            content = _cap_content(config, text)
+            span.add_event(
+                f"gen_ai.completion.{completion_idx}",
+                attributes={
+                    "gen_ai.completion.role": getattr(item, "role", "assistant"),
+                    "gen_ai.completion.content": content,
+                },
+            )
+            if completion_idx == 0:
+                response_text = content
+            completion_idx += 1
+
+        # Set as attribute for the evaluation processor.
+        if response_text:
+            span.set_attribute("gen_ai.response", response_text)
 
     def _add_embedding_content(self, span, result, request_kwargs: dict, config):
         """Attach the embedded text (and optionally vectors) to a span.
@@ -584,6 +844,17 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 first_choice = result.choices[0]
                 if hasattr(first_choice, "finish_reason"):
                     return first_choice.finish_reason
+
+            # Responses reports a terminal `status`. When it stopped short,
+            # incomplete_details.reason says why, which is the answer an
+            # operator actually needs -- prefer it over the bare "incomplete".
+            details = getattr(result, "incomplete_details", None)
+            reason = getattr(details, "reason", None) if details is not None else None
+            if isinstance(reason, str) and reason:
+                return reason
+            status = getattr(result, "status", None)
+            if isinstance(status, str) and status:
+                return status
         except Exception as e:
             logger.debug("Failed to extract finish_reason: %s", e)
         return None

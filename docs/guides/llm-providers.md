@@ -6,7 +6,7 @@ TraceVerde auto-instruments 21+ LLM providers. No code changes are needed - just
 
 | Provider | Models | Install Extra | Example |
 |----------|--------|---------------|---------|
-| OpenAI | GPT-4o, GPT-4 Turbo, GPT-5.2, o1/o3, embeddings (50+) | `[openai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openai/example.py) |
+| OpenAI | GPT-4o, GPT-4 Turbo, GPT-5.2, o1/o3, embeddings, Responses API (50+) | `[openai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openai/example.py) |
 | OpenRouter | All models via OpenAI-compatible API | `[openrouter]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openrouter/example.py) |
 | CometAPI | 500+ models via OpenAI- or Anthropic-compatible API | `[cometapi]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/comet_api.py) |
 | Anthropic | Claude Sonnet 4.6, Claude 3.5/3 series (15+) | `[anthropic]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/anthropic/example.py) |
@@ -94,6 +94,50 @@ print(f"Response: {response.choices[0].message.content}")
 print(f"Tokens used: {response.usage.total_tokens}")
 # Traces, metrics, and costs are automatically captured
 ```
+
+## Quick Example: Responses API
+
+`client.responses.create` is traced as its own span (`openai.responses`). This is
+the default path for native GPT-5.6+ models, because Chat Completions rejects
+function tools combined with reasoning -- so agent runtimes that use tools and
+reasoning together end up here rather than on `chat.completions.create`.
+
+```python
+import genai_otel
+genai_otel.instrument()
+
+from openai import OpenAI
+
+client = OpenAI()
+response = client.responses.create(
+    model="gpt-5.6",
+    instructions="You are a helpful assistant.",
+    input="What is OpenTelemetry?",
+    max_output_tokens=150,
+)
+
+print(response.output_text)
+```
+
+The Responses shape differs from Chat Completions in every field the
+instrumentation reads, and each is mapped onto the same semantic conventions so
+Responses and Chat Completions spans stay comparable:
+
+| Responses | Chat Completions | Recorded as |
+|---|---|---|
+| `input` (string or list), `instructions` | `messages` | `gen_ai.request.message_count`, `gen_ai.request.first_message`, `gen_ai.request.instructions` |
+| `max_output_tokens` | `max_tokens` | `gen_ai.request.max_tokens` |
+| `output[]` items | `choices[]` | completion events, `gen_ai.response` |
+| `usage.input_tokens` / `output_tokens` | `usage.prompt_tokens` / `completion_tokens` | `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` |
+| `output_tokens_details.reasoning_tokens` | `completion_tokens_details.reasoning_tokens` | `gen_ai.usage.reasoning_tokens` |
+| `input_tokens_details.cached_tokens` | `prompt_tokens_details.cached_tokens` | `gen_ai.usage.cache_read.input_tokens` |
+| `status` / `incomplete_details.reason` | `choices[].finish_reason` | `gen_ai.response.finish_reasons` |
+
+Reasoning tokens are attributed as output, because that is how they are billed.
+Tool calls come from the `function_call` items of `output[]`, and `response.id`
+is recorded so `store=true` responses stay joinable server-side. Streaming works
+the same as elsewhere -- TTFT and inter-token latency are measured as the
+response events arrive.
 
 ## Quick Example: Embeddings and RAG
 
