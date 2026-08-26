@@ -19,10 +19,7 @@ from __future__ import annotations
 
 import pytest
 
-from genai_otel.gpu_metrics import (
-    _codecarbon_supported_countries,
-    normalize_country_iso_code,
-)
+from genai_otel.gpu_metrics import _codecarbon_supported_countries, normalize_country_iso_code
 
 #: The dataset-membership branch of the validator can only be exercised when
 #: codecarbon is actually installed -- it reads codecarbon's own

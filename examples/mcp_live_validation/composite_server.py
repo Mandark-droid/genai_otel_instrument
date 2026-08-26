@@ -23,9 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastmcp import FastMCP
 
 #: Where the schema maps live, overridable for a different tool surface.
-DEFAULT_SCHEMA_DIR = os.environ.get(
-    "MCP_SCHEMA_DIR", r"REDACTED-PATH\schemas"
-)
+DEFAULT_SCHEMA_DIR = os.environ.get("MCP_SCHEMA_DIR", r"REDACTED-PATH\schemas")
 
 #: Tools that return a canned error, so the error-attribution path is exercised
 #: against a real JSON-RPC round trip rather than a mock.
