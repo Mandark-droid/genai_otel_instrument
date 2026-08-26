@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- **`.idea/` untracked and stripped from all git history.** The directory had been
+  listed in `.gitignore` since long before the files were committed, but gitignore
+  does not apply to paths already in the index, so seven IntelliJ config files stayed
+  tracked. They are now removed from the index (local IDE settings are untouched) and
+  purged from history with `git-filter-repo`.
+
+  `.idea/` entered history in October 2025, so this **rewrites the commit SHAs of
+  every tag in the repository -- `v0.1.0` through `v1.21.0`**, a wider range than the
+  `docs/proposals` purge in 1.21.0, which stopped at `v1.1.0`. Anyone pinned to a git
+  SHA, or consuming a GitHub release tarball from any version, must re-pin.
+  **PyPI wheels and sdists are unaffected** and need no action -- published artifacts
+  already excluded `.idea` via `MANIFEST.in`.
+
 ## [1.21.0] - 2026-08-26
 
 ### Added
