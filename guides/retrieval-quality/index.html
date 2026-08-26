@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://mandark-droid.github.io/genai_otel_instrument/guides/arize-ax/">
+        <link rel="canonical" href="https://mandark-droid.github.io/genai_otel_instrument/guides/retrieval-quality/">
       
       
-        <link rel="prev" href="../sarvam-ai/">
+        <link rel="prev" href="../llm-providers/">
       
       
-        <link rel="next" href="../../reference/performance-tuning/">
+        <link rel="next" href="../speech/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Arize AX - TraceVerde Documentation</title>
+        <title>Retrieval Quality - TraceVerde Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#arize-ax" class="md-skip">
+        <a href="#retrieval-quality" class="md-skip">
           Skip to content
         </a>
       
@@ -115,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Arize AX
+              Retrieval Quality
             
           </span>
         </div>
@@ -541,10 +541,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../retrieval-quality/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Retrieval Quality
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -560,6 +587,48 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quality-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quality attributes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#application-owned-signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Application-owned signals
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -821,37 +890,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Arize AX
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../arize-ax/" class="md-nav__link">
         
   
   
@@ -867,136 +909,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick Start
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#regions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Regions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#two-details-that-are-easy-to-get-wrong" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Two details that are easy to get wrong
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#metrics-go-somewhere-else" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metrics go somewhere else
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-arize-ax-does-with-the-spans" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What Arize AX does with the spans
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#token-counts-must-use-the-current-conventions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Token counts must use the current conventions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-a-real-span-carries" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What a real span carries
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rag-traces" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RAG traces
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verifying-a-trace-landed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verifying a trace landed
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sending-to-arize-and-somewhere-else-at-once" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sending to Arize and somewhere else at once
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1354,10 +1266,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
+  <a href="#quality-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Start
+        Quality attributes
       
     </span>
   </a>
@@ -1365,98 +1277,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#regions" class="md-nav__link">
+  <a href="#application-owned-signals" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Regions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#two-details-that-are-easy-to-get-wrong" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Two details that are easy to get wrong
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#metrics-go-somewhere-else" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metrics go somewhere else
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-arize-ax-does-with-the-spans" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What Arize AX does with the spans
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#token-counts-must-use-the-current-conventions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Token counts must use the current conventions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-a-real-span-carries" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What a real span carries
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rag-traces" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RAG traces
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verifying-a-trace-landed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verifying a trace landed
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sending-to-arize-and-somewhere-else-at-once" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sending to Arize and somewhere else at once
+        Application-owned signals
       
     </span>
   </a>
@@ -1483,216 +1307,92 @@
   
 
 
-<h1 id="arize-ax">Arize AX<a class="headerlink" href="#arize-ax" title="Permanent link">&para;</a></h1>
-<p>TraceVerde exports to <a href="https://arize.com">Arize AX</a> over plain OTLP.</p>
-<p>There is no Arize integration in this library. There is no adapter, no
-<code>arize-otel</code>, and no <code>openinference-instrumentation-*</code> package. Arize AX
-consumes the OpenTelemetry GenAI semantic conventions natively, and TraceVerde
-emits them, so the two interoperate through OTLP without a translation layer on
-either side.</p>
-<p>The entire configuration is four standard OpenTelemetry environment variables.</p>
-<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openai<span class="o">]</span>
-</code></pre></div>
-<p>Get an API key and Space ID from <a href="https://app.arize.com">app.arize.com</a>
-(Settings -&gt; API Keys). <code>ARIZE_SPACE_ID</code> needs the base64 Space <strong>ID</strong>, not the
-space name.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;OTEL_EXPORTER_OTLP_ENDPOINT&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;https://otlp.arize.com&quot;</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;OTEL_EXPORTER_OTLP_PROTOCOL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;http/protobuf&quot;</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;OTEL_EXPORTER_OTLP_HEADERS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="sa">f</span><span class="s2">&quot;space_id=</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;ARIZE_SPACE_ID&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">,api_key=</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;ARIZE_API_KEY&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;OTEL_RESOURCE_ATTRIBUTES&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;openinference.project.name=my-project&quot;</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">()</span>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;What is OpenTelemetry?&quot;</span><span class="p">}],</span>
-<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="p">)</span>
-</code></pre></div>
-<p>The project is created in Arize on first export. A runnable version of this is
-in <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/arize_ax"><code>examples/arize_ax/</code></a>.</p>
-<p>Set the variables as real environment variables rather than in Python if you
-prefer - none of this needs to be in code:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span>https://otlp.arize.com
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_PROTOCOL</span><span class="o">=</span>http/protobuf
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_HEADERS</span><span class="o">=</span><span class="nv">space_id</span><span class="o">=</span>&lt;id&gt;,api_key<span class="o">=</span>&lt;key&gt;
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_RESOURCE_ATTRIBUTES</span><span class="o">=</span>openinference.project.name<span class="o">=</span>&lt;project&gt;
-</code></pre></div>
-<h2 id="regions">Regions<a class="headerlink" href="#regions" title="Permanent link">&para;</a></h2>
+<h1 id="retrieval-quality">Retrieval quality<a class="headerlink" href="#retrieval-quality" title="Permanent link">&para;</a></h1>
+<p>TraceVerde emits the existing <code>retrieval.*</code> and <code>db.vector.*</code> attributes for
+the retrieved documents and requested top-k. The additive <code>rag.*</code> attributes
+describe quality and provenance signals that an application or vector
+instrumentor can know at retrieval time.</p>
+<h2 id="quality-attributes">Quality attributes<a class="headerlink" href="#quality-attributes" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Region</th>
-<th>Endpoint</th>
+<th>Attribute</th>
+<th>Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>US (default)</td>
-<td><code>https://otlp.arize.com</code></td>
+<td><code>rag.embedding.model</code></td>
+<td>Model used for the query embedding</td>
 </tr>
 <tr>
-<td>EU</td>
-<td><code>https://otlp.eu-west-1a.arize.com</code></td>
+<td><code>rag.embedding.index_model</code></td>
+<td>Model used to build the index</td>
 </tr>
 <tr>
-<td>Canada</td>
-<td><code>https://otlp.ca-central-1a.arize.com</code></td>
+<td><code>rag.embedding.model_match</code></td>
+<td>Boolean comparison of the two model identifiers</td>
+</tr>
+<tr>
+<td><code>rag.embedding.dim</code></td>
+<td>Query/index vector dimension</td>
+</tr>
+<tr>
+<td><code>rag.search.score_floor</code></td>
+<td>Minimum score accepted by the search</td>
+</tr>
+<tr>
+<td><code>rag.search.distance</code></td>
+<td>Distance or similarity metric name</td>
+</tr>
+<tr>
+<td><code>rag.result.score_max</code> / <code>min</code> / <code>mean</code></td>
+<td>Distribution summary for returned scores</td>
+</tr>
+<tr>
+<td><code>rag.result.score_margin</code></td>
+<td>Difference between the two highest scores</td>
+</tr>
+<tr>
+<td><code>rag.corpus.version</code></td>
+<td>Corpus or index version</td>
+</tr>
+<tr>
+<td><code>rag.context.tokens_est</code></td>
+<td>Estimated context tokens sent downstream</td>
+</tr>
+<tr>
+<td><code>rag.context.truncated</code></td>
+<td>Whether context was truncated</td>
+</tr>
+<tr>
+<td><code>rag.answer.refused</code></td>
+<td>Whether the answer path refused to answer</td>
 </tr>
 </tbody>
 </table>
-<h2 id="two-details-that-are-easy-to-get-wrong">Two details that are easy to get wrong<a class="headerlink" href="#two-details-that-are-easy-to-get-wrong" title="Permanent link">&para;</a></h2>
-<p><strong>The endpoint has no path.</strong> The OTLP HTTP exporter appends <code>/v1/traces</code>
-itself, so the base is the bare host. <code>https://otlp.arize.com/v1</code> produces a
-request to <code>/v1/v1/traces</code> and nothing arrives.</p>
-<p><strong>The project name is required.</strong> Arize rejects spans with HTTP 500 when it is
-absent, and <code>service.name</code> alone is not enough.
-<code>openinference.project.name</code> is the one vendor-namespaced value in this setup,
-and it is supplied through the standard <code>OTEL_RESOURCE_ATTRIBUTES</code> variable
-rather than any code change.</p>
-<p>Short-lived scripts must flush before exiting, or the batch span processor is
-torn down with spans still queued:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">opentelemetry</span><span class="w"> </span><span class="kn">import</span> <span class="n">trace</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">trace</span><span class="o">.</span><span class="n">get_tracer_provider</span><span class="p">()</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="s2">&quot;force_flush&quot;</span><span class="p">):</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">provider</span><span class="o">.</span><span class="n">force_flush</span><span class="p">(</span><span class="mi">30000</span><span class="p">)</span>
+<p><code>top_k</code> and result count remain <code>db.vector.top_k</code> and
+<code>retrieval.document_count</code>; TraceVerde does not emit duplicate <code>rag.*</code> names
+for those values.</p>
+<h2 id="application-owned-signals">Application-owned signals<a class="headerlink" href="#application-owned-signals" title="Permanent link">&para;</a></h2>
+<p>Use the public helper when the application owns the embedding, index metadata,
+or answer policy:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">instrumentor</span><span class="o">.</span><span class="n">add_retrieval_quality_attributes</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">span</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">embedding_model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">index_embedding_model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">embedding_dim</span><span class="o">=</span><span class="mi">1536</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">distance</span><span class="o">=</span><span class="s2">&quot;cosine&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">scores</span><span class="o">=</span><span class="p">[</span><span class="mf">0.91</span><span class="p">,</span> <span class="mf">0.84</span><span class="p">,</span> <span class="mf">0.72</span><span class="p">],</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">corpus_version</span><span class="o">=</span><span class="s2">&quot;2026-08-20&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">context_tokens_est</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">context_truncated</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">answer_refused</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span>
 </code></pre></div>
-<p>For long-running services, use the SIGTERM flush described in
-<a href="../../getting-started/configuration/">Configuration</a> instead.</p>
-<h2 id="metrics-go-somewhere-else">Metrics go somewhere else<a class="headerlink" href="#metrics-go-somewhere-else" title="Permanent link">&para;</a></h2>
-<p><code>OTEL_EXPORTER_OTLP_ENDPOINT</code> applies to every signal, and Arize's OTLP endpoint
-ingests traces. Metric batches sent to it are rejected, which surfaces as a
-retry loop in the log:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Transient error Bad Gateway encountered while exporting metrics batch, retrying in 1.15s.
-</code></pre></div>
-<p>Traces are unaffected. Point metrics at their own destination with the standard
-signal-specific variable, which takes precedence over the generic one:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">OTEL_EXPORTER_OTLP_METRICS_ENDPOINT</span><span class="o">=</span>http://localhost:4318/v1/metrics
-</code></pre></div>
-<h2 id="what-arize-ax-does-with-the-spans">What Arize AX does with the spans<a class="headerlink" href="#what-arize-ax-does-with-the-spans" title="Permanent link">&para;</a></h2>
-<p>AX normalises the GenAI conventions onto its own OpenInference model at
-ingestion. Sending nothing but <code>gen_ai.*</code>, a chat completion span arrives with:</p>
-<table>
-<thead>
-<tr>
-<th>Arize field</th>
-<th>Derived from</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>openinference.span.kind = LLM</code></td>
-<td>inferred; TraceVerde never sends a span kind</td>
-</tr>
-<tr>
-<td><code>llm.provider</code>, <code>llm.system</code></td>
-<td><code>gen_ai.system</code></td>
-</tr>
-<tr>
-<td><code>llm.model_name</code></td>
-<td><code>gen_ai.request.model</code></td>
-</tr>
-<tr>
-<td><code>llm.finish_reason</code></td>
-<td><code>gen_ai.response.finish_reason</code></td>
-</tr>
-<tr>
-<td><code>llm.invocation_parameters</code></td>
-<td><code>gen_ai.request.*</code></td>
-</tr>
-<tr>
-<td><code>llm.token_count.prompt</code> / <code>.completion</code> / <code>.total</code></td>
-<td><code>gen_ai.usage.input_tokens</code> / <code>output_tokens</code></td>
-</tr>
-<tr>
-<td><code>llm.cost.*</code></td>
-<td>derived from the token counts</td>
-</tr>
-</tbody>
-</table>
-<p>All original <code>gen_ai.*</code> attributes are preserved alongside the normalised
-fields, so the same span remains portable to any other OTLP backend. Nothing is
-lost in the direction of Arize, and nothing is Arize-shaped on the way out.</p>
-<h2 id="token-counts-must-use-the-current-conventions">Token counts must use the current conventions<a class="headerlink" href="#token-counts-must-use-the-current-conventions" title="Permanent link">&para;</a></h2>
-<p>Arize reads <code>gen_ai.usage.input_tokens</code> / <code>gen_ai.usage.output_tokens</code> - the
-names introduced when semantic conventions v1.27.0 renamed <code>prompt_tokens</code> and
-<code>completion_tokens</code>
-(<a href="https://github.com/open-telemetry/semantic-conventions/pull/1200">semantic-conventions#1200</a>).</p>
-<p>TraceVerde emits both spellings by default
-(<code>OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai/dup</code>), so Arize resolves token counts and
-cost correctly while dashboards still querying the superseded names keep
-working. Setting <code>gen_ai</code> emits only the current names, which Arize also reads
-correctly. Only the superseded-names-only configuration would report zero tokens
-in AX.</p>
-<h2 id="what-a-real-span-carries">What a real span carries<a class="headerlink" href="#what-a-real-span-carries" title="Permanent link">&para;</a></h2>
-<p>A single <code>gpt-4o-mini</code> chat completion, exported with no Arize-specific code:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>gen_ai.operation.name        = chat
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>gen_ai.provider.name         = openai
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>gen_ai.system                = openai
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>gen_ai.request.model         = gpt-4o-mini
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>gen_ai.response.model        = gpt-4o-mini-2024-07-18
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>gen_ai.request.max_tokens    = 60
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>gen_ai.response.finish_reason= length
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>gen_ai.usage.input_tokens    = 14
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>gen_ai.usage.output_tokens   = 60
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>gen_ai.usage.total_tokens    = 74
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>gen_ai.usage.prompt_tokens   = 14      # dual emission
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>gen_ai.usage.completion_tokens = 60    # dual emission
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>gen_ai.usage.cost.prompt     = 2.1e-06
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>gen_ai.usage.cost.completion = 3.6e-05
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>gen_ai.usage.cost.total      = 3.81e-05
-<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>gen_ai.usage.cost.pricing_source = table
-</code></pre></div>
-<p>Streamed calls add the server-timing conventions, which AX charts alongside
-overall latency:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>gen_ai.server.time_to_first_token  = 2.117
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>gen_ai.server.time_per_output_token = 0.0115
-</code></pre></div>
-<p>If the <a href="../evaluation/">evaluation features</a> are enabled, their verdicts ride on
-the same span as ordinary attributes and land in Arize with no extra wiring:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>evaluation.pii.prompt.detected           = False
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>evaluation.prompt_injection.detected     = False
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>evaluation.toxicity.prompt.detected      = False
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>evaluation.hallucination.response.score  = 0.0
-</code></pre></div>
-<h2 id="rag-traces">RAG traces<a class="headerlink" href="#rag-traces" title="Permanent link">&para;</a></h2>
-<p>Embedding calls produce their own spans, so a retrieval-augmented trace arrives
-in Arize with both legs intact - the lookup and the generation - rather than the
-generation alone. Grouping them under a parent span sends the pipeline as one
-trace:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">with</span> <span class="n">tracer</span><span class="o">.</span><span class="n">start_as_current_span</span><span class="p">(</span><span class="s2">&quot;rag.pipeline&quot;</span><span class="p">):</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="n">chunks</span><span class="p">)</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="n">question</span><span class="p">)</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">)</span>
-</code></pre></div>
-<p>The embedding spans carry <code>gen_ai.request.input_count</code>,
-<code>gen_ai.response.vector_size</code> and their own token counts and cost, priced from
-the embeddings table. The embedded text is attached as <code>embedding.text</code> only
-when <code>GENAI_ENABLE_CONTENT_CAPTURE=true</code>; retrieval inputs routinely contain
-user data, so it is off by default.</p>
-<h2 id="verifying-a-trace-landed">Verifying a trace landed<a class="headerlink" href="#verifying-a-trace-landed" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>pip<span class="w"> </span>install<span class="w"> </span>arize-ax-cli
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>ax<span class="w"> </span>profiles<span class="w"> </span>create<span class="w"> </span>--api-key<span class="w"> </span><span class="nv">$ARIZE_API_KEY</span><span class="w"> </span>--auth-method<span class="w"> </span>api-key
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>ax<span class="w"> </span>projects<span class="w"> </span>list<span class="w"> </span>-l<span class="w"> </span><span class="m">100</span><span class="w"> </span>-o<span class="w"> </span>json
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>ax<span class="w"> </span>spans<span class="w"> </span><span class="nb">export</span><span class="w"> </span>&lt;project-id&gt;<span class="w"> </span>--trace-id<span class="w"> </span>&lt;trace-id&gt;<span class="w"> </span>--output-dir<span class="w"> </span>.arize-tmp-traces
-</code></pre></div>
-<p>Trace-ID lookups are immediately consistent once ingested. If a trace is
-missing, check that the exporter flushed, that the endpoint region matches your
-account, and that the project name resource attribute is present.</p>
-<h2 id="sending-to-arize-and-somewhere-else-at-once">Sending to Arize and somewhere else at once<a class="headerlink" href="#sending-to-arize-and-somewhere-else-at-once" title="Permanent link">&para;</a></h2>
-<p>Because this is ordinary OTLP, an OpenTelemetry Collector can fan the same spans
-out to Arize and to any other backend without the application knowing. Point
-TraceVerde at the collector and configure the exporters there - no change to the
-four variables above beyond the endpoint.</p>
+<p><code>gen_ai.rag.context</code> is not emitted by the library. It is an application-set
+input consumed by the evaluation processors, so applications that use
+hallucination evaluation should continue to set it explicitly.</p>
 
 
 
