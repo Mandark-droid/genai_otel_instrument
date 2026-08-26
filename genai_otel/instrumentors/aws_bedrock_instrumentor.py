@@ -19,6 +19,26 @@ def _cap_content(config, text):
     return text
 
 
+def _converse_blocks_text(blocks: Any) -> str:
+    """Flatten Converse content blocks to plain text.
+
+    Converse content is a list of typed blocks -- ``text``, ``image``,
+    ``toolUse``, ``toolResult`` -- rather than a plain string. Only the text
+    blocks carry anything worth putting on a span.
+    """
+    if isinstance(blocks, str):
+        return blocks
+    if isinstance(blocks, (list, tuple)):
+        parts = []
+        for block in blocks:
+            if isinstance(block, dict):
+                text = block.get("text")
+                if isinstance(text, str):
+                    parts.append(text)
+        return "".join(parts)
+    return ""
+
+
 class AWSBedrockInstrumentor(BaseInstrumentor):
     """Instrumentor for AWS Bedrock"""
 
@@ -80,6 +100,29 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                 span_name="aws.bedrock.invoke_model",
                 extract_attributes=self._extract_aws_bedrock_attributes,
             )(original_invoke_model)
+
+        # The streaming sibling of the call above: same request shape, same
+        # extractor. Without it the covered path went dark the moment a caller
+        # streamed.
+        if hasattr(client, "invoke_model_with_response_stream"):
+            original_ims = client.invoke_model_with_response_stream
+            client.invoke_model_with_response_stream = self.create_span_wrapper(
+                span_name="aws.bedrock.invoke_model_with_response_stream",
+                extract_attributes=self._extract_aws_bedrock_attributes,
+            )(original_ims)
+
+        # Converse is the unified API AWS points callers at, and the practical
+        # path for every non-Anthropic model. Being model-agnostic, it needs no
+        # per-model body shim -- unlike invoke_model.
+        if hasattr(client, "converse"):
+            original_converse = client.converse
+            client.converse = self.create_span_wrapper(
+                span_name="aws.bedrock.converse",
+                extract_attributes=self._extract_converse_attributes,
+            )(original_converse)
+
+        if hasattr(client, "converse_stream"):
+            client.converse_stream = self._wrap_converse_stream(client.converse_stream)
 
     def _extract_aws_bedrock_attributes(
         self, instance: Any, args: Any, kwargs: Any
@@ -159,8 +202,180 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
 
         return attrs
 
+    def _extract_converse_attributes(
+        self, instance: Any, args: Any, kwargs: Any
+    ) -> Dict[str, Any]:  # pylint: disable=W0613
+        """Extract span attributes from a Converse request.
+
+        Converse is model-agnostic, so unlike invoke_model the shape does not
+        have to be driven off modelId.
+        """
+        attrs: Dict[str, Any] = {}
+        messages = kwargs.get("messages") or []
+
+        attrs["gen_ai.system"] = "aws_bedrock"
+        attrs["gen_ai.request.model"] = kwargs.get("modelId", "unknown")
+        attrs["gen_ai.operation.name"] = "chat"
+        attrs["gen_ai.request.message_count"] = len(messages)
+
+        config = getattr(self, "config", None)
+
+        # `system` is a top-level parameter carrying its own content blocks, not
+        # a role inside messages[], so it must not inflate the message count.
+        system = kwargs.get("system")
+        if system:
+            instructions = _converse_blocks_text(system)
+            if instructions:
+                attrs["gen_ai.request.instructions"] = _cap_content(config, instructions)
+
+        inference = kwargs.get("inferenceConfig") or {}
+        if isinstance(inference, dict):
+            if "maxTokens" in inference:
+                attrs["gen_ai.request.max_tokens"] = inference["maxTokens"]
+            if "temperature" in inference:
+                attrs["gen_ai.request.temperature"] = inference["temperature"]
+            if "topP" in inference:
+                attrs["gen_ai.request.top_p"] = inference["topP"]
+            if "stopSequences" in inference:
+                attrs["gen_ai.request.stop_sequences"] = inference["stopSequences"]
+
+        tool_config = kwargs.get("toolConfig")
+        if tool_config:
+            try:
+                attrs["llm.tools"] = json.dumps(tool_config.get("tools", tool_config))
+            except (TypeError, ValueError) as e:
+                logger.debug("Failed to serialize Bedrock toolConfig: %s", e)
+
+        # Normalise onto the chat message shape so the shared first-message
+        # machinery applies unchanged.
+        normalised = [
+            {
+                "role": m.get("role", "user"),
+                "content": _converse_blocks_text(m.get("content", "")),
+            }
+            for m in messages
+            if isinstance(m, dict)
+        ]
+        first_message = self._build_first_message(normalised)
+        if first_message:
+            attrs["gen_ai.request.first_message"] = first_message
+
+        return attrs
+
+    def _wrap_converse_stream(self, original):
+        """Span wrapper for converse_stream.
+
+        Bedrock hands back ``{"stream": EventStream}`` immediately -- the model
+        generates while the caller iterates -- and there is no ``stream=True``
+        kwarg for the generic wrapper to key on. So the span is opened here and
+        given to the shared stream wrapper, which closes it once the event
+        stream is exhausted and reads usage from the trailing ``metadata``
+        event. Closing the span on return instead would report near-zero
+        latency and no tokens.
+        """
+        import time
+
+        from opentelemetry.trace import Status, StatusCode
+
+        instrumentor = self
+
+        def wrapper(*args, **kwargs):
+            if not instrumentor._instrumented:
+                return original(*args, **kwargs)
+
+            attributes: Dict[str, Any] = {}
+            try:
+                attributes = instrumentor._extract_converse_attributes(None, args, kwargs)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("Failed to extract converse_stream attributes: %s", e)
+
+            span = instrumentor.tracer.start_span(
+                "aws.bedrock.converse_stream", attributes=attributes
+            )
+            start_time = time.time()
+            model = kwargs.get("modelId", "unknown")
+
+            try:
+                result = original(*args, **kwargs)
+            except Exception as e:
+                span.record_exception(e)
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.end()
+                raise
+
+            # Sampled-out spans come back as NonRecordingSpan, which has no
+            # `.name` -- the measurement path below reads it, so measuring here
+            # would raise on every call once sampling drops the span. Hand the
+            # caller the untouched stream instead; the measurements would have
+            # been discarded anyway.
+            if not span.is_recording():
+                span.end()
+                return result
+
+            stream = result.get("stream") if hasattr(result, "get") else None
+            if stream is None:
+                # Nothing to measure -- close the span rather than leak it.
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+                return result
+
+            if instrumentor.request_counter:
+                instrumentor.request_counter.add(1, {"operation": "aws.bedrock.converse_stream"})
+
+            result["stream"] = instrumentor._wrap_streaming_response(
+                stream, span, start_time, model
+            )
+            return result
+
+        return wrapper
+
+    @staticmethod
+    def _converse_usage(usage: Any) -> Optional[Dict[str, int]]:
+        """Map Converse's camelCase token counts onto the canonical keys."""
+        if not isinstance(usage, dict):
+            return None
+        if "inputTokens" not in usage and "outputTokens" not in usage:
+            return None
+        input_tokens = usage.get("inputTokens", 0) or 0
+        output_tokens = usage.get("outputTokens", 0) or 0
+        return {
+            "prompt_tokens": input_tokens,
+            "completion_tokens": output_tokens,
+            "total_tokens": usage.get("totalTokens", input_tokens + output_tokens),
+        }
+
+    def _extract_finish_reason(self, result) -> Optional[str]:
+        """Return Converse's stopReason, from the response or a messageStop event."""
+        try:
+            if hasattr(result, "get"):
+                reason = result.get("stopReason")
+                if isinstance(reason, str) and reason:
+                    return reason
+                message_stop = result.get("messageStop")
+                if isinstance(message_stop, dict):
+                    reason = message_stop.get("stopReason")
+                    if isinstance(reason, str) and reason:
+                        return reason
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Failed to extract Bedrock stopReason: %s", e)
+        return None
+
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:  # pylint: disable=R1705
         if hasattr(result, "get"):
+            # Converse reports usage at the top level in camelCase, with no
+            # `body` and no `contentType` -- the contentType gate below would
+            # return None and leave the span priced at zero.
+            converse = self._converse_usage(result.get("usage"))
+            if converse is not None:
+                return converse
+
+            # converse_stream reports tokens only in the trailing metadata event.
+            metadata = result.get("metadata")
+            if isinstance(metadata, dict):
+                converse = self._converse_usage(metadata.get("usage"))
+                if converse is not None:
+                    return converse
+
             content_type = result.get("contentType", "").lower()
             body_str = result.get("body", "")
 
@@ -203,6 +418,43 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
             Dict[str, Any]: Dictionary of response attributes.
         """
         attrs = {}
+
+        # Converse returns a plain dict: the completion, the stop reason and any
+        # tool calls live under output.message.content[], not in a JSON body.
+        try:
+            if hasattr(result, "get") and isinstance(result.get("output"), dict):
+                message = result["output"].get("message") or {}
+                blocks = message.get("content") or []
+
+                text = _converse_blocks_text(blocks)
+                if text:
+                    attrs["gen_ai.response"] = _cap_content(getattr(self, "config", None), text)
+
+                finish_reason = self._extract_finish_reason(result)
+                if finish_reason:
+                    attrs["gen_ai.response.finish_reasons"] = [finish_reason]
+
+                tc_idx = 0
+                for block in blocks:
+                    if not isinstance(block, dict) or "toolUse" not in block:
+                        continue
+                    tool_use = block["toolUse"] or {}
+                    prefix = f"llm.output_messages.0.message.tool_calls.{tc_idx}"
+                    if tool_use.get("toolUseId"):
+                        attrs[f"{prefix}.tool_call.id"] = tool_use["toolUseId"]
+                    if tool_use.get("name"):
+                        attrs[f"{prefix}.tool_call.function.name"] = tool_use["name"]
+                    if "input" in tool_use:
+                        try:
+                            attrs[f"{prefix}.tool_call.function.arguments"] = json.dumps(
+                                tool_use["input"]
+                            )
+                        except (TypeError, ValueError) as e:
+                            logger.debug("Failed to serialize toolUse input: %s", e)
+                    tc_idx += 1
+                return attrs
+        except (AttributeError, KeyError, TypeError) as e:
+            logger.debug("Failed to extract Converse response content: %s", e)
 
         # Extract response content for evaluation support
         try:

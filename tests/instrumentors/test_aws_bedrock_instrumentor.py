@@ -145,15 +145,28 @@ class TestAWSBedrockInstrumentor(unittest.TestCase):
         # Call _instrument_bedrock_client
         instrumentor._instrument_bedrock_client(mock_client)
 
-        # Verify create_span_wrapper was called correctly
-        instrumentor.create_span_wrapper.assert_called_once_with(
-            span_name="aws.bedrock.invoke_model",
-            extract_attributes=instrumentor._extract_aws_bedrock_attributes,
+        # Verify every Bedrock runtime call is wrapped, not just invoke_model.
+        # This previously asserted exactly one call, which is what let #27 sit
+        # unnoticed: converse / converse_stream / invoke_model_with_response_stream
+        # produced no span at all. converse_stream is wrapped separately (it needs
+        # to keep the span open across the event stream), so it is not counted here.
+        wrapped = {
+            call.kwargs["span_name"] for call in instrumentor.create_span_wrapper.call_args_list
+        }
+        self.assertEqual(
+            wrapped,
+            {
+                "aws.bedrock.invoke_model",
+                "aws.bedrock.invoke_model_with_response_stream",
+                "aws.bedrock.converse",
+            },
         )
 
         # The decorator must be applied to the ORIGINAL invoke_model (not assigned
         # directly), otherwise invoke_model would be the factory and raise TypeError.
-        mock_decorator.assert_called_once_with(original_invoke_model)
+        # assert_any_call, not assert_called_once_with: the same decorator mock is
+        # now applied to each wrapped method.
+        mock_decorator.assert_any_call(original_invoke_model)
         self.assertEqual(mock_client.invoke_model, mock_decorator.return_value)
 
     def test_instrument_bedrock_client_without_invoke_model(self):

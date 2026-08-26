@@ -11,7 +11,7 @@ TraceVerde auto-instruments 21+ LLM providers. No code changes are needed - just
 | CometAPI | 500+ models via OpenAI- or Anthropic-compatible API | `[cometapi]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/comet_api.py) |
 | Anthropic | Claude Sonnet 4.6, Claude 3.5/3 series (15+) | `[anthropic]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/anthropic/example.py) |
 | Google AI | Gemini 2.5/2.0 Pro/Flash, PaLM 2 (30+) | `[google]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_ai/example.py) |
-| AWS Bedrock | Amazon Titan, Claude, Llama, Mistral (25+) | `[aws]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/aws_bedrock/example.py) |
+| AWS Bedrock | Amazon Titan, Claude, Llama, Mistral (25+), Converse API | `[aws]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/aws_bedrock/example.py) |
 | Azure OpenAI | Same as OpenAI with Azure pricing | `[openai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/azure_openai/example.py) |
 | Cohere | Command R/R+, Embed v4/v3, rerankers (15+) | `[cohere]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/cohere/example.py) |
 | Mistral AI | Large/Medium/Small, Mixtral, embeddings (20+) | `[mistral]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/mistralai/example.py) |
@@ -138,6 +138,66 @@ Tool calls come from the `function_call` items of `output[]`, and `response.id`
 is recorded so `store=true` responses stay joinable server-side. Streaming works
 the same as elsewhere -- TTFT and inter-token latency are measured as the
 response events arrive.
+
+## Quick Example: AWS Bedrock Converse
+
+All four Bedrock runtime calls are traced: `invoke_model`,
+`invoke_model_with_response_stream`, `converse` and `converse_stream`.
+
+Converse is the unified API AWS points callers at, and the practical path for
+every non-Anthropic model -- it removes the per-vendor request body that makes
+`invoke_model` awkward. Because it is model-agnostic, the span shape does not
+depend on `modelId`.
+
+```python
+import genai_otel
+genai_otel.instrument()
+
+import boto3
+
+client = boto3.client("bedrock-runtime", region_name="us-east-1")
+response = client.converse(
+    modelId="meta.llama3-70b-instruct-v1:0",
+    system=[{"text": "You are a helpful assistant."}],
+    messages=[{"role": "user", "content": [{"text": "What is OpenTelemetry?"}]}],
+    inferenceConfig={"maxTokens": 256, "temperature": 0.2},
+)
+
+print(response["output"]["message"]["content"][0]["text"])
+```
+
+Converse differs from `invoke_model` in every field the instrumentation reads,
+and each is mapped onto the same semantic conventions the other providers emit:
+
+| Converse | Recorded as |
+|---|---|
+| `modelId` | `gen_ai.request.model` |
+| `messages[].content[]` typed blocks (`text`, `image`, `toolUse`, `toolResult`) | `gen_ai.request.message_count`, `gen_ai.request.first_message` |
+| `system` (a top-level parameter, **not** a message role) | `gen_ai.request.instructions` |
+| `inferenceConfig.{maxTokens, temperature, topP, stopSequences}` | `gen_ai.request.{max_tokens, temperature, top_p, stop_sequences}` |
+| `output.message.content[]` | completion events, `gen_ai.response` |
+| `usage.{inputTokens, outputTokens, totalTokens}` (camelCase) | `gen_ai.usage.{input_tokens, output_tokens}` |
+| `stopReason` | `gen_ai.response.finish_reasons` |
+| `toolUse` blocks | tool-call attributes |
+
+### Streaming
+
+`converse_stream` returns `{"stream": ...}` immediately -- the model generates
+while you iterate -- so the span stays open until the event stream is exhausted
+rather than closing on return, which would report near-zero latency and no
+tokens. Token counts arrive only in the trailing `metadata` event and are picked
+up from there.
+
+```python
+response = client.converse_stream(
+    modelId="meta.llama3-70b-instruct-v1:0",
+    messages=[{"role": "user", "content": [{"text": "Explain tracing."}]}],
+)
+
+for event in response["stream"]:
+    if "contentBlockDelta" in event:
+        print(event["contentBlockDelta"]["delta"]["text"], end="")
+```
 
 ## Quick Example: Embeddings and RAG
 

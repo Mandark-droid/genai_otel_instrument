@@ -4,7 +4,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.22.0] - 2026-08-26
+
+### Added
+
+- **The AWS Bedrock Converse API is now traced** (#27). `aws_bedrock_instrumentor`
+  wrapped `invoke_model` and nothing else, so `converse` and `converse_stream` --
+  the unified API AWS points callers at, and the practical path for every
+  non-Anthropic model -- produced **no span at all**. `invoke_model_with_response_stream`
+  was unwrapped too, so even the covered call went dark as soon as a caller streamed.
+  Same silent-empty failure mode as #26: the instrumentor loaded, reported success,
+  and captured nothing.
+
+  All four runtime calls are now wrapped. Converse differs from `invoke_model` in
+  every field the instrumentation reads, and each is mapped onto the existing
+  semantic conventions so Bedrock spans stay comparable with every other provider:
+
+  | Converse | Note |
+  |---|---|
+  | `messages[].content[]` | typed blocks (`text`, `image`, `toolUse`, `toolResult`), not strings |
+  | `system` | a top-level parameter, **not** a message role -- it no longer inflates the message count |
+  | `inferenceConfig.{maxTokens, temperature, topP, stopSequences}` | mapped to `gen_ai.request.*` |
+  | `output.message.content[]`, `stopReason` | completion, finish reason and tool calls |
+  | `usage.{inputTokens, outputTokens, totalTokens}` | camelCase, and top-level rather than inside a JSON body |
+
+  Being model-agnostic, Converse needs none of the per-model body parsing
+  `invoke_model` requires.
+
+### Fixed
+
+- **A Converse response was priced at zero.** `_extract_usage` gated on
+  `contentType` and a JSON `body`, neither of which a Converse response has, so it
+  returned `None` and the span was treated as having no usage rather than being
+  flagged. Converse token counts are now read from the top-level camelCase `usage`.
+
+- **`converse_stream` spans closed before the model had generated anything.**
+  Bedrock returns `{"stream": ...}` immediately and generates while the caller
+  iterates, and there is no `stream=True` keyword for the generic wrapper to key
+  on. The event stream is now wrapped so the span stays open until it is
+  exhausted, reporting real latency and picking up token counts from the trailing
+  `metadata` event. Sampled-out spans are handled explicitly -- a `NonRecordingSpan`
+  has no `.name`, which the measurement path reads.
 
 ### Removed
 
@@ -3689,7 +3729,8 @@ This is the first public release of genai-otel-instrument, a comprehensive OpenT
 - Fixed tests for base/redis and auto instrument (a701603)
 - Updated `test_auto_instrument.py` assertions to match new OTLP exporter configuration (exporters now read endpoint from environment variables instead of direct parameters)
 
-[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.21.0...HEAD
+[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.22.0...HEAD
+[1.22.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.21.0...v1.22.0
 [1.21.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.20.2...v1.21.0
 [1.8.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.6.1...v1.7.0
