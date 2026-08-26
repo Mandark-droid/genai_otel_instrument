@@ -19,7 +19,18 @@ from __future__ import annotations
 
 import pytest
 
-from genai_otel.gpu_metrics import normalize_country_iso_code
+from genai_otel.gpu_metrics import (
+    _codecarbon_supported_countries,
+    normalize_country_iso_code,
+)
+
+#: The dataset-membership branch of the validator can only be exercised when
+#: codecarbon is actually installed -- it reads codecarbon's own
+#: global_energy_mix.json rather than carrying a duplicate list. codecarbon is in
+#: the `co2`/`all` extras but deliberately not in `dev`, so it is absent in CI and
+#: on most dev machines. When it is absent codecarbon is not in use either, and
+#: the validator documents that shape validation is then all that is meaningful.
+_DATASET_READABLE = bool(_codecarbon_supported_countries())
 
 
 class TestTwoLetterCodesAreRepaired:
@@ -46,11 +57,22 @@ class TestUnusableCodesRaiseRatherThanFallBack:
     """A code codecarbon cannot use must stop the integration, not silently
     produce the same number as having no integration at all."""
 
-    @pytest.mark.parametrize("bad", ["XX", "ZZZ", "QQ", "NOTACOUNTRY", "1N"])
-    def test_unknown_code_raises(self, bad) -> None:
+    @pytest.mark.parametrize("bad", ["XX", "QQ", "NOTACOUNTRY", "1N"])
+    def test_malformed_code_always_raises(self, bad) -> None:
+        """Wrong shape is rejected on shape alone -- no dataset needed."""
         with pytest.raises(ValueError) as exc:
             normalize_country_iso_code(bad)
         assert bad.upper() in str(exc.value) or "ISO" in str(exc.value)
+
+    @pytest.mark.skipif(
+        not _DATASET_READABLE, reason="codecarbon not installed; no dataset to check against"
+    )
+    @pytest.mark.parametrize("bad", ["ZZZ", "QQQ"])
+    def test_wellformed_but_unsupported_code_raises(self, bad) -> None:
+        """A well-formed alpha-3 that codecarbon does not know is the silent-475 case."""
+        with pytest.raises(ValueError) as exc:
+            normalize_country_iso_code(bad)
+        assert bad in str(exc.value)
 
     def test_the_error_names_the_consequence(self) -> None:
         """An operator reading the log must learn WHY it matters."""
