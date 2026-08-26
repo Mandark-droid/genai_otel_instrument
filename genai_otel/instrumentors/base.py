@@ -593,7 +593,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         # Dual-emission: also write OTel-canonical gen_ai.input.messages /
         # gen_ai.output.messages JSON when the user has opted into the new
         # GenAI semconv stability tier ("gen_ai" or "gen_ai/dup").
-        # See docs/proposals/upstream-pr-draft/ for the canonical schema.
+        # Canonical schema: gen-ai-input-messages.json / gen-ai-output-messages.json
+        # in open-telemetry/semantic-conventions.
         # Gated on the GenAI tier opt-in, NOT on genai_semconv_modes: this payload
         # carries message CONTENT, so an explicit opt-out must be honoured rather
         # than defaulted to the safe-for-naming value. See genai_tier_opted_in.

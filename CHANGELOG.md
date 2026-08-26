@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+### Removed
+
+- **`docs/proposals/` removed and stripped from all git history.** The folder held
+  pre-submission drafts of an upstream OpenTelemetry semantic-conventions proposal.
+  That proposal has since been filed and is tracked upstream as
+  [semantic-conventions#3672](https://github.com/open-telemetry/semantic-conventions/issues/3672),
+  so the local drafts were a stale, misleading second copy. They were also being
+  published to the docs site and bundled into every sdist since 1.1.1; `MANIFEST.in`
+  now prunes the path so it cannot ship again.
+
+  The drafts were removed from history with `git-filter-repo`, which **rewrites the
+  commit SHAs of every tag from `v1.1.0` onward**. Anyone pinned to a git SHA or
+  consuming a GitHub release tarball from that range must re-pin; PyPI wheels and
+  sdists are unaffected. Documentation now links to the upstream issue instead.
+
+
 ### Fixed
 
 - **A misconfigured carbon country code silently produced a global average instead of a
@@ -1521,7 +1537,7 @@ first-party vendor pricing always wins on conflict.
 
 ### Documentation
 
-- `docs/proposals/upstream-pr-draft/` redrafted around the actual gap discovered
+- Upstream PR draft redrafted around the actual gap discovered
   by reading the OTel JSON schemas: the upstream already has `BlobPart` /
   `FilePart` / `UriPart` and a `Modality` enum. The narrowed proposal adds:
   - `document` value to the `Modality` enum
@@ -1546,7 +1562,7 @@ first-party vendor pricing always wins on conflict.
   - 41 new unit tests covering provider×modality detection matrix, offload pipeline gating, store backends, redactor graceful-degrade, and per-instrumentor wiring.
   - Live MinIO integration test (skipped unless credentials provided).
   - New examples under `examples/multimodal/` (vision, audio, document, face-blur).
-  - New docs: `docs/guides/multimodal.md`, `docs/proposals/otel_genai_multimodal_content_parts.md` (upstream OTel semconv proposal draft).
+  - New docs: `docs/guides/multimodal.md`.
   - New extras: `multimodal-images`, `multimodal-pdf`, `multimodal-faces`, `multimodal-s3`, umbrella `multimodal`.
 
 ## [1.0.5] - 2026-04-22

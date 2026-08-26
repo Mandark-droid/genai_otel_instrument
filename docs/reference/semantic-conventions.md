@@ -186,4 +186,4 @@ Default behaviour (`off`) emits nothing additional.
 | `gen_ai.media.stripped_reason` | enum | `size_exceeded`, `modality_not_allowed`, `redactor_error`, `upload_error` |
 
 Not yet part of upstream OTel GenAI semconv. See
-[the proposal](../proposals/otel_genai_multimodal_content_parts.md) for the upstream contribution we plan to file.
+[open-telemetry/semantic-conventions#3672](https://github.com/open-telemetry/semantic-conventions/issues/3672) for the upstream contribution.

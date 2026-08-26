@@ -10,8 +10,8 @@ OpenTelemetry GenAI semantic conventions standardize text prompts/completions bu
 standardize how multimodal attachments — images, audio, video, documents — are captured on spans.
 This library defines that shape with an additive, OTel-compatible attribute namespace plus a
 pluggable offload pipeline so binary content lives in your object store, not in span attributes.
-(See `docs/proposals/otel_genai_multimodal_content_parts.md` for the upstream proposal we're
-filing with `open-telemetry/semantic-conventions`.)
+(The upstream proposal is filed with `open-telemetry/semantic-conventions` as
+[issue #3672](https://github.com/open-telemetry/semantic-conventions/issues/3672).)
 
 ## Quickstart
 

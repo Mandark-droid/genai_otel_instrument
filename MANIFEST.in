@@ -17,3 +17,4 @@ global-exclude __pycache__
 # have accidentally ended up in past sdists as a result.
 exclude UPSTREAM_ISSUES_DRAFT.md
 prune .idea
+prune docs/proposals

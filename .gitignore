@@ -381,3 +381,6 @@ after_*.txt
 
 # local test virtualenv
 .venv_test/
+
+# Internal upstream-proposal drafts are not published (see OTel semconv#3672)
+docs/proposals/
