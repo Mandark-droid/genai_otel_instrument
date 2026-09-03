@@ -57,6 +57,25 @@ NEW_CHAT_MODELS = [
     ("longcat-flash-chat", 0.0002, 0.0008),
     ("fugu-ultra", 0.005, 0.03),
     ("sakana/fugu-ultra", 0.005, 0.03),
+    # --- September 2026 catch-up, added ahead of the Oct 3 sweep ---------------
+    # Fable 5.1 and Gemini 3.8 Flash shipped on 2026-09-01/02, after the August
+    # sweep's window. Until these keys existed, "gemini-3.8-flash" resolved to
+    # nothing and fell through to the local-model heuristic, and every Bedrock
+    # regional Fable 5.1 profile was billed at the global rate.
+    ("claude-fable-5-1", 0.01, 0.05),
+    ("claude-fable-5.1", 0.01, 0.05),
+    ("claude-fable-5-1@default", 0.01, 0.05),
+    ("anthropic.claude-fable-5-1", 0.01, 0.05),
+    ("global.anthropic.claude-fable-5-1", 0.01, 0.05),
+    # Regional and multi-region endpoints carry a 10 percent premium over the
+    # global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing
+    ("us.anthropic.claude-fable-5-1", 0.011, 0.055),
+    ("eu.anthropic.claude-fable-5-1", 0.011, 0.055),
+    ("au-anthropic-claude-fable-5-1", 0.011, 0.055),
+    ("jp-anthropic-claude-fable-5-1", 0.011, 0.055),
+    ("gemini-3.8-flash", 0.00075, 0.00375),
+    ("gemini-3-8-flash", 0.00075, 0.00375),
+    ("gemini/gemini-3.8-flash", 0.00075, 0.00375),
 ]
 
 
@@ -88,6 +107,13 @@ SNAPSHOT_ROUTING = [
     ("glm-5.2-2026-06-13", "glm-5.2"),
     ("kimi-k2.7-code-20260612", "kimi-k2.7-code"),
     ("mimo-v2.5-pro-ultraspeed-preview", "mimo-v2.5-pro-ultraspeed"),
+    # September 2026: 5.1 must not collapse onto claude-fable-5, and a regional
+    # profile must not collapse onto the global one (a 10 percent under-bill).
+    ("claude-fable-5-1-20260901", "claude-fable-5-1"),
+    ("vertex_ai/claude-fable-5-1", "claude-fable-5-1"),
+    ("bedrock/us.anthropic.claude-fable-5-1", "us.anthropic.claude-fable-5-1"),
+    ("gemini-3.8-flash-preview-09-02", "gemini-3.8-flash"),
+    ("vertexai/gemini-3.8-flash", "gemini-3.8-flash"),
 ]
 
 
@@ -555,3 +581,33 @@ def test_metadata_registries_are_not_pricing_categories(calc):
     for key in ("prices_checked", "deprecated"):
         assert key not in calc._exact_index
         assert key not in calc._substr_index
+
+
+def test_fable_5_1_uses_the_reduced_cache_hit_multiplier(calc):
+    """Fable 5.1 prices cache hits at 0.025x base input, not the usual 0.1x.
+
+    Anthropic documents $0.25/1M for Fable 5.1 and Mythos 5.1 against $10/1M
+    base input; every other model uses 0.1x. Applying the standard multiplier
+    here would over-bill cached reads four-fold.
+    """
+    usage = {"prompt_tokens": 0, "completion_tokens": 0, "cache_read_input_tokens": 1_000_000}
+    costs = calc.calculate_granular_cost("claude-fable-5-1", usage, "chat")
+    assert costs["cache_read"] == pytest.approx(0.25)
+    assert costs["total"] == pytest.approx(0.25)
+
+
+def test_fable_5_1_regional_profile_costs_ten_percent_more(calc):
+    """The regional endpoint must be strictly dearer than the global one."""
+    usage = {"prompt_tokens": 1_000_000, "completion_tokens": 200_000}
+    glob = calc.calculate_granular_cost("global.anthropic.claude-fable-5-1", usage, "chat")
+    regional = calc.calculate_granular_cost("us.anthropic.claude-fable-5-1", usage, "chat")
+    assert regional["total"] == pytest.approx(glob["total"] * 1.1)
+
+
+def test_gemini_3_8_flash_is_priced_not_guessed(calc):
+    """Before this entry existed the name fell through to the local-model
+    heuristic, which read the version "3.8" as a parameter count and invented
+    a price roughly ten times too low."""
+    usage = {"prompt_tokens": 1_000_000, "completion_tokens": 200_000}
+    costs = calc.calculate_granular_cost("gemini-3.8-flash", usage, "chat")
+    assert costs["total"] == pytest.approx(1.5)
