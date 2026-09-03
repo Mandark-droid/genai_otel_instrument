@@ -1,6 +1,10 @@
 # LLM Providers
 
-TraceVerde auto-instruments 21+ LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
+TraceVerde auto-instruments 23 LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
+
+The table below is the complete list, and `tests/test_docs_provider_coverage.py` asserts
+it stays in step with the `INSTRUMENTORS` registry, so a provider cannot be added in code
+without appearing here.
 
 ## Providers with Full Cost Tracking
 
@@ -23,6 +27,12 @@ TraceVerde auto-instruments 21+ LLM providers. No code changes are needed - just
 | Sarvam AI | Indian language models | `[sarvamai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/) |
 | ElevenLabs | Text-to-speech + Scribe speech-to-text | `[elevenlabs]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/elevenlabs_example.py) |
 | Replicate | Hardware-based pricing ($/second), embeddings (BGE/E5/GTE/MPNet/MiniLM families) | `[replicate]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/replicate/example.py) |
+| Azure AI Inference | Serverless and managed endpoints on Azure AI Foundry | `[azure-ai-inference]` | - |
+| Anyscale | Llama, Mistral and Zephyr via an OpenAI-compatible endpoint | `[openai]` | - |
+| Liquid Audio | Liquid Foundation audio models | `[liquid-audio]` | - |
+| HuggingFace Transformers | Local models, cost estimated from parameter count | `[huggingface]` | - |
+| Sentence Transformers | Local embedding models | `[huggingface]` | - |
+| Hyperbolic | Open-weight models over raw HTTP. Disabled by default - see below | - | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/hyperbolic_example.py) |
 
 Replicate hosts arbitrary community models behind one generic `run()` call,
 with no fixed input/output schema and no dedicated embeddings endpoint to

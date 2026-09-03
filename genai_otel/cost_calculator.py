@@ -12,6 +12,41 @@ logger = logging.getLogger(__name__)
 _MISS = object()
 
 
+def _matches_on_token_boundary(haystack: str, needle: str) -> bool:
+    """Return True if ``needle`` occurs in ``haystack`` without splitting a token.
+
+    Model ids are sequences of tokens separated by '-', '.', '/', ':' or '_'.
+    Plain containment treats every position as a candidate, so a short token
+    matches in the middle of an unrelated word and silently bills another
+    model's price:
+
+        "o1"   is inside "sa-o1-0k"  -> Sao10K finetunes billed at o1's $15/1M
+        "mini" is inside "ge-mini"   -> every Gemini id read as a 0.02B model
+        "auto" is inside "nova-2-automotive"
+        "gpt-5" is inside "openai-gpt-52"
+
+    A match therefore has to be flanked by a separator or the string edge. When
+    the needle's own first/last character is already a separator it supplies the
+    boundary itself, so only alphanumeric edges impose the requirement.
+
+    Both scans stay on the resolution hot path, but the cheap ``in`` test
+    short-circuits first and results are memoized per model name.
+    """
+    if not needle:
+        return False
+    needs_left = needle[0].isalnum()
+    needs_right = needle[-1].isalnum()
+    start = haystack.find(needle)
+    while start != -1:
+        end = start + len(needle)
+        left_ok = not needs_left or start == 0 or not haystack[start - 1].isalnum()
+        right_ok = not needs_right or end == len(haystack) or not haystack[end].isalnum()
+        if left_ok and right_ok:
+            return True
+        start = haystack.find(needle, start + 1)
+    return False
+
+
 class CostCalculator:
     """Calculate estimated costs for LLM API calls based on loaded pricing data."""
 
@@ -650,7 +685,12 @@ class CostCalculator:
         if hit is not None:
             return hit
         for lower_key, original_key in self._substr_index.get(category, ()):  # longest-first
-            if lower_key in normalized_model:
+            # Containment alone is not enough: a short key ("o1", "o3", "auto")
+            # matches inside an unrelated name and bills that model's price.
+            # See _matches_on_token_boundary.
+            if lower_key in normalized_model and _matches_on_token_boundary(
+                normalized_model, lower_key
+            ):
                 return original_key
         return None
 
@@ -731,9 +771,15 @@ class CostCalculator:
             "xxl": 11.0,
         }
 
-        # Check for size indicators in the model name
+        # Check for size indicators in the model name. The generic entries below
+        # ("mini", "xl", "tiny", ...) are short enough to appear inside unrelated
+        # words - "mini" is in "gemini", "xl" is in "sdxl" - so a bare
+        # containment test invents a parameter count, and from it a fabricated
+        # local-model price, for models that simply have no pricing entry. A
+        # fabricated price is worse than none: downstream it is indistinguishable
+        # from a real one. Require a token boundary here too.
         for size_key, param_count in size_map.items():
-            if size_key in model_lower:
+            if size_key in model_lower and _matches_on_token_boundary(model_lower, size_key):
                 return param_count
 
         return None

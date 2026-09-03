@@ -4,7 +4,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.23.0] - 2026-09-03
+
+### Fixed
+
+- **Model names no longer match a pricing key in the middle of a word.** Both
+  resolution paths used plain substring containment, so a short token matched
+  inside an unrelated name and billed that model's price:
+
+  | Requested model | Matched | Was billed | Should be |
+  |---|---|---|---|
+  | `Sao10K/L3-8B-Stheno-v3.2` | `o1`, inside `sa`**`o1`**`0k` | $15/1M | ~$0.10/1M |
+  | `google/veo3.1` (a video model) | `o3` | $2/1M | unpriced |
+  | `deepgram/nova-2-automotive` | `auto` | $0.85/1M | unpriced |
+  | `openai-gpt-52` | `gpt-5` | GPT-5 rate | unpriced |
+  | `spacexai/grok-4.20-*` | `xai/grok-4`, inside `spacex`**`ai/`** | Grok 4 rate | Grok 4.20 |
+
+  The same flaw sat in the local-model fallback: the generic size word `mini` is
+  inside `ge`**`mini`**, so **96 Gemini ids with no pricing entry** were read as
+  0.02B local models and given a fabricated price. A fabricated price is worse
+  than a missing one, because downstream it is indistinguishable from a real
+  figure and the error never surfaces.
+
+  A match must now be flanked by a separator or the string edge. Verified across
+  a 7,395-name corpus (pricing keys + models.dev + LiteLLM): 98 resolutions
+  change, all corrections. Names in families that spell a decimal point as `p`
+  (`glm-5p3`, `deepseek-v3p1`, `minimax-m2p1`) move from a wrong price to no
+  price pending an alias backfill.
+
+- **Bedrock and Vertex regional endpoints were under-billed by 10%.** Anthropic
+  prices regional and multi-region endpoints at a 10% premium over the global
+  endpoint, for Claude Sonnet 4.5, Haiku 4.5, Opus 4.5 and every later model.
+  The table applied that only to `eu.`, so US, AU and JP callers were charged
+  the global rate:
+
+  | Model | Regions affected | Was | Now |
+  |---|---|---|---|
+  | Claude Opus 5 | us, au, jp | $5.00 / $25.00 per 1M | $5.50 / $27.50 |
+  | Claude Sonnet 5 | us, au, jp | $2.00 / $10.00 per 1M | $2.20 / $11.00 |
+  | Claude Sonnet 4.6 | us, jp | $3.00 / $15.00 per 1M | $3.30 / $16.50 |
+
+  Cache read and write prices are scaled too, since the multiplier applies to
+  every token category. Eight `us.`/`eu.`/`au.`/`jp.` dot-form aliases for Sonnet
+  5 and Sonnet 4.6 were missing entirely and resolved to the base price by
+  substring fallback, which under-billed by the same 10%; they are now explicit.
+  A parametrized invariant test asserts every regional alias is exactly 1.1x its
+  global counterpart, so a new family cannot repeat this.
+
+### Added
+
+- **Claude Fable 5.1** (released 2026-09-01) - input $10/1M, output $50/1M.
+  Cache hits are **$0.25/1M**, a 0.025x multiplier rather than the 0.1x every
+  other model uses, so a shared `cacheReadPrice` would have over-billed cached
+  reads four-fold. 5-minute cache writes are $12.50/1M. Fifteen aliases: bare,
+  dotted, `@default`, the Bedrock `anthropic.` forms, and the `us`/`eu`/`au`/`jp`
+  regional profiles at the documented **10% premium** ($11/$55) over global.
+  Source: platform.claude.com/docs/en/about-claude/pricing
+
+- **Gemini 3.8 Flash** (released 2026-09-02) - input $0.75/1M, output $3.75/1M,
+  with dashed and `gemini/`-prefixed aliases. Previously unpriced, which meant a
+  1M-in/200k-out call was billed at $0.14 instead of $1.50. Source: models.dev.
+
+  Both models shipped after the August sweep's window and would not have been
+  picked up until the October refresh.
+
+### Changed
+
+- The documented provider count is now **23** and is enforced by a test.
+  `docs/index.md` claimed 19+, `docs/guides/llm-providers.md` and `README.md`
+  claimed 21+, and the table itself listed 17. The six providers that were
+  instrumented but undocumented - Azure AI Inference, Anyscale, Liquid Audio,
+  HuggingFace Transformers, Sentence Transformers and Hyperbolic - now have
+  rows, and `tests/test_docs_provider_coverage.py` fails if the registry and the
+  docs drift apart again.
 ## [1.22.1] - 2026-09-03
+
+> Merged to `main` but never published as its own release; these changes ship in 1.23.0.
 
 ### Added
 
