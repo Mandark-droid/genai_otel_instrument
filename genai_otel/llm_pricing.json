@@ -1982,12 +1982,68 @@
       "cacheWritePrice": 0.00375,
       "note": "Claude Sonnet 4.6. input $3/1M, output $15/1M, cache read $0.3/1M, cache write $3.75/1M. Released 2026-02-17. 1000000 context. Source: models.dev / amazon-bedrock"
     },
+    "us.anthropic.claude-sonnet-4-6": {
+      "promptPrice": 0.0033,
+      "completionPrice": 0.0165,
+      "cacheReadPrice": 0.00033,
+      "cacheWritePrice": 0.004125,
+      "note": "claude-sonnet-4-6 on a US Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "eu.anthropic.claude-sonnet-4-6": {
+      "promptPrice": 0.0033,
+      "completionPrice": 0.0165,
+      "cacheReadPrice": 0.00033,
+      "cacheWritePrice": 0.004125,
+      "note": "claude-sonnet-4-6 on a EU Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "au.anthropic.claude-sonnet-4-6": {
+      "promptPrice": 0.0033,
+      "completionPrice": 0.0165,
+      "cacheReadPrice": 0.00033,
+      "cacheWritePrice": 0.004125,
+      "note": "claude-sonnet-4-6 on a AU Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "jp.anthropic.claude-sonnet-4-6": {
+      "promptPrice": 0.0033,
+      "completionPrice": 0.0165,
+      "cacheReadPrice": 0.00033,
+      "cacheWritePrice": 0.004125,
+      "note": "claude-sonnet-4-6 on a JP Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
     "anthropic-claude-sonnet-5": {
       "promptPrice": 0.002,
       "completionPrice": 0.01,
       "cacheReadPrice": 0.0002,
       "cacheWritePrice": 0.0025,
       "note": "Claude Sonnet 5. input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Released 2026-06-30. 1000000 context. Source: models.dev / amazon-bedrock"
+    },
+    "us.anthropic.claude-sonnet-5": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.00275,
+      "note": "claude-sonnet-5 on a US Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "eu.anthropic.claude-sonnet-5": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.00275,
+      "note": "claude-sonnet-5 on a EU Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "au.anthropic.claude-sonnet-5": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.00275,
+      "note": "claude-sonnet-5 on a AU Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "jp.anthropic.claude-sonnet-5": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.00275,
+      "note": "claude-sonnet-5 on a JP Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "anthropic.claude-3-haiku-20240307-v1:0": {
       "promptPrice": 0.00025,
@@ -2029,11 +2085,11 @@
       "note": "Arcee Trinity Large Thinking (Public Preview). input $0.25/1M, output $0.9/1M, cache read $0.06/1M. Released 2026-04-02. 128000 context. Source: models.dev / digitalocean"
     },
     "au-anthropic-claude-opus-5": {
-      "promptPrice": 0.005,
-      "completionPrice": 0.025,
-      "cacheReadPrice": 0.0005,
-      "cacheWritePrice": 0.00625,
-      "note": "Claude Opus 5 (AU). input $5/1M, output $25/1M, cache read $0.5/1M, cache write $6.25/1M. Released 2026-07-24. 1000000 context. Source: models.dev / amazon-bedrock"
+      "promptPrice": 0.0055,
+      "completionPrice": 0.0275,
+      "cacheReadPrice": 0.00055,
+      "cacheWritePrice": 0.006875,
+      "note": "claude-opus-5 on a AU Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "au-anthropic-claude-sonnet-4-6": {
       "promptPrice": 0.0033,
@@ -2043,18 +2099,18 @@
       "note": "AU Anthropic Claude Sonnet 4.6. input $3.3/1M, output $16.5/1M, cache read $0.33/1M, cache write $4.125/1M. Released 2026-02-17. 1000000 context. Source: models.dev / amazon-bedrock"
     },
     "au-anthropic-claude-sonnet-5": {
-      "promptPrice": 0.002,
-      "completionPrice": 0.01,
-      "cacheReadPrice": 0.0002,
-      "cacheWritePrice": 0.0025,
-      "note": "Claude Sonnet 5 (AU). input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Released 2026-06-30. 1000000 context. Source: models.dev / amazon-bedrock"
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.00275,
+      "note": "claude-sonnet-5 on a AU Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "au.anthropic.claude-opus-5": {
-      "promptPrice": 0.005,
-      "completionPrice": 0.025,
-      "cacheReadPrice": 0.0005,
-      "cacheWritePrice": 0.00625,
-      "note": "Claude Opus 5 (AU). input $5/1M, output $25/1M, cache read $0.5/1M, cache write $6.25/1M. Released 2026-07-24. 1000000 context. Source: models.dev / amazon-bedrock"
+      "promptPrice": 0.0055,
+      "completionPrice": 0.0275,
+      "cacheReadPrice": 0.00055,
+      "cacheWritePrice": 0.006875,
+      "note": "claude-opus-5 on a AU Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "auto": {
       "promptPrice": 0.00085,
@@ -4832,32 +4888,32 @@
       "note": "From LiteLLM - provider: ai21"
     },
     "jp-anthropic-claude-opus-5": {
-      "promptPrice": 0.005,
-      "completionPrice": 0.025,
-      "cacheReadPrice": 0.0005,
-      "cacheWritePrice": 0.00625,
-      "note": "Claude Opus 5 (JP). input $5/1M, output $25/1M, cache read $0.5/1M, cache write $6.25/1M. Released 2026-07-24. 1000000 context. Source: models.dev / amazon-bedrock"
+      "promptPrice": 0.0055,
+      "completionPrice": 0.0275,
+      "cacheReadPrice": 0.00055,
+      "cacheWritePrice": 0.006875,
+      "note": "claude-opus-5 on a JP Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "jp-anthropic-claude-sonnet-4-6": {
-      "promptPrice": 0.003,
-      "completionPrice": 0.015,
-      "cacheReadPrice": 0.0003,
-      "cacheWritePrice": 0.00375,
-      "note": "Claude Sonnet 4.6 (JP). input $3/1M, output $15/1M, cache read $0.3/1M, cache write $3.75/1M. Released 2026-02-17. 1000000 context. Source: models.dev / amazon-bedrock"
+      "promptPrice": 0.0033,
+      "completionPrice": 0.0165,
+      "cacheReadPrice": 0.00033,
+      "cacheWritePrice": 0.004125,
+      "note": "claude-sonnet-4-6 on a JP Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "jp-anthropic-claude-sonnet-5": {
-      "promptPrice": 0.002,
-      "completionPrice": 0.01,
-      "cacheReadPrice": 0.0002,
-      "cacheWritePrice": 0.0025,
-      "note": "Claude Sonnet 5 (JP). input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Released 2026-06-30. 1000000 context. Source: models.dev / amazon-bedrock"
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.00275,
+      "note": "claude-sonnet-5 on a JP Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "jp.anthropic.claude-opus-5": {
-      "promptPrice": 0.005,
-      "completionPrice": 0.025,
-      "cacheReadPrice": 0.0005,
-      "cacheWritePrice": 0.00625,
-      "note": "Claude Opus 5 (JP). input $5/1M, output $25/1M, cache read $0.5/1M, cache write $6.25/1M. Released 2026-07-24. 1000000 context. Source: models.dev / amazon-bedrock"
+      "promptPrice": 0.0055,
+      "completionPrice": 0.0275,
+      "cacheReadPrice": 0.00055,
+      "cacheWritePrice": 0.006875,
+      "note": "claude-opus-5 on a JP Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "kimi-k2-0711-preview": {
       "promptPrice": 0.0006,
@@ -7709,25 +7765,25 @@
       "note": "Tongyi Intent Detect V3. input $0.058/1M, output $0.144/1M. Released 2024-01. 8192 context. Source: models.dev / alibaba-cn"
     },
     "us-anthropic-claude-opus-5": {
-      "promptPrice": 0.005,
-      "completionPrice": 0.025,
-      "cacheReadPrice": 0.0005,
-      "cacheWritePrice": 0.00625,
-      "note": "Claude Opus 5 (US). input $5/1M, output $25/1M, cache read $0.5/1M, cache write $6.25/1M. Released 2026-07-24. 1000000 context. Source: models.dev / amazon-bedrock"
+      "promptPrice": 0.0055,
+      "completionPrice": 0.0275,
+      "cacheReadPrice": 0.00055,
+      "cacheWritePrice": 0.006875,
+      "note": "claude-opus-5 on a US Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "us-anthropic-claude-sonnet-4-6": {
-      "promptPrice": 0.003,
-      "completionPrice": 0.015,
-      "cacheReadPrice": 0.0003,
-      "cacheWritePrice": 0.00375,
-      "note": "Claude Sonnet 4.6 (US). input $3/1M, output $15/1M, cache read $0.3/1M, cache write $3.75/1M. Released 2026-02-17. 1000000 context. Source: models.dev / amazon-bedrock"
+      "promptPrice": 0.0033,
+      "completionPrice": 0.0165,
+      "cacheReadPrice": 0.00033,
+      "cacheWritePrice": 0.004125,
+      "note": "claude-sonnet-4-6 on a US Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "us-anthropic-claude-sonnet-5": {
-      "promptPrice": 0.002,
-      "completionPrice": 0.01,
-      "cacheReadPrice": 0.0002,
-      "cacheWritePrice": 0.0025,
-      "note": "Claude Sonnet 5 (US). input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Released 2026-06-30. 1000000 context. Source: models.dev / amazon-bedrock"
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.00275,
+      "note": "claude-sonnet-5 on a US Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "us-deepseek-r1-v1:0": {
       "promptPrice": 0.00135,
@@ -7745,11 +7801,11 @@
       "note": "Llama 4 Scout 17B Instruct (US). input $0.17/1M, output $0.66/1M. Released 2025-04-05. 3500000 context. Source: models.dev / amazon-bedrock"
     },
     "us.anthropic.claude-opus-5": {
-      "promptPrice": 0.005,
-      "completionPrice": 0.025,
-      "cacheReadPrice": 0.0005,
-      "cacheWritePrice": 0.00625,
-      "note": "Claude Opus 5 (US). input $5/1M, output $25/1M, cache read $0.5/1M, cache write $6.25/1M. Released 2026-07-24. 1000000 context. Source: models.dev / amazon-bedrock"
+      "promptPrice": 0.0055,
+      "completionPrice": 0.0275,
+      "cacheReadPrice": 0.00055,
+      "cacheWritePrice": 0.006875,
+      "note": "claude-opus-5 on a US Regional/multi-region endpoint: 10% premium over the global endpoint. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "us.deepseek.r1-v1:0": {
       "promptPrice": 0.00135,

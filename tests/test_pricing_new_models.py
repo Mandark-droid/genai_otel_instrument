@@ -611,3 +611,56 @@ def test_gemini_3_8_flash_is_priced_not_guessed(calc):
     usage = {"prompt_tokens": 1_000_000, "completion_tokens": 200_000}
     costs = calc.calculate_granular_cost("gemini-3.8-flash", usage, "chat")
     assert costs["total"] == pytest.approx(1.5)
+
+
+# Anthropic prices regional and multi-region endpoints at a 10% premium over the
+# global endpoint, for Claude Sonnet 4.5, Haiku 4.5, Opus 4.5 "and all future
+# models". The table only applied it to `eu.` for a while, so US, AU and JP
+# callers on Bedrock and Vertex were under-billed by 10% on Opus 5 and Sonnet 5.
+REGIONAL_PREMIUM_FAMILIES = [
+    "claude-opus-5",
+    "claude-sonnet-4-6",
+    "claude-sonnet-5",
+    "claude-fable-5-1",
+]
+PRICE_FIELDS = ("promptPrice", "completionPrice", "cacheReadPrice", "cacheWritePrice")
+
+
+@pytest.mark.parametrize("family", REGIONAL_PREMIUM_FAMILIES)
+@pytest.mark.parametrize("region", ["us", "eu", "au", "jp"])
+@pytest.mark.parametrize("sep", [".", "-"])
+def test_regional_endpoint_carries_the_ten_percent_premium(calc, family, region, sep):
+    """Every regional alias must be exactly 1.1x its global counterpart."""
+    table = calc.pricing_data["chat"]
+    global_key = next(
+        (k for k in (f"global.anthropic.{family}", f"global-anthropic-{family}") if k in table),
+        None,
+    )
+    assert global_key, f"no global endpoint entry for {family}"
+
+    regional_key = (
+        f"{region}{sep}anthropic{sep}{family}" if sep == "." else f"{region}-anthropic-{family}"
+    )
+    assert (
+        regional_key in table
+    ), f"{regional_key} is missing, so it falls back to the global price and under-bills by 10%"
+
+    base, regional = table[global_key], table[regional_key]
+    for field in PRICE_FIELDS:
+        if field in base:
+            assert regional.get(field) == pytest.approx(
+                base[field] * 1.1
+            ), f"{regional_key}.{field} is not a 10% premium over {global_key}.{field}"
+
+
+def test_global_endpoint_is_not_charged_the_premium(calc):
+    """The global endpoint and the bare model id stay at base price."""
+    table = calc.pricing_data["chat"]
+    for family in REGIONAL_PREMIUM_FAMILIES:
+        bare = next((k for k in (family, f"anthropic.{family}") if k in table), None)
+        global_key = next(
+            (k for k in (f"global.anthropic.{family}", f"global-anthropic-{family}") if k in table),
+            None,
+        )
+        if bare and global_key:
+            assert table[global_key]["promptPrice"] == pytest.approx(table[bare]["promptPrice"])

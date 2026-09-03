@@ -32,6 +32,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`glm-5p3`, `deepseek-v3p1`, `minimax-m2p1`) move from a wrong price to no
   price pending an alias backfill.
 
+- **Bedrock and Vertex regional endpoints were under-billed by 10%.** Anthropic
+  prices regional and multi-region endpoints at a 10% premium over the global
+  endpoint, for Claude Sonnet 4.5, Haiku 4.5, Opus 4.5 and every later model.
+  The table applied that only to `eu.`, so US, AU and JP callers were charged
+  the global rate:
+
+  | Model | Regions affected | Was | Now |
+  |---|---|---|---|
+  | Claude Opus 5 | us, au, jp | $5.00 / $25.00 per 1M | $5.50 / $27.50 |
+  | Claude Sonnet 5 | us, au, jp | $2.00 / $10.00 per 1M | $2.20 / $11.00 |
+  | Claude Sonnet 4.6 | us, jp | $3.00 / $15.00 per 1M | $3.30 / $16.50 |
+
+  Cache read and write prices are scaled too, since the multiplier applies to
+  every token category. Eight `us.`/`eu.`/`au.`/`jp.` dot-form aliases for Sonnet
+  5 and Sonnet 4.6 were missing entirely and resolved to the base price by
+  substring fallback, which under-billed by the same 10%; they are now explicit.
+  A parametrized invariant test asserts every regional alias is exactly 1.1x its
+  global counterpart, so a new family cannot repeat this.
+
 ### Added
 
 - **Claude Fable 5.1** (released 2026-09-01) - input $10/1M, output $50/1M.
