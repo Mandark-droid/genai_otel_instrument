@@ -244,6 +244,12 @@ AUGUST_2026_MODELS = [
     ("qwen3.8-2.4t", 0.002, 0.006),
     ("qwen3.8-2-4t", 0.002, 0.006),
     ("Qwen/Qwen3.8-2.4T", 0.002, 0.006),
+    # September 3 catch-up sweep: DeepSeek V4 Flash Vision Exp (2026-08-21) was
+    # missed by the original August sweep. Without an explicit key it fell
+    # through to deepseek-v4-flash by substring, which happened to be the same
+    # prompt/completion price but had no reasoning or cache-read rate at all.
+    ("deepseek-v4-flash-vision-exp", 0.00014, 0.00028),
+    ("deepseek/v4-flash-vision-exp", 0.00014, 0.00028),
 ]
 
 
@@ -271,6 +277,9 @@ def test_qwen38_2_4t_matches_max(calc):
         ("nvidia/nemotron-3.5-lightning", "nvidia/nemotron-3.5-lightning"),
         # Must not resolve to the muse-spark family it was distilled from.
         ("muse-glimmer-30b", "muse-glimmer-30b"),
+        # Must not collapse onto the shorter deepseek-v4-flash sibling.
+        ("deepseek-v4-flash-vision-exp", "deepseek-v4-flash-vision-exp"),
+        ("deepseek-v4-flash-vision-exp-20260821", "deepseek-v4-flash-vision-exp"),
     ],
 )
 def test_august_2026_routing_not_shadowed(calc, model, expected_key):
