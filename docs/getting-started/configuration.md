@@ -260,6 +260,34 @@ supplies one, it is used unchanged. Otherwise:
     Prefer `OTEL_SERVICE_INSTANCE_ID` where the deployment can supply a real
     one, and reach for `derived` only where it cannot.
 
+### Telling the three apart from a span
+
+A consumer reading `service.instance.id` needs to know whether it can be
+trusted as a grouping key, and the value says so on its own - no need to watch
+a service across restarts before classifying it:
+
+| Value | Meaning | Safe as a grouping key? |
+|-------|---------|-------------------------|
+| Not a UUID | An operator assigned it | Yes - stable and unique |
+| A **version 5** UUID | `derived` mode | Yes, but it identifies an instance *configuration*, not a process: identically-started workers on one host share it |
+| A **version 4** UUID | Nobody configured anything | No - it changes on every restart. Group on `host.name` + `service.name` instead |
+
+The version 4 case deliberately does not distinguish this library's `random`
+mode from the `service.instance.id` that `opentelemetry-sdk` 1.44 and later
+generate on their own. There is no difference worth acting on: both mean the
+instance was never configured, and both change on every restart.
+
+Note the direction the version 4 rule can be wrong in. An operator who sets
+`OTEL_SERVICE_INSTANCE_ID` to a version 4 UUID they generate and manage
+themselves has a perfectly stable ID that reads as unconfigured. The cost is
+lost per-instance granularity rather than a corrupted grouping, so it fails
+safe - but prefer a non-UUID instance ID (a pod name, a worker index) anyway,
+since it is also the only kind a human can read in an alert.
+
+!!! warning "`process.pid` is not an instance identifier"
+    It separates concurrent processes within one lifetime, but a restart
+    changes it. Use it as evidence, never as the key an entity is tracked by.
+
 ## Semantic Conventions
 
 | Variable | Default | Description |
