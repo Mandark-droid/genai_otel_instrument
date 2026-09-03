@@ -4,6 +4,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.1] - 2026-09-03
+
+### Added
+
+- **Monthly pricing sweep for August 2026 releases.** Cross-checked
+  models.dev against first-party vendor docs for every first-party /
+  hyperscaler model released in the target month:
+
+  | Model | Provider | Input / 1M | Output / 1M | Released |
+  |---|---|---|---|---|
+  | GLM-5.3 | Zhipu / Z.AI | $1.40 | $4.40 | 2026-08-14 |
+  | GLM-5.3-Flash | Zhipu / Z.AI | $0.075 | $0.25 | 2026-08-26 |
+  | Grok 4.6 | xAI | $2.00 | $6.00 | 2026-08-12 |
+  | Qwen3.8 Flash | Alibaba | $0.15 | $0.47 | 2026-08-26 |
+  | Qwen3.8 27B | Open-weight (deepinfra/huggingface) | $0.40 | $3.00 | 2026-08-14 |
+  | Gemini 3.7 Flash | Google | $0.75 | $3.75 | 2026-08-13 |
+  | Sakana Namazu | Sakana AI | $0.95 | $4.00 | 2026-08-03 |
+  | Solar Pro 4 | Upstage | $0.30 | $1.20 | 2026-08-06 |
+  | Grok Imagine Image 2.0 | xAI (image, flat per-image) | $0.04/image | - | 2026-08-07 |
+
+  Each model also received provider-prefixed, dashed-version, and (where
+  applicable) HuggingFace/Bedrock alias keys, mirroring sibling entries in the
+  same family.
+
+### Fixed
+
+- **GLM-5.3, GLM-5.3-Flash, and Grok 4.6 were silently mis-billed.** None of
+  the three had an explicit pricing key, so name lookups fell through to the
+  longest matching *shorter* sibling: any `glm-5.3*` id resolved to the Feb
+  2026 `glm-5` entry (billing GLM-5.3 at $1.00/1M input instead of $1.40, and
+  GLM-5.3-Flash at $1.00/1M instead of its real $0.075/1M), and `grok-4.6`
+  resolved to `grok-4` (billing at $3.00/1M input instead of the real
+  $2.00/1M). Both families now have explicit keys so their own price wins the
+  longest-substring match instead of the older sibling.
+- **`gemini-flash-latest` carried a stale price.** Google repointed the
+  `-latest` alias from the 2026-05-19 flash release to Gemini 3.7 Flash on
+  2026-08-13; the entry still carried the old release's rate ($1.50/1M
+  input), double the new target's real $0.75/1M. Updated to track the
+  current target.
+
+### Deferred
+
+- **Grok Imagine Image 2.0**: models.dev lists no `cost` for this model;
+  priced instead from xAI's own pricing page
+  (`docs.x.ai/developers/pricing`, flat $0.04/image).
+- No other August 2026 first-party/hyperscaler releases were found without a
+  reliable published price this sweep.
+
+### Pricing data sources
+
+Refreshed for this sweep. The `genai_otel/llm_pricing.json` database draws
+from, in order of precedence (first-party always wins on conflict):
+
+- **First-party provider docs**: Anthropic (`platform.claude.com`), OpenAI,
+  Google (`ai.google.dev`), Moonshot AI (`platform.moonshot.ai`), Xiaomi
+  (`platform.xiaomimimo.com`), Zhipu / Z.AI (`docs.z.ai`), Alibaba DashScope,
+  DeepSeek (`api-docs.deepseek.com`), MiniMax (`platform.minimax.io`), xAI
+  (`docs.x.ai`), Cohere, Nvidia, Sakana AI, Upstage, Meituan LongCat
+  (`longcatai.org`).
+- **Hyperscalers**: AWS Bedrock, Azure AI Foundry, Google Vertex AI.
+- **Open-weight host consensus**: when a model has no first-party API SKU
+  (e.g. Qwen3.8 27B), a rate agreed on by two or more allowed hosting
+  providers (deepinfra, huggingface, fireworks-ai, togetherai, baseten,
+  cloudflare-workers-ai, nebius, groq) is used instead of a single aggregator.
+- **Aggregators / cross-checks**: OpenRouter, LiteLLM, Artificial Analysis.
+- **models.dev** (`https://models.dev/api.json`).
+
 ## [1.22.0] - 2026-08-26
 
 ### Added

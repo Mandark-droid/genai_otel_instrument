@@ -142,18 +142,18 @@ and the recorded cost would then depend on which aggregator was indexed first.
 |----------|--------|--------------|
 | OpenAI | GPT-5.5 series, GPT-4o, GPT-4 Turbo, o1/o3, embeddings (50+) | Per token (prompt/completion) |
 | Anthropic | Claude Opus 5, Claude Sonnet 5, Claude Fable 5, Claude Opus 4.8, Claude Sonnet 4.6, Claude 3.5/3 series (20+) | Per token + cache pricing |
-| Google AI | Gemini 3.6 Flash, Gemini 3.5 Flash / Flash Lite, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (35+) | Per token |
+| Google AI | Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.5 Flash / Flash Lite, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (35+) | Per token |
 | AWS Bedrock | Titan, Claude, Llama, Mistral (25+) | Per token |
 | Azure OpenAI | Same as OpenAI | Per token |
 | Cohere | Command A/R/R+, North Mini Code, Embed v4/v3, rerankers (15+) | Per token |
 | Mistral AI | Large/Medium/Small, Mixtral, embeddings (20+) | Per token |
 | Moonshot AI | Kimi K3, Kimi K2.7 Code, K2.6, K2.5, Kimi Latest (20+) | Per token + cache pricing |
-| Alibaba / Qwen | Qwen3.8-Max, Qwen3.7 Flash/Max, Qwen3.6 series (40+) | Per token |
+| Alibaba / Qwen | Qwen3.8-Max, Qwen3.8 Flash, Qwen3.8 27B, Qwen3.7 Flash/Max, Qwen3.6 series (40+) | Per token |
 | Thinking Machines | Inkling, Inkling Small | Per token |
 | Xiaomi | MiMo V2.5 Pro/UltraSpeed, MiMo V2 Flash/Omni/Pro (6+) | Per token + cache pricing |
-| Zhipu / Z.AI | GLM-5.2, GLM-5.1, GLM-5 series | Per token + cache pricing |
+| Zhipu / Z.AI | GLM-5.3, GLM-5.3-Flash, GLM-5.2, GLM-5.1, GLM-5 series | Per token + cache pricing |
 | Meituan | LongCat-2.0, LongCat Flash Chat | Per token (cache free) |
-| Sakana AI | Fugu Ultra | Per token + cache pricing |
+| Sakana AI | Sakana Namazu, Fugu Ultra | Per token + cache pricing |
 | Nvidia | Nemotron 3 Ultra, Nemotron 4/Nano/Super (15+) | Per token |
 | Together AI | DeepSeek-R1, Llama 3.x, Qwen (25+) | Per token |
 | Groq | Llama 3.x, Mixtral, Gemma (20+) | Per token |
@@ -170,7 +170,8 @@ and the recorded cost would then depend on which aggregator was indexed first.
 | IBM Granite | Chat, vision, embeddings (10+) | Per token |
 | DeepSeek | V3, R1, VL (15+) | Per token |
 | Qwen/Alibaba | Qwen 3.5, VL, embeddings (25+) | Per token |
-| xAI | Grok 4.20, Grok 4.1 (5+) | Per token |
+| xAI | Grok 4.6, Grok 4.20, Grok 4.1 (5+) | Per token |
+| Upstage | Solar Pro 4, Solar Pro 2, Solar Mini | Per token |
 
 ## Special Pricing
 
