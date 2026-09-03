@@ -61,8 +61,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The OpenRouter example requested `nvidia/nemotron-3-nano-30b-a3b:free`, a
   listing that has since been withdrawn, so the example failed with a 404.
-  It now requests the paid slug, and its banner no longer claims to be
-  calling Claude 3.5 Sonnet.
+  It now requests `nvidia/nemotron-3.5-lightning:free` - still a free listing,
+  verified to bill nothing - and carries a note on how to find a replacement
+  if that one is withdrawn too. Its banner also no longer claims to be calling
+  Claude 3.5 Sonnet while requesting a Nemotron model.
 
 ### Changed
 
