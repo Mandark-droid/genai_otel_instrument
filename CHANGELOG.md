@@ -4,7 +4,93 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.0] - 2026-09-03
+
+### Added
+
+- **Spans now identify the host, the process and the service instance.** The
+  resource previously carried `service.name` and the SDK's own `telemetry.sdk.*`
+  keys and nothing else, so two processes of the same service - on one host or
+  on fifty - produced byte-identical resources. Traffic could not be attributed
+  to a machine or to one instance among several.
+
+  The OpenTelemetry SDK already ships `host`, `os` and `process` detectors but
+  runs none of them unless asked, so `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS`
+  now defaults to `host,os,process`. That adds `host.name`, `host.arch`,
+  `os.type`, `os.version`, `process.pid`, `process.command`,
+  `process.command_line`, `process.command_args`, `process.executable.*`,
+  `process.owner` and `process.runtime.*`. `host.ip` has no upstream detector
+  and is resolved by the library, excluding loopback interfaces as the
+  convention requires.
+
+  Every name is from the OpenTelemetry registry, and the control surface is the
+  standard `OTEL_*` variables: set `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS` to
+  `host,os` to drop the process group, or `otel` to restore the previous
+  minimal resource. `OTEL_RESOURCE_ATTRIBUTES` always wins over anything
+  detected.
+
+- **`service.instance.id` is always set.** Taken from `OTEL_SERVICE_INSTANCE_ID`
+  or `OTEL_RESOURCE_ATTRIBUTES` when supplied, otherwise generated as a v4 UUID
+  that is stable for the life of the process. `GENAI_SERVICE_INSTANCE_ID_MODE=derived`
+  switches to a v5 UUID over the host name, service name and normalised startup
+  arguments - under the namespace the specification designates for derived
+  instance IDs - which survives a restart, at the cost of collapsing identical
+  workers on one host onto a single ID. Prefer setting
+  `OTEL_SERVICE_INSTANCE_ID` where the deployment can supply a real one.
+
+### Security
+
+- **Credential values in `process.command_args` are redacted.** A value
+  following a flag whose name looks like a credential (`--password`,
+  `--api-key`, `--token`, `--client-secret`, and similar) becomes
+  `***REDACTED***`, in both the `--flag value` and `--flag=value` forms, as are
+  inline `name=value` pairs and `scheme://user:password@host` URLs.
+  `process.command_line` is rebuilt from the redacted vector so the two cannot
+  disagree.
+
+  This has to happen in the SDK. `process.command_args` is an array, so a flag
+  and its value arrive as separate elements; once flattened, the value element
+  carries no indication of which flag it belonged to and no downstream
+  `name=value` rule can reconnect them. Redaction is pattern-based and cannot
+  catch a credential passed under an unrecognised flag name, so
+  `GENAI_PROFILE=strict|bfsi|bank` defaults the detector list to `host,os`,
+  keeping command lines off the wire entirely while leaving host and instance
+  identity intact.
+
+### Fixed
+
+- The OpenRouter example requested `nvidia/nemotron-3-nano-30b-a3b:free`, a
+  listing that has since been withdrawn, so the example failed with a 404.
+  It now requests `nvidia/nemotron-3.5-lightning:free` - still a free listing,
+  verified to bill nothing - and carries a note on how to find a replacement
+  if that one is withdrawn too. Its banner also no longer claims to be calling
+  Claude 3.5 Sonnet while requesting a Nemotron model.
+
+### Changed
+
+- **Behaves identically across the supported `opentelemetry-sdk` range**, which
+  changed twice underneath this feature. 1.44 added an `include_command_args`
+  flag to `ProcessResourceDetector` and defaulted it off, so the detector loaded
+  from the entry point stopped emitting `process.command_line` and
+  `process.command_args` at all; they are now requested explicitly whenever the
+  process detector is enabled. 1.44 also began auto-generating
+  `service.instance.id`, which meant "the attribute is already set" could no
+  longer distinguish an operator's choice from the SDK's, and
+  `GENAI_SERVICE_INSTANCE_ID_MODE` was accepted and then silently ignored; the
+  two standard sources are now read directly. Both were caught by end-to-end
+  validation against a fresh install, not by the unit suite, which resolved an
+  older SDK.
+
+- Resource attributes now use their current registry names:
+  `deployment.environment.name` (was a bare `environment` key, which was never a
+  registry name) and `telemetry.distro.name` / `telemetry.distro.version` (were
+  `telemetry.auto.*`, renamed upstream). The superseded spellings are still
+  emitted alongside the current ones, as the GenAI token attributes are under
+  `gen_ai/dup`, and will be removed at 2.0.
+
 ## [1.23.1] - 2026-09-03
+
+> Merged to `main` but never published as its own release; these changes ship in 1.24.0.
 
 ### Added
 
@@ -277,7 +363,6 @@ from, in order of precedence (first-party always wins on conflict):
   labelled `embedding.model_name`. Routing now decides on the *response* shape, which
   is unambiguous, rather than on a request key both APIs share.
 
-
 ### Removed
 
 - **`docs/proposals/` removed and stripped from all git history.** The folder held
@@ -292,7 +377,6 @@ from, in order of precedence (first-party always wins on conflict):
   commit SHAs of every tag from `v1.1.0` onward**. Anyone pinned to a git SHA or
   consuming a GitHub release tarball from that range must re-pin; PyPI wheels and
   sdists are unaffected. Documentation now links to the upstream issue instead.
-
 
 ### Fixed
 
@@ -1071,7 +1155,6 @@ To emit only the current names (the 1.9.0 behaviour):
 ```bash
 export OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai
 ```
-
 
 ## [1.9.0] - 2026-08-12
 

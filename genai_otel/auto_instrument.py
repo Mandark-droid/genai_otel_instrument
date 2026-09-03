@@ -41,6 +41,7 @@ from .gpu_metrics import GPUMetricsCollector
 from .litellm_span_enrichment_processor import LiteLLMSpanEnrichmentProcessor
 from .mcp_instrumentors import MCPInstrumentorManager
 from .mcp_span_enrichment_processor import MCPSpanEnrichmentProcessor
+from .resource import build_resource
 from .server_metrics import initialize_server_metrics
 from .smolagents_span_enrichment_processor import SmolagentsSpanEnrichmentProcessor
 from .metrics import (
@@ -322,20 +323,12 @@ def setup_auto_instrumentation(config: OTelConfig):
     # explicit setting.
     os.environ.setdefault("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 
-    service_instance_id = os.getenv("OTEL_SERVICE_INSTANCE_ID")
-    environment = os.getenv("OTEL_ENVIRONMENT")
     from .__version__ import __version__ as _pkg_version
 
-    resource_attributes = {
-        "service.name": config.service_name,
-        "telemetry.auto.name": "genai-otel-instrument",
-        "telemetry.auto.version": _pkg_version,
-    }
-    if service_instance_id:
-        resource_attributes["service.instance.id"] = service_instance_id
-    if environment:
-        resource_attributes["environment"] = environment
-    resource = Resource.create(resource_attributes)
+    # Host, OS, process and instance identity, so that traffic can be attributed
+    # to a machine and to one instance among several on it. See genai_otel/resource.py
+    # for the attribute set and the OTEL_* variables that control it.
+    resource = build_resource(config.service_name, _pkg_version, profile=config.profile)
 
     # Configure Tracing
     global _active_tracer_provider, _active_meter_provider

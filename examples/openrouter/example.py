@@ -25,12 +25,18 @@ client = OpenAI(
     api_key=os.environ.get("OPENROUTER_API_KEY"),
 )
 
-print("Making a request to Claude 3.5 Sonnet via OpenRouter...")
+print("Making a request to Nemotron 3.5 Lightning via OpenRouter...")
 
-# Make a simple completion request
-# OpenRouter uses provider/model format (e.g., "anthropic/claude-3.5-sonnet")
+# Make a simple completion request.
+# OpenRouter uses provider/model format (e.g., "anthropic/claude-3.5-sonnet").
+# Keep this on a ":free" listing so running the example costs nothing. Those
+# listings do get withdrawn - the previous one, nvidia/nemotron-3-nano-30b-a3b:free,
+# now returns 404 "This model is unavailable for free" - so if this call fails
+# that way, pick another free model rather than dropping the ":free" suffix:
+#   curl https://openrouter.ai/api/v1/models | jq -r
+#     '.data[] | select(.id | endswith(":free")) | .id'
 response = client.chat.completions.create(
-    model="nvidia/nemotron-3-nano-30b-a3b:free",
+    model="nvidia/nemotron-3.5-lightning:free",
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is OpenRouter and why would I use it?"},
