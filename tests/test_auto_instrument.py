@@ -139,13 +139,19 @@ class TestAutoInstrumentation:
                         mock_metrics.get_meter_provider.return_value = mock_meter_provider_instance
                         setup_auto_instrumentation(config)
                         # Assertions
-                        resource_attrs = mock_resource.create.call_args[0][0]
+                        # The resource is built by genai_otel.resource.build_resource;
+                        # assert on what the provider actually received. Full
+                        # coverage of the attribute set lives in
+                        # tests/test_resource_attributes.py.
+                        mock_tracer_provider_class.assert_called_once()
+                        tracer_kwargs = mock_tracer_provider_class.call_args.kwargs
+                        assert tracer_kwargs["sampler"] is None
+                        built_resource = tracer_kwargs["resource"]
+                        resource_attrs = built_resource.attributes
                         assert resource_attrs["service.name"] == "test-service"
+                        assert resource_attrs["telemetry.distro.name"] == "genai-otel-instrument"
+                        assert "telemetry.distro.version" in resource_attrs
                         assert resource_attrs["telemetry.auto.name"] == "genai-otel-instrument"
-                        assert "telemetry.auto.version" in resource_attrs
-                        mock_tracer_provider_class.assert_called_once_with(
-                            resource=mock_resource_instance, sampler=None
-                        )
                         mock_trace.set_tracer_provider.assert_called_once_with(
                             mock_tracer_provider_instance
                         )
@@ -176,7 +182,8 @@ class TestAutoInstrumentation:
                         # MeterProvider should be called with views parameter for histogram buckets
                         assert mock_meter_provider_class.call_count == 1
                         call_kwargs = mock_meter_provider_class.call_args.kwargs
-                        assert call_kwargs["resource"] == mock_resource_instance
+                        # Traces and metrics must describe the same instance.
+                        assert call_kwargs["resource"] is built_resource
                         assert call_kwargs["metric_readers"] == [mock_metric_reader_instance]
                         assert "views" in call_kwargs
                         assert (
@@ -872,13 +879,13 @@ class TestEdgeCases:
                 with patch("genai_otel.auto_instrument.MeterProvider"):
                     with patch("genai_otel.auto_instrument.trace"):
                         with patch("genai_otel.auto_instrument.metrics"):
-                            with patch("genai_otel.auto_instrument.Resource") as mock_resource:
-                                setup_auto_instrumentation(config)
+                            setup_auto_instrumentation(config)
 
-                                # Verify Resource.create was called with service.instance.id
-                                resource_attrs = mock_resource.create.call_args[0][0]
-                                assert resource_attrs["service.name"] == "test-service"
-                                assert resource_attrs["service.instance.id"] == "instance-123"
+                            resource_attrs = mock_tracer_provider.call_args.kwargs[
+                                "resource"
+                            ].attributes
+                            assert resource_attrs["service.name"] == "test-service"
+                            assert resource_attrs["service.instance.id"] == "instance-123"
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
     def test_setup_with_environment_attribute(self):
@@ -892,17 +899,19 @@ class TestEdgeCases:
         )
 
         with patch.dict("os.environ", {"OTEL_ENVIRONMENT": "production"}):
-            with patch("genai_otel.auto_instrument.TracerProvider"):
+            with patch("genai_otel.auto_instrument.TracerProvider") as mock_tracer_provider:
                 with patch("genai_otel.auto_instrument.MeterProvider"):
                     with patch("genai_otel.auto_instrument.trace"):
                         with patch("genai_otel.auto_instrument.metrics"):
-                            with patch("genai_otel.auto_instrument.Resource") as mock_resource:
-                                setup_auto_instrumentation(config)
+                            setup_auto_instrumentation(config)
 
-                                # Verify Resource.create was called with environment
-                                resource_attrs = mock_resource.create.call_args[0][0]
-                                assert resource_attrs["service.name"] == "test-service"
-                                assert resource_attrs["environment"] == "production"
+                            resource_attrs = mock_tracer_provider.call_args.kwargs[
+                                "resource"
+                            ].attributes
+                            assert resource_attrs["service.name"] == "test-service"
+                            # Registry name, plus the superseded bare key.
+                            assert resource_attrs["deployment.environment.name"] == "production"
+                            assert resource_attrs["environment"] == "production"
 
     @patch("genai_otel.auto_instrument.INSTRUMENTORS", MOCK_INSTRUMENTORS)
     def test_setup_with_invalid_timeout(self):

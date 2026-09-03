@@ -136,13 +136,55 @@ absent, not zero.
 
 ### Resource Attributes
 
+Every resource attribute is a name from the OpenTelemetry registry. They
+identify *where* a span came from, which is what makes it possible to separate
+traffic per host and per instance when several copies of an application run at
+once.
+
 | Attribute | Description |
 |-----------|-------------|
 | `service.name` | Service name |
-| `service.instance.id` | Instance identifier |
-| `deployment.environment` | Environment name |
-| `telemetry.auto.name` | "genai-otel-instrument" |
-| `telemetry.auto.version` | Package version |
+| `service.instance.id` | Instance identifier. Taken from `OTEL_SERVICE_INSTANCE_ID` when set, otherwise generated - see [Host and Instance Identity](../getting-started/configuration.md#host-and-instance-identity) |
+| `deployment.environment.name` | Environment name |
+| `telemetry.distro.name` | `"genai-otel-instrument"` |
+| `telemetry.distro.version` | Package version |
+| `host.name` | Hostname of the machine |
+| `host.arch` | CPU architecture |
+| `host.ip` | Non-loopback IP addresses of the host (array) |
+| `os.type` / `os.version` | Operating system |
+| `process.pid` / `process.parent_pid` | Process identifiers |
+| `process.command` | Program that was started |
+| `process.command_line` | Full startup command line |
+| `process.command_args` | Startup arguments (array) |
+| `process.executable.name` / `process.executable.path` | Interpreter location |
+| `process.owner` | User the process runs as (requires `psutil`) |
+| `process.runtime.name` / `.version` / `.description` | Python runtime |
+
+The `host.*`, `os.*` and `process.*` groups come from the OpenTelemetry SDK's
+own detectors, which this library enables by default via
+`OTEL_EXPERIMENTAL_RESOURCE_DETECTORS`. `host.ip` has no upstream detector and
+is resolved by the library.
+
+!!! warning "Credential values in `process.command_args` are redacted"
+    A value following a flag whose name looks like a credential
+    (`--password`, `--api-key`, `--token`, `--client-secret`, ...) is replaced
+    with `***REDACTED***`, in both the `--flag value` and `--flag=value` forms,
+    as are `name=value` pairs and `scheme://user:password@host` URLs. This has
+    to happen in the SDK: `process.command_args` is an array, so a flag and its
+    value become separate elements and no downstream `name=value` rule can
+    reconnect them. Redaction is pattern-based and cannot catch a credential
+    passed under an unrecognised flag name - see
+    [Host and Instance Identity](../getting-started/configuration.md#host-and-instance-identity)
+    for how to drop the process detector entirely.
+
+**Superseded spellings**, still emitted alongside the current names for the same
+reason the GenAI token attributes are dual-emitted, and removed at 2.0:
+
+| Superseded | Current |
+|------------|---------|
+| `environment` | `deployment.environment.name` |
+| `telemetry.auto.name` | `telemetry.distro.name` |
+| `telemetry.auto.version` | `telemetry.distro.version` |
 
 ## Metrics
 

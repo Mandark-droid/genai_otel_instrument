@@ -216,6 +216,50 @@ SIGKILL, out-of-memory kills and segfaults cannot be handled from inside the
 process. To bound the loss window there, shorten the batch delay with the
 standard `OTEL_BSP_SCHEDULE_DELAY`, trading export frequency for exposure.
 
+## Host and Instance Identity
+
+Spans carry host, OS, process and instance attributes so that traffic can be
+attributed to a machine and to one instance among several running on it. All of
+them are OpenTelemetry registry names, and all are controlled by standard
+`OTEL_*` variables - see
+[Resource Attributes](../reference/semantic-conventions.md#resource-attributes)
+for the full list.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS` | `host,os,process` | SDK detectors to run. Set to `host,os` to drop process attributes, or `otel` for none |
+| `OTEL_SERVICE_INSTANCE_ID` | | Instance identifier. **Recommended** - set it to something your orchestrator already guarantees unique and stable, such as a pod name |
+| `OTEL_RESOURCE_ATTRIBUTES` | | Any additional resource attributes, `key=value` comma-separated. Always wins over what the library detects |
+| `GENAI_SERVICE_INSTANCE_ID_MODE` | `random` | How `service.instance.id` is generated when not set explicitly. `random` or `derived` |
+
+!!! note "Defaults differ under the hardened profiles"
+    `GENAI_PROFILE=strict|bfsi|bank` defaults the detector list to `host,os`,
+    leaving out `process` so that no command line reaches the backend. Host and
+    instance identity are unaffected. Setting
+    `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS` explicitly overrides this.
+
+### Choosing how `service.instance.id` is generated
+
+`service.instance.id` is what separates two instances of the same service on
+the same host. If `OTEL_SERVICE_INSTANCE_ID` (or `OTEL_RESOURCE_ATTRIBUTES`)
+supplies one, it is used unchanged. Otherwise:
+
+- **`random`** (default) - a version 4 UUID, stable for the life of the
+  process. This is OpenTelemetry's primary recommendation and is the only
+  option guaranteed to distinguish instances that run at the same time. It
+  changes on every restart.
+- **`derived`** - a version 5 UUID over the host name, the service name and the
+  normalised startup arguments, using the namespace the specification
+  designates for derived instance IDs. The same configured instance keeps its
+  identity across restarts, which matters for any consumer that builds
+  per-instance baselines: a key that changes on restart never accumulates
+  enough history for one instance.
+
+    Its limitation is the mirror image: instances that differ in no argument -
+    several identical workers started on one host - collapse onto a single ID.
+    Prefer `OTEL_SERVICE_INSTANCE_ID` where the deployment can supply a real
+    one, and reach for `derived` only where it cannot.
+
 ## Semantic Conventions
 
 | Variable | Default | Description |
