@@ -59,6 +59,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Behaves identically across the supported `opentelemetry-sdk` range**, which
+  changed twice underneath this feature. 1.44 added an `include_command_args`
+  flag to `ProcessResourceDetector` and defaulted it off, so the detector loaded
+  from the entry point stopped emitting `process.command_line` and
+  `process.command_args` at all; they are now requested explicitly whenever the
+  process detector is enabled. 1.44 also began auto-generating
+  `service.instance.id`, which meant "the attribute is already set" could no
+  longer distinguish an operator's choice from the SDK's, and
+  `GENAI_SERVICE_INSTANCE_ID_MODE` was accepted and then silently ignored; the
+  two standard sources are now read directly. Both were caught by end-to-end
+  validation against a fresh install, not by the unit suite, which resolved an
+  older SDK.
+
 - Resource attributes now use their current registry names:
   `deployment.environment.name` (was a bare `environment` key, which was never a
   registry name) and `telemetry.distro.name` / `telemetry.distro.version` (were

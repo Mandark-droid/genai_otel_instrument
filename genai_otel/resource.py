@@ -31,8 +31,9 @@ import sys
 import threading
 import uuid
 from typing import Dict, List, Optional, Sequence, Tuple
+from urllib.parse import unquote
 
-from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.resources import ProcessResourceDetector, Resource
 
 logger = logging.getLogger(__name__)
 
@@ -207,6 +208,61 @@ def process_argv() -> List[str]:
     return list(getattr(sys, "orig_argv", sys.argv))
 
 
+def _process_detector_enabled() -> bool:
+    detectors = os.getenv("OTEL_EXPERIMENTAL_RESOURCE_DETECTORS", "")
+    return "process" in {name.strip() for name in detectors.split(",")}
+
+
+def _argv_resource() -> Optional[Resource]:
+    """``process.command_line`` and ``process.command_args``, which SDK 1.44 hid.
+
+    1.44 added an ``include_command_args`` flag to ``ProcessResourceDetector``
+    and defaulted it off, because those attributes can carry credentials. The
+    detector loaded from the entry point is constructed with no arguments, so
+    on 1.44 and later the argument vector is simply absent - which removes the
+    startup command line this library exists to report. Ask for it explicitly
+    and redact it, rather than dropping the attribute.
+
+    On older SDKs the flag does not exist and the attributes are already
+    present, so there is nothing to add.
+    """
+    try:
+        detector = ProcessResourceDetector(include_command_args=True)
+    except TypeError:
+        return None
+    try:
+        detected = detector.detect()
+    except Exception as exc:  # pragma: no cover - detector is defensive already
+        logger.debug("process argument detection failed: %s", exc)
+        return None
+    argv_only = {
+        key: value
+        for key, value in detected.attributes.items()
+        if key in (PROCESS_COMMAND_LINE, PROCESS_COMMAND_ARGS)
+    }
+    return Resource(argv_only) if argv_only else None
+
+
+def _operator_supplied_instance_id() -> Optional[str]:
+    """An instance id the operator set, as distinct from one the SDK invented.
+
+    SDK 1.44 began auto-generating ``service.instance.id``, so the attribute
+    merely being present no longer means somebody chose it. Read the two
+    standard sources directly instead, or ``GENAI_SERVICE_INSTANCE_ID_MODE``
+    would be silently ignored on 1.44 and later - a setting that quietly does
+    nothing being worse than no setting at all.
+    """
+    configured = os.getenv("OTEL_SERVICE_INSTANCE_ID")
+    if configured:
+        return configured
+    for item in os.getenv("OTEL_RESOURCE_ATTRIBUTES", "").split(","):
+        key, separator, value = item.partition("=")
+        if separator and key.strip() == SERVICE_INSTANCE_ID and value.strip():
+            # Values in OTEL_RESOURCE_ATTRIBUTES are URL-encoded per the spec.
+            return unquote(value.strip())
+    return None
+
+
 def _random_instance_id() -> str:
     """A v4 UUID, stable for the life of this process.
 
@@ -279,6 +335,13 @@ def build_resource(service_name: str, distro_version: str, profile: str = "") ->
 
     resource = Resource.create(attributes)
 
+    # The argument vector is opt-in on newer SDKs; ask for it when the process
+    # detector is enabled at all.
+    if _process_detector_enabled() and not resource.attributes.get(PROCESS_COMMAND_LINE):
+        argv_resource = _argv_resource()
+        if argv_resource is not None:
+            resource = resource.merge(argv_resource)
+
     # Credential values are stripped from the detected argument vector, and the
     # joined command line is rebuilt from the stripped version so the two cannot
     # disagree.
@@ -295,13 +358,17 @@ def build_resource(service_name: str, distro_version: str, profile: str = "") ->
     # Fill in only what neither a detector nor OTEL_RESOURCE_ATTRIBUTES gave us,
     # so an operator's explicit value is never second-guessed.
     fallbacks: Dict[str, object] = {}
-    if not resource.attributes.get(SERVICE_INSTANCE_ID):
-        fallbacks[SERVICE_INSTANCE_ID] = _instance_id(service_name)
     if not resource.attributes.get(HOST_IP):
         addresses = host_ip_addresses()
         if addresses:
             fallbacks[HOST_IP] = list(addresses)
     if fallbacks:
         resource = Resource(fallbacks).merge(resource)
+
+    # Handled apart from the fallbacks above, because on SDK 1.44 and later the
+    # attribute is always present - auto-generated - so its absence can no
+    # longer be the test for whether the operator left this to us.
+    if not _operator_supplied_instance_id():
+        resource = resource.merge(Resource({SERVICE_INSTANCE_ID: _instance_id(service_name)}))
 
     return resource

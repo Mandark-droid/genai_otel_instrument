@@ -195,6 +195,34 @@ def test_derived_instance_id_differs_per_service(clean_env):
     assert one != two
 
 
+def test_derived_mode_wins_over_an_sdk_generated_instance_id(clean_env):
+    """SDK 1.44 auto-generates service.instance.id, which used to mask this.
+
+    The attribute being present no longer means an operator chose it, so
+    "already set" cannot be the test for whether to apply the configured mode.
+    Without this, GENAI_SERVICE_INSTANCE_ID_MODE=derived was accepted and then
+    silently ignored on newer SDKs.
+    """
+    resource = _build(GENAI_SERVICE_INSTANCE_ID_MODE="derived")
+    assert uuid.UUID(resource.attributes[SERVICE_INSTANCE_ID]).version == 5
+
+
+def test_operator_value_still_beats_the_configured_mode(clean_env):
+    """An explicit id outranks both the SDK's and ours, in either mode."""
+    for env in (
+        {"OTEL_SERVICE_INSTANCE_ID": "worker-7"},
+        {"OTEL_RESOURCE_ATTRIBUTES": "service.instance.id=worker-7"},
+    ):
+        resource = _build(GENAI_SERVICE_INSTANCE_ID_MODE="derived", **env)
+        assert resource.attributes[SERVICE_INSTANCE_ID] == "worker-7", env
+
+
+def test_percent_encoded_instance_id_is_decoded(clean_env):
+    """OTEL_RESOURCE_ATTRIBUTES values are URL-encoded per the specification."""
+    resource = _build(OTEL_RESOURCE_ATTRIBUTES="service.instance.id=pod%20one")
+    assert resource.attributes[SERVICE_INSTANCE_ID] == "pod one"
+
+
 def test_unknown_instance_id_mode_falls_back_to_random(clean_env):
     resource = _build(GENAI_SERVICE_INSTANCE_ID_MODE="nonsense")
     assert uuid.UUID(resource.attributes[SERVICE_INSTANCE_ID]).version == 4
@@ -210,6 +238,34 @@ def test_process_attributes_are_present_by_default(clean_env):
     assert resource.attributes.get(PROCESS_PID)
     assert resource.attributes.get(PROCESS_COMMAND_LINE) is not None
     assert resource.attributes.get(PROCESS_COMMAND) is not None
+
+
+def test_command_line_survives_the_sdk_making_argv_opt_in(clean_env):
+    """SDK 1.44 defaulted ``ProcessResourceDetector`` to omitting the argv.
+
+    It added an ``include_command_args`` flag and turned it off, so the
+    entry-point-loaded detector - constructed with no arguments - stops
+    emitting ``process.command_line`` entirely. This package supports SDKs on
+    both sides of that change, and the startup command line has to be present
+    either way. Regression caught end-to-end, not by the unit suite, because
+    the suite ran against an older SDK than a fresh install resolves to.
+    """
+    resource = build_resource("test-service", "9.9.9")
+    assert resource.attributes.get(PROCESS_COMMAND_LINE) is not None
+    assert resource.attributes.get(PROCESS_COMMAND_ARGS) is not None
+
+
+def test_argv_is_not_requested_when_the_process_detector_is_off(clean_env):
+    """The opt-in must not smuggle argv back in past an operator's decision."""
+    resource = _build(OTEL_EXPERIMENTAL_RESOURCE_DETECTORS="host,os")
+    assert PROCESS_COMMAND_LINE not in resource.attributes
+    assert PROCESS_COMMAND_ARGS not in resource.attributes
+
+
+def test_argv_is_not_requested_under_a_hardened_profile(clean_env):
+    resource = build_resource("test-service", "9.9.9", profile="bank")
+    assert PROCESS_COMMAND_LINE not in resource.attributes
+    assert PROCESS_COMMAND_ARGS not in resource.attributes
 
 
 def test_command_args_are_a_sequence(clean_env):
