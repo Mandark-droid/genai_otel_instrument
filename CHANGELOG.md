@@ -57,6 +57,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keeping command lines off the wire entirely while leaving host and instance
   identity intact.
 
+### Fixed
+
+- The OpenRouter example requested `nvidia/nemotron-3-nano-30b-a3b:free`, a
+  listing that has since been withdrawn, so the example failed with a 404.
+  It now requests the paid slug, and its banner no longer claims to be
+  calling Claude 3.5 Sonnet.
+
 ### Changed
 
 - **Behaves identically across the supported `opentelemetry-sdk` range**, which
