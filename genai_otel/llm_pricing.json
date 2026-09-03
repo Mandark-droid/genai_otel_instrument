@@ -484,6 +484,16 @@
         "4096x4096": 0.12
       },
       "note": "Google Gemini 3 Pro Image Preview (alias: nano-banana-pro). Premium image gen."
+    },
+    "grok-imagine-image-2.0": {
+      "standard": {
+        "per_image": 0.04
+      }
+    },
+    "xai/grok-imagine-image-2.0": {
+      "standard": {
+        "per_image": 0.04
+      }
     }
   },
   "audio": {
@@ -3181,7 +3191,7 @@
     "gemini-2.5-computer-use-preview": {
       "promptPrice": 0.00125,
       "completionPrice": 0.01,
-      "note": "Gemini 2.5 Computer Use Preview - ≤200k tokens. >200k: $0.0025/$0.015"
+      "note": "Gemini 2.5 Computer Use Preview - \u2264200k tokens. >200k: $0.0025/$0.015"
     },
     "gemini-2.5-flash": {
       "promptPrice": 0.0003,
@@ -3328,12 +3338,12 @@
     "gemini-3-pro": {
       "promptPrice": 0.002,
       "completionPrice": 0.012,
-      "note": "Gemini 3 Pro - ≤200k tokens. >200k: $0.004/$0.018"
+      "note": "Gemini 3 Pro - \u2264200k tokens. >200k: $0.004/$0.018"
     },
     "gemini-3-pro-preview": {
       "promptPrice": 0.002,
       "completionPrice": 0.012,
-      "note": "Gemini 3 Pro Preview - ≤200k tokens. >200k: $0.004/$0.018"
+      "note": "Gemini 3 Pro Preview - \u2264200k tokens. >200k: $0.004/$0.018"
     },
     "gemini-3.1-flash-image": {
       "promptPrice": 0.0005,
@@ -3387,10 +3397,10 @@
       "note": "Gemini Experimental 1206 - free during experimental phase"
     },
     "gemini-flash-latest": {
-      "promptPrice": 0.0015,
-      "completionPrice": 0.009,
-      "cacheReadPrice": 0.00015,
-      "note": "Gemini Flash Latest. input $1.5/1M, output $9/1M, cache read $0.15/1M. Released 2026-05-19. 1048576 context. Source: models.dev / google"
+      "promptPrice": 0.00075,
+      "completionPrice": 0.00375,
+      "cacheReadPrice": 7.5e-05,
+      "note": "Gemini Flash Latest - repoints to Gemini 3.7 Flash as of 2026-08-13 (previously pointed to the 2026-05-19 flash release at a higher price). input $0.75/1M, output $3.75/1M, cache read $0.075/1M. Source: models.dev / google"
     },
     "gemini-flash-lite-latest": {
       "promptPrice": 0.00025,
@@ -7051,7 +7061,7 @@
     "qwen3-max-2025-09-23": {
       "promptPrice": 0.00084,
       "completionPrice": 0.00336,
-      "note": "Qwen3 Max snapshot (Sept 2025) - Tiered: ¥0.006-0.015/1K tokens input, ¥0.024-0.06/1K output"
+      "note": "Qwen3 Max snapshot (Sept 2025) - Tiered: \u00a50.006-0.015/1K tokens input, \u00a50.024-0.06/1K output"
     },
     "qwen3-next-80b-a3b-instruct": {
       "promptPrice": 0.000525,
@@ -8133,6 +8143,161 @@
       "promptPrice": 0.0014,
       "completionPrice": 0.0044,
       "note": "Zhipu GLM-5.2 via Z.AI provider"
+    },
+    "glm-5.3": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0044,
+      "cacheReadPrice": 0.00026,
+      "cacheWritePrice": 0.0,
+      "note": "GLM-5.3. input $1.4/1M, output $4.4/1M, cache read $0.26/1M, cache write $0/1M. Released 2026-08-14. 1000000 context. Source: models.dev / zai"
+    },
+    "glm-5-3": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0044,
+      "cacheReadPrice": 0.00026,
+      "cacheWritePrice": 0.0,
+      "note": "GLM-5.3. input $1.4/1M, output $4.4/1M, cache read $0.26/1M, cache write $0/1M. Released 2026-08-14. 1000000 context. Source: models.dev / zai"
+    },
+    "zai/glm-5.3": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0044,
+      "note": "Zhipu GLM-5.3 via Z.AI provider"
+    },
+    "THUDM/GLM-5.3": {
+      "promptPrice": 0.0014,
+      "completionPrice": 0.0044,
+      "note": "Zhipu GLM-5.3 - HuggingFace repo format"
+    },
+    "glm-5.3-flash": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.00025,
+      "cacheReadPrice": 1.5e-05,
+      "cacheWritePrice": 0.0,
+      "note": "GLM-5.3-Flash. input $0.075/1M, output $0.25/1M, cache read $0.015/1M, cache write $0/1M. Released 2026-08-26. 1000000 context. Source: models.dev / zai"
+    },
+    "glm-5-3-flash": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.00025,
+      "cacheReadPrice": 1.5e-05,
+      "cacheWritePrice": 0.0,
+      "note": "GLM-5.3-Flash. input $0.075/1M, output $0.25/1M, cache read $0.015/1M, cache write $0/1M. Released 2026-08-26. 1000000 context. Source: models.dev / zai"
+    },
+    "zai/glm-5.3-flash": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.00025,
+      "note": "Zhipu GLM-5.3-Flash via Z.AI provider"
+    },
+    "THUDM/GLM-5.3-Flash": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.00025,
+      "note": "Zhipu GLM-5.3-Flash - HuggingFace repo format"
+    },
+    "grok-4.6": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "cacheReadPrice": 0.0005,
+      "note": "Grok 4.6. input $2/1M, output $6/1M, cache read $0.5/1M. Released 2026-08-12. 500000 context. Above 200K context the vendor charges {'input': 4, 'output': 12, 'cache_read': 1}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / xai"
+    },
+    "grok-4-6": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "cacheReadPrice": 0.0005,
+      "note": "Grok 4.6. input $2/1M, output $6/1M, cache read $0.5/1M. Released 2026-08-12. 500000 context. Above 200K context the vendor charges {'input': 4, 'output': 12, 'cache_read': 1}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / xai"
+    },
+    "xai/grok-4.6": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "xAI Grok 4.6 (xai provider prefix) - 500K context"
+    },
+    "xai.grok-4.6": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "cacheReadPrice": 0.0005,
+      "note": "Grok 4.6 - AWS Bedrock id"
+    },
+    "us.xai.grok-4.6": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "cacheReadPrice": 0.0005,
+      "note": "Grok 4.6 (US) - AWS Bedrock id"
+    },
+    "qwen3.8-flash": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00047,
+      "cacheReadPrice": 1.6e-05,
+      "cacheWritePrice": 0.0002,
+      "note": "Qwen3.8 Flash. input $0.15/1M, output $0.47/1M, cache read $0.016/1M, cache write $0.2/1M. Released 2026-08-26. 1000000 context. Source: models.dev / alibaba"
+    },
+    "qwen3-8-flash": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00047,
+      "cacheReadPrice": 1.6e-05,
+      "cacheWritePrice": 0.0002,
+      "note": "Qwen3.8 Flash. input $0.15/1M, output $0.47/1M, cache read $0.016/1M, cache write $0.2/1M. Released 2026-08-26. 1000000 context. Source: models.dev / alibaba"
+    },
+    "dashscope/qwen3.8-flash": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00047,
+      "note": "Qwen 3.8 Flash via DashScope provider prefix"
+    },
+    "qwen3.8-27b": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.003,
+      "cacheReadPrice": 4e-05,
+      "note": "Qwen3.8 27B. input $0.4/1M, output $3/1M, cache read $0.04/1M. Released 2026-08-14. 262144 context. Open-weight model; no first-party Alibaba SKU listed, deepinfra and huggingface agree on this rate. Source: models.dev / deepinfra"
+    },
+    "qwen3-8-27b": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.003,
+      "cacheReadPrice": 4e-05,
+      "note": "Qwen3.8 27B. input $0.4/1M, output $3/1M, cache read $0.04/1M. Released 2026-08-14. 262144 context. Open-weight model; no first-party Alibaba SKU listed, deepinfra and huggingface agree on this rate. Source: models.dev / deepinfra"
+    },
+    "Qwen/Qwen3.8-27B": {
+      "promptPrice": 0.0004,
+      "completionPrice": 0.003,
+      "cacheReadPrice": 4e-05,
+      "note": "Qwen3.8 27B. input $0.4/1M, output $3/1M, cache read $0.04/1M. Released 2026-08-14. 262144 context. Open-weight model; no first-party Alibaba SKU listed, deepinfra and huggingface agree on this rate. Source: models.dev / deepinfra"
+    },
+    "gemini-3.7-flash": {
+      "promptPrice": 0.00075,
+      "completionPrice": 0.00375,
+      "cacheReadPrice": 7.5e-05,
+      "note": "Gemini 3.7 Flash. input $0.75/1M, output $3.75/1M, cache read $0.075/1M. Released 2026-08-13. 1048576 context. Source: models.dev / google"
+    },
+    "gemini-3-7-flash": {
+      "promptPrice": 0.00075,
+      "completionPrice": 0.00375,
+      "cacheReadPrice": 7.5e-05,
+      "note": "Gemini 3.7 Flash. input $0.75/1M, output $3.75/1M, cache read $0.075/1M. Released 2026-08-13. 1048576 context. Source: models.dev / google"
+    },
+    "gemini/gemini-3.7-flash": {
+      "promptPrice": 0.00075,
+      "completionPrice": 0.00375,
+      "note": "Google Gemini 3.7 Flash (gemini provider prefix)"
+    },
+    "sakana-namazu": {
+      "promptPrice": 0.00095,
+      "completionPrice": 0.004,
+      "cacheReadPrice": 0.00015,
+      "note": "Sakana Namazu. input $0.95/1M, output $4/1M, cache read $0.15/1M. Released 2026-08-03. 262144 context. Source: models.dev / sakana"
+    },
+    "sakana/sakana-namazu": {
+      "promptPrice": 0.00095,
+      "completionPrice": 0.004,
+      "cacheReadPrice": 0.00015,
+      "note": "Sakana Namazu. input $0.95/1M, output $4/1M, cache read $0.15/1M. Released 2026-08-03. 262144 context. Source: models.dev / sakana"
+    },
+    "solar-pro4": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "cacheReadPrice": 6e-05,
+      "note": "Solar Pro 4. input $0.3/1M, output $1.2/1M, cache read $0.06/1M. Released 2026-08-06. 524288 context. Source: models.dev / upstage"
+    },
+    "upstage/solar-pro4": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "cacheReadPrice": 6e-05,
+      "note": "Solar Pro 4. input $0.3/1M, output $1.2/1M, cache read $0.06/1M. Released 2026-08-06. 524288 context. Source: models.dev / upstage"
     }
   },
   "speech_to_text": {

@@ -258,6 +258,123 @@ def test_muse_glimmer_does_not_shadow_muse_spark(calc):
     assert spark == pytest.approx(0.00125 + 0.00425)
 
 
+# --- September 2026 monthly sweep (target month: August 2026) --------------
+# GLM-5.3, GLM-5.3-Flash and Grok 4.6 were previously invisible: their names
+# were only ever resolved via the longest-substring fallback, and the
+# pre-existing shorter siblings ("glm-5", "grok-4") won that race, so every
+# call silently billed at the OLD model's rate. Qwen3.8 Flash, Qwen3.8 27B,
+# Gemini 3.7 Flash, Sakana Namazu and Solar Pro 4 had no entry at all.
+SEPTEMBER_2026_SWEEP_MODELS = [
+    ("glm-5.3", 0.0014, 0.0044),
+    ("glm-5-3", 0.0014, 0.0044),
+    ("zai/glm-5.3", 0.0014, 0.0044),
+    ("THUDM/GLM-5.3", 0.0014, 0.0044),
+    ("glm-5.3-flash", 0.000075, 0.00025),
+    ("glm-5-3-flash", 0.000075, 0.00025),
+    ("zai/glm-5.3-flash", 0.000075, 0.00025),
+    ("grok-4.6", 0.002, 0.006),
+    ("grok-4-6", 0.002, 0.006),
+    ("xai/grok-4.6", 0.002, 0.006),
+    ("xai.grok-4.6", 0.002, 0.006),
+    ("us.xai.grok-4.6", 0.002, 0.006),
+    ("qwen3.8-flash", 0.00015, 0.00047),
+    ("qwen3-8-flash", 0.00015, 0.00047),
+    ("dashscope/qwen3.8-flash", 0.00015, 0.00047),
+    ("qwen3.8-27b", 0.0004, 0.003),
+    ("qwen3-8-27b", 0.0004, 0.003),
+    ("Qwen/Qwen3.8-27B", 0.0004, 0.003),
+    ("gemini-3.7-flash", 0.00075, 0.00375),
+    ("gemini-3-7-flash", 0.00075, 0.00375),
+    ("gemini/gemini-3.7-flash", 0.00075, 0.00375),
+    ("gemini-flash-latest", 0.00075, 0.00375),
+    ("sakana-namazu", 0.00095, 0.004),
+    ("sakana/sakana-namazu", 0.00095, 0.004),
+    ("solar-pro4", 0.0003, 0.0012),
+    ("upstage/solar-pro4", 0.0003, 0.0012),
+]
+
+
+@pytest.mark.parametrize("model,prompt_price,completion_price", SEPTEMBER_2026_SWEEP_MODELS)
+def test_september_2026_sweep_model_cost(calc, model, prompt_price, completion_price):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["prompt"] == pytest.approx(prompt_price)
+    assert costs["completion"] == pytest.approx(completion_price)
+    assert costs["total"] == pytest.approx(prompt_price + completion_price)
+
+
+# Novel dated/preview snapshots must route to the new family via the
+# longest-substring fallback rather than collapsing onto a shorter sibling.
+SEPTEMBER_2026_SNAPSHOT_ROUTING = [
+    ("glm-5.3-20260814", "glm-5.3"),
+    ("glm-5.3-flash-20260826", "glm-5.3-flash"),
+    ("grok-4.6-0812", "grok-4.6"),
+    ("qwen3.8-flash-preview", "qwen3.8-flash"),
+    ("gemini-3.7-flash-preview-08-13", "gemini-3.7-flash"),
+]
+
+
+@pytest.mark.parametrize("requested,expected_key", SEPTEMBER_2026_SNAPSHOT_ROUTING)
+def test_september_2026_snapshot_alias_routing(calc, requested, expected_key):
+    assert calc._normalize_model_name(requested, "chat") == expected_key
+
+
+def test_glm_5_3_does_not_shadow_or_get_shadowed_by_glm_5(calc):
+    """GLM-5.3 must resolve to its own price rather than the older GLM-5 (Feb
+    2026) entry that previously shadowed it via a shorter substring match."""
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    glm5 = calc.calculate_granular_cost("glm-5", usage, "chat")["total"]
+    glm53 = calc.calculate_granular_cost("glm-5.3", usage, "chat")["total"]
+    assert glm5 == pytest.approx(0.001 + 0.0032)
+    assert glm53 == pytest.approx(0.0014 + 0.0044)
+    assert glm53 != pytest.approx(glm5)
+
+
+def test_glm_5_3_flash_does_not_shadow_or_get_shadowed_by_glm_5_3(calc):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    glm53 = calc.calculate_granular_cost("glm-5.3", usage, "chat")["total"]
+    glm53flash = calc.calculate_granular_cost("glm-5.3-flash", usage, "chat")["total"]
+    assert glm53flash == pytest.approx(0.000075 + 0.00025)
+    assert glm53flash != pytest.approx(glm53)
+
+
+def test_grok_4_6_does_not_shadow_or_get_shadowed_by_grok_4(calc):
+    """Before this entry existed, 'grok-4.6' resolved to the older 'grok-4'
+    key ($3/$15 per 1M) instead of xAI's actual $2/$6 per 1M rate."""
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    grok4 = calc.calculate_granular_cost("grok-4", usage, "chat")["total"]
+    grok46 = calc.calculate_granular_cost("grok-4.6", usage, "chat")["total"]
+    assert grok4 == pytest.approx(0.003 + 0.015)
+    assert grok46 == pytest.approx(0.002 + 0.006)
+    assert grok46 != pytest.approx(grok4)
+
+
+def test_gemini_flash_latest_tracks_gemini_3_7_flash(calc):
+    """gemini-flash-latest was repointed to Gemini 3.7 Flash on 2026-08-13; the
+    stored price must track the new target, not the stale 2026-05-19 rate the
+    alias previously carried."""
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    latest = calc.calculate_granular_cost("gemini-flash-latest", usage, "chat")["total"]
+    flash37 = calc.calculate_granular_cost("gemini-3.7-flash", usage, "chat")["total"]
+    assert latest == pytest.approx(flash37)
+
+
+def test_qwen38_27b_is_not_shadowed_by_qwen38_max(calc):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    max_ = calc.calculate_granular_cost("qwen3.8-max", usage, "chat")["total"]
+    b27 = calc.calculate_granular_cost("qwen3.8-27b", usage, "chat")["total"]
+    assert b27 == pytest.approx(0.0004 + 0.003)
+    assert b27 != pytest.approx(max_)
+
+
+def test_grok_imagine_image_2_0_price(calc):
+    usage = {"size": "per_image", "quality": "standard", "n": 1}
+    cost = calc.calculate_cost("grok-imagine-image-2.0", usage, "image")
+    assert cost == pytest.approx(0.04)
+    alias_cost = calc.calculate_cost("xai/grok-imagine-image-2.0", usage, "image")
+    assert alias_cost == pytest.approx(0.04)
+
+
 # --- deprecation registry -------------------------------------------------
 # A deprecated model still has a real price and still bills, so it must stay
 # "table" rather than looking unpriced. What the flag adds is a time signal:
