@@ -3019,6 +3019,13 @@
       "completionPrice": 0.00028,
       "note": "DeepSeek V4 Flash - input $0.14/1M, output $0.28/1M (cache miss). Source: api-docs.deepseek.com/quick_start/pricing"
     },
+    "deepseek-v4-flash-vision-exp": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "reasoningPrice": 0.00028,
+      "cacheReadPrice": 0.0000028,
+      "note": "DeepSeek V4 Flash Vision Exp - experimental multimodal (image input) variant. input $0.14/1M, output $0.28/1M, reasoning $0.28/1M, cache read $0.0028/1M. Released 2026-08-21. Source: models.dev / deepseek (api-docs.deepseek.com/quick_start/pricing)"
+    },
     "deepseek-v4-pro": {
       "promptPrice": 0.000435,
       "completionPrice": 0.00087,
@@ -3073,6 +3080,13 @@
       "promptPrice": 0.00014,
       "completionPrice": 0.00028,
       "note": "Alias for deepseek-v4-flash"
+    },
+    "deepseek/v4-flash-vision-exp": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "reasoningPrice": 0.00028,
+      "cacheReadPrice": 0.0000028,
+      "note": "Alias for deepseek-v4-flash-vision-exp"
     },
     "deepseek/v4-pro": {
       "promptPrice": 0.000435,
@@ -8757,8 +8771,10 @@
     "deepgram/nova-3-medical": "2026-08-13",
     "deepgram/nova-3-multilingual": "2026-08-13",
     "deepseek-v4-flash": "2026-08-13",
+    "deepseek-v4-flash-vision-exp": "2026-09-03",
     "deepseek-v4-pro": "2026-08-13",
     "deepseek/v4-flash": "2026-08-13",
+    "deepseek/v4-flash-vision-exp": "2026-09-03",
     "deepseek/v4-pro": "2026-08-13",
     "eleven_english_v1": "2026-08-12",
     "eleven_monolingual_v1": "2026-08-12",

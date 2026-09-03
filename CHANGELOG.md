@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.23.1] - 2026-09-03
+
+### Added
+
+- **August 2026 pricing sweep gap-fill: DeepSeek V4 Flash Vision Exp.**
+  Re-ran the August 2026 first-party/hyperscaler model scan against
+  models.dev (the sweep shipped in 1.22.1/1.23.0 covered nine of the ten
+  in-scope releases; this one was missed):
+
+  | Model | Provider | Input / 1M | Output / 1M | Released |
+  |---|---|---|---|---|
+  | DeepSeek V4 Flash Vision Exp | DeepSeek | $0.14 | $0.28 | 2026-08-21 |
+
+  Also priced: reasoning $0.28/1M, cache read $0.0028/1M. Added the
+  `deepseek/v4-flash-vision-exp` provider-prefixed alias mirroring the
+  `deepseek-v4-flash` sibling.
+
+### Fixed
+
+- **`deepseek-v4-flash-vision-exp` had no pricing key**, so it fell through
+  to the shorter `deepseek-v4-flash` sibling by longest-substring match.
+  The prompt/completion rate happened to be identical, so this was not a
+  mis-bill, but the model had no reasoning or cache-read price at all
+  (both silently $0). It now has its own explicit key with the full rate
+  card.
+
+### Deferred
+
+- No other August 2026 first-party/hyperscaler releases were found without
+  a reliable published price, or missing from the table, in this re-scan.
+
+### Pricing data sources
+
+Re-checked for this gap-fill sweep: models.dev, cross-referenced against
+`api-docs.deepseek.com/quick_start/pricing` (first-party, wins on conflict).
+
 ## [1.23.0] - 2026-09-03
 
 ### Fixed
