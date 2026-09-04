@@ -298,8 +298,11 @@ class CometAPIInstrumentor(BaseInstrumentor):
             "gen_ai.request.input_count": self._count_embedding_inputs(kwargs.get("input")),
         }
 
-        if "encoding_format" in kwargs:
-            attrs["gen_ai.request.encoding_format"] = kwargs["encoding_format"]
+        self.add_embedding_request_attributes(
+            attrs,
+            dimensions=kwargs.get("dimensions"),
+            encoding_format=kwargs.get("encoding_format"),
+        )
 
         return attrs
 

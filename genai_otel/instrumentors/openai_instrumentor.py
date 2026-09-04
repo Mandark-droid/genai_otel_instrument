@@ -389,10 +389,11 @@ class OpenAIInstrumentor(BaseInstrumentor):
             "gen_ai.request.input_count": self._count_embedding_inputs(kwargs.get("input")),
         }
 
-        if "dimensions" in kwargs:
-            attrs["gen_ai.request.dimensions"] = kwargs["dimensions"]
-        if "encoding_format" in kwargs:
-            attrs["gen_ai.request.encoding_format"] = kwargs["encoding_format"]
+        self.add_embedding_request_attributes(
+            attrs,
+            dimensions=kwargs.get("dimensions"),
+            encoding_format=kwargs.get("encoding_format"),
+        )
 
         return attrs
 
@@ -576,8 +577,34 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 if cached_tokens:
                     usage_dict["cache_read_input_tokens"] = cached_tokens
 
+            # Per-modality breakdown (semantic-conventions-genai#440). OpenAI
+            # reports audio tokens on both detail objects for the realtime and
+            # audio-preview models, and text/image tokens on the Responses API.
+            # Normalised into the flat keys base.py emits from.
+            self._collect_modality_tokens(usage, usage_dict)
+
             return usage_dict
         return None
+
+    @staticmethod
+    def _collect_modality_tokens(usage, usage_dict: Dict[str, Any]) -> None:
+        """Copy per-modality token counts off OpenAI's usage detail objects.
+
+        Only counts the provider actually reported are copied; a missing detail
+        is left absent rather than defaulted to zero, so a consumer can tell
+        "no audio in this request" from "this model does not report modality".
+        """
+        for details_attr, direction in (
+            ("prompt_tokens_details", "input"),
+            ("completion_tokens_details", "output"),
+        ):
+            details = getattr(usage, details_attr, None)
+            if not details:
+                continue
+            for modality in ("text", "image", "audio"):
+                value = getattr(details, f"{modality}_tokens", None)
+                if isinstance(value, (int, float)) and value > 0:
+                    usage_dict[f"{modality}_{direction}_tokens"] = int(value)
 
     def _extract_response_attributes(self, result) -> Dict[str, Any]:
         """Extract response attributes from OpenAI response.

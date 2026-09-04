@@ -18,6 +18,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   provider's public host would misattribute exactly the traffic worth
   distinguishing. An instrumentor that sets these itself is never overridden.
 
+- **Per-modality token breakdown.** `gen_ai.usage.{text,image,audio}.{input,output}_tokens`
+  and `gen_ai.usage.{text,image,audio}.cache_read.input_tokens`, from
+  [semantic-conventions-genai#440](https://github.com/open-telemetry/semantic-conventions-genai/pull/440).
+  Instrumentors normalise provider shapes into flat usage keys and the span
+  attributes are emitted from one place, as cache and reasoning tokens already
+  were; the OpenAI instrumentor populates them from `prompt_tokens_details` and
+  `completion_tokens_details`. Each value is a **subset** of the corresponding
+  total, so consumers must not sum them alongside `gen_ai.usage.input_tokens`.
+  A modality the provider did not report is omitted rather than emitted as zero.
+
+- **Request parameters recorded centrally:** `gen_ai.request.seed`,
+  `gen_ai.request.stream`, `gen_ai.request.top_k`, `gen_ai.request.choice.count`
+  (from `n`, or Google's `candidate_count`) and `gen_ai.output.type` (derived
+  from `response_format`). Only parameters the caller actually passed are
+  recorded -- materialising provider defaults would report choices the
+  application never made.
+
 - **`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` is now honoured.** This
   is the content-capture switch shared with other OpenTelemetry GenAI
   instrumentations; previously only `GENAI_ENABLE_CONTENT_CAPTURE` worked, so an
@@ -30,6 +47,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a typo on a privacy switch should fail closed.
 
 ### Changed
+
+- **Three attribute names now match the conventions, with the old spellings kept
+  under `gen_ai/dup`.** Each was a name no conforming consumer looks for:
+  `gen_ai.response.finish_reasons` (an array) supersedes the singular
+  `gen_ai.response.finish_reason` -- the library previously disagreed with
+  itself here, since several instrumentors already emitted the plural;
+  `gen_ai.embeddings.dimension.count` supersedes `gen_ai.request.dimensions`;
+  and `gen_ai.request.encoding_formats` (an array) supersedes the singular
+  `gen_ai.request.encoding_format`.
 
 - **`gen_ai.usage.cache_creation.input_tokens` is superseded by
   `gen_ai.usage.cache_write.input_tokens`.**

@@ -112,6 +112,45 @@ class SemanticConvention:
     GEN_AI_USAGE_CACHE_WRITE_INPUT_TOKENS = "gen_ai.usage.cache_write.input_tokens"
     GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS = "gen_ai.usage.cache_creation.input_tokens"
 
+    # Per-modality token breakdown (semantic-conventions-genai#440, merged
+    # 2026-08-20). Each value is a subset of the corresponding total, i.e.
+    # `gen_ai.usage.text.input_tokens` is included in
+    # `gen_ai.usage.input_tokens`, so consumers must not sum them alongside it.
+    # Templates take .format(modality=...). Modalities are the registry's:
+    # text, image, audio (video/document carry no token counts on any provider
+    # we have seen, so they are not emitted rather than emitted as zero).
+    GEN_AI_USAGE_MODALITY_INPUT_TOKENS = "gen_ai.usage.{modality}.input_tokens"
+    GEN_AI_USAGE_MODALITY_OUTPUT_TOKENS = "gen_ai.usage.{modality}.output_tokens"
+    GEN_AI_USAGE_MODALITY_CACHE_READ_INPUT_TOKENS = (
+        "gen_ai.usage.{modality}.cache_read.input_tokens"
+    )
+    TOKEN_MODALITIES = ("text", "image", "audio")
+
+    # Embeddings request shape. `gen_ai.embeddings.dimension.count` and the
+    # plural `gen_ai.request.encoding_formats` are the registry spellings; the
+    # singular/`request.dimensions` forms below are this library's older names,
+    # kept under the dup policy so existing dashboards keep resolving.
+    GEN_AI_EMBEDDINGS_DIMENSION_COUNT = "gen_ai.embeddings.dimension.count"
+    GEN_AI_REQUEST_ENCODING_FORMATS = "gen_ai.request.encoding_formats"
+    GEN_AI_REQUEST_DIMENSIONS = "gen_ai.request.dimensions"
+    GEN_AI_REQUEST_ENCODING_FORMAT = "gen_ai.request.encoding_format"
+
+    # Finish reasons are an array in the conventions. The singular form is this
+    # library's older spelling and is emitted alongside it under the dup policy.
+    GEN_AI_RESPONSE_FINISH_REASONS = "gen_ai.response.finish_reasons"
+    GEN_AI_RESPONSE_FINISH_REASON = "gen_ai.response.finish_reason"
+
+    # Request parameters that the conventions define and providers commonly
+    # echo back, but which this library did not previously record.
+    GEN_AI_REQUEST_SEED = "gen_ai.request.seed"
+    GEN_AI_REQUEST_STREAM = "gen_ai.request.stream"
+    GEN_AI_REQUEST_TOP_K = "gen_ai.request.top_k"
+    GEN_AI_REQUEST_CHOICE_COUNT = "gen_ai.request.choice.count"
+    GEN_AI_OUTPUT_TYPE = "gen_ai.output.type"
+    # Span-attribute counterpart of the time-to-first-token metric; set only on
+    # streamed calls, for the same reason the metric is.
+    GEN_AI_RESPONSE_TIME_TO_FIRST_CHUNK = "gen_ai.response.time_to_first_chunk"
+
     # Server identity for the model endpoint. Conditionally required on
     # inference spans; the reference scenarios in semantic-conventions-genai
     # emit both. Derived from the SDK client's base URL where the client

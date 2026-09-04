@@ -152,6 +152,53 @@ _BASE_URL_PATHS = (
 )
 
 
+def _request_parameter_attributes(kwargs: Dict[str, Any]) -> Dict[str, Any]:
+    """Map common request kwargs onto the conventions' request attributes.
+
+    Keyed on the OpenAI-compatible parameter names, which the large majority of
+    SDKs and every OpenAI-compatible gateway reuse. Only parameters the caller
+    actually passed are recorded: an absent attribute means "not set by the
+    caller", whereas materialising provider defaults would report a temperature
+    or top_k the application never chose.
+    """
+    attrs: Dict[str, Any] = {}
+    if not isinstance(kwargs, dict):
+        return attrs
+
+    seed = kwargs.get("seed")
+    if isinstance(seed, int) and not isinstance(seed, bool):
+        attrs[SC.GEN_AI_REQUEST_SEED] = seed
+
+    if "stream" in kwargs:
+        attrs[SC.GEN_AI_REQUEST_STREAM] = bool(kwargs.get("stream"))
+
+    top_k = kwargs.get("top_k")
+    if isinstance(top_k, (int, float)) and not isinstance(top_k, bool):
+        attrs[SC.GEN_AI_REQUEST_TOP_K] = top_k
+
+    # `n` is the OpenAI spelling; `candidate_count` is Google's.
+    for key in ("n", "candidate_count"):
+        count = kwargs.get(key)
+        if isinstance(count, int) and not isinstance(count, bool) and count > 0:
+            attrs[SC.GEN_AI_REQUEST_CHOICE_COUNT] = count
+            break
+
+    # `gen_ai.output.type` is about the shape the caller asked for, so it is
+    # derived from the request rather than from what came back.
+    response_format = kwargs.get("response_format")
+    if response_format is not None:
+        fmt = response_format
+        if isinstance(fmt, dict):
+            fmt = fmt.get("type")
+        fmt = str(getattr(fmt, "value", fmt) or "").lower()
+        if fmt.startswith("json"):
+            attrs[SC.GEN_AI_OUTPUT_TYPE] = "json"
+        elif fmt == "text":
+            attrs[SC.GEN_AI_OUTPUT_TYPE] = "text"
+
+    return attrs
+
+
 def _server_attributes(instance: Any) -> Dict[str, Any]:
     """Derive `server.address` / `server.port` from an SDK client's base URL.
 
@@ -760,8 +807,10 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 try:
                     for _sk, _sv in _server_attributes(instance).items():
                         initial_attributes.setdefault(_sk, _sv)
+                    for _rk, _rv in _request_parameter_attributes(kwargs).items():
+                        initial_attributes.setdefault(_rk, _rv)
                 except Exception as e:  # pragma: no cover - defensive
-                    logger.debug("Could not derive server attributes for '%s': %s", span_name, e)
+                    logger.debug("Could not derive span attributes for '%s': %s", span_name, e)
 
                 # Check if this is a streaming request before creating the span
                 is_streaming = kwargs.get("stream", False)
@@ -1168,6 +1217,67 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             if emit_superseded:
                 span.set_attribute(SC.GEN_AI_USAGE_COMPLETION_TOKENS, int(completion_tokens))
 
+    def add_embedding_request_attributes(
+        self, attrs: Dict[str, Any], dimensions: Any = None, encoding_format: Any = None
+    ) -> Dict[str, Any]:
+        """Record embeddings request shape under the registry spellings.
+
+        The conventions name these `gen_ai.embeddings.dimension.count` and
+        `gen_ai.request.encoding_formats` (an array). This library shipped
+        `gen_ai.request.dimensions` and a singular `encoding_format`, which no
+        consumer following the conventions looks for; both are kept under the
+        dup policy so existing dashboards keep resolving.
+        """
+        # Attribute extraction runs at call time, which can precede `config`
+        # being attached to the instrumentor, so read it defensively rather
+        # than assuming the attribute exists.
+        _cfg = getattr(self, "config", None)
+        _, emit_superseded = genai_semconv_modes(_cfg.semconv_stability_opt_in if _cfg else None)
+        if dimensions is not None:
+            attrs[SC.GEN_AI_EMBEDDINGS_DIMENSION_COUNT] = dimensions
+            if emit_superseded:
+                attrs[SC.GEN_AI_REQUEST_DIMENSIONS] = dimensions
+        if encoding_format is not None:
+            formats = (
+                list(encoding_format)
+                if isinstance(encoding_format, (list, tuple))
+                else [encoding_format]
+            )
+            attrs[SC.GEN_AI_REQUEST_ENCODING_FORMATS] = [str(f) for f in formats]
+            if emit_superseded:
+                attrs[SC.GEN_AI_REQUEST_ENCODING_FORMAT] = encoding_format
+        return attrs
+
+    def _set_modality_token_attributes(self, span, usage: Dict[str, Any]) -> None:
+        """Emit `gen_ai.usage.<modality>.*` token counts when a provider reports them.
+
+        Each value is a subset of the corresponding total: a consumer that sums
+        the modality attributes alongside `gen_ai.usage.input_tokens` double
+        counts. Absent modalities are omitted rather than emitted as zero -- a
+        zero would claim the provider reported no audio tokens, when in practice
+        it usually means the provider does not break usage down at all.
+        """
+        if not isinstance(usage, dict):
+            return
+        for modality in SC.TOKEN_MODALITIES:
+            for key, template in (
+                (
+                    f"{modality}_input_tokens",
+                    SC.GEN_AI_USAGE_MODALITY_INPUT_TOKENS,
+                ),
+                (
+                    f"{modality}_output_tokens",
+                    SC.GEN_AI_USAGE_MODALITY_OUTPUT_TOKENS,
+                ),
+                (
+                    f"{modality}_cache_read_input_tokens",
+                    SC.GEN_AI_USAGE_MODALITY_CACHE_READ_INPUT_TOKENS,
+                ),
+            ):
+                value = usage.get(key)
+                if isinstance(value, (int, float)) and value > 0:
+                    span.set_attribute(template.format(modality=modality), int(value))
+
     def _record_result_metrics(self, span, result, start_time: float, request_kwargs: dict = None):
         """Record metrics derived from the function result and execution time.
 
@@ -1364,6 +1474,14 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         # is also included in `gen_ai.usage.output_tokens`.
                         span.set_attribute(SC.GEN_AI_USAGE_REASONING_TOKENS, int(reasoning))
 
+                # Per-modality token breakdown (semantic-conventions-genai#440).
+                # Instrumentors normalise provider-specific shapes into flat
+                # `<modality>_{input,output}_tokens` /
+                # `<modality>_cache_read_input_tokens` keys on usage_dict, the
+                # same way they already do for cache and reasoning tokens, so
+                # this stays a single emission point.
+                self._set_modality_token_attributes(span, usage)
+
                 # Calculate and record cost if enabled and applicable
                 if self.config and self.config.enable_cost_tracking:
                     try:
@@ -1475,7 +1593,22 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 finish_reason = self._extract_finish_reason(result)
                 if finish_reason:
                     # Set span attribute (always - needed for audit).
-                    span.set_attribute("gen_ai.response.finish_reason", finish_reason)
+                    # The conventions define an array (`finish_reasons`); the
+                    # singular is this library's older spelling and follows the
+                    # dup policy. A consumer reading the plural name found
+                    # nothing here, even though several instrumentors already
+                    # emitted it -- so the library disagreed with itself.
+                    _, _emit_superseded_fr = genai_semconv_modes(
+                        self.config.semconv_stability_opt_in if self.config else None
+                    )
+                    # An instrumentor that already extracted a real array keeps
+                    # it; this only fills in from the singular value.
+                    if SC.GEN_AI_RESPONSE_FINISH_REASONS not in (
+                        getattr(span, "attributes", None) or {}
+                    ):
+                        span.set_attribute(SC.GEN_AI_RESPONSE_FINISH_REASONS, [str(finish_reason)])
+                    if _emit_superseded_fr:
+                        span.set_attribute(SC.GEN_AI_RESPONSE_FINISH_REASON, finish_reason)
 
                     # Finish/success/failure metric counters are opt-in (_rec_finish).
                     if _rec_finish:

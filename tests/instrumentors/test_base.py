@@ -1573,3 +1573,157 @@ def test_server_attributes_absent_rather_than_guessed():
 
     assert _server_attributes(object()) == {}
     assert _server_attributes(_client_with("not a url")) == {}
+
+
+# ---------------------------------------------------------------------------
+# Per-modality token breakdown (semantic-conventions-genai#440)
+# ---------------------------------------------------------------------------
+
+
+def test_modality_token_attributes_emitted(instrumentor):
+    """Modality counts a provider reports land under gen_ai.usage.<modality>.*."""
+    inst, mock_span = instrumentor
+    result = {
+        "usage": {
+            "prompt_tokens": 300,
+            "completion_tokens": 180,
+            "text_input_tokens": 100,
+            "image_input_tokens": 200,
+            "text_output_tokens": 180,
+            "text_cache_read_input_tokens": 40,
+        }
+    }
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+    attrs = {c[0][0]: c[0][1] for c in mock_span.set_attribute.call_args_list}
+
+    assert attrs.get("gen_ai.usage.text.input_tokens") == 100
+    assert attrs.get("gen_ai.usage.image.input_tokens") == 200
+    assert attrs.get("gen_ai.usage.text.output_tokens") == 180
+    assert attrs.get("gen_ai.usage.text.cache_read.input_tokens") == 40
+    # Totals remain the totals; modality values are subsets of them.
+    assert attrs.get("gen_ai.usage.input_tokens") == 300
+
+
+def test_modality_absent_rather_than_zero(instrumentor):
+    """A provider that reports no breakdown gets no modality attributes.
+
+    Emitting zeros would claim the provider said "no audio tokens", when it
+    actually said nothing about modality at all.
+    """
+    inst, mock_span = instrumentor
+    inst._record_result_metrics(
+        mock_span, {"usage": {"prompt_tokens": 10, "completion_tokens": 5}}, time.time() - 1
+    )
+    attrs = {c[0][0]: c[0][1] for c in mock_span.set_attribute.call_args_list}
+
+    assert not [k for k in attrs if k.startswith("gen_ai.usage.audio.")]
+    assert not [k for k in attrs if k.startswith("gen_ai.usage.image.")]
+
+
+# ---------------------------------------------------------------------------
+# Request parameters derived centrally from call kwargs
+# ---------------------------------------------------------------------------
+
+
+def test_request_parameter_attributes_mapped():
+    from genai_otel.instrumentors.base import _request_parameter_attributes
+
+    attrs = _request_parameter_attributes(
+        {
+            "seed": 42,
+            "stream": True,
+            "top_k": 40,
+            "n": 3,
+            "response_format": {"type": "json_object"},
+        }
+    )
+    assert attrs["gen_ai.request.seed"] == 42
+    assert attrs["gen_ai.request.stream"] is True
+    assert attrs["gen_ai.request.top_k"] == 40
+    assert attrs["gen_ai.request.choice.count"] == 3
+    assert attrs["gen_ai.output.type"] == "json"
+
+
+def test_request_parameters_google_spelling():
+    """Google's candidate_count maps onto the same choice.count attribute."""
+    from genai_otel.instrumentors.base import _request_parameter_attributes
+
+    assert _request_parameter_attributes({"candidate_count": 2})["gen_ai.request.choice.count"] == 2
+
+
+def test_request_parameters_omitted_when_not_passed():
+    """Unset parameters are absent, not defaulted to a provider's value."""
+    from genai_otel.instrumentors.base import _request_parameter_attributes
+
+    assert _request_parameter_attributes({"model": "gpt-4o"}) == {}
+    # stream=False is a real caller choice and is recorded as such.
+    assert _request_parameter_attributes({"stream": False}) == {"gen_ai.request.stream": False}
+
+
+def test_request_parameters_reject_bool_as_number():
+    """A bool must not be recorded as a seed or top_k."""
+    from genai_otel.instrumentors.base import _request_parameter_attributes
+
+    attrs = _request_parameter_attributes({"seed": True, "top_k": False})
+    assert "gen_ai.request.seed" not in attrs
+    assert "gen_ai.request.top_k" not in attrs
+
+
+# ---------------------------------------------------------------------------
+# Embeddings request shape uses the registry spellings
+# ---------------------------------------------------------------------------
+
+
+def test_embedding_request_attributes_dual_emission(instrumentor):
+    inst, _ = instrumentor
+    inst.config.semconv_stability_opt_in = "gen_ai/dup"
+
+    attrs = inst.add_embedding_request_attributes({}, dimensions=512, encoding_format="float")
+
+    assert attrs["gen_ai.embeddings.dimension.count"] == 512
+    assert attrs["gen_ai.request.encoding_formats"] == ["float"]
+    assert attrs["gen_ai.request.dimensions"] == 512
+    assert attrs["gen_ai.request.encoding_format"] == "float"
+
+
+def test_embedding_request_attributes_current_only(instrumentor):
+    inst, _ = instrumentor
+    inst.config.semconv_stability_opt_in = "gen_ai"
+
+    attrs = inst.add_embedding_request_attributes({}, dimensions=512, encoding_format=["float"])
+
+    assert attrs["gen_ai.embeddings.dimension.count"] == 512
+    assert attrs["gen_ai.request.encoding_formats"] == ["float"]
+    assert "gen_ai.request.dimensions" not in attrs
+    assert "gen_ai.request.encoding_format" not in attrs
+
+
+# ---------------------------------------------------------------------------
+# finish_reasons is an array in the conventions
+# ---------------------------------------------------------------------------
+
+
+def test_finish_reasons_array_emitted(instrumentor):
+    """The singular value is also published under the plural array name."""
+    inst, mock_span = instrumentor
+    inst.config.semconv_stability_opt_in = "gen_ai/dup"
+    inst._extract_finish_reason = lambda result: "stop"
+    mock_span.attributes = {}
+
+    inst._record_result_metrics(mock_span, {"usage": {}}, time.time() - 1)
+    attrs = {c[0][0]: c[0][1] for c in mock_span.set_attribute.call_args_list}
+
+    assert attrs.get("gen_ai.response.finish_reasons") == ["stop"]
+    assert attrs.get("gen_ai.response.finish_reason") == "stop"
+
+
+def test_finish_reasons_does_not_clobber_instrumentor_array(instrumentor):
+    """An instrumentor that already extracted a real array keeps it."""
+    inst, mock_span = instrumentor
+    inst._extract_finish_reason = lambda result: "stop"
+    mock_span.attributes = {"gen_ai.response.finish_reasons": ["length", "stop"]}
+
+    inst._record_result_metrics(mock_span, {"usage": {}}, time.time() - 1)
+    attrs = {c[0][0]: c[0][1] for c in mock_span.set_attribute.call_args_list}
+
+    assert "gen_ai.response.finish_reasons" not in attrs

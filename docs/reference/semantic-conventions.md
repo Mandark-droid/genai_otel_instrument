@@ -21,6 +21,23 @@ TraceVerde follows OpenTelemetry semantic conventions for GenAI with additional 
 | `gen_ai.usage.reasoning.output_tokens` | int | Reasoning tokens (OpenAI o1/o3-style `completion_tokens_details.reasoning_tokens`). Included in `gen_ai.usage.output_tokens`. |
 | `server.address` | string | Host of the model endpoint, derived from the SDK client's base URL. Omitted when the SDK exposes no base URL -- absent means "endpoint unknown", never a guessed vendor host. |
 | `server.port` | int | Port of the model endpoint. Explicit port when the base URL carries one, otherwise the scheme default. |
+| `gen_ai.usage.{text,image,audio}.input_tokens` | int | Per-modality input tokens ([semantic-conventions-genai#440](https://github.com/open-telemetry/semantic-conventions-genai/pull/440)). A **subset** of `gen_ai.usage.input_tokens` -- do not sum alongside it. Absent when the provider reports no breakdown. |
+| `gen_ai.usage.{text,image,audio}.output_tokens` | int | Per-modality output tokens; subset of `gen_ai.usage.output_tokens`. |
+| `gen_ai.usage.{text,image,audio}.cache_read.input_tokens` | int | Per-modality prompt-cache hits. |
+| `gen_ai.response.finish_reasons` | string[] | Finish reasons as an array (registry spelling). |
+| `gen_ai.response.finish_reason` | string | Superseded singular form, emitted alongside the array under `gen_ai/dup`. |
+| `gen_ai.embeddings.dimension.count` | int | Requested embedding dimensions (registry spelling; supersedes `gen_ai.request.dimensions`). |
+| `gen_ai.request.encoding_formats` | string[] | Requested encoding formats as an array (registry spelling; supersedes the singular `gen_ai.request.encoding_format`). |
+| `gen_ai.request.seed` | int | Sampling seed, when the caller passed one. |
+| `gen_ai.request.stream` | bool | Whether the caller requested streaming. |
+| `gen_ai.request.top_k` | int | Top-k sampling parameter, when passed. |
+| `gen_ai.request.choice.count` | int | Number of completions requested (`n`, or Google's `candidate_count`). |
+| `gen_ai.output.type` | string | `json` or `text`, derived from the caller's `response_format`. |
+
+!!! note "Request parameters are recorded only when the caller passes them"
+    An absent `gen_ai.request.*` attribute means the application did not set that
+    parameter. The library does not materialise provider defaults, which would
+    report a `top_k` or `seed` the application never chose.
 | `gen_ai.usage.token_count_estimated` | bool | `true` when prompt/completion token counts came from a fallback estimate (e.g. multimodal Ollama responses lacking `prompt_eval_count`, or HuggingFace vision/audio pipelines that don't surface usage). Absent on spans whose tokens come from the provider response. |
 | `gen_ai.usage.image_count` | int | Number of input images counted by the instrumentor for multimodal calls (vision pipelines). |
 | `gen_ai.usage.audio_seconds` | float | Total input audio duration in seconds for ASR / audio pipelines. |
