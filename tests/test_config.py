@@ -168,3 +168,41 @@ class TestStandardContentCaptureEnvVar:
         with caplog.at_level(logging.WARNING):
             assert OTelConfig().enable_content_capture is False
         assert "not a valid option" in caplog.text
+
+
+class TestCaptureEmbeddingVectors:
+    """`capture_embedding_vectors` is a real field, not an undeclared attribute.
+
+    It was previously read only via `getattr(config, ..., False)`, so it could
+    be set only by assigning the attribute in Python -- despite being
+    documented as a supported option -- and had no environment variable.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _clear(self, monkeypatch):
+        monkeypatch.delenv("GENAI_CAPTURE_EMBEDDING_VECTORS", raising=False)
+
+    def test_defaults_off(self):
+        assert OTelConfig().capture_embedding_vectors is False
+
+    def test_enabled_by_env(self, monkeypatch):
+        monkeypatch.setenv("GENAI_CAPTURE_EMBEDDING_VECTORS", "true")
+        assert OTelConfig().capture_embedding_vectors is True
+
+    def test_is_a_declared_field(self):
+        """Declared on the dataclass, so it survives asdict()/replace()."""
+        import dataclasses
+
+        names = {f.name for f in dataclasses.fields(OTelConfig)}
+        assert "capture_embedding_vectors" in names
+
+    def test_independent_of_content_capture(self, monkeypatch):
+        """Enabling content capture must not opt an app into huge vectors.
+
+        A 3072-dimension vector serialises to tens of kilobytes; a single
+        embeddings span would dwarf every other span in the trace.
+        """
+        monkeypatch.setenv("GENAI_ENABLE_CONTENT_CAPTURE", "true")
+        config = OTelConfig()
+        assert config.enable_content_capture is True
+        assert config.capture_embedding_vectors is False

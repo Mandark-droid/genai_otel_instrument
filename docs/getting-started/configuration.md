@@ -174,6 +174,7 @@ When enabled, these metrics are recorded:
 | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` | unset | Cross-library content-capture switch. Takes precedence over `GENAI_ENABLE_CONTENT_CAPTURE` |
 | `GENAI_ENABLE_CONTENT_CAPTURE` | `false` | Capture prompt/response text in spans |
 | `GENAI_CONTENT_MAX_LENGTH` | `200` | Max characters to capture (0 = unlimited) |
+| `GENAI_CAPTURE_EMBEDDING_VECTORS` | `false` | Capture the raw embedding vector on embeddings spans |
 
 `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` is the spelling shared with
 other OpenTelemetry GenAI instrumentations, so an application migrating from one

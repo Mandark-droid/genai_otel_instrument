@@ -332,6 +332,25 @@ class OTelConfig:
     # without learning our name for the same switch.
     enable_content_capture: bool = field(default_factory=lambda: _content_capture_from_env())
 
+    # Capture the raw embedding vector on embeddings spans.
+    #
+    # Off by default and deliberately separate from `enable_content_capture`:
+    # a 3072-dimension float vector serialises to tens of kilobytes, so a
+    # single embeddings span can dwarf every other span in a trace and blow
+    # past collector payload limits. Turning on content capture should not
+    # silently opt an application into that.
+    #
+    # This was previously read via `getattr(config, "capture_embedding_vectors",
+    # False)` with no field declared anywhere, so it could only be set by
+    # assigning the attribute in Python and had no environment variable at all,
+    # despite being documented as a supported option.
+    capture_embedding_vectors: bool = field(
+        default_factory=lambda: os.getenv("GENAI_CAPTURE_EMBEDDING_VECTORS", "false")
+        .strip()
+        .lower()
+        == "true"
+    )
+
     # Maximum length for captured content (prompt text within the first_message attribute).
     # Only applies when enable_content_capture is true.
     # Default: 200 (current behavior). Set to 0 for no limit (full content).

@@ -48,6 +48,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`capture_embedding_vectors` is now a real configuration field with an
+  environment variable (`GENAI_CAPTURE_EMBEDDING_VECTORS`).** It was read only
+  via `getattr(config, "capture_embedding_vectors", False)` with no field
+  declared anywhere, so despite being documented as a supported option it could
+  be set only by assigning the attribute in Python, was invisible to
+  `dataclasses.fields()`, and had no env var. Behaviour is unchanged: still off
+  by default, and deliberately independent of `enable_content_capture`, because
+  a 3072-dimension vector serialises to tens of kilobytes and one embeddings
+  span would dwarf every other span in a trace.
+
 - **Three attribute names now match the conventions, with the old spellings kept
   under `gen_ai/dup`.** Each was a name no conforming consumer looks for:
   `gen_ai.response.finish_reasons` (an array) supersedes the singular
