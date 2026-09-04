@@ -14,6 +14,7 @@ Requirements:
 import logging
 from typing import Any, Dict, Optional
 
+from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
 from .base import BaseInstrumentor
 
@@ -154,6 +155,7 @@ class AutoGenInstrumentor(BaseInstrumentor):
         # Core attributes
         attrs["gen_ai.system"] = "autogen"
         attrs["gen_ai.operation.name"] = "conversation.initiate"
+        attrs.update(extract_budget_attributes(kwargs, instance))
 
         # Extract sender agent name
         if hasattr(instance, "name"):

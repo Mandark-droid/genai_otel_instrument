@@ -9,6 +9,7 @@ import logging
 import uuid
 from typing import Any, Dict, Optional
 
+from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
 from .base import BaseInstrumentor
 
@@ -208,6 +209,8 @@ class LangGraphInstrumentor(BaseInstrumentor):
         # Core attributes
         attrs["gen_ai.system"] = "langgraph"
         attrs["gen_ai.operation.name"] = "graph.execution"
+        # LangGraph carries recursion_limit in the run config dict.
+        attrs.update(extract_budget_attributes(kwargs, kwargs.get("config"), instance))
 
         # Extract graph structure information from StateGraph
         try:

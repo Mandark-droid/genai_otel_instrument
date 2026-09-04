@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Per-invocation agent budget governance** (`gen_ai.agent.token_budget`,
+  `.token_budget.consumed`, `gen_ai.agent.iteration_budget`,
+  `.iteration_budget.consumed`, plus a
+  `gen_ai.invoke_agent.token_budget.utilization` histogram), implementing
+  [semantic-conventions-genai#425](https://github.com/open-telemetry/semantic-conventions-genai/issues/425).
+  Budgets are read from CrewAI (`max_iter` / `max_tokens`), LangGraph
+  (`recursion_limit`), AutoGen and the OpenAI Agents SDK (`max_turns`), and
+  Google ADK (`max_llm_calls`).
+
+  Consumption is accumulated in a context-local frame rather than summed from
+  child spans afterwards, because head sampling drops exactly those children --
+  a sampled trace would otherwise report a runaway agent as having consumed
+  nothing. Nested agents account separately, so a supervisor reports its own
+  direct usage rather than its delegates', which is what its own budget governs.
+  Budgets are never synthesised from an iteration limit times a per-call
+  `max_tokens`, which #425 explicitly forbids. Known limitation: a call on a
+  thread that does not carry the context is not counted.
+
 - **`server.address` / `server.port` on spans.** Derived centrally from the SDK
   client's base URL, so every instrumentor using the shared span wrapper reports
   the endpoint a call actually went to. Both are conditionally required on

@@ -34,6 +34,32 @@ TraceVerde follows OpenTelemetry semantic conventions for GenAI with additional 
 | `gen_ai.request.choice.count` | int | Number of completions requested (`n`, or Google's `candidate_count`). |
 | `gen_ai.output.type` | string | `json` or `text`, derived from the caller's `response_format`. |
 
+| `gen_ai.agent.token_budget` | int | Cumulative token cap configured for the invocation ([semantic-conventions-genai#425](https://github.com/open-telemetry/semantic-conventions-genai/issues/425)). |
+| `gen_ai.agent.token_budget.consumed` | int | Tokens actually consumed across the invocation's inference calls. |
+| `gen_ai.agent.iteration_budget` | int | Configured iteration / turn / recursion limit. |
+| `gen_ai.agent.iteration_budget.consumed` | int | Inference calls completed during the invocation. |
+| `gen_ai.latency.time_in_queue` | float | Scheduler queue wait, seconds (self-hosted engines). |
+| `gen_ai.latency.time_to_first_token` | float | TTFT, seconds. |
+| `gen_ai.latency.e2e` | float | End-to-end request latency, seconds. |
+| `gen_ai.latency.time_in_model_prefill` | float | Prefill phase duration, seconds. |
+| `gen_ai.latency.time_in_model_decode` | float | Decode phase duration, seconds. |
+| `gen_ai.latency.time_in_model_inference` | float | Total on-engine inference duration, seconds. |
+| `gen_ai.request.id` | string | Engine-assigned request id (vLLM / SGLang). |
+
+!!! note "Engine latency keys are the de-facto vocabulary, not ours"
+    `gen_ai.latency.*` is emitted verbatim as vLLM and SGLang define it, and as
+    [semantic-conventions-genai#408](https://github.com/open-telemetry/semantic-conventions-genai/issues/408)
+    proposes standardising. Running vLLM's own OTLP tracing alongside this
+    library therefore yields one vocabulary rather than two to join. These keys
+    are not yet in the registry.
+
+!!! note "Agent budget consumption and threads"
+    Consumption is accumulated in a context-local frame, so it survives head
+    sampling that drops the child inference spans. A call made on a thread that
+    does not carry the context (a bare `threading.Thread`) is not counted --
+    consistent with tracing itself, which would also lose the parent/child span
+    relationship for such a call.
+
 !!! note "Request parameters are recorded only when the caller passes them"
     An absent `gen_ai.request.*` attribute means the application did not set that
     parameter. The library does not materialise provider defaults, which would

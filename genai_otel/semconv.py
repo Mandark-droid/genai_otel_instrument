@@ -151,6 +151,17 @@ class SemanticConvention:
     # streamed calls, for the same reason the metric is.
     GEN_AI_RESPONSE_TIME_TO_FIRST_CHUNK = "gen_ai.response.time_to_first_chunk"
 
+    # Per-invocation agent budget governance
+    # (semantic-conventions-genai#425). `gen_ai.request.max_tokens` is a
+    # per-call limit passed to the model API; these are the invocation-level
+    # envelope a framework enforces across many calls, which is a different
+    # thing and is what runaway-agent alerting needs.
+    GEN_AI_AGENT_TOKEN_BUDGET = "gen_ai.agent.token_budget"
+    GEN_AI_AGENT_TOKEN_BUDGET_CONSUMED = "gen_ai.agent.token_budget.consumed"
+    GEN_AI_AGENT_ITERATION_BUDGET = "gen_ai.agent.iteration_budget"
+    GEN_AI_AGENT_ITERATION_BUDGET_CONSUMED = "gen_ai.agent.iteration_budget.consumed"
+    GEN_AI_INVOKE_AGENT_TOKEN_BUDGET_UTILIZATION = "gen_ai.invoke_agent.token_budget.utilization"
+
     # Server identity for the model endpoint. Conditionally required on
     # inference spans; the reference scenarios in semantic-conventions-genai
     # emit both. Derived from the SDK client's base URL where the client

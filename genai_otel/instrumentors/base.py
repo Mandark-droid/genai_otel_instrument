@@ -31,6 +31,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Status, StatusCode
 
+from .. import agent_budget
 from ..config import OTelConfig
 from ..cost_calculator import CostCalculator
 from ..exceptions import PolicyViolationError
@@ -343,6 +344,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     _shared_reasoning_cost_counter = None
     _shared_cache_read_cost_counter = None
     _shared_cache_write_cost_counter = None
+    # Agent budget governance (semantic-conventions-genai#425)
+    _shared_token_budget_utilization_histogram = None
     # Streaming metrics (Phase 3.4)
     _shared_ttft_histogram = None
     _shared_tbt_histogram = None
@@ -398,6 +401,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         self.reasoning_cost_counter = self._shared_reasoning_cost_counter
         self.cache_read_cost_counter = self._shared_cache_read_cost_counter
         self.cache_write_cost_counter = self._shared_cache_write_cost_counter
+        # Agent budget governance
+        self.token_budget_utilization_histogram = self._shared_token_budget_utilization_histogram
         # Streaming metrics
         self.ttft_histogram = self._shared_ttft_histogram
         self.tbt_histogram = self._shared_tbt_histogram
@@ -467,6 +472,14 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 )
                 # Streaming metrics (Phase 3.4)
                 # Note: Buckets should be configured via Views in MeterProvider
+                cls._shared_token_budget_utilization_histogram = meter.create_histogram(
+                    SC.GEN_AI_INVOKE_AGENT_TOKEN_BUDGET_UTILIZATION,
+                    description=(
+                        "Fraction of an agent invocation's configured token budget "
+                        "that it consumed"
+                    ),
+                    unit="1",
+                )
                 cls._shared_ttft_histogram = meter.create_histogram(
                     SC.GEN_AI_SERVER_TTFT,
                     description="Time to first token in seconds",
@@ -531,6 +544,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 cls._shared_cache_read_cost_counter = None
                 cls._shared_cache_write_cost_counter = None
                 cls._shared_error_counter = None
+                cls._shared_token_budget_utilization_histogram = None
                 cls._shared_ttft_histogram = None
                 cls._shared_tbt_histogram = None
                 cls._shared_time_to_first_token_histogram = None
@@ -852,6 +866,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
                 ctx = trace.set_span_in_context(span)
                 token = otel_context.attach(ctx)
+                # Begin accumulating budget consumption if this is an agent
+                # invocation. No-op for ordinary LLM spans.
+                self._begin_agent_budget(span, initial_attributes)
                 start_time = time.time()
 
                 # Increment server metrics: running requests counter
@@ -1087,6 +1104,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             "Failed to run evaluation checks for span '%s': %s", span_name, e
                         )
 
+                    self._finish_agent_budget(span)
+
                     # Set span status to OK on successful execution
                     span.set_status(Status(StatusCode.OK))
                     span.end()
@@ -1111,6 +1130,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             )
                     except Exception:
                         pass
+
+                    self._finish_agent_budget(span)
 
                     # Set span status to ERROR and record the exception
                     span.set_status(Status(StatusCode.ERROR, str(e)))
@@ -1247,6 +1268,75 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             if emit_superseded:
                 attrs[SC.GEN_AI_REQUEST_ENCODING_FORMAT] = encoding_format
         return attrs
+
+    # Operation names that denote an agent invocation rather than a single
+    # model call. Budget accounting is scoped to these so an ordinary LLM span
+    # pays nothing for the feature.
+    _AGENT_OPERATION_MARKERS = (
+        "agent",
+        "runner",
+        "graph",
+        "workflow",
+        "crew",
+        "conversation",
+        "task.execution",
+    )
+
+    @classmethod
+    def _is_agent_invocation(cls, attrs: Dict[str, Any]) -> bool:
+        operation = str(attrs.get("gen_ai.operation.name") or "").lower()
+        if not operation:
+            return False
+        return any(marker in operation for marker in cls._AGENT_OPERATION_MARKERS)
+
+    def _begin_agent_budget(self, span, attrs: Dict[str, Any]) -> None:
+        """Start budget accounting for an agent invocation.
+
+        Consumption is accumulated in a context-local frame rather than summed
+        from child spans afterwards, because head sampling drops exactly those
+        children -- a sampled trace would otherwise report a runaway agent as
+        having consumed nothing.
+        """
+        try:
+            if not self._is_agent_invocation(attrs):
+                return
+            token = agent_budget.push_frame()
+            if token is not None:
+                span._genai_budget_token = token
+        except Exception as e:  # pragma: no cover - defensive
+            logger.debug("Could not begin agent budget accounting: %s", e)
+
+    def _finish_agent_budget(self, span) -> None:
+        """Emit budget consumption and utilization, then end the accounting frame."""
+        try:
+            token = getattr(span, "_genai_budget_token", None)
+            if token is None:
+                return
+            try:
+                span._genai_budget_token = None
+            except Exception:  # pragma: no cover - defensive
+                pass
+
+            frame = agent_budget.pop_frame(token)
+            consumed = agent_budget.consumption_attributes(frame)
+            for key, value in consumed.items():
+                span.set_attribute(key, value)
+
+            attrs = getattr(span, "attributes", None) or {}
+            ratio = agent_budget.utilization(
+                consumed.get(SC.GEN_AI_AGENT_TOKEN_BUDGET_CONSUMED),
+                attrs.get(SC.GEN_AI_AGENT_TOKEN_BUDGET),
+            )
+            if ratio is not None and self.token_budget_utilization_histogram:
+                self.token_budget_utilization_histogram.record(
+                    ratio,
+                    {
+                        "gen_ai.operation.name": str(attrs.get("gen_ai.operation.name", "")),
+                        "gen_ai.agent.name": str(attrs.get("gen_ai.agent.name", "")),
+                    },
+                )
+        except Exception as e:  # pragma: no cover - defensive
+            logger.debug("Could not finish agent budget accounting: %s", e)
 
     def _set_modality_token_attributes(self, span, usage: Dict[str, Any]) -> None:
         """Emit `gen_ai.usage.<modality>.*` token counts when a provider reports them.
@@ -1435,6 +1525,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 # Record total tokens
                 if isinstance(total_tokens, (int, float)) and total_tokens > 0:
                     span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))
+                    # Attribute this call to the enclosing agent invocation's
+                    # budget, if there is one. No-op for a plain LLM call.
+                    agent_budget.record_inference(int(total_tokens))
 
                 # Record detailed token-usage breakdowns when the provider
                 # supplies them. Attribute names align with upstream

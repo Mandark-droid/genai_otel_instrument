@@ -80,6 +80,7 @@ def instrumentor(monkeypatch):
         mock_cache_write_cost_counter = MagicMock()
         mock_error_counter = MagicMock()
         # Phase 3.4: Streaming metrics
+        mock_token_budget_utilization_histogram = MagicMock()
         mock_ttft_histogram = MagicMock()
         mock_tbt_histogram = MagicMock()
         mock_time_to_first_token_histogram = MagicMock()
@@ -111,6 +112,7 @@ def instrumentor(monkeypatch):
         ]
         mock_meter_instance.create_histogram.side_effect = [
             mock_latency_histogram,
+            mock_token_budget_utilization_histogram,
             mock_ttft_histogram,
             mock_tbt_histogram,
             mock_time_to_first_token_histogram,
@@ -123,6 +125,11 @@ def instrumentor(monkeypatch):
         monkeypatch.setattr(BaseInstrumentor, "_shared_request_counter", mock_request_counter)
         monkeypatch.setattr(BaseInstrumentor, "_shared_token_counter", mock_token_counter)
         monkeypatch.setattr(BaseInstrumentor, "_shared_latency_histogram", mock_latency_histogram)
+        monkeypatch.setattr(
+            BaseInstrumentor,
+            "_shared_token_budget_utilization_histogram",
+            mock_token_budget_utilization_histogram,
+        )
         monkeypatch.setattr(BaseInstrumentor, "_shared_cost_counter", mock_cost_counter)
         monkeypatch.setattr(
             BaseInstrumentor, "_shared_prompt_cost_counter", mock_prompt_cost_counter

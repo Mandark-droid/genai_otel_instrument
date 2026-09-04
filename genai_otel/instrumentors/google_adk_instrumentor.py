@@ -14,6 +14,7 @@ Requirements:
 import logging
 from typing import Any, Dict, Optional
 
+from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
 from .base import BaseInstrumentor
 
@@ -133,6 +134,8 @@ class GoogleADKInstrumentor(BaseInstrumentor):
         # Core attributes
         attrs["gen_ai.system"] = "google_adk"
         attrs["gen_ai.operation.name"] = "runner.run"
+        # Google ADK bounds a run with max_llm_calls.
+        attrs.update(extract_budget_attributes(kwargs, kwargs.get("run_config"), instance))
 
         # Extract app_name from runner
         if hasattr(instance, "app_name"):

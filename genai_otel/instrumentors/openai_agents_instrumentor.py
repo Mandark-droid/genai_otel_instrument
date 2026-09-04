@@ -7,6 +7,7 @@ and guardrails using the OpenAI Agents SDK (openai-agents package).
 import logging
 from typing import Any, Dict, Optional
 
+from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
 from .base import BaseInstrumentor
 
@@ -99,6 +100,8 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
         # Core attributes
         attrs["gen_ai.system"] = "openai_agents"
         attrs["gen_ai.operation.name"] = "agent.run"
+        # OpenAI Agents SDK takes max_turns as a Runner.run kwarg.
+        attrs.update(extract_budget_attributes(kwargs, instance))
 
         # Extract agent from args (first positional argument)
         agent = None

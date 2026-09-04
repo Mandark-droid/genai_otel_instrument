@@ -20,6 +20,7 @@ from typing import Any, Dict, Optional
 
 from opentelemetry import context as otel_context
 
+from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
 from .base import BaseInstrumentor
 
@@ -289,6 +290,8 @@ class CrewAIInstrumentor(BaseInstrumentor):
         # Core attributes
         attrs["gen_ai.system"] = "crewai"
         attrs["gen_ai.operation.name"] = "agent.execution"
+        # CrewAI puts max_iter / max_tokens on the Agent itself.
+        attrs.update(extract_budget_attributes(kwargs, instance))
 
         try:
             # Extract agent role
