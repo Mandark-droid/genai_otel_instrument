@@ -384,3 +384,53 @@ def test_instrument_error_respects_fail_on_error():
         config.fail_on_error = True
         with pytest.raises(AttributeError):
             inst.instrument(config)
+
+
+# ---------------------------------------------------------------------------
+# vLLM V1 engine reality
+#
+# Verified live against vLLM 0.24 and 0.27 on an RTX 5090: the V1 engine sets
+# `RequestOutput.metrics` to None and exposes no per-request timing on the
+# Python API, but DOES populate `num_cached_tokens`. Unit tests built from
+# hand-made RequestMetrics objects cannot see this, which is why the live run
+# was a release gate.
+# ---------------------------------------------------------------------------
+
+
+def _v1_output(cached=0):
+    """A RequestOutput as the V1 engine actually returns it."""
+    return SimpleNamespace(
+        request_id="0",
+        prompt_token_ids=[1, 2, 3, 4],
+        outputs=[SimpleNamespace(token_ids=[5, 6, 7], finish_reason="stop")],
+        metrics=None,
+        num_cached_tokens=cached,
+    )
+
+
+class TestVLLMV1Engine:
+    def test_no_latency_attributes_when_metrics_is_none(self):
+        """Absent beats invented: the engine reported no timings, so we emit none."""
+        attrs = VLLMInstrumentor()._extract_response_attributes([_v1_output()])
+        assert not [k for k in attrs if k.startswith("gen_ai.latency.")]
+        # The rest of the span is unaffected.
+        assert attrs["gen_ai.request.id"] == "0"
+
+    def test_tokens_still_extracted_without_metrics(self):
+        usage = VLLMInstrumentor()._extract_usage([_v1_output()])
+        assert usage["prompt_tokens"] == 4
+        assert usage["completion_tokens"] == 3
+
+    def test_num_cached_tokens_maps_to_cache_read(self):
+        """V1 does populate this, and it is the conventions' cache_read concept."""
+        usage = VLLMInstrumentor()._extract_usage([_v1_output(cached=128)])
+        assert usage["cache_read_input_tokens"] == 128
+
+    def test_cache_read_summed_across_batch(self):
+        usage = VLLMInstrumentor()._extract_usage([_v1_output(cached=64), _v1_output(cached=32)])
+        assert usage["cache_read_input_tokens"] == 96
+
+    def test_zero_cached_tokens_omitted(self):
+        """Zero prefix-cache hits is not a cache_read of zero worth recording."""
+        usage = VLLMInstrumentor()._extract_usage([_v1_output(cached=0)])
+        assert "cache_read_input_tokens" not in usage

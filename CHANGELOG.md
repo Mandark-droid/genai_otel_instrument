@@ -16,12 +16,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pointing OpenAI-SDK instrumentation at it, but offline batch generation never
   makes an HTTP request and is invisible to every HTTP-based approach.
 
-  Spans carry the engine latency breakdown -- queue, prefill, decode,
-  time-to-first-token, end-to-end -- under the `gen_ai.latency.*` keys that vLLM
-  and SGLang independently converged on and that
+  Where the engine reports it, spans carry the latency breakdown -- queue,
+  prefill, decode, time-to-first-token, end-to-end -- under the
+  `gen_ai.latency.*` keys that vLLM and SGLang independently converged on and
+  that
   [semantic-conventions-genai#408](https://github.com/open-telemetry/semantic-conventions-genai/issues/408)
   proposes standardising, so an operator running vLLM's own OTLP tracing
   alongside this library gets one vocabulary rather than two to join.
+
+  **Availability caveat, established by live testing rather than assumed:**
+  vLLM's **V1 engine sets `RequestOutput.metrics` to `None`** and exposes no
+  per-request timing on the Python API at all (verified against vLLM 0.24 and
+  0.27). On any current vLLM the `gen_ai.latency.*` attributes are therefore
+  **absent**; everything else on the span -- tokens, cost, finish reason,
+  request id, batch size -- is unaffected. They are emitted wherever `metrics`
+  is populated. No wall-clock substitute is invented in its place: the span
+  duration already records end-to-end time honestly, and a fabricated "prefill"
+  figure would be indistinguishable from a real engine measurement to any
+  consumer that trusted it. vLLM's `num_cached_tokens` **is** populated on V1
+  and is recorded as `gen_ai.usage.cache_read.input_tokens`.
 
   vLLM token counts are summed across a batch, since `generate()` returns one
   `RequestOutput` per prompt; for a batch the **slowest** request's timings are

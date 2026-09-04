@@ -7,11 +7,22 @@ instrumentation at it, but offline batch inference through ``LLM.generate()``
 is invisible to every HTTP-based approach, because no HTTP request is ever
 made.
 
-vLLM attaches a ``RequestMetrics`` object to each ``RequestOutput``. That is
-where the queue / prefill / decode breakdown comes from, and it is the
-diagnostic signal that matters when operating a self-hosted engine: it
-separates "we are capacity-bound" from "prompts are long" from "generations are
-long". See :mod:`genai_otel.engine_latency`.
+**Engine latency availability.** The queue / prefill / decode breakdown comes
+from the ``RequestMetrics`` object vLLM attaches to each ``RequestOutput``. The
+**V1 engine does not populate it** -- ``RequestOutput.metrics`` is ``None``, and
+V1 exposes no per-request timing on the Python API at all (verified against
+vLLM 0.24 and 0.27). So on any current vLLM the ``gen_ai.latency.*`` attributes
+are simply absent, and everything else on the span is unaffected.
+
+They are still emitted wherever ``metrics`` is populated (V0-era engines and
+builds that fill it in), because reporting a real breakdown when one exists is
+worth more than dropping the capability, and inventing timings from wall-clock
+guesses would be worse than emitting nothing: the span duration already records
+end-to-end time honestly, and a fabricated "prefill" number is not recoverable
+by a consumer that trusts it.
+
+``num_cached_tokens`` *is* available on V1 and carries the prefix-cache hit
+count, so that is read separately. See :mod:`genai_otel.engine_latency`.
 """
 
 import logging
@@ -228,11 +239,24 @@ class VLLMInstrumentor(BaseInstrumentor):
 
         if not prompt_tokens and not completion_tokens:
             return None
-        return {
+
+        usage: Dict[str, Any] = {
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "total_tokens": prompt_tokens + completion_tokens,
         }
+
+        # Prefix-cache hits. Unlike RequestMetrics this IS populated by the V1
+        # engine, and it is the same concept the conventions call cache_read.
+        cached = 0
+        for output in outputs:
+            value = getattr(output, "num_cached_tokens", None)
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0:
+                cached += int(value)
+        if cached:
+            usage["cache_read_input_tokens"] = cached
+
+        return usage
 
     def _extract_response_attributes(self, result) -> Dict[str, Any]:
         """Response attributes, including the engine latency breakdown."""
@@ -251,6 +275,12 @@ class VLLMInstrumentor(BaseInstrumentor):
         # than the batch. Report the slowest request instead: a batch is only
         # as fast as its tail, and averaging would hide exactly the stragglers
         # this breakdown exists to find.
+        #
+        # `metrics` is None on the V1 engine, which is every current vLLM, so
+        # this branch is skipped and no latency attributes are emitted. That is
+        # deliberate: absent means "the engine did not report it", which a
+        # consumer can act on, whereas a wall-clock substitute would look like
+        # an engine-internal measurement and quietly mislead.
         metrics = self._slowest_metrics(outputs)
         if metrics is not None:
             apply_latency_attributes(attrs, vllm_latency_attributes(metrics))
