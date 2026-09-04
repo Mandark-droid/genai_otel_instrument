@@ -44,7 +44,6 @@ DEFAULT_INSTRUMENTORS = [
     "groq",
     "llamacpp",
     "ollama",
-    "sglang",
     "vllm",
     "vertexai",
     "replicate",

@@ -1,6 +1,6 @@
 # LLM Providers
 
-TraceVerde auto-instruments 26 LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
+TraceVerde auto-instruments 25 LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
 
 The table below is the complete list, and `tests/test_docs_provider_coverage.py` asserts
 it stays in step with the `INSTRUMENTORS` registry, so a provider cannot be added in code
@@ -23,7 +23,6 @@ without appearing here.
 | Groq | Llama 3.x, Mixtral, Gemma, Whisper (20+) | `[groq]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/groq/example.py) |
 | Ollama | All local models with token tracking | `[ollama]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/ollama/example.py) |
 | vLLM | In-process batch inference with queue/prefill/decode latency | `[vllm]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/inference_engines/vllm_example.py) |
-| SGLang | In-process generation with prefix-cache and latency metadata | `[sglang]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/inference_engines/sglang_example.py) |
 | llama.cpp | Local GGUF models via llama-cpp-python | `[llamacpp]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/inference_engines/llamacpp_example.py) |
 | Vertex AI | Gemini models via Google Cloud | `[vertexai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/vertexai/example.py) |
 | SambaNova | sarvam-m, Saarika, Bulbul (12+) | `[sambanova]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sambanova_example.py) |

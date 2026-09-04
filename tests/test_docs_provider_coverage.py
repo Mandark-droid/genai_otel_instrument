@@ -66,7 +66,6 @@ PROVIDER_DISPLAY_NAMES = {
     "mistralai": "Mistral AI",
     "llamacpp": "llama.cpp",
     "ollama": "Ollama",
-    "sglang": "SGLang",
     "vllm": "vLLM",
     "openai": "OpenAI",
     "openrouter": "OpenRouter",

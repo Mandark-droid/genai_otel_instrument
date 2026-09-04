@@ -16,7 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was not instrumented at all, because `LLM.generate` returns completed outputs
   and streaming goes through `AsyncLLM`; a vLLM batch that ended different ways
   reported only the first finish reason, hiding the truncated requests; and
-  streamed spans on both engines carried no outcome at all.
+  streamed spans on both engines carried no outcome at all. An SGLang
+  instrumentor exists in the tree but is held back until it can be put through
+  the same matrix.
 
   Streamed calls now carry what the engine actually reports -- full usage on
   vLLM (each yielded `RequestOutput` is cumulative), finish reason only on
@@ -24,9 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   derived from chunk counts. Telemetry failures never interrupt a caller's
   stream.
 
-- **Instrumentors for three self-hosted inference engines: vLLM, SGLang and
-  llama.cpp.** All three are instrumented at their **in-process Python APIs**
-  (`vllm.LLM.generate` / `.chat`, `sglang.Engine.generate`,
+- **Instrumentors for two self-hosted inference engines: vLLM and llama.cpp.**
+  Both are instrumented at their **in-process Python APIs**
+  (`vllm.LLM.generate` / `.chat` / `.encode` and the streaming `AsyncLLM`,
   `llama_cpp.Llama.create_chat_completion` / `create_completion`), not at an
   OpenAI-compatible HTTP endpoint. A served engine can already be traced by
   pointing OpenAI-SDK instrumentation at it, but offline batch generation never

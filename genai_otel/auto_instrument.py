@@ -90,7 +90,6 @@ try:
         OpenAIInstrumentor,
         OpenAIAgentsInstrumentor,
         OpenRouterInstrumentor,
-        SGLangInstrumentor,
         PydanticAIInstrumentor,
         VLLMInstrumentor,
         ReplicateInstrumentor,
@@ -135,7 +134,6 @@ except ImportError:
         OpenAIInstrumentor,
         OpenAIAgentsInstrumentor,
         OpenRouterInstrumentor,
-        SGLangInstrumentor,
         PydanticAIInstrumentor,
         VLLMInstrumentor,
         ReplicateInstrumentor,
@@ -224,7 +222,6 @@ INSTRUMENTORS = {
     "instructor": InstructorInstrumentor,  # Instructor structured output extraction
     "llamacpp": LlamaCppInstrumentor,
     "ollama": OllamaInstrumentor,
-    "sglang": SGLangInstrumentor,
     "vllm": VLLMInstrumentor,
     "vertexai": VertexAIInstrumentor,
     "replicate": ReplicateInstrumentor,

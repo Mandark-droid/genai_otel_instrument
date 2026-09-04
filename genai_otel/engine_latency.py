@@ -4,7 +4,8 @@ vLLM and SGLang independently converged on an identical ``gen_ai.latency.*``
 span-attribute set -- ``vllm/tracing/utils.py`` and
 ``sglang/srt/observability/trace.py`` each define it, and each says in comments
 that it mirrors the OTel GenAI conventions and adds the latency keys because
-the spec lacks them. `semantic-conventions-genai#408
+the spec lacks them. Only the vLLM derivation ships today; the SGLang one lands
+with its instrumentor. `semantic-conventions-genai#408
 <https://github.com/open-telemetry/semantic-conventions-genai/issues/408>`_
 proposes adopting that set.
 
@@ -95,26 +96,6 @@ def vllm_latency_attributes(metrics: Any) -> Dict[str, float]:
     if forward_ms is not None:
         candidates[SC.GEN_AI_LATENCY_TIME_IN_MODEL_FORWARD] = forward_ms / 1000.0
 
-    return {k: v for k, v in candidates.items() if v is not None}
-
-
-def sglang_latency_attributes(meta_info: Any) -> Dict[str, float]:
-    """Derive latency attributes from an SGLang ``meta_info`` mapping.
-
-    SGLang returns per-request metadata alongside the generated text. Field
-    coverage varies by version, so each key is read independently and any that
-    is absent simply does not produce an attribute.
-    """
-    if not isinstance(meta_info, dict):
-        return {}
-
-    candidates = {
-        SC.GEN_AI_LATENCY_E2E: _seconds(meta_info.get("e2e_latency")),
-        SC.GEN_AI_LATENCY_TIME_TO_FIRST_TOKEN: _seconds(meta_info.get("ttft")),
-        SC.GEN_AI_LATENCY_TIME_IN_QUEUE: _seconds(meta_info.get("queue_time")),
-        SC.GEN_AI_LATENCY_TIME_IN_MODEL_PREFILL: _seconds(meta_info.get("prefill_latency")),
-        SC.GEN_AI_LATENCY_TIME_IN_MODEL_DECODE: _seconds(meta_info.get("decode_latency")),
-    }
     return {k: v for k, v in candidates.items() if v is not None}
 
 
