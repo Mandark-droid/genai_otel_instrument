@@ -33,6 +33,7 @@ from .langchain_instrumentor import LangChainInstrumentor
 from .langgraph_instrumentor import LangGraphInstrumentor
 from .liquid_audio_instrumentor import LiquidAudioInstrumentor
 from .litellm_latency_instrumentor import LiteLLMLatencyInstrumentor
+from .llamacpp_instrumentor import LlamaCppInstrumentor
 from .llamaindex_instrumentor import LlamaIndexInstrumentor
 from .mistralai_instrumentor import MistralAIInstrumentor
 from .ollama_instrumentor import OllamaInstrumentor
@@ -46,8 +47,10 @@ from .replicate_instrumentor import ReplicateInstrumentor
 from .sambanova_instrumentor import SambaNovaInstrumentor
 from .sarvam_instrumentor import SarvamAIInstrumentor
 from .sentence_transformers_instrumentor import SentenceTransformersInstrumentor
+from .sglang_instrumentor import SGLangInstrumentor
 from .togetherai_instrumentor import TogetherAIInstrumentor
 from .vertexai_instrumentor import VertexAIInstrumentor
+from .vllm_instrumentor import VLLMInstrumentor
 
 __all__ = [
     "OpenAIInstrumentor",
@@ -72,7 +75,10 @@ __all__ = [
     "GuardrailsAIInstrumentor",
     "HaystackInstrumentor",
     "InstructorInstrumentor",
+    "LlamaCppInstrumentor",
     "OllamaInstrumentor",
+    "SGLangInstrumentor",
+    "VLLMInstrumentor",
     "VertexAIInstrumentor",
     "ReplicateInstrumentor",
     "AnyscaleInstrumentor",

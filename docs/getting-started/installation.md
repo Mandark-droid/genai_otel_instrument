@@ -40,6 +40,9 @@ pip install genai-otel-instrument[cohere]
 pip install genai-otel-instrument[mistral]
 pip install genai-otel-instrument[groq]
 pip install genai-otel-instrument[ollama]
+pip install genai-otel-instrument[vllm]        # self-hosted vLLM, in-process API
+pip install genai-otel-instrument[sglang]      # self-hosted SGLang, in-process API
+pip install genai-otel-instrument[llamacpp]    # local GGUF models via llama-cpp-python
 pip install genai-otel-instrument[together]
 pip install genai-otel-instrument[cometapi]
 pip install genai-otel-instrument[elevenlabs]   # text-to-speech + Scribe speech-to-text

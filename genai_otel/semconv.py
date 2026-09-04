@@ -151,6 +151,27 @@ class SemanticConvention:
     # streamed calls, for the same reason the metric is.
     GEN_AI_RESPONSE_TIME_TO_FIRST_CHUNK = "gen_ai.response.time_to_first_chunk"
 
+    # Inference-engine latency breakdown. vLLM and SGLang independently
+    # converged on this identical key set (vllm/tracing/utils.py and
+    # sglang/srt/observability/trace.py both define it), and
+    # semantic-conventions-genai#408 proposes adopting it. Not yet in the
+    # registry, so these are emitted as-is under the de-facto spelling rather
+    # than invented anew -- an operator running vLLM's own tracing alongside
+    # this library gets one vocabulary, not two.
+    # All values are seconds, matching the conventions' other duration units.
+    GEN_AI_LATENCY_TIME_IN_QUEUE = "gen_ai.latency.time_in_queue"
+    GEN_AI_LATENCY_TIME_TO_FIRST_TOKEN = "gen_ai.latency.time_to_first_token"
+    GEN_AI_LATENCY_E2E = "gen_ai.latency.e2e"
+    GEN_AI_LATENCY_TIME_IN_MODEL_PREFILL = "gen_ai.latency.time_in_model_prefill"
+    GEN_AI_LATENCY_TIME_IN_MODEL_DECODE = "gen_ai.latency.time_in_model_decode"
+    GEN_AI_LATENCY_TIME_IN_MODEL_INFERENCE = "gen_ai.latency.time_in_model_inference"
+    # Finer-grained keys defined in vLLM's class only.
+    GEN_AI_LATENCY_TIME_IN_SCHEDULER = "gen_ai.latency.time_in_scheduler"
+    GEN_AI_LATENCY_TIME_IN_MODEL_FORWARD = "gen_ai.latency.time_in_model_forward"
+    GEN_AI_LATENCY_TIME_IN_MODEL_EXECUTE = "gen_ai.latency.time_in_model_execute"
+    # Engine-assigned request id. vLLM and SGLang both expose one; the
+    # conventions only define gen_ai.response.id.
+    GEN_AI_REQUEST_ID = "gen_ai.request.id"
     # Per-invocation agent budget governance
     # (semantic-conventions-genai#425). `gen_ai.request.max_tokens` is a
     # per-call limit passed to the model API; these are the invocation-level

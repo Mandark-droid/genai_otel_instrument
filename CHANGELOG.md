@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Instrumentors for three self-hosted inference engines: vLLM, SGLang and
+  llama.cpp.** All three are instrumented at their **in-process Python APIs**
+  (`vllm.LLM.generate` / `.chat`, `sglang.Engine.generate`,
+  `llama_cpp.Llama.create_chat_completion` / `create_completion`), not at an
+  OpenAI-compatible HTTP endpoint. A served engine can already be traced by
+  pointing OpenAI-SDK instrumentation at it, but offline batch generation never
+  makes an HTTP request and is invisible to every HTTP-based approach.
+
+  Spans carry the engine latency breakdown -- queue, prefill, decode,
+  time-to-first-token, end-to-end -- under the `gen_ai.latency.*` keys that vLLM
+  and SGLang independently converged on and that
+  [semantic-conventions-genai#408](https://github.com/open-telemetry/semantic-conventions-genai/issues/408)
+  proposes standardising, so an operator running vLLM's own OTLP tracing
+  alongside this library gets one vocabulary rather than two to join.
+
+  vLLM token counts are summed across a batch, since `generate()` returns one
+  `RequestOutput` per prompt; for a batch the **slowest** request's timings are
+  reported, because a batch is only as fast as its tail. vLLM reports
+  `model_forward_time` in milliseconds while its other fields are seconds, and
+  llama.cpp reports milliseconds throughout -- both normalised. SGLang's
+  `cached_tokens` maps onto the conventions' `cache_read` concept. A phase an
+  engine did not report is omitted rather than recorded as zero.
+
 ## [1.25.0] - 2026-09-04
 
 ### Added

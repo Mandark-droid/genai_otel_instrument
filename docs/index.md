@@ -2,12 +2,12 @@
 
 **The most comprehensive OpenTelemetry auto-instrumentation library for LLM/GenAI applications.**
 
-TraceVerde provides production-ready, zero-code instrumentation for GenAI applications. Install, set two environment variables, and get complete observability across 23 LLM providers, 8 multi-agent frameworks, and 20+ MCP tools.
+TraceVerde provides production-ready, zero-code instrumentation for GenAI applications. Install, set two environment variables, and get complete observability across 26 LLM providers, 8 multi-agent frameworks, and 20+ MCP tools.
 
 ## Key Features
 
 - **Zero-Code Setup** - Just install and set env vars, or add one line of code
-- **23 LLM Providers** - OpenAI, Anthropic, Google AI, AWS Bedrock, Azure, Cohere, Mistral, Together AI, Groq, Ollama, and more
+- **26 LLM Providers** - OpenAI, Anthropic, Google AI, AWS Bedrock, Azure, Cohere, Mistral, Together AI, Groq, Ollama, and more
 - **8 Multi-Agent Frameworks** - CrewAI, LangGraph, Google ADK, AutoGen, OpenAI Agents SDK, Pydantic AI, Haystack, DSPy
 - **Automatic Cost Tracking** - 1,700+ model pricing database with per-request cost breakdown
 - **GPU Metrics** - Real-time NVIDIA and AMD GPU monitoring (utilization, memory, temperature, power)
@@ -40,7 +40,7 @@ response = client.chat.completions.create(
 - [Installation](getting-started/installation.md) - Detailed installation options
 - [Quick Start](getting-started/quickstart.md) - Get up and running in minutes
 - [Configuration](getting-started/configuration.md) - Environment variables and options
-- [LLM Providers](guides/llm-providers.md) - 23 providers with code examples
+- [LLM Providers](guides/llm-providers.md) - 26 providers with code examples
 - [Multi-Agent Frameworks](guides/multi-agent-frameworks.md) - CrewAI, LangGraph, Google ADK, AutoGen, and more
 - [MCP Tools](guides/mcp-tools.md) - Databases, caches, vector DBs, message queues
 - [Cost Tracking](guides/cost-tracking.md) - Automatic cost calculation for 1,700+ models
