@@ -389,7 +389,7 @@ def test_instrument_error_respects_fail_on_error():
 # ---------------------------------------------------------------------------
 # vLLM V1 engine reality
 #
-# Verified live against vLLM 0.24 and 0.27 on an RTX 5090: the V1 engine sets
+# Verified live against vLLM 0.24 and 0.27: the V1 engine sets
 # `RequestOutput.metrics` to None and exposes no per-request timing on the
 # Python API, but DOES populate `num_cached_tokens`. Unit tests built from
 # hand-made RequestMetrics objects cannot see this, which is why the live run
@@ -553,3 +553,91 @@ class TestVLLMAsyncStreaming:
         inst = VLLMInstrumentor()
         attrs = inst._extract_async_generate_attributes(None, (), {"request_id": "kw-req"})
         assert attrs["gen_ai.request.id"] == "kw-req"
+
+
+class TestLlamaCppNestedSpanDedup:
+    """One span per user call, not one per internal delegation.
+
+    Found live: `create_chat_completion` calls `create_completion` internally,
+    so wrapping both emitted a `llamacpp.chat` AND a nested
+    `llamacpp.completion` span carrying the same usage -- tokens and cost were
+    counted twice for every chat call.
+    """
+
+    def test_inner_delegation_is_not_traced_again(self):
+        from genai_otel.instrumentors import llamacpp_instrumentor as mod
+
+        calls = []
+
+        def original(self, *a, **kw):
+            return {"origin": "original"}
+
+        def traced(*a, **kw):
+            calls.append("traced")
+            return {"origin": "traced"}
+
+        guarded = LlamaCppInstrumentor._dedup(traced, original)
+
+        # Outermost call is traced.
+        assert guarded(object())["origin"] == "traced"
+        assert calls == ["traced"]
+
+        # A call made while a llama.cpp span is already open is not.
+        token = mod._LLAMACPP_SPAN_ACTIVE.set(True)
+        try:
+            assert guarded(object())["origin"] == "original"
+        finally:
+            mod._LLAMACPP_SPAN_ACTIVE.reset(token)
+        assert calls == ["traced"]
+
+    def test_guard_is_released_after_a_call(self):
+        from genai_otel.instrumentors import llamacpp_instrumentor as mod
+
+        guarded = LlamaCppInstrumentor._dedup(lambda *a, **k: {}, lambda *a, **k: {})
+        guarded(object())
+        assert mod._LLAMACPP_SPAN_ACTIVE.get() is False
+
+    def test_guard_is_released_when_the_call_raises(self):
+        from genai_otel.instrumentors import llamacpp_instrumentor as mod
+
+        def boom(*a, **k):
+            raise ValueError("nope")
+
+        guarded = LlamaCppInstrumentor._dedup(boom, lambda *a, **k: {})
+        with pytest.raises(ValueError):
+            guarded(object())
+        assert mod._LLAMACPP_SPAN_ACTIVE.get() is False
+
+    def test_guard_is_held_until_a_stream_is_drained(self):
+        """A delegated call mid-stream must not open a second span."""
+        from genai_otel.instrumentors import llamacpp_instrumentor as mod
+
+        def streaming(*a, **k):
+            yield {"chunk": 1}
+            yield {"chunk": 2}
+
+        guarded = LlamaCppInstrumentor._dedup(streaming, lambda *a, **k: {})
+        gen = guarded(object())
+        next(gen)
+        assert mod._LLAMACPP_SPAN_ACTIVE.get() is True, "guard released too early"
+        list(gen)
+        assert mod._LLAMACPP_SPAN_ACTIVE.get() is False
+
+
+class TestLlamaCppStreamedFinishReason:
+    """Streamed chunks carry no usage, but the last one carries the reason."""
+
+    def test_reason_read_from_the_final_chunk(self):
+        chunks = [
+            {"choices": [{"finish_reason": None}]},
+            {"choices": [{"finish_reason": None}]},
+            {"choices": [{"finish_reason": "length"}]},
+        ]
+        assert LlamaCppInstrumentor()._extract_finish_reason(chunks) == "length"
+
+    def test_no_reason_anywhere(self):
+        chunks = [{"choices": [{"finish_reason": None}]}]
+        assert LlamaCppInstrumentor()._extract_finish_reason(chunks) is None
+
+    def test_non_streamed_response_still_works(self):
+        assert LlamaCppInstrumentor()._extract_finish_reason(_llamacpp_result()) == "stop"

@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Coverage established by live testing, not assumption.** Each engine was run
+  against real models across a matrix of entry point x streaming x
+  batching x finish reason, which found four defects unit tests could not reach:
+  a llama.cpp chat call emitted **two** spans (it delegates to
+  `create_completion`) and so **double-counted tokens and cost**; vLLM streaming
+  was not instrumented at all, because `LLM.generate` returns completed outputs
+  and streaming goes through `AsyncLLM`; a vLLM batch that ended different ways
+  reported only the first finish reason, hiding the truncated requests; and
+  streamed spans on both engines carried no outcome at all.
+
+  Streamed calls now carry what the engine actually reports -- full usage on
+  vLLM (each yielded `RequestOutput` is cumulative), finish reason only on
+  llama.cpp (it emits no `usage` block in stream mode). Token counts are never
+  derived from chunk counts. Telemetry failures never interrupt a caller's
+  stream.
+
 - **Instrumentors for three self-hosted inference engines: vLLM, SGLang and
   llama.cpp.** All three are instrumented at their **in-process Python APIs**
   (`vllm.LLM.generate` / `.chat`, `sglang.Engine.generate`,

@@ -12,8 +12,13 @@ llama.cpp returns OpenAI-shaped responses, so token usage comes off the usual
 latency vocabulary in :mod:`genai_otel.engine_latency`.
 """
 
+import contextvars
+import inspect
 import logging
 from typing import Any, Dict, Optional
+
+import wrapt
+from opentelemetry.trace import Status, StatusCode
 
 from ..config import OTelConfig
 from ..engine_latency import apply_latency_attributes, llamacpp_latency_attributes
@@ -23,6 +28,31 @@ from .base import BaseInstrumentor
 logger = logging.getLogger(__name__)
 
 PROVIDER = "llamacpp"
+
+# llama.cpp's entry points delegate to each other: create_chat_completion calls
+# create_completion, and __call__ calls it too. Wrapping each one independently
+# therefore produced TWO spans for every chat call, both carrying the same token
+# counts -- so tokens and cost were counted twice in the metrics. This flag marks
+# that a llama.cpp span is already open on this call stack, and the inner call
+# runs untraced.
+#
+# A contextvar rather than an instance attribute, so concurrent calls on
+# different threads or tasks do not suppress each other's spans.
+_LLAMACPP_SPAN_ACTIVE: contextvars.ContextVar = contextvars.ContextVar(
+    "genai_otel_llamacpp_span_active", default=False
+)
+
+
+def _reset_after(generator, token):
+    """Re-yield a stream, releasing the dedup guard once it is exhausted."""
+    try:
+        for item in generator:
+            yield item
+    finally:
+        try:
+            _LLAMACPP_SPAN_ACTIVE.reset(token)
+        except Exception:  # pragma: no cover - reset in a different context
+            _LLAMACPP_SPAN_ACTIVE.set(False)
 
 
 class LlamaCppInstrumentor(BaseInstrumentor):
@@ -93,8 +123,9 @@ class LlamaCppInstrumentor(BaseInstrumentor):
                 setattr(
                     llama_cls,
                     method_name,
-                    self.create_span_wrapper(span_name=span_name, extract_attributes=extractor)(
-                        original
+                    self._dedup(
+                        self._stream_aware(original, span_name, extractor),
+                        original,
                     ),
                 )
 
@@ -105,6 +136,101 @@ class LlamaCppInstrumentor(BaseInstrumentor):
             logger.error("Failed to instrument llama.cpp: %s", e)
             if config and config.fail_on_error:
                 raise
+
+    def _stream_aware(self, original, span_name, extractor):
+        """Trace a call, handling streamed and non-streamed results alike.
+
+        The generic generator path in :mod:`~genai_otel.instrumentors.base`
+        ends the span but never inspects the chunks, so a streamed llama.cpp
+        call produced a span with no outcome at all. Here the stream is
+        re-yielded chunk by chunk and the final chunk's finish reason is
+        recorded when it is exhausted.
+
+        Token counts stay absent for streamed calls: llama.cpp emits no
+        ``usage`` block in stream mode, and deriving a count from the number of
+        chunks would be a guess presented as a measurement.
+        """
+        traced = self.create_span_wrapper(span_name=span_name, extract_attributes=extractor)(
+            original
+        )
+        instrumentor = self
+
+        @wrapt.decorator
+        def dispatch(wrapped, instance, args, kwargs):
+            if not kwargs.get("stream"):
+                return wrapped(*args, **kwargs)
+
+            try:
+                attrs = extractor(instance, args, kwargs)
+                attrs[SC.GEN_AI_REQUEST_STREAM] = True
+            except Exception:  # pragma: no cover - defensive
+                attrs = {"gen_ai.system": PROVIDER, SC.GEN_AI_REQUEST_STREAM: True}
+            span = instrumentor.tracer.start_span(span_name, attributes=attrs)
+
+            def traced_stream():
+                chunks = []
+                try:
+                    for chunk in original(instance, *args, **kwargs):
+                        chunks.append(chunk)
+                        yield chunk
+                except Exception as e:
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
+                    span.record_exception(e)
+                    span.end()
+                    raise
+                try:
+                    reason = instrumentor._extract_finish_reason(chunks)
+                    if reason:
+                        span.set_attribute(SC.GEN_AI_RESPONSE_FINISH_REASONS, [reason])
+                    span.set_status(Status(StatusCode.OK))
+                except Exception as e:  # pragma: no cover - defensive
+                    logger.debug("Could not record streamed llama.cpp outcome: %s", e)
+                finally:
+                    span.end()
+
+            return traced_stream()
+
+        return dispatch(traced)
+
+    @staticmethod
+    def _dedup(traced, original):
+        """Emit one span per user call, not one per internal delegation.
+
+        ``create_chat_completion`` calls ``create_completion`` internally, so
+        without this a single chat call produced a ``llamacpp.chat`` span and a
+        nested ``llamacpp.completion`` span carrying the same usage -- double
+        counting tokens and cost. The outermost call wins, because that is the
+        operation the application actually made.
+        """
+
+        # wrapt, not a plain function: these are set as class attributes, so a
+        # plain wrapper is never bound and the instrumentor receives
+        # instance=None -- which silently lost gen_ai.request.model, since the
+        # gguf path is read off the Llama instance.
+        @wrapt.decorator
+        def guarded(wrapped, instance, args, kwargs):
+            if _LLAMACPP_SPAN_ACTIVE.get():
+                # Already inside a llama.cpp span: run the untraced original so
+                # the delegation does not produce a second span.
+                if instance is not None:
+                    return original(instance, *args, **kwargs)
+                return original(*args, **kwargs)
+            token = _LLAMACPP_SPAN_ACTIVE.set(True)
+            try:
+                result = wrapped(*args, **kwargs)
+            except BaseException:
+                _LLAMACPP_SPAN_ACTIVE.reset(token)
+                raise
+            if inspect.isgenerator(result):
+                # A streamed call: the guard must stay set for as long as the
+                # caller is consuming chunks, not just until the generator
+                # object is handed back, or a delegated inner call mid-stream
+                # would open a second span.
+                return _reset_after(result, token)
+            _LLAMACPP_SPAN_ACTIVE.reset(token)
+            return result
+
+        return guarded(traced)
 
     # ------------------------------------------------------------------
     # Attribute extraction
@@ -197,6 +323,21 @@ class LlamaCppInstrumentor(BaseInstrumentor):
         return attrs
 
     def _extract_finish_reason(self, result) -> Optional[str]:
+        """Finish reason from a completed response or a final streamed chunk.
+
+        Streamed chunks carry no ``usage`` block -- llama.cpp does not report
+        token counts in stream mode -- but the last chunk does carry the finish
+        reason, so that much is recoverable. Tokens are left absent rather than
+        derived from a chunk count, which would be a guess presented as a
+        measurement.
+        """
+        if isinstance(result, (list, tuple)):
+            # A drained stream: the reason lives on the final chunk.
+            for chunk in reversed(result):
+                reason = self._extract_finish_reason(chunk)
+                if reason:
+                    return reason
+            return None
         if not isinstance(result, dict):
             return None
         choices = result.get("choices")
