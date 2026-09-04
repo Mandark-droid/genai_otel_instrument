@@ -641,3 +641,90 @@ class TestLlamaCppStreamedFinishReason:
 
     def test_non_streamed_response_still_works(self):
         assert LlamaCppInstrumentor()._extract_finish_reason(_llamacpp_result()) == "stop"
+
+
+class TestSGLangNestedSpanDedup:
+    """One span per user call, not one per internal delegation.
+
+    SGLang's synchronous Engine.generate drives async_generate through an event
+    loop on several releases, so wrapping both independently would emit two
+    spans for one call and count its tokens twice -- the same defect live
+    testing found in llama.cpp's create_chat_completion.
+    """
+
+    def test_inner_delegation_is_not_traced_again(self):
+        from genai_otel.instrumentors import sglang_instrumentor as mod
+
+        def original(self, *a, **kw):
+            return {"origin": "original"}
+
+        def traced(*a, **kw):
+            return {"origin": "traced"}
+
+        guarded = mod._dedup(traced, original)
+        assert guarded(object())["origin"] == "traced"
+
+        token = mod._SGLANG_SPAN_ACTIVE.set(True)
+        try:
+            assert guarded(object())["origin"] == "original"
+        finally:
+            mod._SGLANG_SPAN_ACTIVE.reset(token)
+
+    def test_guard_released_after_call_and_after_error(self):
+        from genai_otel.instrumentors import sglang_instrumentor as mod
+
+        mod._dedup(lambda *a, **k: {}, lambda *a, **k: {})(object())
+        assert mod._SGLANG_SPAN_ACTIVE.get() is False
+
+        def boom(*a, **k):
+            raise ValueError("nope")
+
+        with pytest.raises(ValueError):
+            mod._dedup(boom, lambda *a, **k: {})(object())
+        assert mod._SGLANG_SPAN_ACTIVE.get() is False
+
+    def test_guard_held_until_a_stream_is_drained(self):
+        from genai_otel.instrumentors import sglang_instrumentor as mod
+
+        def streaming(*a, **k):
+            yield {"chunk": 1}
+            yield {"chunk": 2}
+
+        gen = mod._dedup(streaming, lambda *a, **k: {})(object())
+        next(gen)
+        assert mod._SGLANG_SPAN_ACTIVE.get() is True
+        list(gen)
+        assert mod._SGLANG_SPAN_ACTIVE.get() is False
+
+
+class TestSGLangBatchFinishReasons:
+    """A batch ends different ways; the array must report all of them."""
+
+    @staticmethod
+    def _result(reason):
+        return {
+            "text": "x",
+            "meta_info": {"finish_reason": reason, "prompt_tokens": 3, "completion_tokens": 2},
+        }
+
+    def test_mixed_batch_reports_every_reason(self):
+        attrs = SGLangInstrumentor()._extract_response_attributes(
+            [self._result({"type": "stop"}), self._result({"type": "length"})]
+        )
+        assert attrs["gen_ai.response.finish_reasons"] == ["stop", "length"]
+
+    def test_bare_string_shape_also_handled(self):
+        attrs = SGLangInstrumentor()._extract_response_attributes(
+            [self._result("stop"), self._result("length")]
+        )
+        assert attrs["gen_ai.response.finish_reasons"] == ["stop", "length"]
+
+    def test_uniform_batch_deduplicated(self):
+        attrs = SGLangInstrumentor()._extract_response_attributes(
+            [self._result({"type": "length"}) for _ in range(6)]
+        )
+        assert attrs["gen_ai.response.finish_reasons"] == ["length"]
+
+    def test_absent_when_no_reason_reported(self):
+        attrs = SGLangInstrumentor()._extract_response_attributes([self._result(None)])
+        assert "gen_ai.response.finish_reasons" not in attrs
