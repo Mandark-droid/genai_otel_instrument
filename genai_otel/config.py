@@ -80,6 +80,49 @@ if sys.version_info >= (3, 10):
     DEFAULT_INSTRUMENTORS.extend(["smolagents", "litellm"])
 
 
+# Cross-library env var controlling whether prompt/response content is recorded.
+# Defined by opentelemetry-util-genai and used by the reference scenarios in
+# open-telemetry/semantic-conventions-genai; its formal definition in the
+# conventions is still open (semantic-conventions-genai#497).
+OTEL_GENAI_CAPTURE_MESSAGE_CONTENT = "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"
+
+# Values accepted by that variable, matching util-genai's ContentCapturingMode.
+# Anything that reaches a span at all counts as "on" for us: this library has a
+# single boolean capture switch rather than separate span and event sinks, so
+# EVENT_ONLY deliberately maps to False -- claiming capture and then writing the
+# content somewhere the operator did not ask for is worse than not capturing.
+_CONTENT_CAPTURE_MODES = {
+    "NO_CONTENT": False,
+    "SPAN_ONLY": True,
+    "EVENT_ONLY": False,
+    "SPAN_AND_EVENT": True,
+}
+
+
+def _content_capture_from_env() -> bool:
+    """Resolve content capture from the standard env var, then our own.
+
+    `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` takes precedence when
+    set to a recognised mode. An unrecognised value is a configuration mistake
+    on a privacy-relevant switch, so it warns and falls back to the safe answer
+    (no capture) rather than silently reading through to our own variable and
+    capturing content the operator may have been trying to turn off.
+    """
+    standard = os.getenv(OTEL_GENAI_CAPTURE_MESSAGE_CONTENT, "").strip()
+    if standard:
+        mode = _CONTENT_CAPTURE_MODES.get(standard.upper())
+        if mode is not None:
+            return mode
+        logger.warning(
+            "%s is not a valid option for `%s`. Must be one of %s. Defaulting to no capture.",
+            standard,
+            OTEL_GENAI_CAPTURE_MESSAGE_CONTENT,
+            ", ".join(_CONTENT_CAPTURE_MODES),
+        )
+        return False
+    return os.getenv("GENAI_ENABLE_CONTENT_CAPTURE", "false").strip().lower() == "true"
+
+
 def _get_enabled_instrumentors() -> List[str]:
     """
     Gets the list of enabled instrumentors from the environment variable.
@@ -282,9 +325,12 @@ class OTelConfig:
     # Enable content capture as span events
     # Controls whether request/response content is captured on spans.
     # Set to "true" to enable content capture for full visibility.
-    enable_content_capture: bool = field(
-        default_factory=lambda: os.getenv("GENAI_ENABLE_CONTENT_CAPTURE", "false").lower() == "true"
-    )
+    #
+    # `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` is the cross-library
+    # spelling (see `_content_capture_from_env`) and wins when both are set, so
+    # an application migrating from another GenAI instrumentation keeps working
+    # without learning our name for the same switch.
+    enable_content_capture: bool = field(default_factory=lambda: _content_capture_from_env())
 
     # Maximum length for captured content (prompt text within the first_message attribute).
     # Only applies when enable_content_capture is true.
@@ -461,8 +507,11 @@ class OTelConfig:
             self.co2_offline_mode = True
             self.toxicity_use_perspective_api = False
             # Soft default: enable content capture for audit unless the operator
-            # explicitly set GENAI_ENABLE_CONTENT_CAPTURE.
-            if os.getenv("GENAI_ENABLE_CONTENT_CAPTURE", "") == "":
+            # explicitly pinned it, under either spelling.
+            if (
+                os.getenv("GENAI_ENABLE_CONTENT_CAPTURE", "") == ""
+                and os.getenv(OTEL_GENAI_CAPTURE_MESSAGE_CONTENT, "").strip() == ""
+            ):
                 self.enable_content_capture = True
 
 

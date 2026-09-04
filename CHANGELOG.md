@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`server.address` / `server.port` on spans.** Derived centrally from the SDK
+  client's base URL, so every instrumentor using the shared span wrapper reports
+  the endpoint a call actually went to. Both are conditionally required on
+  inference spans upstream and the library previously emitted neither, which made
+  self-hosted, proxied and gateway traffic indistinguishable from a vendor's
+  public API. The attributes are omitted entirely when the SDK exposes no base
+  URL: an absent attribute reads as "endpoint unknown", whereas defaulting to the
+  provider's public host would misattribute exactly the traffic worth
+  distinguishing. An instrumentor that sets these itself is never overridden.
+
+- **`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` is now honoured.** This
+  is the content-capture switch shared with other OpenTelemetry GenAI
+  instrumentations; previously only `GENAI_ENABLE_CONTENT_CAPTURE` worked, so an
+  application migrating from one of them got no content and no indication why. It
+  accepts `NO_CONTENT`, `SPAN_ONLY`, `EVENT_ONLY` and `SPAN_AND_EVENT`
+  (case-insensitive) and takes precedence over `GENAI_ENABLE_CONTENT_CAPTURE`.
+  `EVENT_ONLY` captures nothing here, because this library has a single boolean
+  capture switch rather than separate span and event sinks. An unrecognised value
+  warns and captures nothing rather than reading through to the other variable --
+  a typo on a privacy switch should fail closed.
+
+### Changed
+
+- **`gen_ai.usage.cache_creation.input_tokens` is superseded by
+  `gen_ai.usage.cache_write.input_tokens`.**
+  [semantic-conventions-genai#440](https://github.com/open-telemetry/semantic-conventions-genai/pull/440)
+  renamed it upstream; the library emitted only the old name, so a backend
+  following the current conventions read zero cache-write tokens. Both names are
+  now emitted under the default `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai/dup`, and
+  only `cache_write` under `gen_ai` -- the same policy already used for
+  prompt/completion tokens. `gen_ai.usage.cache_read.input_tokens` was not
+  renamed and is unaffected.
+
 ## [1.24.0] - 2026-09-03
 
 ### Added

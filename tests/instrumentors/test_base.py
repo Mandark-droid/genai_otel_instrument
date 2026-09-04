@@ -1457,3 +1457,119 @@ async def test_async_wrapper_decrements_server_metrics_on_error(instrumentor):
             await wrapped()
 
     mock_server_metrics.decrement_requests_running.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# Prompt-cache token breakdown: `cache_write` is the current spelling
+# (semantic-conventions-genai#440 renamed `cache_creation`), `cache_creation`
+# is superseded and follows the same dual-emission policy as prompt/completion.
+# ---------------------------------------------------------------------------
+
+
+def test_cache_tokens_dual_emission(instrumentor):
+    """Both cache_write and the superseded cache_creation are emitted under gen_ai/dup."""
+    inst, mock_span = instrumentor
+    inst.config.semconv_stability_opt_in = "gen_ai/dup"
+
+    result = {
+        "usage": {
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "cache_read_input_tokens": 40,
+            "cache_creation_input_tokens": 7,
+        }
+    }
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+    attrs = {c[0][0]: c[0][1] for c in mock_span.set_attribute.call_args_list}
+
+    assert attrs.get("gen_ai.usage.cache_read.input_tokens") == 40
+    assert attrs.get("gen_ai.usage.cache_write.input_tokens") == 7
+    assert attrs.get("gen_ai.usage.cache_creation.input_tokens") == 7
+
+
+def test_cache_tokens_current_name_only(instrumentor):
+    """Under gen_ai, only the current cache_write spelling is emitted."""
+    inst, mock_span = instrumentor
+    inst.config.semconv_stability_opt_in = "gen_ai"
+
+    result = {"usage": {"cache_read_input_tokens": 40, "cache_creation_input_tokens": 7}}
+    inst._record_result_metrics(mock_span, result, time.time() - 1)
+    attrs = {c[0][0]: c[0][1] for c in mock_span.set_attribute.call_args_list}
+
+    assert attrs.get("gen_ai.usage.cache_write.input_tokens") == 7
+    assert "gen_ai.usage.cache_creation.input_tokens" not in attrs
+    # cache_read was never renamed, so it is emitted at both tiers.
+    assert attrs.get("gen_ai.usage.cache_read.input_tokens") == 40
+
+
+def test_cache_tokens_absent_when_provider_reports_none(instrumentor):
+    """No cache attributes at all when the provider does not report caching."""
+    inst, mock_span = instrumentor
+    inst.config.semconv_stability_opt_in = "gen_ai/dup"
+
+    inst._record_result_metrics(mock_span, {"usage": {"prompt_tokens": 5}}, time.time() - 1)
+    attrs = {c[0][0]: c[0][1] for c in mock_span.set_attribute.call_args_list}
+
+    assert not [k for k in attrs if "cache" in k]
+
+
+# ---------------------------------------------------------------------------
+# server.address / server.port derivation
+# ---------------------------------------------------------------------------
+
+
+class _Node:
+    """Minimal stand-in for an SDK object graph."""
+
+
+def _client_with(base_url, depth=1):
+    """Build a sub-resource whose client chain ends in ``base_url``."""
+    client = _Node()
+    client.base_url = base_url
+    for _ in range(depth):
+        parent = _Node()
+        parent._client = client
+        client = parent
+    return client
+
+
+def test_server_attributes_from_sdk_client():
+    """The common `sub_resource._client.base_url` shape yields host and port."""
+    from genai_otel.instrumentors.base import _server_attributes
+
+    assert _server_attributes(_client_with("https://api.openai.com/v1")) == {
+        "server.address": "api.openai.com",
+        "server.port": 443,
+    }
+
+
+def test_server_attributes_explicit_port_wins():
+    """A self-hosted endpoint keeps its explicit port rather than a scheme default."""
+    from genai_otel.instrumentors.base import _server_attributes
+
+    assert _server_attributes(_client_with("http://localhost:11434")) == {
+        "server.address": "localhost",
+        "server.port": 11434,
+    }
+
+
+def test_server_attributes_walks_wrapped_transport():
+    """SDKs that wrap a transport client of their own are still resolved."""
+    from genai_otel.instrumentors.base import _server_attributes
+
+    assert _server_attributes(_client_with("https://api.anthropic.com", depth=2)) == {
+        "server.address": "api.anthropic.com",
+        "server.port": 443,
+    }
+
+
+def test_server_attributes_absent_rather_than_guessed():
+    """No base URL, or an unparseable one, yields no attributes at all.
+
+    An absent attribute reads as "endpoint unknown"; a guessed vendor host would
+    silently misattribute self-hosted and proxied traffic.
+    """
+    from genai_otel.instrumentors.base import _server_attributes
+
+    assert _server_attributes(object()) == {}
+    assert _server_attributes(_client_with("not a url")) == {}

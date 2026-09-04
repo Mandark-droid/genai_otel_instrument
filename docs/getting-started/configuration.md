@@ -171,8 +171,27 @@ When enabled, these metrics are recorded:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` | unset | Cross-library content-capture switch. Takes precedence over `GENAI_ENABLE_CONTENT_CAPTURE` |
 | `GENAI_ENABLE_CONTENT_CAPTURE` | `false` | Capture prompt/response text in spans |
 | `GENAI_CONTENT_MAX_LENGTH` | `200` | Max characters to capture (0 = unlimited) |
+
+`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` is the spelling shared with
+other OpenTelemetry GenAI instrumentations, so an application migrating from one
+of them keeps working without relearning this switch. It accepts (case-insensitively):
+
+| Value | Effect here |
+|-------|-------------|
+| `NO_CONTENT` | No capture |
+| `SPAN_ONLY` | Capture |
+| `SPAN_AND_EVENT` | Capture |
+| `EVENT_ONLY` | **No capture** |
+
+`EVENT_ONLY` maps to no capture because this library has a single boolean capture
+switch rather than separate span and event sinks -- writing content onto spans
+when the operator asked for events only would put it somewhere they did not ask
+for. An unrecognised value logs a warning and captures nothing, rather than
+falling through to `GENAI_ENABLE_CONTENT_CAPTURE`: a typo on a privacy switch
+should fail closed.
 
 !!! warning "Privacy"
     Content capture records full prompts and responses. This may expose sensitive data. Ensure proper data handling and access controls before enabling in production.

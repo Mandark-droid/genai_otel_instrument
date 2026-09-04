@@ -17,6 +17,7 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional
+from urllib.parse import urlparse
 
 import wrapt
 from opentelemetry import context as otel_context
@@ -137,6 +138,55 @@ def register_base_url_claim(domain_substring: str, instrumentor_name: str) -> No
     """
     with _BASE_URL_CLAIMS_LOCK:
         _BASE_URL_CLAIMS[domain_substring.lower()] = instrumentor_name
+
+
+# Attribute paths walked to find the SDK client's base URL, in order. Wrapped
+# methods are bound to a sub-resource (e.g. `openai.resources.Completions`),
+# not the client, so the client is reached through `_client` -- twice for SDKs
+# that wrap a transport client of their own.
+_BASE_URL_PATHS = (
+    ("base_url",),
+    ("_client", "base_url"),
+    ("_client", "_client", "base_url"),
+    ("_client", "_base_url"),
+)
+
+
+def _server_attributes(instance: Any) -> Dict[str, Any]:
+    """Derive `server.address` / `server.port` from an SDK client's base URL.
+
+    Returns an empty dict when no base URL can be observed. That is the honest
+    answer for SDKs that do not expose one: an absent attribute reads as
+    "endpoint unknown", whereas defaulting to the provider's public host would
+    silently misattribute self-hosted, proxied and gateway traffic to the vendor.
+    """
+    for path in _BASE_URL_PATHS:
+        target = instance
+        for step in path:
+            target = getattr(target, step, None)
+            if target is None:
+                break
+        if target is None:
+            continue
+        try:
+            parsed = urlparse(str(target))
+        except Exception:  # pragma: no cover - urlparse is near-total
+            continue
+        if not parsed.hostname:
+            continue
+        attrs: Dict[str, Any] = {SC.SERVER_ADDRESS: parsed.hostname}
+        port = None
+        try:
+            port = parsed.port
+        except ValueError:
+            # Malformed port in the URL; record the host without inventing one.
+            port = None
+        if port is None:
+            port = {"https": 443, "http": 80}.get(parsed.scheme)
+        if port is not None:
+            attrs[SC.SERVER_PORT] = int(port)
+        return attrs
+    return {}
 
 
 def find_base_url_claim(base_url: Any) -> Optional[str]:
@@ -702,6 +752,16 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         logger.warning(
                             "Failed to extract attributes for span '%s': %s", span_name, e
                         )
+
+                # Endpoint identity, derived centrally so every instrumentor
+                # using this wrapper gets it. Never overwrites a value an
+                # instrumentor set itself -- it knows its SDK better than the
+                # generic walk does.
+                try:
+                    for _sk, _sv in _server_attributes(instance).items():
+                        initial_attributes.setdefault(_sk, _sv)
+                except Exception as e:  # pragma: no cover - defensive
+                    logger.debug("Could not derive server attributes for '%s': %s", span_name, e)
 
                 # Check if this is a streaming request before creating the span
                 is_streaming = kwargs.get("stream", False)
@@ -1277,12 +1337,23 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 #     (prompt caching).
                 cache_read = usage.get("cache_read_input_tokens")
                 if isinstance(cache_read, (int, float)) and cache_read > 0:
-                    span.set_attribute("gen_ai.usage.cache_read.input_tokens", int(cache_read))
+                    span.set_attribute(SC.GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS, int(cache_read))
                 cache_creation = usage.get("cache_creation_input_tokens")
                 if isinstance(cache_creation, (int, float)) and cache_creation > 0:
-                    span.set_attribute(
-                        "gen_ai.usage.cache_creation.input_tokens", int(cache_creation)
+                    # `cache_write` is the current spelling (renamed upstream in
+                    # semantic-conventions-genai#440); `cache_creation` is the
+                    # superseded one and follows the same dual-emission policy as
+                    # prompt/completion tokens.
+                    _, _emit_superseded_cache = genai_semconv_modes(
+                        self.config.semconv_stability_opt_in if self.config else None
                     )
+                    span.set_attribute(
+                        SC.GEN_AI_USAGE_CACHE_WRITE_INPUT_TOKENS, int(cache_creation)
+                    )
+                    if _emit_superseded_cache:
+                        span.set_attribute(
+                            SC.GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS, int(cache_creation)
+                        )
                 completion_details = usage.get("completion_tokens_details")
                 if isinstance(completion_details, dict):
                     reasoning = completion_details.get("reasoning_tokens")
@@ -1291,7 +1362,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         # stability since open-telemetry/semantic-conventions#3194,
                         # migrated to semantic-conventions-genai). The value
                         # is also included in `gen_ai.usage.output_tokens`.
-                        span.set_attribute("gen_ai.usage.reasoning.output_tokens", int(reasoning))
+                        span.set_attribute(SC.GEN_AI_USAGE_REASONING_TOKENS, int(reasoning))
 
                 # Calculate and record cost if enabled and applicable
                 if self.config and self.config.enable_cost_tracking:

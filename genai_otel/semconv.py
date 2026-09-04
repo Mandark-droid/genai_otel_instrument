@@ -99,6 +99,28 @@ class SemanticConvention:
     # `gen_ai.usage.output_tokens`.
     GEN_AI_USAGE_REASONING_TOKENS = "gen_ai.usage.reasoning.output_tokens"
 
+    # Prompt-cache token breakdown. `cache_write` is the current registry
+    # spelling: semantic-conventions-genai#440 (merged 2026-08-20) renamed
+    # `gen_ai.usage.cache_creation.input_tokens` to
+    # `gen_ai.usage.cache_write.input_tokens`. The superseded name is still
+    # emitted alongside it under the `gen_ai/dup` policy, the same way
+    # prompt/completion tokens are handled above -- a backend that follows the
+    # current conventions sees zero cached tokens if only the old name is
+    # present, and Anthropic prompt-cache economics are the main reason anyone
+    # reads these at all.
+    GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS = "gen_ai.usage.cache_read.input_tokens"
+    GEN_AI_USAGE_CACHE_WRITE_INPUT_TOKENS = "gen_ai.usage.cache_write.input_tokens"
+    GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS = "gen_ai.usage.cache_creation.input_tokens"
+
+    # Server identity for the model endpoint. Conditionally required on
+    # inference spans; the reference scenarios in semantic-conventions-genai
+    # emit both. Derived from the SDK client's base URL where the client
+    # exposes one, and omitted entirely when it cannot be observed -- an
+    # absent attribute reads as "unknown endpoint", whereas a guessed default
+    # host silently misattributes self-hosted and proxied traffic.
+    SERVER_ADDRESS = "server.address"
+    SERVER_PORT = "server.port"
+
     # GenAI Server metrics (streaming)
     GEN_AI_SERVER_TTFT = "gen_ai.server.ttft"
     GEN_AI_SERVER_TBT = "gen_ai.server.tbt"
