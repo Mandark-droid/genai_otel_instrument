@@ -26,7 +26,11 @@ count, so that is read separately. See :mod:`genai_otel.engine_latency`.
 """
 
 import logging
+import time
 from typing import Any, Dict, List, Optional
+
+import wrapt
+from opentelemetry.trace import Status, StatusCode
 
 from ..config import OTelConfig
 from ..engine_latency import apply_latency_attributes, vllm_latency_attributes
@@ -93,6 +97,9 @@ class VLLMInstrumentor(BaseInstrumentor):
             for method_name, span_name, extractor in (
                 ("generate", "vllm.generate", self._extract_generate_attributes),
                 ("chat", "vllm.chat", self._extract_chat_attributes),
+                # Offline embeddings. Without this an embeddings workload run
+                # through vLLM produces no retrieval leg at all.
+                ("encode", "vllm.embeddings", self._extract_encode_attributes),
             ):
                 original = getattr(llm_cls, method_name, None)
                 if not callable(original):
@@ -107,6 +114,8 @@ class VLLMInstrumentor(BaseInstrumentor):
                     ),
                 )
 
+            self._instrument_async_engines()
+
             llm_cls._genai_otel_vllm_instrumented = True
             self._instrumented = True
             logger.info("vLLM instrumentation enabled")
@@ -114,6 +123,95 @@ class VLLMInstrumentor(BaseInstrumentor):
             logger.error("Failed to instrument vLLM: %s", e)
             if config and config.fail_on_error:
                 raise
+
+    def _instrument_async_engines(self) -> None:
+        """Wrap the streaming entry points.
+
+        ``LLM.generate`` returns completed outputs, so a streaming or
+        server-side deployment never goes through it -- it uses ``AsyncLLM``
+        (V1) or ``AsyncLLMEngine`` (V0 shim), whose ``generate`` is an async
+        generator yielding partial ``RequestOutput``s. Without these, streaming
+        traffic produces no spans at all.
+
+        Both classes are tried because which one exists depends on the vLLM
+        version, and a release that exposes neither simply gets no async
+        instrumentation rather than an error.
+        """
+        targets = []
+        try:
+            from vllm.v1.engine.async_llm import AsyncLLM  # type: ignore
+
+            targets.append(AsyncLLM)
+        except Exception:  # pragma: no cover - depends on vLLM version
+            pass
+        async_engine = getattr(self._vllm_module, "AsyncLLMEngine", None)
+        if isinstance(async_engine, type):
+            targets.append(async_engine)
+
+        for cls in targets:
+            if getattr(cls, "_genai_otel_vllm_instrumented", False) is True:
+                continue
+            original = getattr(cls, "generate", None)
+            if not callable(original):
+                continue
+            try:
+                cls.generate = self._async_generate_wrapper(original)
+                cls._genai_otel_vllm_instrumented = True
+            except Exception as e:  # pragma: no cover - defensive
+                logger.debug("Could not instrument %s.generate: %s", cls.__name__, e)
+
+    def _async_generate_wrapper(self, original):
+        """Trace a streamed ``AsyncLLM.generate`` including its token usage.
+
+        The generic async-generator path in :mod:`~genai_otel.instrumentors.base`
+        ends the span correctly but never records result metrics, so a streamed
+        call produced a span with no tokens, no cost and no finish reason --
+        verified live before this wrapper existed. vLLM makes the fix easy: each
+        yielded ``RequestOutput`` is cumulative, so the final one carries the
+        whole completion and can be handed to the normal metric path.
+
+        Failures in the telemetry are swallowed and the item is always
+        re-yielded. Breaking a caller's token stream to record a span would be a
+        far worse outcome than losing the span.
+        """
+        instrumentor = self
+
+        @wrapt.decorator
+        def wrapper(wrapped, instance, args, kwargs):
+            if not instrumentor._instrumented:
+                return wrapped(*args, **kwargs)
+
+            agen = wrapped(*args, **kwargs)
+            try:
+                attrs = instrumentor._extract_async_generate_attributes(instance, args, kwargs)
+            except Exception:  # pragma: no cover - defensive
+                attrs = {"gen_ai.system": PROVIDER}
+            span = instrumentor.tracer.start_span("vllm.generate", attributes=attrs)
+            start_time = time.time()
+
+            async def traced():
+                final = None
+                try:
+                    async for item in agen:
+                        final = item
+                        yield item
+                except Exception as e:
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
+                    span.record_exception(e)
+                    span.end()
+                    raise
+                try:
+                    if final is not None:
+                        instrumentor._record_result_metrics(span, [final], start_time, kwargs)
+                    span.set_status(Status(StatusCode.OK))
+                except Exception as e:  # pragma: no cover - defensive
+                    logger.debug("Could not record streamed vLLM metrics: %s", e)
+                finally:
+                    span.end()
+
+            return traced()
+
+        return wrapper(original)
 
     # ------------------------------------------------------------------
     # Attribute extraction
@@ -187,6 +285,50 @@ class VLLMInstrumentor(BaseInstrumentor):
         count = self._prompt_count(messages)
         if count is not None:
             attrs["gen_ai.request.input_count"] = count
+        return attrs
+
+    def _extract_encode_attributes(self, instance, args, kwargs) -> Dict[str, Any]:
+        attrs = self._base_attributes(instance, kwargs)
+        attrs["gen_ai.operation.name"] = "embeddings"
+        # Singular: CostCalculator dispatches on this. The pricing table
+        # category is the plural "embeddings" and the two deliberately differ.
+        attrs["gen_ai.request.type"] = "embedding"
+        prompts = kwargs.get("prompts", args[0] if args else None)
+        count = self._prompt_count(prompts)
+        if count is not None:
+            attrs["gen_ai.request.input_count"] = count
+        return attrs
+
+    def _extract_async_generate_attributes(self, instance, args, kwargs) -> Dict[str, Any]:
+        """Attributes for a streamed AsyncLLM/AsyncLLMEngine generate.
+
+        The async engines take one prompt per call rather than a batch, and
+        carry the caller's request id, which is the handle an operator uses to
+        line a span up against the engine's own logs.
+        """
+        attrs: Dict[str, Any] = {
+            "gen_ai.system": PROVIDER,
+            "gen_ai.operation.name": "text_completion",
+            "gen_ai.request.type": "chat",
+            SC.GEN_AI_REQUEST_STREAM: True,
+            "gen_ai.request.input_count": 1,
+        }
+        request_id = kwargs.get("request_id")
+        if request_id is None and len(args) >= 3:
+            request_id = args[2]
+        if request_id:
+            attrs[SC.GEN_AI_REQUEST_ID] = str(request_id)
+
+        sampling = kwargs.get("sampling_params")
+        if sampling is not None and not isinstance(sampling, (list, tuple)):
+            for source, target in (
+                ("max_tokens", "gen_ai.request.max_tokens"),
+                ("temperature", "gen_ai.request.temperature"),
+                ("top_p", "gen_ai.request.top_p"),
+            ):
+                value = getattr(sampling, source, None)
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    attrs[target] = value
         return attrs
 
     @staticmethod
@@ -285,10 +427,33 @@ class VLLMInstrumentor(BaseInstrumentor):
         if metrics is not None:
             apply_latency_attributes(attrs, vllm_latency_attributes(metrics))
 
+        # The conventions define finish_reasons as an array, and a vLLM batch
+        # genuinely ends different ways: one request hits EOS while another
+        # hits the token cap. Reporting only the first would hide exactly the
+        # requests an operator is looking for -- the truncated ones.
+        reasons = self._extract_finish_reasons(outputs)
+        if reasons:
+            attrs[SC.GEN_AI_RESPONSE_FINISH_REASONS] = reasons
+
         if len(outputs) > 1:
             attrs["gen_ai.response.output_count"] = len(outputs)
 
         return attrs
+
+    @staticmethod
+    def _extract_finish_reasons(outputs: List[Any]) -> List[str]:
+        """Every distinct finish reason in a batch, in first-seen order.
+
+        De-duplicated because a 512-prompt batch that all hit the cap should
+        report ``["length"]``, not the same string 512 times.
+        """
+        reasons: List[str] = []
+        for output in outputs:
+            for completion in getattr(output, "outputs", None) or []:
+                reason = getattr(completion, "finish_reason", None)
+                if reason and str(reason) not in reasons:
+                    reasons.append(str(reason))
+        return reasons
 
     @staticmethod
     def _slowest_metrics(outputs: List[Any]) -> Any:

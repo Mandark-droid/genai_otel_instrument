@@ -434,3 +434,122 @@ class TestVLLMV1Engine:
         """Zero prefix-cache hits is not a cache_read of zero worth recording."""
         usage = VLLMInstrumentor()._extract_usage([_v1_output(cached=0)])
         assert "cache_read_input_tokens" not in usage
+
+
+def _vllm_output_with_reason(reason, prompt_ids=(1, 2), token_ids=(3,)):
+    return SimpleNamespace(
+        request_id="r",
+        prompt_token_ids=list(prompt_ids),
+        outputs=[SimpleNamespace(token_ids=list(token_ids), finish_reason=reason)],
+        metrics=None,
+        num_cached_tokens=0,
+    )
+
+
+class TestVLLMBatchFinishReasons:
+    """A vLLM batch genuinely ends different ways; the array must say so.
+
+    Found by live testing: a two-prompt batch where the engine reported
+    ['stop', 'length'] emitted only ('stop',), hiding the truncated request --
+    precisely the one an operator is looking for.
+    """
+
+    def test_mixed_batch_reports_every_reason(self):
+        attrs = VLLMInstrumentor()._extract_response_attributes(
+            [_vllm_output_with_reason("stop"), _vllm_output_with_reason("length")]
+        )
+        assert attrs["gen_ai.response.finish_reasons"] == ["stop", "length"]
+
+    def test_uniform_batch_is_deduplicated(self):
+        """512 prompts that all hit the cap report ["length"], not 512 copies."""
+        attrs = VLLMInstrumentor()._extract_response_attributes(
+            [_vllm_output_with_reason("length") for _ in range(8)]
+        )
+        assert attrs["gen_ai.response.finish_reasons"] == ["length"]
+
+    def test_single_output(self):
+        attrs = VLLMInstrumentor()._extract_response_attributes([_vllm_output_with_reason("stop")])
+        assert attrs["gen_ai.response.finish_reasons"] == ["stop"]
+
+    def test_absent_when_engine_reports_none(self):
+        attrs = VLLMInstrumentor()._extract_response_attributes([_vllm_output_with_reason(None)])
+        assert "gen_ai.response.finish_reasons" not in attrs
+
+
+class TestVLLMAsyncStreaming:
+    """AsyncLLM.generate is how streaming and server deployments reach vLLM.
+
+    LLM.generate returns completed outputs, so it is never on that path. The
+    generic async-generator tracing in base.py ends the span but records no
+    result metrics, which live testing showed produced a span with no tokens,
+    cost or finish reason -- hence the dedicated wrapper.
+    """
+
+    @staticmethod
+    def _instrumentor():
+        inst = VLLMInstrumentor()
+        inst._instrumented = True
+        inst.config = OTelConfig(service_name="test")
+        return inst
+
+    def test_stream_is_passed_through_unchanged(self):
+        """Telemetry must never alter or truncate a caller's token stream."""
+        import asyncio
+
+        chunks = [_v1_output(), _v1_output(), _v1_output()]
+
+        async def fake_generate(self, *a, **kw):
+            for c in chunks:
+                yield c
+
+        inst = self._instrumentor()
+        wrapped = inst._async_generate_wrapper(fake_generate)
+
+        async def run():
+            return [x async for x in wrapped(None, "prompt", None, "req-1")]
+
+        assert asyncio.run(run()) == chunks
+
+    def test_telemetry_failure_does_not_break_the_stream(self):
+        """Losing a span is acceptable; losing the caller's tokens is not."""
+        import asyncio
+
+        async def fake_generate(self, *a, **kw):
+            yield _v1_output()
+
+        inst = self._instrumentor()
+        inst._record_result_metrics = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
+        wrapped = inst._async_generate_wrapper(fake_generate)
+
+        async def run():
+            return [x async for x in wrapped(None, "prompt", None, "req-1")]
+
+        assert len(asyncio.run(run())) == 1
+
+    def test_generator_exception_propagates(self):
+        import asyncio
+
+        async def failing(self, *a, **kw):
+            yield _v1_output()
+            raise ValueError("engine died")
+
+        inst = self._instrumentor()
+        wrapped = inst._async_generate_wrapper(failing)
+
+        async def run():
+            return [x async for x in wrapped(None, "prompt", None, "req-1")]
+
+        with pytest.raises(ValueError, match="engine died"):
+            asyncio.run(run())
+
+    def test_request_attributes_mark_the_call_as_streamed(self):
+        inst = VLLMInstrumentor()
+        attrs = inst._extract_async_generate_attributes(None, ("prompt", None, "req-9"), {})
+        assert attrs["gen_ai.request.stream"] is True
+        assert attrs["gen_ai.request.id"] == "req-9"
+        assert attrs["gen_ai.request.input_count"] == 1
+
+    def test_request_id_read_from_kwargs_too(self):
+        inst = VLLMInstrumentor()
+        attrs = inst._extract_async_generate_attributes(None, (), {"request_id": "kw-req"})
+        assert attrs["gen_ai.request.id"] == "kw-req"
