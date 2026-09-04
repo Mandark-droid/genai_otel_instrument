@@ -20,6 +20,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+# Pydantic is not a dependency of this library -- it arrives only via optional
+# SDKs, so several supported environments legitimately do not have it. These
+# tests describe what happens when it IS present; where it is absent there is
+# nothing to evict and nothing to guard.
+pytest.importorskip("pydantic", reason="pydantic is optional here; nothing to evict without it")
+
 LAZY_MODULES = ("pydantic.root_model", "pydantic.main", "pydantic.fields")
 
 

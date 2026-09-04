@@ -39,5 +39,8 @@ sys.setrecursionlimit(10000)
 for _lazy_module in ("pydantic.root_model", "pydantic.main", "pydantic.fields"):
     try:
         importlib.import_module(_lazy_module)
-    except ImportError:  # pragma: no cover - pydantic is a hard dependency
+    except ImportError:
+        # Pydantic is not a dependency of this library; it arrives only via
+        # optional SDKs. Where it is absent there is nothing to evict, so
+        # there is nothing to preload either.
         pass
