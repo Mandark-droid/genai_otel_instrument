@@ -838,3 +838,35 @@ def test_zero_valued_cache_prices_do_not_spread(calc):
     }
     new = offenders - KNOWN_ZERO_CACHE_PRICES
     assert not new, f"new zero-valued cache prices bill cached tokens at nothing: {sorted(new)}"
+
+
+# The tier threshold in a note must be the vendor's actual token count, written
+# exactly. It was previously rendered as "Above 200K context" for the whole
+# GPT-5.x/5.6 family because the generator took the label from models.dev's
+# fixed `context_over_200k` FIELD NAME rather than from `tiers[].tier.size`.
+# That field name sits alongside real thresholds of 256000, 262144, 272000,
+# 272001, 512000 and 524288, so it names nothing. A consumer read the prose and
+# nearly repriced a quarter of a month's tokens against a threshold that does
+# not exist.
+TIER_THRESHOLDS = [
+    ("gpt-5-6", 272000),
+    ("gpt-5-6-luna", 272000),
+    ("gpt-5-6-sol", 272000),
+    ("gpt-5-6-terra", 272000),
+    ("gpt-6-astra", 272000),
+    ("gpt-5-5", 272000),
+    ("gpt-5-4", 272000),
+    ("qwen3-7-plus", 256000),
+]
+
+
+@pytest.mark.parametrize("model,threshold", TIER_THRESHOLDS)
+def test_tier_threshold_is_exact_not_a_paraphrase(calc, model, threshold):
+    note = calc.pricing_data["chat"][model].get("note", "")
+    assert f"Above {threshold} tokens of context" in note, (
+        f"{model} must state its real tier threshold ({threshold}); " f"note reads: {note[:160]}"
+    )
+    assert "Above 200K context" not in note, (
+        f"{model} states a rounded 200K threshold that is not the vendor's actual "
+        f"{threshold}-token boundary"
+    )

@@ -39,6 +39,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cost nothing. `claude-sonnet-5` already described its cache rates in its own
   note text while leaving the machine-readable fields empty.
 
+- **Context-tier thresholds in note text stated a number the vendor does not
+  use.** Notes for the GPT-5.4/5.5/5.6 families, GPT-6 Astra and Qwen3.6/3.7
+  Plus read "Above 200K context", because the generator took that label from the
+  upstream catalog's fixed `context_over_200k` FIELD NAME rather than from the
+  structured `tiers[].tier.size`. That field name sits alongside real thresholds
+  of 256000, 262144, 272000, 272001, 512000 and 524288, so it names nothing. The
+  real boundary is 272000 for the OpenAI families and 256000 for Qwen Plus, and
+  the notes now state the exact token count. Entries whose threshold genuinely is
+  200000 (Gemini 2.5/3.1 Pro, Grok 4.x, Claude Sonnet 4.x) are unchanged.
+
 - **Pinned snapshots now inherit their base model's cache rates.** A dated key
   such as `claude-sonnet-5-20260630` resolves to itself, so it kept billing
   cached tokens at zero while the floating `claude-sonnet-5` was corrected.

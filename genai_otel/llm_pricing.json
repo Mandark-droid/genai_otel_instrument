@@ -4496,7 +4496,7 @@
       "promptPrice": 0.0025,
       "completionPrice": 0.015,
       "cacheReadPrice": 0.00025,
-      "note": "GPT-5.4. input $2.5/1M, output $15/1M, cache read $0.25/1M. Released 2026-03-05. 1050000 context. Above 200K context the vendor charges ${'input': 5, 'output': 22.5, 'cache_read': 0.5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+      "note": "GPT-5.4. input $2.5/1M, output $15/1M, cache read $0.25/1M. Released 2026-03-05. 1050000 context. Above 272000 tokens of context the vendor charges ${'input': 5, 'output': 22.5, 'cache_read': 0.5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
     },
     "gpt-5-4-mini": {
       "promptPrice": 0.00075,
@@ -4513,18 +4513,18 @@
     "gpt-5-4-pro": {
       "promptPrice": 0.03,
       "completionPrice": 0.18,
-      "note": "GPT-5.4 Pro. input $30/1M, output $180/1M. Released 2026-03-05. 1050000 context. Above 200K context the vendor charges ${'input': 60, 'output': 270}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+      "note": "GPT-5.4 Pro. input $30/1M, output $180/1M. Released 2026-03-05. 1050000 context. Above 272000 tokens of context the vendor charges ${'input': 60, 'output': 270}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
     },
     "gpt-5-5": {
       "promptPrice": 0.005,
       "completionPrice": 0.03,
       "cacheReadPrice": 0.0005,
-      "note": "GPT-5.5. input $5/1M, output $30/1M, cache read $0.5/1M. Released 2026-04-23. 1050000 context. Above 200K context the vendor charges ${'input': 10, 'output': 45, 'cache_read': 1}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+      "note": "GPT-5.5. input $5/1M, output $30/1M, cache read $0.5/1M. Released 2026-04-23. 1050000 context. Above 272000 tokens of context the vendor charges ${'input': 10, 'output': 45, 'cache_read': 1}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
     },
     "gpt-5-5-pro": {
       "promptPrice": 0.03,
       "completionPrice": 0.18,
-      "note": "GPT-5.5 Pro. input $30/1M, output $180/1M. Released 2026-04-23. 1050000 context. Above 200K context the vendor charges ${'input': 60, 'output': 270}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+      "note": "GPT-5.5 Pro. input $30/1M, output $180/1M. Released 2026-04-23. 1050000 context. Above 272000 tokens of context the vendor charges ${'input': 60, 'output': 270}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
     },
     "gpt-5-chat": {
       "promptPrice": 0.00125,
@@ -6702,7 +6702,7 @@
       "promptPrice": 0.0025,
       "completionPrice": 0.015,
       "cacheReadPrice": 0.00025,
-      "note": "OpenAI GPT-5.4. input $2.5/1M, output $15/1M, cache read $0.25/1M. Released 2026-03-05. 400000 context. Above 200K context the vendor charges ${'input': 5, 'output': 22.5, 'cache_read': 0.5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / digitalocean"
+      "note": "OpenAI GPT-5.4. input $2.5/1M, output $15/1M, cache read $0.25/1M. Released 2026-03-05. 400000 context. Above 272000 tokens of context the vendor charges ${'input': 5, 'output': 22.5, 'cache_read': 0.5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / digitalocean"
     },
     "openai-gpt-5-4-mini": {
       "promptPrice": 0.00075,
@@ -6719,13 +6719,13 @@
     "openai-gpt-5-4-pro": {
       "promptPrice": 0.03,
       "completionPrice": 0.18,
-      "note": "OpenAI GPT-5.4 Pro. input $30/1M, output $180/1M. Released 2026-03-05. 1050000 context. Above 200K context the vendor charges ${'input': 60, 'output': 270}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / digitalocean"
+      "note": "OpenAI GPT-5.4 Pro. input $30/1M, output $180/1M. Released 2026-03-05. 1050000 context. Above 272000 tokens of context the vendor charges ${'input': 60, 'output': 270}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / digitalocean"
     },
     "openai-gpt-5-5": {
       "promptPrice": 0.005,
       "completionPrice": 0.03,
       "cacheReadPrice": 0.0005,
-      "note": "OpenAI GPT-5.5. input $5/1M, output $30/1M, cache read $0.5/1M. Released 2026-04-23. 1000000 context. Above 200K context the vendor charges ${'input': 10, 'output': 45, 'cache_read': 1}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / digitalocean"
+      "note": "OpenAI GPT-5.5. input $5/1M, output $30/1M, cache read $0.5/1M. Released 2026-04-23. 1000000 context. Above 272000 tokens of context the vendor charges ${'input': 10, 'output': 45, 'cache_read': 1}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / digitalocean"
     },
     "openai-gpt-image-1-5": {
       "promptPrice": 0.005,
@@ -7261,7 +7261,7 @@
       "completionPrice": 0.003,
       "cacheReadPrice": 5e-05,
       "cacheWritePrice": 0.000625,
-      "note": "Qwen3.6 Plus. input $0.5/1M, output $3/1M, cache read $0.05/1M, cache write $0.625/1M. Released 2026-04-02. 1000000 context. Above 200K context the vendor charges ${'input': 2, 'output': 6, 'cache_read': 0.2, 'cache_write': 2.5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / alibaba"
+      "note": "Qwen3.6 Plus. input $0.5/1M, output $3/1M, cache read $0.05/1M, cache write $0.625/1M. Released 2026-04-02. 1000000 context. Above 256000 tokens of context the vendor charges ${'input': 2, 'output': 6, 'cache_read': 0.2, 'cache_write': 2.5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / alibaba"
     },
     "qwen3-7-flash": {
       "promptPrice": 2.962e-05,
@@ -7282,7 +7282,7 @@
       "completionPrice": 0.003,
       "cacheReadPrice": 5e-05,
       "cacheWritePrice": 0.000625,
-      "note": "Qwen3.7 Plus. input $0.5/1M, output $3/1M, cache read $0.05/1M, cache write $0.625/1M. Released 2026-06-02. 1000000 context. Above 200K context the vendor charges ${'input': 2, 'output': 6, 'cache_read': 0.2, 'cache_write': 2.5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / alibaba"
+      "note": "Qwen3.7 Plus. input $0.5/1M, output $3/1M, cache read $0.05/1M, cache write $0.625/1M. Released 2026-06-02. 1000000 context. Above 256000 tokens of context the vendor charges ${'input': 2, 'output': 6, 'cache_read': 0.2, 'cache_write': 2.5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / alibaba"
     },
     "qwen3-8-max": {
       "promptPrice": 0.002,
@@ -8578,7 +8578,7 @@
       "completionPrice": 0.02,
       "cacheReadPrice": 0.0004,
       "cacheWritePrice": 0.005,
-      "note": "GPT-5.6. input $4/1M, output $20/1M, cache read $0.4/1M, cache write $5/1M. Released 2026-07-09. 1050000 context. Above 200K context the vendor charges ${'input': 8, 'output': 30, 'cache_read': 0.8, 'cache_write': 10}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+      "note": "GPT-5.6. input $4/1M, output $20/1M, cache read $0.4/1M, cache write $5/1M. Released 2026-07-09. 1050000 context. Above 272000 tokens of context the vendor charges ${'input': 8, 'output': 30, 'cache_read': 0.8, 'cache_write': 10}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
     },
     "gpt-5.6": {
       "promptPrice": 0.004,
@@ -8592,7 +8592,7 @@
       "completionPrice": 0.0012,
       "cacheReadPrice": 2e-05,
       "cacheWritePrice": 0.00025,
-      "note": "GPT-5.6 Luna. input $0.2/1M, output $1.2/1M, cache read $0.02/1M, cache write $0.25/1M. Released 2026-07-09. 1050000 context. Above 200K context the vendor charges ${'input': 0.4, 'output': 1.8, 'cache_read': 0.04, 'cache_write': 0.5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+      "note": "GPT-5.6 Luna. input $0.2/1M, output $1.2/1M, cache read $0.02/1M, cache write $0.25/1M. Released 2026-07-09. 1050000 context. Above 272000 tokens of context the vendor charges ${'input': 0.4, 'output': 1.8, 'cache_read': 0.04, 'cache_write': 0.5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
     },
     "gpt-5.6-luna": {
       "promptPrice": 0.0002,
@@ -8606,7 +8606,7 @@
       "completionPrice": 0.02,
       "cacheReadPrice": 0.0004,
       "cacheWritePrice": 0.005,
-      "note": "GPT-5.6 Sol. input $4/1M, output $20/1M, cache read $0.4/1M, cache write $5/1M. Released 2026-07-09. 1050000 context. Above 200K context the vendor charges ${'input': 8, 'output': 30, 'cache_read': 0.8, 'cache_write': 10}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+      "note": "GPT-5.6 Sol. input $4/1M, output $20/1M, cache read $0.4/1M, cache write $5/1M. Released 2026-07-09. 1050000 context. Above 272000 tokens of context the vendor charges ${'input': 8, 'output': 30, 'cache_read': 0.8, 'cache_write': 10}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
     },
     "gpt-5.6-sol": {
       "promptPrice": 0.004,
@@ -8620,7 +8620,7 @@
       "completionPrice": 0.012,
       "cacheReadPrice": 0.0002,
       "cacheWritePrice": 0.0025,
-      "note": "GPT-5.6 Terra. input $2/1M, output $12/1M, cache read $0.2/1M, cache write $2.5/1M. Released 2026-07-09. 1050000 context. Above 200K context the vendor charges ${'input': 4, 'output': 18, 'cache_read': 0.4, 'cache_write': 5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+      "note": "GPT-5.6 Terra. input $2/1M, output $12/1M, cache read $0.2/1M, cache write $2.5/1M. Released 2026-07-09. 1050000 context. Above 272000 tokens of context the vendor charges ${'input': 4, 'output': 18, 'cache_read': 0.4, 'cache_write': 5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
     },
     "gpt-5.6-terra": {
       "promptPrice": 0.002,
@@ -8634,7 +8634,7 @@
       "completionPrice": 0.05,
       "cacheReadPrice": 0.001,
       "cacheWritePrice": 0.0125,
-      "note": "GPT-6 Astra. input $10/1M, output $50/1M, cache read $1/1M, cache write $12.5/1M. Released 2026-09-04. 1050000 context. Above 200K context the vendor charges ${'input': 20, 'output': 75, 'cache_read': 2, 'cache_write': 25}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+      "note": "GPT-6 Astra. input $10/1M, output $50/1M, cache read $1/1M, cache write $12.5/1M. Released 2026-09-04. 1050000 context. Above 272000 tokens of context the vendor charges ${'input': 20, 'output': 75, 'cache_read': 2, 'cache_write': 25}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
     }
   },
   "speech_to_text": {
