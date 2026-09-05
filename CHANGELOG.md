@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`scripts/verify_release.py`, an executable post-release check.** Installs a
+  published version into a clean virtualenv and asserts what it actually
+  contains, with `--require-model` / `--require-note` expectations, exiting
+  non-zero on any mismatch. Replaces the previous prose instruction to
+  "pip install and confirm the version", which could not fail for the reasons
+  that matter.
+
+  Each check exists because the naive version proved a wrong answer during the
+  1.27.0 release. `python -m venv` silently reuses an existing directory, so a
+  venv left over from an earlier release check keeps the version already
+  installed in it. A failed `pip install pkg==X` does not stop a later
+  `import pkg` from succeeding against whatever is already present, so the
+  install's exit code is not evidence of what got installed. PyPI's JSON API and
+  its simple index propagate separately, so for roughly a minute the JSON API
+  reports a version pip cannot yet resolve. Together those reported a healthy
+  1.27.0 as a broken release that shipped no pricing at all.
+
+  The script asserts the installed version through `importlib.metadata` rather
+  than trusting pip, confirms the import resolved to site-packages rather than
+  the working tree, and waits on the simple index rather than the JSON API.
+
 ## [1.27.0] - 2026-09-05
 
 ### Added
