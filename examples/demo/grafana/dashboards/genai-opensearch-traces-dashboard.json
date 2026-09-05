@@ -203,7 +203,9 @@
         "footer": {
           "countRows": false,
           "fields": "",
-          "reducer": ["sum"],
+          "reducer": [
+            "sum"
+          ],
           "show": false
         },
         "showHeader": true,
@@ -266,7 +268,7 @@
               "gen_ai_request_model": "Model",
               "gen_ai_usage_total_tokens": "Tokens",
               "gen_ai_cost_amount": "Cost (USD)",
-              "duration": "Duration (μs)",
+              "duration": "Duration (\u03bcs)",
               "span_status": "Status"
             }
           }
@@ -276,7 +278,7 @@
           "options": {
             "alias": "Duration (ms)",
             "binary": {
-              "left": "Duration (μs)",
+              "left": "Duration (\u03bcs)",
               "operator": "/",
               "right": "1000"
             },
@@ -373,7 +375,9 @@
         "footer": {
           "countRows": false,
           "fields": "",
-          "reducer": ["sum"],
+          "reducer": [
+            "sum"
+          ],
           "show": false
         },
         "showHeader": true,
@@ -506,7 +510,9 @@
         "footer": {
           "countRows": false,
           "fields": "",
-          "reducer": ["sum"],
+          "reducer": [
+            "sum"
+          ],
           "show": false
         },
         "showHeader": true,
@@ -646,7 +652,9 @@
         "footer": {
           "countRows": false,
           "fields": "",
-          "reducer": ["sum"],
+          "reducer": [
+            "sum"
+          ],
           "show": false
         },
         "showHeader": true
@@ -683,7 +691,9 @@
               "id": "3",
               "meta": {},
               "settings": {
-                "percents": ["95"]
+                "percents": [
+                  "95"
+                ]
               },
               "type": "percentiles"
             },
@@ -692,7 +702,9 @@
               "id": "4",
               "meta": {},
               "settings": {
-                "percents": ["99"]
+                "percents": [
+                  "99"
+                ]
               },
               "type": "percentiles"
             }
@@ -713,9 +725,9 @@
             "renameByName": {
               "gen_ai_request_model.keyword": "Model",
               "Count": "Requests",
-              "Average duration": "Avg Duration (μs)",
-              "Percentiles duration": "P95 (μs)",
-              "Percentiles duration 1": "P99 (μs)"
+              "Average duration": "Avg Duration (\u03bcs)",
+              "Percentiles duration": "P95 (\u03bcs)",
+              "Percentiles duration 1": "P99 (\u03bcs)"
             }
           }
         },
@@ -724,7 +736,7 @@
           "options": {
             "alias": "Avg Duration (ms)",
             "binary": {
-              "left": "Avg Duration (μs)",
+              "left": "Avg Duration (\u03bcs)",
               "operator": "/",
               "right": "1000"
             },
@@ -736,7 +748,7 @@
           "options": {
             "alias": "P95 (ms)",
             "binary": {
-              "left": "P95 (μs)",
+              "left": "P95 (\u03bcs)",
               "operator": "/",
               "right": "1000"
             },
@@ -748,7 +760,7 @@
           "options": {
             "alias": "P99 (ms)",
             "binary": {
-              "left": "P99 (μs)",
+              "left": "P99 (\u03bcs)",
               "operator": "/",
               "right": "1000"
             },
@@ -813,7 +825,9 @@
         "footer": {
           "countRows": false,
           "fields": "",
-          "reducer": ["sum"],
+          "reducer": [
+            "sum"
+          ],
           "show": false
         },
         "showHeader": true
@@ -866,11 +880,446 @@
         }
       ],
       "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "id": 24,
+      "panels": [],
+      "title": "Prompt Cache & Reasoning",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "opensearch",
+        "uid": "${DS_OPENSEARCH}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 41
+      },
+      "id": 25,
+      "title": "Cache Effectiveness by Model",
+      "type": "table",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [
+            {
+              "field": "gen_ai_request_model.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_count",
+                "size": "10"
+              },
+              "type": "terms"
+            }
+          ],
+          "datasource": {
+            "type": "opensearch",
+            "uid": "${DS_OPENSEARCH}"
+          },
+          "metrics": [
+            {
+              "field": "gen_ai_usage_cache_read_input_tokens",
+              "id": "1",
+              "type": "sum"
+            },
+            {
+              "field": "gen_ai_usage_cache_write_input_tokens",
+              "id": "2",
+              "type": "sum"
+            },
+            {
+              "field": "gen_ai_usage_input_tokens",
+              "id": "3",
+              "type": "sum"
+            },
+            {
+              "field": "gen_ai_usage_cost_cache_read",
+              "id": "4",
+              "type": "sum"
+            }
+          ],
+          "query": "gen_ai_usage_cache_read_input_tokens:*",
+          "refId": "A",
+          "timeField": "startTimeMillis"
+        }
+      ],
+      "description": "Cache reads vs writes against total input tokens. Anthropic reports cache_write on the call that populates the cache and cache_read on subsequent hits; a healthy prompt-cache setup shows reads far exceeding writes."
+    },
+    {
+      "datasource": {
+        "type": "opensearch",
+        "uid": "${DS_OPENSEARCH}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 41
+      },
+      "id": 26,
+      "title": "Reasoning Tokens & Cost by Model",
+      "type": "table",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [
+            {
+              "field": "gen_ai_request_model.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_count",
+                "size": "10"
+              },
+              "type": "terms"
+            }
+          ],
+          "datasource": {
+            "type": "opensearch",
+            "uid": "${DS_OPENSEARCH}"
+          },
+          "metrics": [
+            {
+              "field": "gen_ai_usage_reasoning_output_tokens",
+              "id": "1",
+              "type": "sum"
+            },
+            {
+              "field": "gen_ai_usage_cost_reasoning",
+              "id": "2",
+              "type": "sum"
+            },
+            {
+              "field": "gen_ai_usage_output_tokens",
+              "id": "3",
+              "type": "sum"
+            }
+          ],
+          "query": "gen_ai_usage_reasoning_output_tokens:*",
+          "refId": "A",
+          "timeField": "startTimeMillis"
+        }
+      ],
+      "description": "Reasoning tokens are billed as output but produce no visible text. Comparing them to total output tokens shows how much of the spend is invisible to the end user."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "id": 27,
+      "panels": [],
+      "title": "Token Usage by Modality",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "opensearch",
+        "uid": "${DS_OPENSEARCH}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "id": 28,
+      "title": "Modality Token Split by Model",
+      "type": "table",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [
+            {
+              "field": "gen_ai_request_model.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_count",
+                "size": "10"
+              },
+              "type": "terms"
+            }
+          ],
+          "datasource": {
+            "type": "opensearch",
+            "uid": "${DS_OPENSEARCH}"
+          },
+          "metrics": [
+            {
+              "field": "gen_ai_usage_text_input_tokens",
+              "id": "1",
+              "type": "sum"
+            },
+            {
+              "field": "gen_ai_usage_image_input_tokens",
+              "id": "2",
+              "type": "sum"
+            },
+            {
+              "field": "gen_ai_usage_audio_input_tokens",
+              "id": "3",
+              "type": "sum"
+            },
+            {
+              "field": "gen_ai_usage_text_output_tokens",
+              "id": "4",
+              "type": "sum"
+            },
+            {
+              "field": "gen_ai_usage_audio_output_tokens",
+              "id": "5",
+              "type": "sum"
+            }
+          ],
+          "query": "gen_ai_usage_text_input_tokens:* OR gen_ai_usage_image_input_tokens:* OR gen_ai_usage_audio_input_tokens:*",
+          "refId": "A",
+          "timeField": "startTimeMillis"
+        }
+      ],
+      "description": "Per-modality counts from semantic-conventions-genai#440. Each value is a SUBSET of gen_ai_usage_input_tokens / output_tokens - do not add them to the totals. A modality the provider did not report is absent rather than zero."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 58
+      },
+      "id": 29,
+      "panels": [],
+      "title": "Agent Budget Governance",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "opensearch",
+        "uid": "${DS_OPENSEARCH}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 59
+      },
+      "id": 30,
+      "title": "Budget Utilisation by Agent",
+      "type": "table",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [
+            {
+              "field": "gen_ai_agent_name.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_count",
+                "size": "10"
+              },
+              "type": "terms"
+            }
+          ],
+          "datasource": {
+            "type": "opensearch",
+            "uid": "${DS_OPENSEARCH}"
+          },
+          "metrics": [
+            {
+              "field": "gen_ai_agent_token_budget",
+              "id": "1",
+              "type": "max"
+            },
+            {
+              "field": "gen_ai_agent_token_budget_consumed",
+              "id": "2",
+              "type": "sum"
+            },
+            {
+              "field": "gen_ai_agent_iteration_budget",
+              "id": "3",
+              "type": "max"
+            },
+            {
+              "field": "gen_ai_agent_iteration_budget_consumed",
+              "id": "4",
+              "type": "sum"
+            }
+          ],
+          "query": "gen_ai_agent_iteration_budget:* OR gen_ai_agent_token_budget:*",
+          "refId": "A",
+          "timeField": "startTimeMillis"
+        }
+      ],
+      "description": "Configured cap against actual consumption per semantic-conventions-genai#425. Most frameworks expose only an iteration budget - a token budget is absent unless the framework configures one, and is never synthesised. Consumption is accumulated on the agent span, so it survives head sampling that drops child inference spans."
+    },
+    {
+      "datasource": {
+        "type": "opensearch",
+        "uid": "${DS_OPENSEARCH}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 59
+      },
+      "id": 31,
+      "title": "Requests by Endpoint",
+      "type": "table",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [
+            {
+              "field": "server_address.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_count",
+                "size": "10"
+              },
+              "type": "terms"
+            }
+          ],
+          "datasource": {
+            "type": "opensearch",
+            "uid": "${DS_OPENSEARCH}"
+          },
+          "metrics": [
+            {
+              "field": "gen_ai_usage_total_tokens",
+              "id": "1",
+              "type": "sum"
+            },
+            {
+              "field": "duration",
+              "id": "2",
+              "type": "avg"
+            },
+            {
+              "field": "gen_ai_usage_cost_total",
+              "id": "3",
+              "type": "sum"
+            }
+          ],
+          "query": "server_address:*",
+          "refId": "A",
+          "timeField": "startTimeMillis"
+        }
+      ],
+      "description": "Groups traffic by the endpoint each call actually reached. Self-hosted, proxied and gateway traffic is distinguishable from a vendor's public API here; an absent server_address means the SDK exposed no base URL."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 67
+      },
+      "id": 32,
+      "panels": [],
+      "title": "Inference Engine Latency",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "opensearch",
+        "uid": "${DS_OPENSEARCH}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 68
+      },
+      "id": 33,
+      "title": "Engine Latency Breakdown by Model",
+      "type": "table",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [
+            {
+              "field": "gen_ai_request_model.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_count",
+                "size": "10"
+              },
+              "type": "terms"
+            }
+          ],
+          "datasource": {
+            "type": "opensearch",
+            "uid": "${DS_OPENSEARCH}"
+          },
+          "metrics": [
+            {
+              "field": "gen_ai_latency_time_in_queue",
+              "id": "1",
+              "type": "avg"
+            },
+            {
+              "field": "gen_ai_latency_time_in_model_prefill",
+              "id": "2",
+              "type": "avg"
+            },
+            {
+              "field": "gen_ai_latency_time_in_model_decode",
+              "id": "3",
+              "type": "avg"
+            },
+            {
+              "field": "gen_ai_latency_time_to_first_token",
+              "id": "4",
+              "type": "avg"
+            },
+            {
+              "field": "gen_ai_latency_e2e",
+              "id": "5",
+              "type": "avg"
+            }
+          ],
+          "query": "gen_ai_latency_e2e:* OR gen_ai_latency_time_in_queue:*",
+          "refId": "A",
+          "timeField": "startTimeMillis"
+        }
+      ],
+      "description": "Queue / prefill / decode split for self-hosted engines, using the gen_ai.latency.* keys from semantic-conventions-genai#408. EXPECT THIS EMPTY on current vLLM: the V1 engine sets RequestOutput.metrics to None and exposes no per-request timing, so these attributes are not emitted. It populates on engines that do report them."
     }
   ],
   "schemaVersion": 39,
   "style": "dark",
-  "tags": ["genai", "otel", "opensearch", "traces"],
+  "tags": [
+    "genai",
+    "otel",
+    "opensearch",
+    "traces"
+  ],
   "templating": {
     "list": [
       {
