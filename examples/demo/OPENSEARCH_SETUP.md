@@ -29,6 +29,65 @@ The ingest pipeline extracts and flattens the following fields from span tags:
 #### Cost Tracking
 - `gen_ai_cost_amount`: Estimated cost in USD
 - `gen_ai_cost_currency`: Currency (USD)
+- `gen_ai_usage_cost_total` / `_prompt` / `_completion`: Cost breakdown in USD
+- `gen_ai_usage_cost_reasoning`: Cost of reasoning tokens
+- `gen_ai_usage_cost_cache_read` / `_cache_write`: Prompt-cache cost split
+- `gen_ai_usage_cost_pricing_source`: `table` when the model was priced from
+  `llm_pricing.json`, `estimated` when it fell back to a parameter-size estimate
+
+#### Prompt Cache and Reasoning Tokens
+- `gen_ai_usage_cache_read_input_tokens`: Tokens served from a prompt cache
+- `gen_ai_usage_cache_write_input_tokens`: Tokens written to a prompt cache.
+  This is the current convention spelling; `gen_ai_usage_cache_creation_input_tokens`
+  is the superseded name and is emitted alongside it under the default
+  `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai/dup`
+- `gen_ai_usage_reasoning_output_tokens`: Reasoning tokens. Billed as output but
+  producing no visible text, so they are worth charting separately
+
+#### Per-Modality Token Usage
+From [semantic-conventions-genai#440](https://github.com/open-telemetry/semantic-conventions-genai/pull/440):
+
+- `gen_ai_usage_{text,image,audio}_input_tokens`
+- `gen_ai_usage_{text,image,audio}_output_tokens`
+- `gen_ai_usage_{text,image,audio}_cache_read_input_tokens`
+
+**These are subsets, not additions.** Each is already included in
+`gen_ai_usage_input_tokens` / `gen_ai_usage_output_tokens`, so summing a modality
+field alongside the total double counts. A modality the provider did not report
+is absent rather than zero, which keeps "no audio in this request" distinct from
+"this provider does not break usage down".
+
+#### Agent Budget Governance
+From [semantic-conventions-genai#425](https://github.com/open-telemetry/semantic-conventions-genai/issues/425):
+
+- `gen_ai_agent_name`: Agent identifier, the natural grouping key
+- `gen_ai_agent_token_budget` / `_consumed`: Configured token cap and actual use
+- `gen_ai_agent_iteration_budget` / `_consumed`: Configured loop cap and actual use
+
+Most frameworks expose only an iteration budget; a token budget appears only where
+the framework configures one and is never synthesised from the two.
+
+#### Inference Engine Latency (self-hosted engines)
+From [semantic-conventions-genai#408](https://github.com/open-telemetry/semantic-conventions-genai/issues/408):
+
+- `gen_ai_latency_time_in_queue`, `_time_to_first_token`, `_e2e`
+- `gen_ai_latency_time_in_model_prefill`, `_time_in_model_decode`, `_time_in_model_inference`
+
+**Expect these absent on current vLLM.** The V1 engine sets
+`RequestOutput.metrics` to `None` and exposes no per-request timing on its Python
+API, so nothing is emitted rather than a wall-clock guess being substituted. They
+populate on engines that do report them.
+
+#### Endpoint and Request Parameters
+- `server_address` / `server_port`: The endpoint a call actually reached, so
+  self-hosted, proxied and gateway traffic is distinguishable from a vendor's
+  public API. Absent when the SDK exposes no base URL
+- `gen_ai_request_seed`, `_top_k`, `_choice_count`, `_stream`: Recorded only when
+  the caller passed them, so an absent value means "not set" rather than a
+  provider default
+- `gen_ai_output_type`: `json` or `text`, derived from `response_format`
+- `gen_ai_request_id`: Engine-assigned request id (vLLM / SGLang)
+- `gen_ai_embeddings_dimension_count`, `gen_ai_request_encoding_formats`
 
 #### Performance Metrics
 - `gen_ai_server_ttft`: Time to first token (streaming)
@@ -53,6 +112,32 @@ The ingest pipeline extracts and flattens the following fields from span tags:
 - `service_instance_id`: Instance identifier
 - `service_version`: Application version
 - `telemetry_sdk_language`: SDK language (python, java, etc.)
+
+#### Host and Process Context
+These arrive as **process tags** rather than span tags, so they are lifted from a
+separate block in the pipeline:
+
+- `host_name`, `host_arch`: Machine identity and architecture
+- `os_type`, `os_version`: Operating system
+- `process_pid`: Process id, typed `integer` so it can be aggregated
+- `process_runtime_name`, `process_runtime_version`: Python runtime
+- `telemetry_distro_name` / `_version`, `telemetry_auto_version`: Which
+  instrumentation build produced the span
+
+### How a field becomes usable
+
+Adding an attribute to the library is not enough for it to appear here. Each one
+needs **both** halves:
+
+1. **Promotion** in the ingest pipeline, lifting it from `tags` (or
+   `process.tags`) to a top-level `ctx.*` field.
+2. **An explicit type** in the index template's `properties` block.
+
+Anything missing the second half falls through to the `strings_as_keyword`
+dynamic template, which sets `"index": false` - leaving the field neither
+searchable nor aggregatable. Numeric fields must be declared `integer`, `long`,
+`double` or `float`; left as `tag.*` keywords they can be displayed but never
+summed, averaged or charted.
 
 #### Error Information
 - `error`: Error flag (true/false)
@@ -167,6 +252,47 @@ The pre-built Grafana dashboard includes:
 ### Error Analysis
 - **Error Table**: All failed GenAI requests with error details
 - **Columns**: Trace ID, Provider, Model, Error Type, Error Message, HTTP Status
+
+### Prompt Cache & Reasoning
+- **Cache Effectiveness by Model**: Cache reads against cache writes and total
+  input tokens, plus cache-read cost. A working prompt-cache setup shows reads
+  far exceeding writes; the reverse means the cache is being rewritten rather
+  than hit.
+- **Reasoning Tokens & Cost by Model**: Reasoning tokens are billed as output but
+  produce no text the user sees, so comparing them to total output tokens shows
+  how much of the spend is invisible.
+
+### Token Usage by Modality
+- **Modality Token Split by Model**: The per-modality breakdown from
+  [semantic-conventions-genai#440](https://github.com/open-telemetry/semantic-conventions-genai/pull/440).
+- **These values are subsets of the totals.** Adding a modality column to
+  `gen_ai_usage_input_tokens` double counts. The panel description repeats this,
+  because it is the easy mistake to make when building a derived panel.
+
+### Agent Budget Governance
+- **Budget Utilisation by Agent**: Configured cap against actual consumption, per
+  [semantic-conventions-genai#425](https://github.com/open-telemetry/semantic-conventions-genai/issues/425).
+- Consumption is accumulated on the agent span rather than summed from child
+  spans, so the numbers survive head sampling that drops the child inference
+  spans - which is exactly the situation a runaway agent produces.
+- **Requests by Endpoint**: Groups traffic by `server_address`, so self-hosted,
+  proxied and gateway calls are distinguishable from a vendor's public API.
+
+### Inference Engine Latency
+- **Engine Latency Breakdown by Model**: Queue, prefill, decode, time-to-first-token
+  and end-to-end, using the keys from
+  [semantic-conventions-genai#408](https://github.com/open-telemetry/semantic-conventions-genai/issues/408).
+- **Expect this panel empty on current vLLM.** The V1 engine sets
+  `RequestOutput.metrics` to `None` and exposes no per-request timing, so the
+  library emits nothing rather than substituting a wall-clock guess. An empty
+  panel here means "the engine did not report it", not a broken dashboard.
+
+> **Two dashboard files, one uid.** Both
+> `genai-opensearch-traces-dashboard.json` and the timestamped
+> `GenAI Traces - OpenSearch-*.json` export carry the uid
+> `genai-opensearch-traces`, and provisioning loads the whole directory. Whichever
+> Grafana reads last wins, so edits must be applied to both copies until one is
+> removed or given a distinct uid.
 
 ## Example Queries
 

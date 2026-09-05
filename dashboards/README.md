@@ -50,6 +50,13 @@ service:
       exporters: [prometheus]
 ```
 
+> **Looking for the trace dashboards?** The Grafana dashboards in this directory
+> chart **metrics**. The OpenSearch-backed **trace** dashboard lives in
+> `examples/demo/grafana/dashboards/` and is documented in
+> [examples/demo/OPENSEARCH_SETUP.md](../examples/demo/OPENSEARCH_SETUP.md),
+> including the panels for prompt-cache effectiveness, per-modality tokens,
+> agent budget utilisation and inference-engine latency.
+
 ## OpenSearch Dashboards
 
 ### GenAI Overview (`opensearch/genai-overview.ndjson`)
