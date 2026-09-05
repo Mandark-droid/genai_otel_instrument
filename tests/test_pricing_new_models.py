@@ -673,3 +673,168 @@ def test_global_endpoint_is_not_charged_the_premium(calc):
         )
         if bare and global_key:
             assert table[global_key]["promptPrice"] == pytest.approx(table[bare]["promptPrice"])
+
+
+# --- September 2026: GPT-5.6 family + GPT-6 Astra -----------------------------
+# Reported by the platform team: Codex traffic rendered as unpriced because no
+# 5.6 entry existed. Names containing "gpt-5.6" previously fell through the
+# longest-substring lookup to plain "gpt-5" and billed $1.25/1M instead of the
+# real rate, which is a silent 3.2x under-bill on Sol and a 6x over-bill on Luna.
+GPT_56_FAMILY = [
+    ("gpt-5.6", 0.004, 0.02),
+    ("gpt-5-6", 0.004, 0.02),
+    ("gpt-5.6-luna", 0.0002, 0.0012),
+    ("gpt-5-6-luna", 0.0002, 0.0012),
+    ("gpt-5.6-sol", 0.004, 0.02),
+    ("gpt-5-6-sol", 0.004, 0.02),
+    ("gpt-5.6-terra", 0.002, 0.012),
+    ("gpt-5-6-terra", 0.002, 0.012),
+    ("gpt-6-astra", 0.01, 0.05),
+]
+
+
+@pytest.mark.parametrize("model,prompt_price,completion_price", GPT_56_FAMILY)
+def test_gpt_5_6_family_priced(calc, model, prompt_price, completion_price):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["prompt"] == pytest.approx(prompt_price)
+    assert costs["completion"] == pytest.approx(completion_price)
+
+
+# Over 97% of this family's input tokens are cache reads in production, so a
+# missing cacheReadPrice swings the bill by ~27x on identical traffic. The rate
+# has to be present AND applied, not merely present.
+GPT_56_CACHE_RATES = [
+    ("gpt-5.6-luna", 0.00002, 0.00025),
+    ("gpt-5-6-luna", 0.00002, 0.00025),
+    ("gpt-5.6-sol", 0.0004, 0.005),
+    ("gpt-5.6-terra", 0.0002, 0.0025),
+    ("gpt-6-astra", 0.001, 0.0125),
+]
+
+
+@pytest.mark.parametrize("model,cache_read,cache_write", GPT_56_CACHE_RATES)
+def test_gpt_5_6_family_cache_rates_applied(calc, model, cache_read, cache_write):
+    usage = {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cache_read_input_tokens": 1000,
+        "cache_creation_input_tokens": 1000,
+    }
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["cache_read"] == pytest.approx(cache_read)
+    assert costs["cache_write"] == pytest.approx(cache_write)
+
+
+# The provider-prefixed spellings resellers and gateways emit must reach the 5.6
+# entry rather than collapsing onto "gpt-5".
+GPT_56_ROUTING = [
+    ("azure/gpt-5.6-luna", "gpt-5.6-luna"),
+    ("openai/gpt-5.6-sol", "gpt-5.6-sol"),
+    ("global.openai.gpt-5.6-terra", "gpt-5.6-terra"),
+    ("databricks-gpt-5-6-luna", "gpt-5-6-luna"),
+    ("openai/gpt-6-astra", "gpt-6-astra"),
+    ("gpt-6-astra-pro", "gpt-6-astra"),
+]
+
+
+@pytest.mark.parametrize("requested,expected_key", GPT_56_ROUTING)
+def test_gpt_5_6_routing_not_shadowed_by_gpt_5(calc, requested, expected_key):
+    resolved = calc._resolve_model_key(requested, "chat")
+    assert resolved == expected_key, (
+        f"{requested} resolved to {resolved}; falling back to a shorter key "
+        "bills this family at the wrong rate"
+    )
+
+
+# The dotted spelling is what callers actually send. It carried base prices but
+# no cacheReadPrice, while its dashed twin had one, so an identical request
+# billed cache reads at the full prompt rate depending only on how the model
+# name happened to be punctuated.
+DOTTED_ALIASES_NEEDING_CACHE_READ = [
+    ("gpt-5.5", 0.0005),
+    ("gpt-5.4", 0.00025),
+    ("gpt-5.2", 0.000175),
+    ("gpt-5.1", 0.000125),
+    ("gpt-4.1", 0.0005),
+    ("gemini-2.5-pro", 0.000125),
+]
+
+
+@pytest.mark.parametrize("model,cache_read", DOTTED_ALIASES_NEEDING_CACHE_READ)
+def test_dotted_alias_carries_cache_read_price(calc, model, cache_read):
+    usage = {"prompt_tokens": 0, "completion_tokens": 0, "cache_read_input_tokens": 1000}
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["cache_read"] == pytest.approx(cache_read)
+
+
+# Anthropic models all support prompt caching. An entry without a cache write
+# rate silently under-bills every cache_creation token it sees.
+ANTHROPIC_CACHE_RATES = [
+    ("claude-sonnet-5", 0.0002, 0.0025),
+    ("claude-sonnet-5-20260630", 0.0002, 0.0025),
+    ("claude-fable-5", 0.001, 0.0125),
+    ("claude-haiku-4-5", 0.0001, 0.00125),
+    ("claude-opus-4-5", 0.0005, 0.00625),
+    ("claude-sonnet-4-5", 0.0003, 0.00375),
+]
+
+
+@pytest.mark.parametrize("model,cache_read,cache_write", ANTHROPIC_CACHE_RATES)
+def test_anthropic_cache_rates_present(calc, model, cache_read, cache_write):
+    usage = {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cache_read_input_tokens": 1000,
+        "cache_creation_input_tokens": 1000,
+    }
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["cache_read"] == pytest.approx(cache_read)
+    assert costs["cache_write"] == pytest.approx(cache_write)
+
+
+# Pre-existing zero-valued cache prices, recorded so the set cannot grow.
+#
+# These are import artifacts: models.dev reports cache_write as ABSENT for the
+# GLM family across nearly every provider, and a zero landed here instead. They
+# are deliberately not "fixed" by deleting the field, because absent and zero
+# mean different things to a downstream consumer -- absent commonly falls back
+# to the prompt rate, so removing a zero silently changes a bill from nothing to
+# full price on data we do not actually have. Resolving these needs a real
+# vendor rate, not a schema edit.
+KNOWN_ZERO_CACHE_PRICES = frozenset(
+    {
+        ("glm-4-5", "cacheWritePrice"),
+        ("glm-4-5-air", "cacheWritePrice"),
+        ("glm-4-6", "cacheWritePrice"),
+        ("glm-4-7", "cacheWritePrice"),
+        ("glm-4-7-flashx", "cacheWritePrice"),
+        ("glm-4.5", "cacheWritePrice"),
+        ("glm-4.5-air", "cacheWritePrice"),
+        ("glm-4.6", "cacheWritePrice"),
+        ("glm-4.7", "cacheWritePrice"),
+        ("glm-4.7-flashx", "cacheWritePrice"),
+        ("glm-5-1", "cacheWritePrice"),
+        ("glm-5-2", "cacheWritePrice"),
+        ("glm-5-3", "cacheWritePrice"),
+        ("glm-5.3", "cacheWritePrice"),
+        ("glm-5-3-flash", "cacheWritePrice"),
+        ("glm-5.3-flash", "cacheWritePrice"),
+        ("gpt-3-5-turbo", "cacheReadPrice"),
+        ("zai-glm-4-7", "cacheWritePrice"),
+        ("zai-glm-4.7", "cacheWritePrice"),
+    }
+)
+
+
+def test_zero_valued_cache_prices_do_not_spread(calc):
+    """A zero cache rate bills cached tokens at nothing, so a sweep must never
+    propagate one onto a model that currently has no rate at all."""
+    offenders = {
+        (key, field)
+        for key, entry in calc.pricing_data["chat"].items()
+        for field in ("cacheReadPrice", "cacheWritePrice")
+        if field in entry and not entry[field]
+    }
+    new = offenders - KNOWN_ZERO_CACHE_PRICES
+    assert not new, f"new zero-valued cache prices bill cached tokens at nothing: {sorted(new)}"

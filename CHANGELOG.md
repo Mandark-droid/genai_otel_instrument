@@ -4,6 +4,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.27.0] - 2026-09-05
+
+### Added
+
+- **Pricing for the GPT-5.6 family and GPT-6 Astra.** `gpt-5.6`, `gpt-5.6-luna`,
+  `gpt-5.6-sol`, `gpt-5.6-terra` and `gpt-6-astra`, each in both the dotted and
+  dashed spelling, and each carrying `cacheReadPrice` and `cacheWritePrice`
+  alongside the base rates. These are the first OpenAI models for which the
+  vendor publishes a cache **write** charge; 5.1 through 5.5 have none, so the
+  field is not a blanket assumption applied to the family.
+
+  Before this, any model name containing `gpt-5.6` fell through the
+  longest-substring lookup to plain `gpt-5` and was billed at $1.25/1M. That is
+  a 3.2x under-bill on Sol and a 6x over-bill on Luna, reported as a plausible
+  number rather than as missing data. 74 provider-prefixed spellings
+  (`azure/`, `openai/`, `global.openai.`, `databricks-`, and others) were
+  resolving that way and now reach the correct entry.
+
+### Fixed
+
+- **Cache rates were missing wherever a model name was punctuated with a dot.**
+  A model whose dashed key carried a `cacheReadPrice` often had a dotted twin
+  without one, so `gpt-5.5` and `gpt-5-5` billed the same request differently:
+  the dotted spelling charged cache reads at the full prompt rate. Affected
+  `gpt-4.1`, `gpt-5.1` through `gpt-5.5`, `gemini-2.x`/`3.x`, `glm-5.x`,
+  `grok-4.3`, `kimi-k2.x`, `MiniMax-M2.x`, `mimo-v2.5` and `qwen3.7-plus`.
+  Rates are copied only where both spellings already agreed on the base price.
+
+- **Anthropic models were missing prompt-caching rates.** Every Claude model
+  supports prompt caching, but `claude-sonnet-5`, `claude-fable-5`,
+  `claude-haiku-4-5`, `claude-opus-4-5` through `4-8` and `claude-sonnet-4-5`
+  carried no `cacheReadPrice` or `cacheWritePrice`, so cache-creation tokens
+  cost nothing. `claude-sonnet-5` already described its cache rates in its own
+  note text while leaving the machine-readable fields empty.
+
+- **Pinned snapshots now inherit their base model's cache rates.** A dated key
+  such as `claude-sonnet-5-20260630` resolves to itself, so it kept billing
+  cached tokens at zero while the floating `claude-sonnet-5` was corrected.
+
 ## [1.26.0] - 2026-09-05
 
 ### Added

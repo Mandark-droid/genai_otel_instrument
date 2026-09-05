@@ -1104,22 +1104,30 @@
     "MiniMax-M2.5": {
       "promptPrice": 0.0003,
       "completionPrice": 0.0012,
-      "note": "MiniMax M2.5 (Feb 2026)"
+      "note": "MiniMax M2.5 (Feb 2026)",
+      "cacheReadPrice": 3e-05,
+      "cacheWritePrice": 0.000375
     },
     "MiniMax-M2.5-highspeed": {
       "promptPrice": 0.0006,
       "completionPrice": 0.0024,
-      "note": "MiniMax M2.5 highspeed tier (2x base price)"
+      "note": "MiniMax M2.5 highspeed tier (2x base price)",
+      "cacheReadPrice": 6e-05,
+      "cacheWritePrice": 0.000375
     },
     "MiniMax-M2.7": {
       "promptPrice": 0.0003,
       "completionPrice": 0.0012,
-      "note": "MiniMax M2.7 (2026) - per platform.minimax.io pricing"
+      "note": "MiniMax M2.7 (2026) - per platform.minimax.io pricing",
+      "cacheReadPrice": 6e-05,
+      "cacheWritePrice": 0.000375
     },
     "MiniMax-M2.7-highspeed": {
       "promptPrice": 0.0006,
       "completionPrice": 0.0024,
-      "note": "MiniMax M2.7 highspeed tier (2x base price)"
+      "note": "MiniMax M2.7 highspeed tier (2x base price)",
+      "cacheReadPrice": 6e-05,
+      "cacheWritePrice": 0.000375
     },
     "MiniMax-M3": {
       "promptPrice": 0.0003,
@@ -2263,7 +2271,9 @@
     "claude-fable-5": {
       "promptPrice": 0.01,
       "completionPrice": 0.05,
-      "note": "Anthropic Claude Fable 5 (2026) - input $10/1M, output $50/1M; new tier above Opus. Source: platform.claude.com/docs pricing"
+      "note": "Anthropic Claude Fable 5 (2026) - input $10/1M, output $50/1M; new tier above Opus. Source: platform.claude.com/docs pricing",
+      "cacheReadPrice": 0.001,
+      "cacheWritePrice": 0.0125
     },
     "claude-fable-5-1": {
       "promptPrice": 0.01,
@@ -2372,12 +2382,16 @@
     },
     "claude-haiku-4-5": {
       "promptPrice": 0.001,
-      "completionPrice": 0.005
+      "completionPrice": 0.005,
+      "cacheReadPrice": 0.0001,
+      "cacheWritePrice": 0.00125
     },
     "claude-haiku-4-5-20251001": {
       "promptPrice": 0.001,
       "completionPrice": 0.005,
-      "note": "From LiteLLM - provider: anthropic"
+      "note": "From LiteLLM - provider: anthropic",
+      "cacheReadPrice": 0.0001,
+      "cacheWritePrice": 0.00125
     },
     "claude-opus-4": {
       "promptPrice": 0.015,
@@ -2400,27 +2414,37 @@
     "claude-opus-4-5": {
       "promptPrice": 0.005,
       "completionPrice": 0.025,
-      "note": "From LiteLLM - provider: anthropic"
+      "note": "From LiteLLM - provider: anthropic",
+      "cacheReadPrice": 0.0005,
+      "cacheWritePrice": 0.00625
     },
     "claude-opus-4-5-20251101": {
       "promptPrice": 0.005,
       "completionPrice": 0.025,
-      "note": "From LiteLLM - provider: anthropic"
+      "note": "From LiteLLM - provider: anthropic",
+      "cacheReadPrice": 0.0005,
+      "cacheWritePrice": 0.00625
     },
     "claude-opus-4-6": {
       "promptPrice": 0.005,
       "completionPrice": 0.025,
-      "note": "Anthropic - Claude Opus 4.6 (Feb 2026)"
+      "note": "Anthropic - Claude Opus 4.6 (Feb 2026)",
+      "cacheReadPrice": 0.0005,
+      "cacheWritePrice": 0.00625
     },
     "claude-opus-4-7": {
       "promptPrice": 0.005,
       "completionPrice": 0.025,
-      "note": "Anthropic Claude Opus 4.7 (Apr 2026) - new tokenizer, ~35% more tokens vs 4.6"
+      "note": "Anthropic Claude Opus 4.7 (Apr 2026) - new tokenizer, ~35% more tokens vs 4.6",
+      "cacheReadPrice": 0.0005,
+      "cacheWritePrice": 0.00625
     },
     "claude-opus-4-8": {
       "promptPrice": 0.005,
       "completionPrice": 0.025,
-      "note": "Anthropic Claude Opus 4.8 (2026) - input $5/1M, output $25/1M (standard mode); fast mode 2x. Source: platform.claude.com/docs pricing"
+      "note": "Anthropic Claude Opus 4.8 (2026) - input $5/1M, output $25/1M (standard mode); fast mode 2x. Source: platform.claude.com/docs pricing",
+      "cacheReadPrice": 0.0005,
+      "cacheWritePrice": 0.00625
     },
     "claude-opus-4.1": {
       "promptPrice": 0.015,
@@ -2429,17 +2453,23 @@
     "claude-opus-4.6": {
       "promptPrice": 0.005,
       "completionPrice": 0.025,
-      "note": "Anthropic - Claude Opus 4.6 (Feb 2026)"
+      "note": "Anthropic - Claude Opus 4.6 (Feb 2026)",
+      "cacheReadPrice": 0.0005,
+      "cacheWritePrice": 0.00625
     },
     "claude-opus-4.7": {
       "promptPrice": 0.005,
       "completionPrice": 0.025,
-      "note": "Anthropic Claude Opus 4.7 (Apr 2026)"
+      "note": "Anthropic Claude Opus 4.7 (Apr 2026)",
+      "cacheReadPrice": 0.0005,
+      "cacheWritePrice": 0.00625
     },
     "claude-opus-4.8": {
       "promptPrice": 0.005,
       "completionPrice": 0.025,
-      "note": "Anthropic Claude Opus 4.8 (2026) - dotted alias"
+      "note": "Anthropic Claude Opus 4.8 (2026) - dotted alias",
+      "cacheReadPrice": 0.0005,
+      "cacheWritePrice": 0.00625
     },
     "claude-opus-5": {
       "promptPrice": 0.005,
@@ -2462,21 +2492,29 @@
     },
     "claude-sonnet-4-5": {
       "promptPrice": 0.003,
-      "completionPrice": 0.015
+      "completionPrice": 0.015,
+      "cacheReadPrice": 0.0003,
+      "cacheWritePrice": 0.00375
     },
     "claude-sonnet-4-5-20250929": {
       "promptPrice": 0.003,
-      "completionPrice": 0.015
+      "completionPrice": 0.015,
+      "cacheReadPrice": 0.0003,
+      "cacheWritePrice": 0.00375
     },
     "claude-sonnet-4-6": {
       "promptPrice": 0.003,
       "completionPrice": 0.015,
-      "note": "Anthropic - Claude Sonnet 4.6 (Feb 2026)"
+      "note": "Anthropic - Claude Sonnet 4.6 (Feb 2026)",
+      "cacheReadPrice": 0.0003,
+      "cacheWritePrice": 0.00375
     },
     "claude-sonnet-4.6": {
       "promptPrice": 0.003,
       "completionPrice": 0.015,
-      "note": "Anthropic - Claude Sonnet 4.6 (Feb 2026)"
+      "note": "Anthropic - Claude Sonnet 4.6 (Feb 2026)",
+      "cacheReadPrice": 0.0003,
+      "cacheWritePrice": 0.00375
     },
     "claude-sonnet-4@20250514": {
       "promptPrice": 0.003,
@@ -2488,12 +2526,16 @@
     "claude-sonnet-5": {
       "promptPrice": 0.002,
       "completionPrice": 0.01,
-      "note": "Anthropic Claude Sonnet 5 (Jun 30, 2026) - intro discount input $2/1M, output $10/1M through Sep 2026; reverts to standard $5/1M input, $15/1M output after. 1M context; cache read $0.20/1M, cache write $2.50/1M. Source: platform.claude.com/docs pricing + models.dev"
+      "note": "Anthropic Claude Sonnet 5 (Jun 30, 2026) - intro discount input $2/1M, output $10/1M through Sep 2026; reverts to standard $5/1M input, $15/1M output after. 1M context; cache read $0.20/1M, cache write $2.50/1M. Source: platform.claude.com/docs pricing + models.dev",
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025
     },
     "claude-sonnet-5-20260630": {
       "promptPrice": 0.002,
       "completionPrice": 0.01,
-      "note": "Claude Sonnet 5 dated snapshot; same intro pricing as claude-sonnet-5"
+      "note": "Claude Sonnet 5 dated snapshot; same intro pricing as claude-sonnet-5",
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025
     },
     "codellama/CodeLlama-34b-Instruct-hf": {
       "promptPrice": 0.0008,
@@ -3322,7 +3364,8 @@
     },
     "gemini-2.0-flash": {
       "promptPrice": 0.0001,
-      "completionPrice": 0.0004
+      "completionPrice": 0.0004,
+      "cacheReadPrice": 2.5e-05
     },
     "gemini-2.0-flash-001": {
       "promptPrice": 0.00015,
@@ -3370,11 +3413,13 @@
     },
     "gemini-2.5-flash": {
       "promptPrice": 0.0003,
-      "completionPrice": 0.0025
+      "completionPrice": 0.0025,
+      "cacheReadPrice": 3e-05
     },
     "gemini-2.5-flash-lite": {
       "promptPrice": 0.0001,
-      "completionPrice": 0.0004
+      "completionPrice": 0.0004,
+      "cacheReadPrice": 1e-05
     },
     "gemini-2.5-flash-lite-preview": {
       "promptPrice": 0.0001,
@@ -3411,7 +3456,8 @@
     },
     "gemini-2.5-pro": {
       "promptPrice": 0.00125,
-      "completionPrice": 0.01
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.000125
     },
     "gemini-2.5-pro-exp-03-25": {
       "promptPrice": 0.00125,
@@ -3533,12 +3579,14 @@
     "gemini-3.1-flash-lite": {
       "promptPrice": 0.00025,
       "completionPrice": 0.0015,
-      "note": "Google Gemini 3.1 Flash-Lite (Mar 2026) - cost-effective, 2.5x faster TTFA"
+      "note": "Google Gemini 3.1 Flash-Lite (Mar 2026) - cost-effective, 2.5x faster TTFA",
+      "cacheReadPrice": 2.5e-05
     },
     "gemini-3.1-flash-lite-preview": {
       "promptPrice": 0.00025,
       "completionPrice": 0.0015,
-      "note": "Google Gemini 3.1 Flash-Lite Preview (Mar 2026)"
+      "note": "Google Gemini 3.1 Flash-Lite Preview (Mar 2026)",
+      "cacheReadPrice": 2.5e-05
     },
     "gemini-3.1-flash-live-preview": {
       "promptPrice": 0.00075,
@@ -3548,12 +3596,14 @@
     "gemini-3.1-pro-preview": {
       "promptPrice": 0.002,
       "completionPrice": 0.012,
-      "note": "Google Gemini 3.1 Pro Preview (Mar 2026) - 1M context, <=200K pricing"
+      "note": "Google Gemini 3.1 Pro Preview (Mar 2026) - 1M context, <=200K pricing",
+      "cacheReadPrice": 0.0002
     },
     "gemini-3.5-flash": {
       "promptPrice": 0.0015,
       "completionPrice": 0.009,
-      "note": "Google Gemini 3.5 Flash (May 19, 2026) - input $1.50/1M, output $9.00/1M, cached input $0.15/1M. Source: ai.google.dev/gemini-api/docs/pricing"
+      "note": "Google Gemini 3.5 Flash (May 19, 2026) - input $1.50/1M, output $9.00/1M, cached input $0.15/1M. Source: ai.google.dev/gemini-api/docs/pricing",
+      "cacheReadPrice": 0.00015
     },
     "gemini-3.5-live-translate-preview": {
       "promptPrice": 0.0035,
@@ -4015,12 +4065,14 @@
     "glm-5.1": {
       "promptPrice": 0.0014,
       "completionPrice": 0.0044,
-      "note": "Zhipu GLM-5.1 (2026) - per docs.z.ai/guides/overview/pricing"
+      "note": "Zhipu GLM-5.1 (2026) - per docs.z.ai/guides/overview/pricing",
+      "cacheReadPrice": 0.00026
     },
     "glm-5.2": {
       "promptPrice": 0.0014,
       "completionPrice": 0.0044,
-      "note": "Zhipu GLM-5.2 (Jun 13, 2026) - input $1.40/1M, output $4.40/1M, cache read $0.26/1M, 1M context. Source: docs.z.ai/guides/overview/pricing + models.dev"
+      "note": "Zhipu GLM-5.2 (Jun 13, 2026) - input $1.40/1M, output $4.40/1M, cache read $0.26/1M, 1M context. Source: docs.z.ai/guides/overview/pricing + models.dev",
+      "cacheReadPrice": 0.00026
     },
     "global-anthropic-claude-opus-5": {
       "promptPrice": 0.005,
@@ -4303,7 +4355,8 @@
     },
     "gpt-4.1": {
       "promptPrice": 0.002,
-      "completionPrice": 0.008
+      "completionPrice": 0.008,
+      "cacheReadPrice": 0.0005
     },
     "gpt-4.1-2025-04-14": {
       "promptPrice": 0.002,
@@ -4311,7 +4364,8 @@
     },
     "gpt-4.1-mini": {
       "promptPrice": 0.0004,
-      "completionPrice": 0.0016
+      "completionPrice": 0.0016,
+      "cacheReadPrice": 0.0001
     },
     "gpt-4.1-mini-2025-04-14": {
       "promptPrice": 0.0004,
@@ -4319,7 +4373,8 @@
     },
     "gpt-4.1-nano": {
       "promptPrice": 0.0001,
-      "completionPrice": 0.0004
+      "completionPrice": 0.0004,
+      "cacheReadPrice": 2.5e-05
     },
     "gpt-4.1-nano-2025-04-14": {
       "promptPrice": 0.0001,
@@ -4345,16 +4400,19 @@
     },
     "gpt-4o-2024-08-06": {
       "promptPrice": 0.0025,
-      "completionPrice": 0.01
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.00125
     },
     "gpt-4o-2024-11-20": {
       "promptPrice": 0.0025,
       "completionPrice": 0.01,
-      "note": "From LiteLLM - provider: openai"
+      "note": "From LiteLLM - provider: openai",
+      "cacheReadPrice": 0.00125
     },
     "gpt-4o-mini": {
       "promptPrice": 0.00015,
-      "completionPrice": 0.0006
+      "completionPrice": 0.0006,
+      "cacheReadPrice": 7.5e-05
     },
     "gpt-4o-mini-2024-07-18": {
       "promptPrice": 0.00015,
@@ -4362,7 +4420,8 @@
     },
     "gpt-5": {
       "promptPrice": 0.00125,
-      "completionPrice": 0.01
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.000125
     },
     "gpt-5-1": {
       "promptPrice": 0.00125,
@@ -4479,7 +4538,8 @@
     },
     "gpt-5-mini": {
       "promptPrice": 0.00025,
-      "completionPrice": 0.002
+      "completionPrice": 0.002,
+      "cacheReadPrice": 2.5e-05
     },
     "gpt-5-mini-2025-08-07": {
       "promptPrice": 0.00025,
@@ -4508,7 +4568,8 @@
     "gpt-5.1": {
       "promptPrice": 0.00125,
       "completionPrice": 0.01,
-      "note": "From LiteLLM - provider: openai"
+      "note": "From LiteLLM - provider: openai",
+      "cacheReadPrice": 0.000125
     },
     "gpt-5.1-2025-11-13": {
       "promptPrice": 0.00125,
@@ -4518,17 +4579,20 @@
     "gpt-5.1-codex": {
       "promptPrice": 0.00125,
       "completionPrice": 0.01,
-      "note": "From LiteLLM - provider: openai"
+      "note": "From LiteLLM - provider: openai",
+      "cacheReadPrice": 0.000125
     },
     "gpt-5.1-codex-mini": {
       "promptPrice": 0.00025,
       "completionPrice": 0.002,
-      "note": "From LiteLLM - provider: openai"
+      "note": "From LiteLLM - provider: openai",
+      "cacheReadPrice": 2.5e-05
     },
     "gpt-5.2": {
       "promptPrice": 0.00175,
       "completionPrice": 0.014,
-      "note": "OpenAI GPT-5.2 (Dec 2025) - 400K context"
+      "note": "OpenAI GPT-5.2 (Dec 2025) - 400K context",
+      "cacheReadPrice": 0.000175
     },
     "gpt-5.2-2025-12-10": {
       "promptPrice": 0.00175,
@@ -4548,27 +4612,32 @@
     "gpt-5.3-chat-latest": {
       "promptPrice": 0.00175,
       "completionPrice": 0.014,
-      "note": "OpenAI GPT-5.3 chat-latest snapshot"
+      "note": "OpenAI GPT-5.3 chat-latest snapshot",
+      "cacheReadPrice": 0.000175
     },
     "gpt-5.3-codex": {
       "promptPrice": 0.00175,
       "completionPrice": 0.014,
-      "note": "OpenAI GPT-5.3 Codex - coding-specialized snapshot"
+      "note": "OpenAI GPT-5.3 Codex - coding-specialized snapshot",
+      "cacheReadPrice": 0.000175
     },
     "gpt-5.4": {
       "promptPrice": 0.0025,
       "completionPrice": 0.015,
-      "note": "OpenAI GPT-5.4 (Mar 2026) - flagship, cached input $0.25/1M"
+      "note": "OpenAI GPT-5.4 (Mar 2026) - flagship, cached input $0.25/1M",
+      "cacheReadPrice": 0.00025
     },
     "gpt-5.4-mini": {
       "promptPrice": 0.00075,
       "completionPrice": 0.0045,
-      "note": "OpenAI GPT-5.4 mini (Mar 2026) - cached input $0.075/1M"
+      "note": "OpenAI GPT-5.4 mini (Mar 2026) - cached input $0.075/1M",
+      "cacheReadPrice": 7.5e-05
     },
     "gpt-5.4-nano": {
       "promptPrice": 0.0002,
       "completionPrice": 0.00125,
-      "note": "OpenAI GPT-5.4 nano (Mar 2026) - cached input $0.02/1M"
+      "note": "OpenAI GPT-5.4 nano (Mar 2026) - cached input $0.02/1M",
+      "cacheReadPrice": 2e-05
     },
     "gpt-5.4-pro": {
       "promptPrice": 0.03,
@@ -4578,7 +4647,8 @@
     "gpt-5.5": {
       "promptPrice": 0.005,
       "completionPrice": 0.03,
-      "note": "OpenAI GPT-5.5 (Apr 2026) - input $5/1M, output $30/1M"
+      "note": "OpenAI GPT-5.5 (Apr 2026) - input $5/1M, output $30/1M",
+      "cacheReadPrice": 0.0005
     },
     "gpt-5.5-mini": {
       "promptPrice": 0.0004,
@@ -4781,7 +4851,8 @@
     "grok-4.3": {
       "promptPrice": 0.00125,
       "completionPrice": 0.0025,
-      "note": "xAI Grok 4.3 - 1M context, input $1.25/1M, output $2.50/1M per docs.x.ai/developers/models"
+      "note": "xAI Grok 4.3 - 1M context, input $1.25/1M, output $2.50/1M per docs.x.ai/developers/models",
+      "cacheReadPrice": 0.0002
     },
     "grok-beta": {
       "promptPrice": 0.0005,
@@ -4989,22 +5060,26 @@
     "kimi-k2.5": {
       "promptPrice": 0.0006,
       "completionPrice": 0.003,
-      "note": "Moonshot AI - Kimi K2.5 (Jan 2026, 1T MoE)"
+      "note": "Moonshot AI - Kimi K2.5 (Jan 2026, 1T MoE)",
+      "cacheReadPrice": 0.0001
     },
     "kimi-k2.6": {
       "promptPrice": 0.00095,
       "completionPrice": 0.004,
-      "note": "Moonshot Kimi K2.6 (Apr 20, 2026) - Moonshot first-party API, cache hit $0.16/1M"
+      "note": "Moonshot Kimi K2.6 (Apr 20, 2026) - Moonshot first-party API, cache hit $0.16/1M",
+      "cacheReadPrice": 0.00016
     },
     "kimi-k2.7-code": {
       "promptPrice": 0.00095,
       "completionPrice": 0.004,
-      "note": "Moonshot Kimi K2.7 Code (Jun 12, 2026) - input $0.95/1M, output $4/1M, cache hit $0.19/1M, 256K context, open weights. Source: platform.moonshot.ai + models.dev"
+      "note": "Moonshot Kimi K2.7 Code (Jun 12, 2026) - input $0.95/1M, output $4/1M, cache hit $0.19/1M, 256K context, open weights. Source: platform.moonshot.ai + models.dev",
+      "cacheReadPrice": 0.00019
     },
     "kimi-k2.7-code-highspeed": {
       "promptPrice": 0.0019,
       "completionPrice": 0.008,
-      "note": "Moonshot Kimi K2.7 Code HighSpeed tier (2x base) - input $1.90/1M, output $8/1M. Source: models.dev"
+      "note": "Moonshot Kimi K2.7 Code HighSpeed tier (2x base) - input $1.90/1M, output $8/1M. Source: models.dev",
+      "cacheReadPrice": 0.00038
     },
     "kimi-k3": {
       "promptPrice": 0.003,
@@ -5449,7 +5524,7 @@
     "mimo-v2-5": {
       "promptPrice": 0.00014,
       "completionPrice": 0.00028,
-      "cacheReadPrice": 2.8e-06,
+      "cacheReadPrice": 0.0000028,
       "note": "MiMo-V2.5. input $0.14/1M, output $0.28/1M, cache read $0.0028/1M. Released 2026-04-22. 1048576 context. Source: models.dev / xiaomi"
     },
     "mimo-v2-5-pro": {
@@ -5482,17 +5557,20 @@
     "mimo-v2.5": {
       "promptPrice": 0.00014,
       "completionPrice": 0.00028,
-      "note": "Xiaomi MiMo-V2.5 (Apr 22, 2026) - input $0.14/1M, output $0.28/1M, cache hit $0.0028/1M, 1M context, open weights. Source: platform.xiaomimimo.com + models.dev"
+      "note": "Xiaomi MiMo-V2.5 (Apr 22, 2026) - input $0.14/1M, output $0.28/1M, cache hit $0.0028/1M, 1M context, open weights. Source: platform.xiaomimimo.com + models.dev",
+      "cacheReadPrice": 2.8e-06
     },
     "mimo-v2.5-pro": {
       "promptPrice": 0.000435,
       "completionPrice": 0.00087,
-      "note": "Xiaomi MiMo-V2.5-Pro (Apr 22, 2026) - input $0.435/1M, output $0.87/1M, cache hit $0.0036/1M, 1M context, open weights. Source: platform.xiaomimimo.com + models.dev"
+      "note": "Xiaomi MiMo-V2.5-Pro (Apr 22, 2026) - input $0.435/1M, output $0.87/1M, cache hit $0.0036/1M, 1M context, open weights. Source: platform.xiaomimimo.com + models.dev",
+      "cacheReadPrice": 3.6e-06
     },
     "mimo-v2.5-pro-ultraspeed": {
       "promptPrice": 0.001305,
       "completionPrice": 0.00261,
-      "note": "Xiaomi MiMo-V2.5-Pro-UltraSpeed (Jun 8, 2026) - low-latency tier, input $1.305/1M, output $2.61/1M, cache hit $0.0108/1M, 1M context. Source: platform.xiaomimimo.com + models.dev"
+      "note": "Xiaomi MiMo-V2.5-Pro-UltraSpeed (Jun 8, 2026) - low-latency tier, input $1.305/1M, output $2.61/1M, cache hit $0.0108/1M, 1M context. Source: platform.xiaomimimo.com + models.dev",
+      "cacheReadPrice": 1.08e-05
     },
     "minimax-m2.5": {
       "promptPrice": 0.0003,
@@ -6496,7 +6574,8 @@
     "o1": {
       "promptPrice": 0.015000000000000001,
       "completionPrice": 0.060000000000000005,
-      "note": "From LiteLLM - provider: openai"
+      "note": "From LiteLLM - provider: openai",
+      "cacheReadPrice": 0.0075
     },
     "o1-2024-12-17": {
       "promptPrice": 0.015000000000000001,
@@ -6532,7 +6611,8 @@
     "o3": {
       "promptPrice": 0.002,
       "completionPrice": 0.008,
-      "note": "From LiteLLM - provider: openai"
+      "note": "From LiteLLM - provider: openai",
+      "cacheReadPrice": 0.0005
     },
     "o3-2025-04-16": {
       "promptPrice": 0.002,
@@ -6542,7 +6622,8 @@
     "o3-mini": {
       "promptPrice": 0.0011,
       "completionPrice": 0.0044,
-      "note": "From LiteLLM - provider: openai"
+      "note": "From LiteLLM - provider: openai",
+      "cacheReadPrice": 0.00055
     },
     "o3-mini-2025-01-31": {
       "promptPrice": 0.0011,
@@ -6562,7 +6643,8 @@
     "o4-mini": {
       "promptPrice": 0.0011,
       "completionPrice": 0.0044,
-      "note": "From LiteLLM - provider: openai"
+      "note": "From LiteLLM - provider: openai",
+      "cacheReadPrice": 0.000275
     },
     "o4-mini-2025-04-16": {
       "promptPrice": 0.0011,
@@ -7394,7 +7476,9 @@
     "qwen3.7-plus": {
       "promptPrice": 0.0005,
       "completionPrice": 0.003,
-      "note": "Alibaba Qwen3.7 Plus (Jun 2, 2026) - input $0.50/1M, output $3/1M, cache read $0.05/1M, cache write $0.625/1M, 1M context. Source: DashScope + models.dev"
+      "note": "Alibaba Qwen3.7 Plus (Jun 2, 2026) - input $0.50/1M, output $3/1M, cache read $0.05/1M, cache write $0.625/1M, 1M context. Source: DashScope + models.dev",
+      "cacheReadPrice": 5e-05,
+      "cacheWritePrice": 0.000625
     },
     "qwen3.8-max": {
       "promptPrice": 0.002,
@@ -8488,6 +8572,69 @@
       "completionPrice": 0.0012,
       "cacheReadPrice": 6e-05,
       "note": "Solar Pro 4. input $0.3/1M, output $1.2/1M, cache read $0.06/1M. Released 2026-08-06. 524288 context. Source: models.dev / upstage"
+    },
+    "gpt-5-6": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0004,
+      "cacheWritePrice": 0.005,
+      "note": "GPT-5.6. input $4/1M, output $20/1M, cache read $0.4/1M, cache write $5/1M. Released 2026-07-09. 1050000 context. Above 200K context the vendor charges ${'input': 8, 'output': 30, 'cache_read': 0.8, 'cache_write': 10}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+    },
+    "gpt-5.6": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0004,
+      "cacheWritePrice": 0.005,
+      "note": "OpenAI GPT-5.6 (Jul 2026) - input $4/1M, output $20/1M, cached input $0.40/1M"
+    },
+    "gpt-5-6-luna": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0012,
+      "cacheReadPrice": 2e-05,
+      "cacheWritePrice": 0.00025,
+      "note": "GPT-5.6 Luna. input $0.2/1M, output $1.2/1M, cache read $0.02/1M, cache write $0.25/1M. Released 2026-07-09. 1050000 context. Above 200K context the vendor charges ${'input': 0.4, 'output': 1.8, 'cache_read': 0.04, 'cache_write': 0.5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+    },
+    "gpt-5.6-luna": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.0012,
+      "cacheReadPrice": 2e-05,
+      "cacheWritePrice": 0.00025,
+      "note": "OpenAI GPT-5.6 Luna (Jul 2026) - economy tier, input $0.20/1M, output $1.20/1M"
+    },
+    "gpt-5-6-sol": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0004,
+      "cacheWritePrice": 0.005,
+      "note": "GPT-5.6 Sol. input $4/1M, output $20/1M, cache read $0.4/1M, cache write $5/1M. Released 2026-07-09. 1050000 context. Above 200K context the vendor charges ${'input': 8, 'output': 30, 'cache_read': 0.8, 'cache_write': 10}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+    },
+    "gpt-5.6-sol": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0004,
+      "cacheWritePrice": 0.005,
+      "note": "OpenAI GPT-5.6 Sol (Jul 2026) - input $4/1M, output $20/1M"
+    },
+    "gpt-5-6-terra": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.012,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025,
+      "note": "GPT-5.6 Terra. input $2/1M, output $12/1M, cache read $0.2/1M, cache write $2.5/1M. Released 2026-07-09. 1050000 context. Above 200K context the vendor charges ${'input': 4, 'output': 18, 'cache_read': 0.4, 'cache_write': 5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+    },
+    "gpt-5.6-terra": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.012,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025,
+      "note": "OpenAI GPT-5.6 Terra (Jul 2026) - input $2/1M, output $12/1M"
+    },
+    "gpt-6-astra": {
+      "promptPrice": 0.01,
+      "completionPrice": 0.05,
+      "cacheReadPrice": 0.001,
+      "cacheWritePrice": 0.0125,
+      "note": "GPT-6 Astra. input $10/1M, output $50/1M, cache read $1/1M, cache write $12.5/1M. Released 2026-09-04. 1050000 context. Above 200K context the vendor charges ${'input': 20, 'output': 75, 'cache_read': 2, 'cache_write': 25}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
     }
   },
   "speech_to_text": {
@@ -8785,6 +8932,15 @@
     "elevenlabs/scribe_v1_experimental": "2026-08-12",
     "fireworks/whisper-v3": "2026-08-13",
     "fireworks/whisper-v3-turbo": "2026-08-13",
+    "gpt-5-6": "2026-09-05",
+    "gpt-5-6-luna": "2026-09-05",
+    "gpt-5-6-sol": "2026-09-05",
+    "gpt-5-6-terra": "2026-09-05",
+    "gpt-5.6": "2026-09-05",
+    "gpt-5.6-luna": "2026-09-05",
+    "gpt-5.6-sol": "2026-09-05",
+    "gpt-5.6-terra": "2026-09-05",
+    "gpt-6-astra": "2026-09-05",
     "groq/whisper-large-v3": "2026-08-13",
     "groq/whisper-large-v3-turbo": "2026-08-13",
     "meta/muse-glimmer-30b": "2026-08-13",
