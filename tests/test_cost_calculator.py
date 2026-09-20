@@ -18,6 +18,7 @@ class TestCostCalculator(unittest.TestCase):
             "chat": {
                 "gpt-4o": {"promptPrice": 0.0005, "completionPrice": 0.0015},
                 "gpt-3.5-turbo": {"promptPrice": 0.0005, "completionPrice": 0.0015},
+                "jev": {"promptPrice": 0.000042, "completionPrice": 0.0},
             },
         }
 
@@ -35,6 +36,11 @@ class TestCostCalculator(unittest.TestCase):
         cost = self.calculator.calculate_cost("gpt-4o", usage, "chat")
         expected_cost = (1000 / 1000 * 0.0005) + (2000 / 1000 * 0.0015)
         self.assertAlmostEqual(cost, expected_cost)
+
+    def test_calculate_jev_cost_with_free_output_tokens(self):
+        usage = {"prompt_tokens": 1000, "completion_tokens": 2000}
+        cost = self.calculator.calculate_cost("jev-1.13.0", usage, "chat")
+        self.assertAlmostEqual(cost, 0.000042)
 
     def test_calculate_embedding_cost(self):
         usage = {"prompt_tokens": 5000}

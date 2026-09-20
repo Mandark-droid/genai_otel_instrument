@@ -97,6 +97,7 @@ try:
         SarvamAIInstrumentor,
         SentenceTransformersInstrumentor,
         TogetherAIInstrumentor,
+        TypeSafeInstrumentor,
         VertexAIInstrumentor,
     )
 except ImportError:
@@ -141,6 +142,7 @@ except ImportError:
         SarvamAIInstrumentor,
         SentenceTransformersInstrumentor,
         TogetherAIInstrumentor,
+        TypeSafeInstrumentor,
         VertexAIInstrumentor,
     )
 
@@ -237,6 +239,7 @@ INSTRUMENTORS = {
     "transformers": HuggingFaceInstrumentor,
     "sentence_transformers": SentenceTransformersInstrumentor,
     "liquid_audio": LiquidAudioInstrumentor,
+    "typesafe": TypeSafeInstrumentor,
     # MCP client attribution (mcp.* / commerce.* semantic conventions). Opt-in
     # rather than default: it is most useful with a tool schema map attached,
     # which only the application can supply. See genai_otel.mcp_semconv.

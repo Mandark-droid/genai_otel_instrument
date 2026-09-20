@@ -1,6 +1,6 @@
 # LLM Providers
 
-TraceVerde auto-instruments 25 LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
+TraceVerde auto-instruments 26 LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
 
 The table below is the complete list, and `tests/test_docs_provider_coverage.py` asserts
 it stays in step with the `INSTRUMENTORS` registry, so a provider cannot be added in code
@@ -35,6 +35,29 @@ without appearing here.
 | HuggingFace Transformers | Local models, cost estimated from parameter count | `[huggingface]` | - |
 | Sentence Transformers | Local embedding models | `[huggingface]` | - |
 | Hyperbolic | Open-weight models over raw HTTP. Disabled by default - see below | - | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/hyperbolic_example.py) |
+| TypeSafe AI / Jev | Structured Choice, Score, and Noul decisions with confidence and probabilities | `[typesafe]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/typesafe/example.py) |
+
+## TypeSafe AI / Jev
+
+TypeSafe's System One API evaluates typed questions against unstructured state and
+returns decisions instead of generated prose. TraceVerde wraps both
+`TypeSafeClient.system_one` and `AsyncTypeSafeClient.system_one` natively, recording
+the model, typed answers, confidence/probability payload, token usage, and Jev's
+published input pricing. Content capture remains opt-in, like the other
+instrumentors.
+
+```bash
+pip install 'genai-otel-instrument[typesafe]'
+export TYPESAFE_API_KEY="your-key"
+export GENAI_ENABLED_INSTRUMENTORS="typesafe"
+export GENAI_ENABLE_CONTENT_CAPTURE=true
+export GENAI_CONTENT_MAX_LENGTH=0
+python examples/typesafe/example.py
+```
+
+The example sends one state with a `Choice`, `Noul`, and `Score` question so you
+can inspect the complete structured response in the terminal and the resulting
+`typesafe.system_one` span in Jaeger or your OTLP backend.
 
 Replicate hosts arbitrary community models behind one generic `run()` call,
 with no fixed input/output schema and no dedicated embeddings endpoint to

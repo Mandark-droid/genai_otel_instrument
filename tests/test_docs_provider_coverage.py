@@ -74,6 +74,7 @@ PROVIDER_DISPLAY_NAMES = {
     "sarvamai": "Sarvam AI",
     "sentence_transformers": "Sentence Transformers",
     "together": "Together AI",
+    "typesafe": "TypeSafe AI / Jev",
     "transformers": "HuggingFace Transformers",
     "vertexai": "Vertex AI",
 }

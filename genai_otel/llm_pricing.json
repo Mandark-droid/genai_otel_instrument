@@ -818,6 +818,11 @@
     "playht/PlayDialog": 0.05
   },
   "chat": {
+    "jev": {
+      "promptPrice": 0.000042,
+      "completionPrice": 0.0,
+      "note": "TypeSafe Jev input $0.042/1M tokens; output tokens are free. Source: https://typesafe.ai/blog/introducing-system-one-models-and-jev"
+    },
     "@cf/aisingapore/gemma-sea-lion-v4-27b-it": {
       "promptPrice": 0.000351,
       "completionPrice": 0.000555,

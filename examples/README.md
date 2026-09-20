@@ -36,6 +36,7 @@ That's it! No code changes needed in your application logic.
 - **[replicate/](replicate/)** - Replicate API
 - **[togetherai/](togetherai/)** - Together AI
 - **[vertexai/](vertexai/)** - Google Cloud Vertex AI
+- **[typesafe/](typesafe/)** - TypeSafe AI / Jev structured decisions
 
 ### Frameworks
 
@@ -68,6 +69,9 @@ That's it! No code changes needed in your application logic.
 ```bash
 # Install with specific provider
 pip install genai-otel-instrument[openai]
+
+# TypeSafe AI / Jev (Python 3.10+)
+pip install 'genai-otel-instrument[typesafe]'
 
 # Or install with all providers
 pip install genai-otel-instrument[all]

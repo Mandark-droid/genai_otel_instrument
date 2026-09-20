@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Native TypeSafe AI / Jev instrumentation.** Added a from-scratch wrapper for
+  `TypeSafeClient.system_one` and `AsyncTypeSafeClient.system_one`, with typed
+  answer payloads, confidence/probability data, token usage, Jev input pricing,
+  optional content capture, and a runnable manual example. Install it with the
+  new `typesafe` extra on Python 3.10+.
+
 - **`scripts/verify_release.py`, an executable post-release check.** Installs a
   published version into a clean virtualenv and asserts what it actually
   contains, with `--require-model` / `--require-note` expectations, exiting

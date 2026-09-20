@@ -48,6 +48,7 @@ from .sambanova_instrumentor import SambaNovaInstrumentor
 from .sarvam_instrumentor import SarvamAIInstrumentor
 from .sentence_transformers_instrumentor import SentenceTransformersInstrumentor
 from .togetherai_instrumentor import TogetherAIInstrumentor
+from .typesafe_instrumentor import TypeSafeInstrumentor
 from .vertexai_instrumentor import VertexAIInstrumentor
 from .vllm_instrumentor import VLLMInstrumentor
 
@@ -92,4 +93,5 @@ __all__ = [
     "ElevenLabsInstrumentor",
     "SarvamAIInstrumentor",
     "SentenceTransformersInstrumentor",
+    "TypeSafeInstrumentor",
 ]

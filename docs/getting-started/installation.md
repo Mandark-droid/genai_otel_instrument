@@ -45,6 +45,7 @@ pip install genai-otel-instrument[llamacpp]    # local GGUF models via llama-cpp
 pip install genai-otel-instrument[together]
 pip install genai-otel-instrument[cometapi]
 pip install genai-otel-instrument[elevenlabs]   # text-to-speech + Scribe speech-to-text
+pip install 'genai-otel-instrument[typesafe]'    # TypeSafe AI / Jev (Python 3.10+)
 
 # All providers
 pip install genai-otel-instrument[all-providers]
@@ -67,6 +68,15 @@ pip install genai-otel-instrument[openinference]
 ```
 
 Includes LiteLLM, Smolagents, and MCP instrumentation via OpenInference.
+
+### TypeSafe AI / Jev (Python 3.10+)
+
+```bash
+pip install 'genai-otel-instrument[typesafe]'
+```
+
+This installs the official `typesafe-sdk`; TraceVerde provides the native
+instrumentation in this package and does not wrap Arize's implementation.
 
 ### GPU Metrics
 

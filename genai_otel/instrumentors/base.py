@@ -1903,6 +1903,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         response = result.choices[0].text
             except Exception:
                 pass
+            if response is None:
+                # Structured decision SDKs (for example TypeSafe) do not expose
+                # chat-style choices. Their instrumentors may preserve a JSON
+                # response on the span when content capture is enabled.
+                response = attrs.get("gen_ai.response") or attrs.get("output.value")
 
             # Run PII detection
             if BaseInstrumentor._pii_detector and prompt:
