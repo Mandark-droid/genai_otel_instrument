@@ -3,8 +3,9 @@
 Prerequisites:
     pip install -e ".[typesafe]"
     set TYPESAFE_API_KEY=your-key       # PowerShell: $env:TYPESAFE_API_KEY=...
-    docker run -d --name jaeger -e COLLECTOR_OTLP_ENABLED=true -p 4318:4318 \
-        -p 16686:16686 jaegertracing/all-in-one:latest
+    set OTEL_EXPORTER_OTLP_ENDPOINT=https://otel.example.internal:4318
+    set OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+    set OTEL_EXPORTER_OTLP_CERTIFICATE=C:\\path\\to\\platform-ca.crt
 """
 
 import os
@@ -16,11 +17,25 @@ def main() -> None:
     if not os.getenv("TYPESAFE_API_KEY"):
         raise SystemExit("Set TYPESAFE_API_KEY before running this example.")
 
+    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if not endpoint:
+        raise SystemExit("Set OTEL_EXPORTER_OTLP_ENDPOINT to the platform OTLP HTTPS endpoint.")
+    if not endpoint.lower().startswith("https://"):
+        raise SystemExit("OTEL_EXPORTER_OTLP_ENDPOINT must use https:// for the platform.")
+
+    ca_certificate = os.getenv("OTEL_EXPORTER_OTLP_CERTIFICATE")
+    if not ca_certificate:
+        raise SystemExit("Set OTEL_EXPORTER_OTLP_CERTIFICATE to the platform CA certificate.")
+    if not os.path.isfile(ca_certificate):
+        raise SystemExit(f"CA certificate does not exist: {ca_certificate}")
+
+    os.environ.setdefault("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+
     # Enable TraceVerde before importing the optional SDK. Content capture is
     # deliberately opt-in; enable it in the shell when inspecting the payload.
     genai_otel.instrument(
         service_name=os.getenv("OTEL_SERVICE_NAME", "typesafe-manual-example"),
-        endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
+        endpoint=endpoint,
         enabled_instrumentors=["typesafe"],
         enable_gpu_metrics=False,
     )
@@ -68,7 +83,7 @@ def main() -> None:
         print(f"  {key}: {answer}")
     print("usage:", getattr(response, "usage", None))
     genai_otel.flush_telemetry()
-    print("Trace exported as typesafe.system_one; inspect Jaeger at http://localhost:16686")
+    print("Trace exported as typesafe.system_one to the configured OTLP backend.")
 
 
 if __name__ == "__main__":

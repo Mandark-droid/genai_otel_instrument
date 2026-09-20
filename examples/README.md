@@ -87,6 +87,18 @@ cp .env.example .env
 # Edit .env with your API keys
 ```
 
+For the platform OTLP endpoint, use HTTPS and provide the CA certificate that
+signed the endpoint:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://otel.example.internal:4318"
+export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
+export OTEL_EXPORTER_OTLP_CERTIFICATE="/absolute/path/to/platform-ca.crt"
+```
+
+On Windows PowerShell, use `$env:NAME = "value"` assignments. The certificate
+path must be readable by the Python process.
+
 ### 3. Start an OTLP collector
 
 **Using Jaeger (recommended for getting started):**

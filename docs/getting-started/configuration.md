@@ -11,12 +11,18 @@ A complete `sample.env` template is included in the repository.
 | `OTEL_SERVICE_NAME` | `genai-app` | Service name for traces and metrics |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` | OTLP endpoint URL. Leave empty for console output |
 | `OTEL_EXPORTER_OTLP_HEADERS` | | Headers in `key1=val1,key2=val2` format |
+| `OTEL_EXPORTER_OTLP_CERTIFICATE` | | CA certificate file used to verify an HTTPS OTLP endpoint |
 | `OTEL_EXPORTER_OTLP_TIMEOUT` | `60` | OTLP exporter timeout in seconds |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` | Protocol: `http/protobuf` (default) or `grpc` |
 | `OTEL_SERVICE_INSTANCE_ID` | | Instance identifier (container ID, pod name) |
 | `OTEL_ENVIRONMENT` | `dev` | Deployment environment (dev, staging, production) |
 | `GENAI_OTEL_LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
 | `GENAI_FAIL_ON_ERROR` | `false` | Raise exceptions on instrumentation errors |
+
+For a TLS-enabled platform deployment, set `OTEL_EXPORTER_OTLP_ENDPOINT` to the
+HTTPS OTLP base URL and set `OTEL_EXPORTER_OTLP_CERTIFICATE` to the CA
+certificate file that signed the endpoint. The exporter appends the signal path
+(`v1/traces` or `v1/metrics`) to the base URL.
 
 ## Feature Toggles
 

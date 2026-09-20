@@ -49,6 +49,9 @@ instrumentors.
 ```bash
 pip install 'genai-otel-instrument[typesafe]'
 export TYPESAFE_API_KEY="your-key"
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://otel.example.internal:4318"
+export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
+export OTEL_EXPORTER_OTLP_CERTIFICATE="/absolute/path/to/platform-ca.crt"
 export GENAI_ENABLED_INSTRUMENTORS="typesafe"
 export GENAI_ENABLE_CONTENT_CAPTURE=true
 export GENAI_CONTENT_MAX_LENGTH=0
@@ -57,7 +60,9 @@ python examples/typesafe/example.py
 
 The example sends one state with a `Choice`, `Noul`, and `Score` question so you
 can inspect the complete structured response in the terminal and the resulting
-`typesafe.system_one` span in Jaeger or your OTLP backend.
+`typesafe.system_one` span in the platform backend. The OTLP endpoint must use
+HTTPS, and `OTEL_EXPORTER_OTLP_CERTIFICATE` must point to the CA certificate
+that signed it.
 
 Replicate hosts arbitrary community models behind one generic `run()` call,
 with no fixed input/output schema and no dedicated embeddings endpoint to
