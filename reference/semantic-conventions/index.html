@@ -1644,32 +1644,135 @@
 <td>Total token count</td>
 </tr>
 <tr>
-<td><code>gen_ai.usage.token_count_estimated</code></td>
-<td>bool</td>
-<td><code>true</code> when prompt/completion token counts came from a fallback estimate (e.g. multimodal Ollama responses lacking <code>prompt_eval_count</code>, or HuggingFace vision/audio pipelines that don't surface usage). Absent on spans whose tokens come from the provider response.</td>
-</tr>
-<tr>
-<td><code>gen_ai.usage.image_count</code></td>
+<td><code>gen_ai.usage.cache_read.input_tokens</code></td>
 <td>int</td>
-<td>Number of input images counted by the instrumentor for multimodal calls (vision pipelines).</td>
+<td>Prompt-cache hits (Anthropic <code>cache_read_input_tokens</code>, OpenAI <code>prompt_tokens_details.cached_tokens</code>). Included in <code>gen_ai.usage.input_tokens</code>.</td>
 </tr>
 <tr>
-<td><code>gen_ai.usage.audio_seconds</code></td>
-<td>float</td>
-<td>Total input audio duration in seconds for ASR / audio pipelines.</td>
+<td><code>gen_ai.usage.cache_write.input_tokens</code></td>
+<td>int</td>
+<td>Prompt-cache writes (Anthropic <code>cache_creation_input_tokens</code>). Current spelling: <a href="https://github.com/open-telemetry/semantic-conventions-genai/pull/440">semantic-conventions-genai#440</a> renamed <code>cache_creation</code> to <code>cache_write</code>.</td>
 </tr>
 <tr>
-<td><code>gen_ai.usage.audio_duration_seconds</code></td>
-<td>float</td>
-<td>Canonical total input audio duration in seconds for speech-to-text and audio pipelines.</td>
+<td><code>gen_ai.usage.cache_creation.input_tokens</code></td>
+<td>int</td>
+<td>Superseded spelling of the row above. Emitted alongside it only under <code>OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai/dup</code> (the default).</td>
 </tr>
 <tr>
-<td><code>gen_ai.operation.name</code></td>
+<td><code>gen_ai.usage.reasoning.output_tokens</code></td>
+<td>int</td>
+<td>Reasoning tokens (OpenAI o1/o3-style <code>completion_tokens_details.reasoning_tokens</code>). Included in <code>gen_ai.usage.output_tokens</code>.</td>
+</tr>
+<tr>
+<td><code>server.address</code></td>
 <td>string</td>
-<td>Operation being performed (<code>chat</code>, <code>embeddings</code>)</td>
+<td>Host of the model endpoint, derived from the SDK client's base URL. Omitted when the SDK exposes no base URL -- absent means "endpoint unknown", never a guessed vendor host.</td>
+</tr>
+<tr>
+<td><code>server.port</code></td>
+<td>int</td>
+<td>Port of the model endpoint. Explicit port when the base URL carries one, otherwise the scheme default.</td>
+</tr>
+<tr>
+<td><code>gen_ai.usage.{text,image,audio}.input_tokens</code></td>
+<td>int</td>
+<td>Per-modality input tokens (<a href="https://github.com/open-telemetry/semantic-conventions-genai/pull/440">semantic-conventions-genai#440</a>). A <strong>subset</strong> of <code>gen_ai.usage.input_tokens</code> -- do not sum alongside it. Absent when the provider reports no breakdown.</td>
+</tr>
+<tr>
+<td><code>gen_ai.usage.{text,image,audio}.output_tokens</code></td>
+<td>int</td>
+<td>Per-modality output tokens; subset of <code>gen_ai.usage.output_tokens</code>.</td>
+</tr>
+<tr>
+<td><code>gen_ai.usage.{text,image,audio}.cache_read.input_tokens</code></td>
+<td>int</td>
+<td>Per-modality prompt-cache hits.</td>
+</tr>
+<tr>
+<td><code>gen_ai.response.finish_reasons</code></td>
+<td>string[]</td>
+<td>Finish reasons as an array (registry spelling).</td>
+</tr>
+<tr>
+<td><code>gen_ai.response.finish_reason</code></td>
+<td>string</td>
+<td>Superseded singular form, emitted alongside the array under <code>gen_ai/dup</code>.</td>
+</tr>
+<tr>
+<td><code>gen_ai.embeddings.dimension.count</code></td>
+<td>int</td>
+<td>Requested embedding dimensions (registry spelling; supersedes <code>gen_ai.request.dimensions</code>).</td>
+</tr>
+<tr>
+<td><code>gen_ai.request.encoding_formats</code></td>
+<td>string[]</td>
+<td>Requested encoding formats as an array (registry spelling; supersedes the singular <code>gen_ai.request.encoding_format</code>).</td>
+</tr>
+<tr>
+<td><code>gen_ai.request.seed</code></td>
+<td>int</td>
+<td>Sampling seed, when the caller passed one.</td>
+</tr>
+<tr>
+<td><code>gen_ai.request.stream</code></td>
+<td>bool</td>
+<td>Whether the caller requested streaming.</td>
+</tr>
+<tr>
+<td><code>gen_ai.request.top_k</code></td>
+<td>int</td>
+<td>Top-k sampling parameter, when passed.</td>
+</tr>
+<tr>
+<td><code>gen_ai.request.choice.count</code></td>
+<td>int</td>
+<td>Number of completions requested (<code>n</code>, or Google's <code>candidate_count</code>).</td>
+</tr>
+<tr>
+<td><code>gen_ai.output.type</code></td>
+<td>string</td>
+<td><code>json</code> or <code>text</code>, derived from the caller's <code>response_format</code>.</td>
 </tr>
 </tbody>
 </table>
+<p>| <code>gen_ai.agent.token_budget</code> | int | Cumulative token cap configured for the invocation (<a href="https://github.com/open-telemetry/semantic-conventions-genai/issues/425">semantic-conventions-genai#425</a>). |
+| <code>gen_ai.agent.token_budget.consumed</code> | int | Tokens actually consumed across the invocation's inference calls. |
+| <code>gen_ai.agent.iteration_budget</code> | int | Configured iteration / turn / recursion limit. |
+| <code>gen_ai.agent.iteration_budget.consumed</code> | int | Inference calls completed during the invocation. |
+| <code>gen_ai.latency.time_in_queue</code> | float | Scheduler queue wait, seconds (self-hosted engines). |
+| <code>gen_ai.latency.time_to_first_token</code> | float | TTFT, seconds. |
+| <code>gen_ai.latency.e2e</code> | float | End-to-end request latency, seconds. |
+| <code>gen_ai.latency.time_in_model_prefill</code> | float | Prefill phase duration, seconds. |
+| <code>gen_ai.latency.time_in_model_decode</code> | float | Decode phase duration, seconds. |
+| <code>gen_ai.latency.time_in_model_inference</code> | float | Total on-engine inference duration, seconds. |
+| <code>gen_ai.request.id</code> | string | Engine-assigned request id (vLLM / SGLang). |</p>
+<div class="admonition note">
+<p class="admonition-title">Engine latency keys are the de-facto vocabulary, not ours</p>
+<p><code>gen_ai.latency.*</code> is emitted verbatim as vLLM and SGLang define it, and as
+<a href="https://github.com/open-telemetry/semantic-conventions-genai/issues/408">semantic-conventions-genai#408</a>
+proposes standardising. Running vLLM's own OTLP tracing alongside this
+library therefore yields one vocabulary rather than two to join. These keys
+are not yet in the registry.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Agent budget consumption and threads</p>
+<p>Consumption is accumulated in a context-local frame, so it survives head
+sampling that drops the child inference spans. A call made on a thread that
+does not carry the context (a bare <code>threading.Thread</code>) is not counted --
+consistent with tracing itself, which would also lose the parent/child span
+relationship for such a call.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Request parameters are recorded only when the caller passes them</p>
+<p>An absent <code>gen_ai.request.*</code> attribute means the application did not set that
+parameter. The library does not materialise provider defaults, which would
+report a <code>top_k</code> or <code>seed</code> the application never chose.</p>
+</div>
+<p>| <code>gen_ai.usage.token_count_estimated</code> | bool | <code>true</code> when prompt/completion token counts came from a fallback estimate (e.g. multimodal Ollama responses lacking <code>prompt_eval_count</code>, or HuggingFace vision/audio pipelines that don't surface usage). Absent on spans whose tokens come from the provider response. |
+| <code>gen_ai.usage.image_count</code> | int | Number of input images counted by the instrumentor for multimodal calls (vision pipelines). |
+| <code>gen_ai.usage.audio_seconds</code> | float | Total input audio duration in seconds for ASR / audio pipelines. |
+| <code>gen_ai.usage.audio_duration_seconds</code> | float | Canonical total input audio duration in seconds for speech-to-text and audio pipelines. |
+| <code>gen_ai.operation.name</code> | string | Operation being performed (<code>chat</code>, <code>embeddings</code>) |</p>
 <div class="admonition note">
 <p class="admonition-title">Cost lives under <code>gen_ai.usage.cost.*</code></p>
 <p>Earlier revisions of this page listed <code>gen_ai.cost.amount</code> as the cost
@@ -1906,6 +2009,10 @@ down every average it enters.</p>
 </tbody>
 </table>
 <h3 id="resource-attributes">Resource Attributes<a class="headerlink" href="#resource-attributes" title="Permanent link">&para;</a></h3>
+<p>Every resource attribute is a name from the OpenTelemetry registry. They
+identify <em>where</em> a span came from, which is what makes it possible to separate
+traffic per host and per instance when several copies of an application run at
+once.</p>
 <table>
 <thead>
 <tr>
@@ -1920,19 +2027,104 @@ down every average it enters.</p>
 </tr>
 <tr>
 <td><code>service.instance.id</code></td>
-<td>Instance identifier</td>
+<td>Instance identifier. Taken from <code>OTEL_SERVICE_INSTANCE_ID</code> when set, otherwise generated - see <a href="../../getting-started/configuration/#host-and-instance-identity">Host and Instance Identity</a></td>
 </tr>
 <tr>
-<td><code>deployment.environment</code></td>
+<td><code>deployment.environment.name</code></td>
 <td>Environment name</td>
 </tr>
 <tr>
+<td><code>telemetry.distro.name</code></td>
+<td><code>"genai-otel-instrument"</code></td>
+</tr>
+<tr>
+<td><code>telemetry.distro.version</code></td>
+<td>Package version</td>
+</tr>
+<tr>
+<td><code>host.name</code></td>
+<td>Hostname of the machine</td>
+</tr>
+<tr>
+<td><code>host.arch</code></td>
+<td>CPU architecture</td>
+</tr>
+<tr>
+<td><code>host.ip</code></td>
+<td>Non-loopback IP addresses of the host (array)</td>
+</tr>
+<tr>
+<td><code>os.type</code> / <code>os.version</code></td>
+<td>Operating system</td>
+</tr>
+<tr>
+<td><code>process.pid</code> / <code>process.parent_pid</code></td>
+<td>Process identifiers</td>
+</tr>
+<tr>
+<td><code>process.command</code></td>
+<td>Program that was started</td>
+</tr>
+<tr>
+<td><code>process.command_line</code></td>
+<td>Full startup command line</td>
+</tr>
+<tr>
+<td><code>process.command_args</code></td>
+<td>Startup arguments (array)</td>
+</tr>
+<tr>
+<td><code>process.executable.name</code> / <code>process.executable.path</code></td>
+<td>Interpreter location</td>
+</tr>
+<tr>
+<td><code>process.owner</code></td>
+<td>User the process runs as (requires <code>psutil</code>)</td>
+</tr>
+<tr>
+<td><code>process.runtime.name</code> / <code>.version</code> / <code>.description</code></td>
+<td>Python runtime</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>host.*</code>, <code>os.*</code> and <code>process.*</code> groups come from the OpenTelemetry SDK's
+own detectors, which this library enables by default via
+<code>OTEL_EXPERIMENTAL_RESOURCE_DETECTORS</code>. <code>host.ip</code> has no upstream detector and
+is resolved by the library.</p>
+<div class="admonition warning">
+<p class="admonition-title">Credential values in <code>process.command_args</code> are redacted</p>
+<p>A value following a flag whose name looks like a credential
+(<code>--password</code>, <code>--api-key</code>, <code>--token</code>, <code>--client-secret</code>, ...) is replaced
+with <code>***REDACTED***</code>, in both the <code>--flag value</code> and <code>--flag=value</code> forms,
+as are <code>name=value</code> pairs and <code>scheme://user:password@host</code> URLs. This has
+to happen in the SDK: <code>process.command_args</code> is an array, so a flag and its
+value become separate elements and no downstream <code>name=value</code> rule can
+reconnect them. Redaction is pattern-based and cannot catch a credential
+passed under an unrecognised flag name - see
+<a href="../../getting-started/configuration/#host-and-instance-identity">Host and Instance Identity</a>
+for how to drop the process detector entirely.</p>
+</div>
+<p><strong>Superseded spellings</strong>, still emitted alongside the current names for the same
+reason the GenAI token attributes are dual-emitted, and removed at 2.0:</p>
+<table>
+<thead>
+<tr>
+<th>Superseded</th>
+<th>Current</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>environment</code></td>
+<td><code>deployment.environment.name</code></td>
+</tr>
+<tr>
 <td><code>telemetry.auto.name</code></td>
-<td>"genai-otel-instrument"</td>
+<td><code>telemetry.distro.name</code></td>
 </tr>
 <tr>
 <td><code>telemetry.auto.version</code></td>
-<td>Package version</td>
+<td><code>telemetry.distro.version</code></td>
 </tr>
 </tbody>
 </table>

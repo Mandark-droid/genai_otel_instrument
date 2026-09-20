@@ -1451,7 +1451,7 @@ pluggable offload pipeline so binary content lives in your object store, not in 
 (The upstream proposal is filed with <code>open-telemetry/semantic-conventions</code> as
 <a href="https://github.com/open-telemetry/semantic-conventions/issues/3672">issue #3672</a>.)</p>
 <h2 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[multimodal,openai,anthropic,google]&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[multimodal,openai,anthropic,google]'</span>
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_CAPTURE_MODE</span><span class="o">=</span>full
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE</span><span class="o">=</span>minio
@@ -1534,7 +1534,7 @@ recorded with <code>gen_ai.media.stripped_reason="size_exceeded"</code> and the 
 </code></pre></div>
 <p>Or write your own:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">my_redactor</span><span class="p">(</span><span class="n">modality</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mime_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">if</span> <span class="n">modality</span> <span class="o">==</span> <span class="s2">&quot;image&quot;</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">if</span> <span class="n">modality</span> <span class="o">==</span> <span class="s2">"image"</span><span class="p">:</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="k">return</span> <span class="n">strip_pii_from_image</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="k">return</span> <span class="n">data</span>
 </code></pre></div>

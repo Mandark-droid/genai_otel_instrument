@@ -619,6 +619,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#host-and-instance-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Host and Instance Identity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Host and Instance Identity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#choosing-how-serviceinstanceid-is-generated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing how service.instance.id is generated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#telling-the-three-apart-from-a-span" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telling the three apart from a span
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#semantic-conventions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1735,6 +1774,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#host-and-instance-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Host and Instance Identity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Host and Instance Identity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#choosing-how-serviceinstanceid-is-generated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing how service.instance.id is generated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#telling-the-three-apart-from-a-span" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telling the three apart from a span
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#semantic-conventions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1954,6 +2032,11 @@
 <td>Headers in <code>key1=val1,key2=val2</code> format</td>
 </tr>
 <tr>
+<td><code>OTEL_EXPORTER_OTLP_CERTIFICATE</code></td>
+<td></td>
+<td>CA certificate file used to verify an HTTPS OTLP endpoint</td>
+</tr>
+<tr>
 <td><code>OTEL_EXPORTER_OTLP_TIMEOUT</code></td>
 <td><code>60</code></td>
 <td>OTLP exporter timeout in seconds</td>
@@ -1985,6 +2068,10 @@
 </tr>
 </tbody>
 </table>
+<p>For a TLS-enabled platform deployment, set <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> to the
+HTTPS OTLP base URL and set <code>OTEL_EXPORTER_OTLP_CERTIFICATE</code> to the CA
+certificate file that signed the endpoint. The exporter appends the signal path
+(<code>v1/traces</code> or <code>v1/metrics</code>) to the base URL.</p>
 <h2 id="feature-toggles">Feature Toggles<a class="headerlink" href="#feature-toggles" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2044,7 +2131,7 @@
 </tr>
 </tbody>
 </table>
-<p>Default instrumentors: <code>openai</code>, <code>openrouter</code>, <code>cometapi</code>, <code>anthropic</code>, <code>google.generativeai</code>, <code>boto3</code>, <code>azure.ai.openai</code>, <code>cohere</code>, <code>mistralai</code>, <code>together</code>, <code>groq</code>, <code>ollama</code>, <code>vertexai</code>, <code>replicate</code>, <code>anyscale</code>, <code>sambanova</code>, <code>sarvamai</code>, <code>elevenlabs</code>, <code>langchain</code>, <code>langgraph</code>, <code>llama_index</code>, <code>transformers</code>, <code>autogen</code>, <code>autogen_agentchat</code>, <code>google_adk</code>, <code>pydantic_ai</code>, <code>openai_agents</code>, <code>bedrock_agents</code>, <code>crewai</code>, <code>smolagents</code> (3.10+), <code>litellm</code> (3.10+)</p>
+<p>Default instrumentors: <code>openai</code>, <code>openrouter</code>, <code>cometapi</code>, <code>anthropic</code>, <code>google.generativeai</code>, <code>boto3</code>, <code>azure.ai.openai</code>, <code>cohere</code>, <code>mistralai</code>, <code>together</code>, <code>groq</code>, <code>ollama</code>, <code>vllm</code>, <code>llamacpp</code>, <code>vertexai</code>, <code>replicate</code>, <code>anyscale</code>, <code>sambanova</code>, <code>sarvamai</code>, <code>elevenlabs</code>, <code>langchain</code>, <code>langgraph</code>, <code>llama_index</code>, <code>transformers</code>, <code>autogen</code>, <code>autogen_agentchat</code>, <code>google_adk</code>, <code>pydantic_ai</code>, <code>openai_agents</code>, <code>bedrock_agents</code>, <code>crewai</code>, <code>smolagents</code> (3.10+), <code>litellm</code> (3.10+), <code>typesafe</code> (3.10+)</p>
 <p><strong>Opt-in instrumentors</strong> (not enabled by default; add them to <code>GENAI_ENABLED_INSTRUMENTORS</code> explicitly):</p>
 <table>
 <thead>
@@ -2066,7 +2153,7 @@ provider span with no extra configuration. Every other provider (Anthropic,
 Bedrock, Gemini, Cohere, HuggingFace, ...) is implemented with litellm's own
 HTTP client, which no provider instrumentor sees. Enabling <code>litellm_latency</code>
 wraps litellm's own entry points so those routes report TTFT/TPOT too:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span><span class="s2">&quot;openai,anthropic,litellm,litellm_latency&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span><span class="s2">"openai,anthropic,litellm,litellm_latency"</span>
 </code></pre></div>
 <p>The span it creates is the parent of any inner provider span. When an inner span
 already measured the request, this one records no tokens, cost or latency of its
@@ -2117,7 +2204,7 @@ in token and cost accounting for every litellm call.</p>
 </tr>
 </tbody>
 </table>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{&quot;chat&quot;:{&quot;my-model&quot;:{&quot;promptPrice&quot;:0.001,&quot;completionPrice&quot;:0.002}}}&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">'{"chat":{"my-model":{"promptPrice":0.001,"completionPrice":0.002}}}'</span>
 </code></pre></div>
 <h2 id="gpu-metrics">GPU Metrics<a class="headerlink" href="#gpu-metrics" title="Permanent link">&para;</a></h2>
 <table>
@@ -2277,6 +2364,11 @@ in token and cost accounting for every litellm call.</p>
 </thead>
 <tbody>
 <tr>
+<td><code>OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT</code></td>
+<td>unset</td>
+<td>Cross-library content-capture switch. Takes precedence over <code>GENAI_ENABLE_CONTENT_CAPTURE</code></td>
+</tr>
+<tr>
 <td><code>GENAI_ENABLE_CONTENT_CAPTURE</code></td>
 <td><code>false</code></td>
 <td>Capture prompt/response text in spans</td>
@@ -2286,8 +2378,48 @@ in token and cost accounting for every litellm call.</p>
 <td><code>200</code></td>
 <td>Max characters to capture (0 = unlimited)</td>
 </tr>
+<tr>
+<td><code>GENAI_CAPTURE_EMBEDDING_VECTORS</code></td>
+<td><code>false</code></td>
+<td>Capture the raw embedding vector on embeddings spans</td>
+</tr>
 </tbody>
 </table>
+<p><code>OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT</code> is the spelling shared with
+other OpenTelemetry GenAI instrumentations, so an application migrating from one
+of them keeps working without relearning this switch. It accepts (case-insensitively):</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Effect here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NO_CONTENT</code></td>
+<td>No capture</td>
+</tr>
+<tr>
+<td><code>SPAN_ONLY</code></td>
+<td>Capture</td>
+</tr>
+<tr>
+<td><code>SPAN_AND_EVENT</code></td>
+<td>Capture</td>
+</tr>
+<tr>
+<td><code>EVENT_ONLY</code></td>
+<td><strong>No capture</strong></td>
+</tr>
+</tbody>
+</table>
+<p><code>EVENT_ONLY</code> maps to no capture because this library has a single boolean capture
+switch rather than separate span and event sinks -- writing content onto spans
+when the operator asked for events only would put it somewhere they did not ask
+for. An unrecognised value logs a warning and captures nothing, rather than
+falling through to <code>GENAI_ENABLE_CONTENT_CAPTURE</code>: a typo on a privacy switch
+should fail closed.</p>
 <div class="admonition warning">
 <p class="admonition-title">Privacy</p>
 <p>Content capture records full prompts and responses. This may expose sensitive data. Ensure proper data handling and access controls before enabling in production.</p>
@@ -2337,6 +2469,118 @@ instead and leave the handler off:</p>
 <p>SIGKILL, out-of-memory kills and segfaults cannot be handled from inside the
 process. To bound the loss window there, shorten the batch delay with the
 standard <code>OTEL_BSP_SCHEDULE_DELAY</code>, trading export frequency for exposure.</p>
+<h2 id="host-and-instance-identity">Host and Instance Identity<a class="headerlink" href="#host-and-instance-identity" title="Permanent link">&para;</a></h2>
+<p>Spans carry host, OS, process and instance attributes so that traffic can be
+attributed to a machine and to one instance among several running on it. All of
+them are OpenTelemetry registry names, and all are controlled by standard
+<code>OTEL_*</code> variables - see
+<a href="../../reference/semantic-conventions/#resource-attributes">Resource Attributes</a>
+for the full list.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OTEL_EXPERIMENTAL_RESOURCE_DETECTORS</code></td>
+<td><code>host,os,process</code></td>
+<td>SDK detectors to run. Set to <code>host,os</code> to drop process attributes, or <code>otel</code> for none</td>
+</tr>
+<tr>
+<td><code>OTEL_SERVICE_INSTANCE_ID</code></td>
+<td></td>
+<td>Instance identifier. <strong>Recommended</strong> - set it to something your orchestrator already guarantees unique and stable, such as a pod name</td>
+</tr>
+<tr>
+<td><code>OTEL_RESOURCE_ATTRIBUTES</code></td>
+<td></td>
+<td>Any additional resource attributes, <code>key=value</code> comma-separated. Always wins over what the library detects</td>
+</tr>
+<tr>
+<td><code>GENAI_SERVICE_INSTANCE_ID_MODE</code></td>
+<td><code>random</code></td>
+<td>How <code>service.instance.id</code> is generated when not set explicitly. <code>random</code> or <code>derived</code></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Defaults differ under the hardened profiles</p>
+<p><code>GENAI_PROFILE=strict|bfsi|bank</code> defaults the detector list to <code>host,os</code>,
+leaving out <code>process</code> so that no command line reaches the backend. Host and
+instance identity are unaffected. Setting
+<code>OTEL_EXPERIMENTAL_RESOURCE_DETECTORS</code> explicitly overrides this.</p>
+</div>
+<h3 id="choosing-how-serviceinstanceid-is-generated">Choosing how <code>service.instance.id</code> is generated<a class="headerlink" href="#choosing-how-serviceinstanceid-is-generated" title="Permanent link">&para;</a></h3>
+<p><code>service.instance.id</code> is what separates two instances of the same service on
+the same host. If <code>OTEL_SERVICE_INSTANCE_ID</code> (or <code>OTEL_RESOURCE_ATTRIBUTES</code>)
+supplies one, it is used unchanged. Otherwise:</p>
+<ul>
+<li><strong><code>random</code></strong> (default) - a version 4 UUID, stable for the life of the
+  process. This is OpenTelemetry's primary recommendation and is the only
+  option guaranteed to distinguish instances that run at the same time. It
+  changes on every restart.</li>
+<li>
+<p><strong><code>derived</code></strong> - a version 5 UUID over the host name, the service name and the
+  normalised startup arguments, using the namespace the specification
+  designates for derived instance IDs. The same configured instance keeps its
+  identity across restarts, which matters for any consumer that builds
+  per-instance baselines: a key that changes on restart never accumulates
+  enough history for one instance.</p>
+<p>Its limitation is the mirror image: instances that differ in no argument -
+several identical workers started on one host - collapse onto a single ID.
+Prefer <code>OTEL_SERVICE_INSTANCE_ID</code> where the deployment can supply a real
+one, and reach for <code>derived</code> only where it cannot.</p>
+</li>
+</ul>
+<h3 id="telling-the-three-apart-from-a-span">Telling the three apart from a span<a class="headerlink" href="#telling-the-three-apart-from-a-span" title="Permanent link">&para;</a></h3>
+<p>A consumer reading <code>service.instance.id</code> needs to know whether it can be
+trusted as a grouping key, and the value says so on its own - no need to watch
+a service across restarts before classifying it:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Meaning</th>
+<th>Safe as a grouping key?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Not a UUID</td>
+<td>An operator assigned it</td>
+<td>Yes - stable and unique</td>
+</tr>
+<tr>
+<td>A <strong>version 5</strong> UUID</td>
+<td><code>derived</code> mode</td>
+<td>Yes, but it identifies an instance <em>configuration</em>, not a process: identically-started workers on one host share it</td>
+</tr>
+<tr>
+<td>A <strong>version 4</strong> UUID</td>
+<td>Nobody configured anything</td>
+<td>No - it changes on every restart. Group on <code>host.name</code> + <code>service.name</code> instead</td>
+</tr>
+</tbody>
+</table>
+<p>The version 4 case deliberately does not distinguish this library's <code>random</code>
+mode from the <code>service.instance.id</code> that <code>opentelemetry-sdk</code> 1.44 and later
+generate on their own. There is no difference worth acting on: both mean the
+instance was never configured, and both change on every restart.</p>
+<p>Note the direction the version 4 rule can be wrong in. An operator who sets
+<code>OTEL_SERVICE_INSTANCE_ID</code> to a version 4 UUID they generate and manage
+themselves has a perfectly stable ID that reads as unconfigured. The cost is
+lost per-instance granularity rather than a corrupted grouping, so it fails
+safe - but prefer a non-UUID instance ID (a pod name, a worker index) anyway,
+since it is also the only kind a human can read in an alert.</p>
+<div class="admonition warning">
+<p class="admonition-title"><code>process.pid</code> is not an instance identifier</p>
+<p>It separates concurrent processes within one lifetime, but a restart
+changes it. Use it as evidence, never as the key an entity is tracked by.</p>
+</div>
 <h2 id="semantic-conventions">Semantic Conventions<a class="headerlink" href="#semantic-conventions" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2700,9 +2944,9 @@ for per-call overhead numbers and the measurement tooling.</p>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
 <a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="c1"># Core</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;my-app&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">endpoint</span><span class="o">=</span><span class="s2">&quot;http://localhost:4318&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;openai&quot;</span><span class="p">,</span> <span class="s2">&quot;anthropic&quot;</span><span class="p">,</span> <span class="s2">&quot;crewai&quot;</span><span class="p">],</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">"my-app"</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">endpoint</span><span class="o">=</span><span class="s2">"http://localhost:4318"</span><span class="p">,</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">"openai"</span><span class="p">,</span> <span class="s2">"anthropic"</span><span class="p">,</span> <span class="s2">"crewai"</span><span class="p">],</span>
 <a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
 <a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="n">fail_on_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
@@ -2714,8 +2958,8 @@ for per-call overhead numbers and the measurement tooling.</p>
 <a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>
 <a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>    <span class="c1"># CO2 tracking</span>
 <a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>    <span class="n">enable_co2_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>    <span class="n">co2_country_iso_code</span><span class="o">=</span><span class="s2">&quot;USA&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>    <span class="n">co2_region</span><span class="o">=</span><span class="s2">&quot;california&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>    <span class="n">co2_country_iso_code</span><span class="o">=</span><span class="s2">"USA"</span><span class="p">,</span>
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>    <span class="n">co2_region</span><span class="o">=</span><span class="s2">"california"</span><span class="p">,</span>
 <a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>
 <a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>    <span class="c1"># GPU</span>
 <a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>    <span class="n">gpu_collection_interval</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
@@ -2723,7 +2967,7 @@ for per-call overhead numbers and the measurement tooling.</p>
 <a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>
 <a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>    <span class="c1"># Evaluation</span>
 <a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a>    <span class="n">enable_pii_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>    <span class="n">pii_mode</span><span class="o">=</span><span class="s2">&quot;redact&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>    <span class="n">pii_mode</span><span class="o">=</span><span class="s2">"redact"</span><span class="p">,</span>
 <a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>    <span class="n">pii_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
 <a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a>    <span class="n">pii_gdpr_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a>
@@ -2811,8 +3055,8 @@ for per-call overhead numbers and the measurement tooling.</p>
 <h2 id="session-and-user-tracking">Session and User Tracking<a class="headerlink" href="#session-and-user-tracking" title="Permanent link">&para;</a></h2>
 <p>For programmatic session/user tracking, provide extractor callables:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">session_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;session_id&quot;</span><span class="p">),</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">user_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">),</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">session_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"metadata"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"session_id"</span><span class="p">),</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">user_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"metadata"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"user_id"</span><span class="p">),</span>
 <a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="p">)</span>
 </code></pre></div>
 <p>CrewAI, LangGraph, and LangChain have built-in automatic session ID propagation. See the <a href="../../guides/multi-agent-frameworks/">Multi-Agent Frameworks guide</a> for details.</p>

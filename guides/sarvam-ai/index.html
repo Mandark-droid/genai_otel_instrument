@@ -1569,16 +1569,16 @@
 </code></pre></div>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span><span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;sarvam-app&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span><span class="n">service_name</span><span class="o">=</span><span class="s2">"sarvam-app"</span><span class="p">)</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sarvamai</span><span class="w"> </span><span class="kn">import</span> <span class="n">SarvamAI</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">SarvamAI</span><span class="p">(</span><span class="n">api_subscription_key</span><span class="o">=</span><span class="s2">&quot;your_key&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">SarvamAI</span><span class="p">(</span><span class="n">api_subscription_key</span><span class="o">=</span><span class="s2">"your_key"</span><span class="p">)</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Chat completion with sarvam-m</span>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;sarvam-m&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;What is AI?&quot;</span><span class="p">}],</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">"sarvam-m"</span><span class="p">,</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="s2">"What is AI?"</span><span class="p">}],</span>
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="p">)</span>
 <a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
 <a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Traces, tokens, and costs captured automatically</span>
@@ -1587,22 +1587,22 @@
 <h3 id="chat-sarvam-m">Chat (sarvam-m)<a class="headerlink" href="#chat-sarvam-m" title="Permanent link">&para;</a></h3>
 <p>Sarvam's multilingual chat model with support for Indian languages.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;sarvam-m&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">"sarvam-m"</span><span class="p">,</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;You are a helpful assistant who speaks Hindi.&quot;</span><span class="p">},</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Tell me about India&#39;s space program&quot;</span><span class="p">},</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="p">{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"system"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="s2">"You are a helpful assistant who speaks Hindi."</span><span class="p">},</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="p">{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="s2">"Tell me about India's space program"</span><span class="p">},</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="p">],</span>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">)</span>
 </code></pre></div>
 <h3 id="translation-mayura-v1">Translation (Mayura v1)<a class="headerlink" href="#translation-mayura-v1" title="Permanent link">&para;</a></h3>
 <p>Translation across 22+ Indian languages with speaker gender adaptation.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">translation</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Hello, how are you?&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">source_language_code</span><span class="o">=</span><span class="s2">&quot;en-IN&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">target_language_code</span><span class="o">=</span><span class="s2">&quot;hi-IN&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;mayura:v1&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;classic-formal&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">speaker_gender</span><span class="o">=</span><span class="s2">&quot;female&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="nb">input</span><span class="o">=</span><span class="s2">"Hello, how are you?"</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">source_language_code</span><span class="o">=</span><span class="s2">"en-IN"</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">target_language_code</span><span class="o">=</span><span class="s2">"hi-IN"</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">"mayura:v1"</span><span class="p">,</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">mode</span><span class="o">=</span><span class="s2">"classic-formal"</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">speaker_gender</span><span class="o">=</span><span class="s2">"female"</span><span class="p">,</span>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">)</span>
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">translation</span><span class="o">.</span><span class="n">translated_text</span><span class="p">)</span>
 </code></pre></div>
@@ -1618,10 +1618,10 @@
 <h3 id="text-to-speech-bulbul-v3">Text-to-Speech (Bulbul v3)<a class="headerlink" href="#text-to-speech-bulbul-v3" title="Permanent link">&para;</a></h3>
 <p>High-quality TTS with 48 speakers across 11 Indian languages.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">tts_response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">speech</span><span class="p">(</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Namaste, aap kaise hain?&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">target_language_code</span><span class="o">=</span><span class="s2">&quot;hi-IN&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;bulbul:v2&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">speaker</span><span class="o">=</span><span class="s2">&quot;meera&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="nb">input</span><span class="o">=</span><span class="s2">"Namaste, aap kaise hain?"</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">target_language_code</span><span class="o">=</span><span class="s2">"hi-IN"</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">"bulbul:v2"</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">speaker</span><span class="o">=</span><span class="s2">"meera"</span><span class="p">,</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">pace</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">pitch</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">loudness</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span>
@@ -1640,20 +1640,20 @@
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/bulbul_v3_tts_example.py">Bulbul v3 TTS example</a>.</p>
 <h3 id="speech-to-text-saarika">Speech-to-Text (Saarika)<a class="headerlink" href="#speech-to-text-saarika" title="Permanent link">&para;</a></h3>
 <p>Automatic speech recognition for Indian languages.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;audio.wav&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"audio.wav"</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">transcript</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">speech</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">,</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;saarika:v2&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="n">language_code</span><span class="o">=</span><span class="s2">&quot;hi-IN&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">"saarika:v2"</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="n">language_code</span><span class="o">=</span><span class="s2">"hi-IN"</span><span class="p">,</span>
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="p">)</span>
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">transcript</span><span class="o">.</span><span class="n">transcript</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="language-detection">Language Detection<a class="headerlink" href="#language-detection" title="Permanent link">&para;</a></h3>
 <p>Identify the language of input text.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">detection</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">detect_language</span><span class="p">(</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Namaste, kaise ho?&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="nb">input</span><span class="o">=</span><span class="s2">"Namaste, kaise ho?"</span><span class="p">,</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="p">)</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">detection</span><span class="o">.</span><span class="n">language_code</span><span class="p">)</span>  <span class="c1"># &quot;hi-IN&quot;</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">detection</span><span class="o">.</span><span class="n">language_code</span><span class="p">)</span>  <span class="c1"># "hi-IN"</span>
 </code></pre></div>
 <h2 id="multilingual-pipeline-example">Multilingual Pipeline Example<a class="headerlink" href="#multilingual-pipeline-example" title="Permanent link">&para;</a></h2>
 <p>A full production-style pipeline combining multiple Sarvam APIs:</p>
@@ -1661,7 +1661,7 @@
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  +-- Language Detection
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  +-- Translate to English
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  +-- sarvam-m Chat (generate response)
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  +-- Translate response back to customer&#39;s language
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  +-- Translate response back to customer's language
 <a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>  +-- Bulbul v3 TTS (voice response)
 </code></pre></div>
 <p>All steps are automatically traced with cost breakdown per API call.</p>

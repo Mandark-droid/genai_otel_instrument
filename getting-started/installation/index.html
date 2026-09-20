@@ -470,6 +470,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#typesafe-ai-jev-python-310" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TypeSafe AI / Jev (Python 3.10+)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#gpu-metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1449,6 +1460,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#typesafe-ai-jev-python-310" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TypeSafe AI / Jev (Python 3.10+)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#gpu-metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1546,13 +1568,13 @@
 <p>This installs the core library with OpenTelemetry SDK and basic instrumentation support.</p>
 <h2 id="multimodal-extras-v100">Multimodal extras (v1.0.0)<a class="headerlink" href="#multimodal-extras-v100" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Everything for multimodal capture (Pillow + pypdf + opencv + boto3)</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[multimodal]&#39;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[multimodal]'</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Pick-and-mix</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[multimodal-images]&#39;</span><span class="w">   </span><span class="c1"># Pillow (EXIF stripping)</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[multimodal-pdf]&#39;</span><span class="w">      </span><span class="c1"># pypdf (PDF redaction)</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[multimodal-faces]&#39;</span><span class="w">    </span><span class="c1"># opencv (face blur)</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[multimodal-s3]&#39;</span><span class="w">       </span><span class="c1"># boto3 (S3/MinIO offload)</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[multimodal-images]'</span><span class="w">   </span><span class="c1"># Pillow (EXIF stripping)</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[multimodal-pdf]'</span><span class="w">      </span><span class="c1"># pypdf (PDF redaction)</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[multimodal-faces]'</span><span class="w">    </span><span class="c1"># opencv (face blur)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[multimodal-s3]'</span><span class="w">       </span><span class="c1"># boto3 (S3/MinIO offload)</span>
 </code></pre></div>
 <p>See the <a href="../../guides/multimodal/">Multimodal Observability guide</a> for capture-mode
 configuration and the redactor / store backends.</p>
@@ -1568,12 +1590,15 @@ configuration and the redactor / store backends.</p>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>mistral<span class="o">]</span>
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>groq<span class="o">]</span>
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>ollama<span class="o">]</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>together<span class="o">]</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>cometapi<span class="o">]</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>elevenlabs<span class="o">]</span><span class="w">   </span><span class="c1"># text-to-speech + Scribe speech-to-text</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="c1"># All providers</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>all-providers<span class="o">]</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>vllm<span class="o">]</span><span class="w">        </span><span class="c1"># self-hosted vLLM, in-process API</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>llamacpp<span class="o">]</span><span class="w">    </span><span class="c1"># local GGUF models via llama-cpp-python</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>together<span class="o">]</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>cometapi<span class="o">]</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>elevenlabs<span class="o">]</span><span class="w">   </span><span class="c1"># text-to-speech + Scribe speech-to-text</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[typesafe]'</span><span class="w">    </span><span class="c1"># TypeSafe AI / Jev (Python 3.10+)</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="c1"># All providers</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>all-providers<span class="o">]</span>
 </code></pre></div>
 <h3 id="frameworks">Frameworks<a class="headerlink" href="#frameworks" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>crewai<span class="o">]</span>
@@ -1586,27 +1611,32 @@ configuration and the redactor / store backends.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openinference<span class="o">]</span>
 </code></pre></div>
 <p>Includes LiteLLM, Smolagents, and MCP instrumentation via OpenInference.</p>
+<h3 id="typesafe-ai-jev-python-310">TypeSafe AI / Jev (Python 3.10+)<a class="headerlink" href="#typesafe-ai-jev-python-310" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[typesafe]'</span>
+</code></pre></div>
+<p>This installs the official <code>typesafe-sdk</code>; TraceVerde provides the native
+instrumentation in this package.</p>
 <h3 id="gpu-metrics">GPU Metrics<a class="headerlink" href="#gpu-metrics" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>gpu<span class="o">]</span><span class="w">       </span><span class="c1"># NVIDIA only</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>amd-gpu<span class="o">]</span><span class="w">   </span><span class="c1"># AMD only</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>all-gpu<span class="o">]</span><span class="w">   </span><span class="c1"># Both</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>gpu<span class="o">]</span><span class="w">       </span><span class="c1"># NVIDIA only</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>amd-gpu<span class="o">]</span><span class="w">   </span><span class="c1"># AMD only</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>all-gpu<span class="o">]</span><span class="w">   </span><span class="c1"># Both</span>
 </code></pre></div>
 <h3 id="databases-and-mcp-tools">Databases and MCP Tools<a class="headerlink" href="#databases-and-mcp-tools" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>databases<span class="o">]</span><span class="w">    </span><span class="c1"># PostgreSQL, MySQL, MongoDB, Redis, etc.</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>messaging<span class="o">]</span><span class="w">    </span><span class="c1"># Kafka, RabbitMQ</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>vector-dbs<span class="o">]</span><span class="w">   </span><span class="c1"># Pinecone, Weaviate, Qdrant, ChromaDB, etc.</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>all-mcp<span class="o">]</span><span class="w">      </span><span class="c1"># All MCP tools</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>databases<span class="o">]</span><span class="w">    </span><span class="c1"># PostgreSQL, MySQL, MongoDB, Redis, etc.</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>messaging<span class="o">]</span><span class="w">    </span><span class="c1"># Kafka, RabbitMQ</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>vector-dbs<span class="o">]</span><span class="w">   </span><span class="c1"># Pinecone, Weaviate, Qdrant, ChromaDB, etc.</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>all-mcp<span class="o">]</span><span class="w">      </span><span class="c1"># All MCP tools</span>
 </code></pre></div>
 <h3 id="evaluation-features">Evaluation Features<a class="headerlink" href="#evaluation-features" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>evaluation<span class="o">]</span><span class="w">   </span><span class="c1"># PII, toxicity, bias detection</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>evaluation<span class="o">]</span><span class="w">   </span><span class="c1"># PII, toxicity, bias detection</span>
 </code></pre></div>
 <h3 id="everything">Everything<a class="headerlink" href="#everything" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>all<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>all<span class="o">]</span>
 </code></pre></div>
 <h2 id="development-installation">Development Installation<a class="headerlink" href="#development-installation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Mandark-droid/genai_otel_instrument.git
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nb">cd</span><span class="w"> </span>genai_otel_instrument
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev,all]&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Mandark-droid/genai_otel_instrument.git
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nb">cd</span><span class="w"> </span>genai_otel_instrument
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[dev,all]"</span>
 </code></pre></div>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
