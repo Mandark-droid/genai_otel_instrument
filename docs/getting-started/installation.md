@@ -76,7 +76,7 @@ pip install 'genai-otel-instrument[typesafe]'
 ```
 
 This installs the official `typesafe-sdk`; TraceVerde provides the native
-instrumentation in this package and does not wrap Arize's implementation.
+instrumentation in this package.
 
 ### GPU Metrics
 
