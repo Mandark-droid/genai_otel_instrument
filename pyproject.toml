@@ -74,6 +74,9 @@ openinference = [
 # Native TypeSafe System One / Jev instrumentation (Python >= 3.10).
 typesafe = ["typesafe-sdk>=0.6.0; python_version >= '3.10'"]
 
+# Native Strands Harness instrumentation (Python >= 3.10).
+strands = ["strands-harness>=0.1.1; python_version >= '3.10'"]
+
 # HTTP instrumentation
 http = [
     "requests>=2.20.0",
@@ -233,6 +236,7 @@ all-providers = [
     "liquid-audio>=1.2.0",
     "litellm>=1.0.0,!=1.82.7,!=1.82.8",
     "typesafe-sdk>=0.6.0; python_version >= '3.10'",
+    "strands-harness>=0.1.1; python_version >= '3.10'",
     "crewai>=0.1.0",
     "pyautogen>=0.2.0",
     "autogen-agentchat>=0.4.0",
@@ -293,6 +297,7 @@ all = [
     "sentence-transformers>=2.2.0",
     "liquid-audio>=1.2.0",
     "typesafe-sdk>=0.6.0; python_version >= '3.10'",
+    "strands-harness>=0.1.1; python_version >= '3.10'",
     "nvidia-ml-py>=11.495.46",
     "amdsmi>=7.0.0",
     "codecarbon>=2.3.0",

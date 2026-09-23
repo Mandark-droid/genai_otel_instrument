@@ -157,6 +157,42 @@ pip install genai-otel-instrument[pydantic-ai]
 
 See [Pydantic AI example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pydantic_ai_example.py).
 
+## Strands Harness
+
+Native instrumentation for the optional Strands Harness runtime. It uses the
+Harness hook API to preserve agent, delegated-agent, model, tool, MCP, and
+context-compaction relationships while allowing the Strands SDK's own provider
+spans to remain in place.
+
+```bash
+pip install 'genai-otel-instrument[strands]'
+```
+
+```python
+import genai_otel
+
+genai_otel.instrument(
+    service_name="my-strands-app",
+    enabled_instrumentors=["strands"],
+    enable_content_capture=False,
+)
+
+from strands_harness import create_harness
+
+agent = create_harness(instructions="Answer in one paragraph.", session=True)
+result = agent("Explain OpenTelemetry.")
+```
+
+The logical hierarchy is `harness.run` -> `agent.run`, with `llm.request`,
+`tool.call`, `mcp.call`, `context.compaction`, and `subagent.run` children when
+those operations are exposed by the installed Harness version. Prompts, tool
+arguments/results, MCP payloads, memory contents, and model output are omitted
+unless the existing GenAI content-capture setting is enabled. Provider-level
+spans are enriched when active, avoiding duplicate model/tool spans. The extra
+currently targets `strands-harness>=0.1.1` on Python 3.10+.
+
+See the [Strands Harness example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/strands_harness/example.py).
+
 ## Other Frameworks
 
 | Framework | Description | Install Extra | Example |

@@ -6,7 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.29.0] - 2026-09-23
+
 ### Added
+
+- **Native Strands Harness instrumentation.** Added the opt-in `strands` extra
+  and lazy hook-based tracing for Harness runs, delegated agents, model calls,
+  tools, MCP identity, streaming, context compaction, sessions, errors, and
+  content-capture privacy behavior. Provider-level spans are enriched rather
+  than duplicated when they are already active.
+
+- **Pricing for the September 21-22, 2026 model releases.** Added Claude Opus
+  5.5 (`claude-opus-5-5` and dotted alias), GPT-6 Sol (`gpt-6-sol`), GPT-6
+  Luna (`gpt-6-luna`), and xAI Grok 4.7 (`grok-4.7` and dashed alias), with
+  input, output, cache-read, and cache-write rates where the provider
+  publishes them. Grok 4.6 was rechecked against xAI's current pricing page.
+  GPT-6 Terra was not added because OpenAI's current GPT-6 catalogue lists
+  Astra, Sol, and Luna; GPT-5.6 Terra remains separately priced.
 
 - **Native TypeSafe AI / Jev instrumentation.** Added a from-scratch wrapper for
   `TypeSafeClient.system_one` and `AsyncTypeSafeClient.system_one`, with typed
@@ -4219,7 +4235,8 @@ This is the first public release of genai-otel-instrument, a comprehensive OpenT
 - Fixed tests for base/redis and auto instrument (a701603)
 - Updated `test_auto_instrument.py` assertions to match new OTLP exporter configuration (exporters now read endpoint from environment variables instead of direct parameters)
 
-[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.22.0...HEAD
+[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.29.0...HEAD
+[1.29.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.28.0...v1.29.0
 [1.22.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.21.0...v1.22.0
 [1.21.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.20.2...v1.21.0
 [1.8.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.7.0...v1.8.0

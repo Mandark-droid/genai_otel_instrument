@@ -545,6 +545,11 @@ VENDOR_VERIFIED = [
     ("fireworks/whisper-v3", "audio"),
     ("deepseek-v4-flash", "chat"),
     ("muse-glimmer-30b", "chat"),
+    ("claude-opus-5-5", "chat"),
+    ("gpt-6-sol", "chat"),
+    ("gpt-6-luna", "chat"),
+    ("grok-4.6", "chat"),
+    ("grok-4.7", "chat"),
 ]
 
 
@@ -745,6 +750,57 @@ def test_gpt_5_6_routing_not_shadowed_by_gpt_5(calc, requested, expected_key):
         f"{requested} resolved to {resolved}; falling back to a shorter key "
         "bills this family at the wrong rate"
     )
+
+
+# --- September 2026 release-day catch-up ------------------------------------
+# Official release/pricing pages confirm these three additions on Sep 21-22.
+# GPT-6 Terra is intentionally absent: OpenAI's current GPT-6 family lists
+# Astra, Sol, and Luna; GPT-5.6 Terra is a different, already-priced model.
+SEPTEMBER_22_MODELS = [
+    ("claude-opus-5-5", 0.004, 0.02),
+    ("claude-opus-5.5", 0.004, 0.02),
+    ("gpt-6-sol", 0.002, 0.01),
+    ("gpt-6-luna", 0.0001, 0.0005),
+    ("grok-4.7", 0.002, 0.006),
+    ("grok-4-7", 0.002, 0.006),
+]
+
+
+@pytest.mark.parametrize("model,prompt_price,completion_price", SEPTEMBER_22_MODELS)
+def test_september_22_models_priced(calc, model, prompt_price, completion_price):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["prompt"] == pytest.approx(prompt_price)
+    assert costs["completion"] == pytest.approx(completion_price)
+
+
+SEPTEMBER_22_CACHE_RATES = [
+    ("claude-opus-5-5", 0.0002, 0.005),
+    ("claude-opus-5.5", 0.0002, 0.005),
+    ("gpt-6-sol", 0.0002, 0.0025),
+    ("gpt-6-luna", 0.00001, 0.000125),
+    ("grok-4.7", 0.0005, None),
+]
+
+
+@pytest.mark.parametrize("model,cache_read,cache_write", SEPTEMBER_22_CACHE_RATES)
+def test_september_22_cache_rates(calc, model, cache_read, cache_write):
+    usage = {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cache_read_input_tokens": 1000,
+        "cache_creation_input_tokens": 1000,
+    }
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["cache_read"] == pytest.approx(cache_read)
+    if cache_write is None:
+        assert costs["cache_write"] == 0.0
+    else:
+        assert costs["cache_write"] == pytest.approx(cache_write)
+
+
+def test_gpt_6_terra_is_not_fabricated(calc):
+    assert calc._normalize_model_name("gpt-6-terra", "chat") is None
 
 
 # The dotted spelling is what callers actually send. It carried base prices but

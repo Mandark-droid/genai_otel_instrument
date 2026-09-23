@@ -59,7 +59,12 @@ pip install genai-otel-instrument[langchain]
 pip install genai-otel-instrument[langgraph]
 pip install genai-otel-instrument[google-adk]
 pip install genai-otel-instrument[autogen-agentchat]
+pip install 'genai-otel-instrument[strands]'   # Strands Harness (Python 3.10+)
 ```
+
+Strands Harness is opt-in. Enable it explicitly with
+`enabled_instrumentors=["strands"]`; the base package does not import Strands
+unless this integration is enabled.
 
 ### OpenInference (Python 3.10+)
 

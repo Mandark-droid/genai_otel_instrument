@@ -47,6 +47,7 @@ NON_PROVIDER_KEYS = {
     "mcp_client",
     "openai_agents",
     "pydantic_ai",
+    "strands",
 }
 
 # Registry key -> the Provider cell in the llm-providers.md table.

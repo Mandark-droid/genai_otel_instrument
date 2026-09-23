@@ -2483,6 +2483,20 @@
       "cacheWritePrice": 0.00625,
       "note": "Claude Opus 5. input $5/1M, output $25/1M, cache read $0.5/1M, cache write $6.25/1M. Released 2026-07-24. 1000000 context. Source: models.dev / anthropic"
     },
+    "claude-opus-5-5": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.005,
+      "note": "Claude Opus 5.5. input $4/1M, output $20/1M, cache read $0.2/1M, cache write $5/1M. Released 2026-09-22. Source: platform.claude.com / anthropic"
+    },
+    "claude-opus-5.5": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.005,
+      "note": "Claude Opus 5.5 dotted alias. input $4/1M, output $20/1M, cache read $0.2/1M, cache write $5/1M. Source: platform.claude.com / anthropic"
+    },
     "claude-opus-5@default": {
       "promptPrice": 0.005,
       "completionPrice": 0.025,
@@ -8475,13 +8489,25 @@
       "promptPrice": 0.002,
       "completionPrice": 0.006,
       "cacheReadPrice": 0.0005,
-      "note": "Grok 4.6. input $2/1M, output $6/1M, cache read $0.5/1M. Released 2026-08-12. 500000 context. Above 200K context the vendor charges {'input': 4, 'output': 12, 'cache_read': 1}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / xai"
+      "note": "Grok 4.6. input $2/1M, output $6/1M, cache read $0.5/1M. Released 2026-08-12. 500000 context. Above 200K context the vendor charges {'input': 4, 'output': 12, 'cache_read': 1}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: docs.x.ai / xAI"
     },
     "grok-4-6": {
       "promptPrice": 0.002,
       "completionPrice": 0.006,
       "cacheReadPrice": 0.0005,
       "note": "Grok 4.6. input $2/1M, output $6/1M, cache read $0.5/1M. Released 2026-08-12. 500000 context. Above 200K context the vendor charges {'input': 4, 'output': 12, 'cache_read': 1}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / xai"
+    },
+    "grok-4.7": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "cacheReadPrice": 0.0005,
+      "note": "Grok 4.7. input $2/1M, output $6/1M, cache read $0.5/1M. Released 2026-09-21. 500000 context. Above 200K context the vendor charges {'input': 4, 'output': 12, 'cache_read': 1}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: docs.x.ai / xAI"
+    },
+    "grok-4-7": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "cacheReadPrice": 0.0005,
+      "note": "Grok 4.7 dashed alias. input $2/1M, output $6/1M, cache read $0.5/1M. Source: docs.x.ai / xAI"
     },
     "xai/grok-4.6": {
       "promptPrice": 0.002,
@@ -8640,6 +8666,20 @@
       "cacheReadPrice": 0.001,
       "cacheWritePrice": 0.0125,
       "note": "GPT-6 Astra. input $10/1M, output $50/1M, cache read $1/1M, cache write $12.5/1M. Released 2026-09-04. 1050000 context. Above 272000 tokens of context the vendor charges ${'input': 20, 'output': 75, 'cache_read': 2, 'cache_write': 25}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / openai"
+    },
+    "gpt-6-sol": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025,
+      "note": "GPT-6 Sol. input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Released 2026-09-22. Above 272000 tokens of context the vendor charges {'input': 4, 'output': 15, 'cache_read': 0.4, 'cache_write': 5}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: developers.openai.com / OpenAI"
+    },
+    "gpt-6-luna": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0005,
+      "cacheReadPrice": 0.00001,
+      "cacheWritePrice": 0.000125,
+      "note": "GPT-6 Luna. input $0.1/1M, output $0.5/1M, cache read $0.01/1M, cache write $0.125/1M. Released 2026-09-22. Above 272000 tokens of context the vendor charges {'input': 0.2, 'output': 0.75, 'cache_read': 0.02, 'cache_write': 0.25}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: developers.openai.com / OpenAI"
     }
   },
   "speech_to_text": {
@@ -8946,6 +8986,14 @@
     "gpt-5.6-sol": "2026-09-05",
     "gpt-5.6-terra": "2026-09-05",
     "gpt-6-astra": "2026-09-05",
+    "gpt-6-luna": "2026-09-23",
+    "gpt-6-sol": "2026-09-23",
+    "grok-4.6": "2026-09-23",
+    "grok-4-6": "2026-09-23",
+    "grok-4.7": "2026-09-23",
+    "grok-4-7": "2026-09-23",
+    "claude-opus-5-5": "2026-09-23",
+    "claude-opus-5.5": "2026-09-23",
     "groq/whisper-large-v3": "2026-08-13",
     "groq/whisper-large-v3-turbo": "2026-08-13",
     "meta/muse-glimmer-30b": "2026-08-13",
