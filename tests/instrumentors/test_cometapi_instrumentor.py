@@ -73,14 +73,24 @@ class TestCometAPIInstrumentor(unittest.TestCase):
             def __init__(self):
                 pass
 
+        class MockAsyncOpenAI:
+            def __init__(self):
+                pass
+
         class MockAnthropic:
+            def __init__(self):
+                pass
+
+        class MockAsyncAnthropic:
             def __init__(self):
                 pass
 
         mock_openai = MagicMock()
         mock_openai.OpenAI = MockOpenAI
+        mock_openai.AsyncOpenAI = MockAsyncOpenAI
         mock_anthropic = MagicMock()
         mock_anthropic.Anthropic = MockAnthropic
+        mock_anthropic.AsyncAnthropic = MockAsyncAnthropic
         mock_wrapt = MagicMock()
 
         with patch.dict(
@@ -95,8 +105,9 @@ class TestCometAPIInstrumentor(unittest.TestCase):
             self.assertEqual(instrumentor.config, config)
             self.assertTrue(instrumentor._instrumented)
             mock_logger.info.assert_called_with("CometAPI instrumentation enabled")
-            # Both OpenAI.__init__ and Anthropic.__init__ should be wrapped
-            self.assertEqual(mock_wrapt.FunctionWrapper.call_count, 2)
+            # Sync AND async client of each SDK: an async-only CometAPI
+            # application used to be traced by nobody.
+            self.assertEqual(mock_wrapt.FunctionWrapper.call_count, 4)
 
     def test_instrument_with_only_anthropic_available(self):
         """Test that instrument wraps only the Anthropic client when OpenAI is missing."""
@@ -105,8 +116,13 @@ class TestCometAPIInstrumentor(unittest.TestCase):
             def __init__(self):
                 pass
 
+        class MockAsyncAnthropic:
+            def __init__(self):
+                pass
+
         mock_anthropic = MagicMock()
         mock_anthropic.Anthropic = MockAnthropic
+        mock_anthropic.AsyncAnthropic = MockAsyncAnthropic
         mock_wrapt = MagicMock()
 
         with patch.dict(
@@ -118,52 +134,49 @@ class TestCometAPIInstrumentor(unittest.TestCase):
             instrumentor.instrument(config)
 
             self.assertTrue(instrumentor._instrumented)
-            mock_wrapt.FunctionWrapper.assert_called_once()
+            self.assertEqual(mock_wrapt.FunctionWrapper.call_count, 2)
 
     @patch("genai_otel.instrumentors.cometapi_instrumentor.logger")
     def test_instrument_exception_with_fail_on_error_false(self, mock_logger):
-        """Test that instrument handles exceptions gracefully when fail_on_error is False."""
-        mock_openai = MagicMock()
+        """Test that instrument handles exceptions gracefully when fail_on_error is False.
 
-        def mock_hasattr_side_effect(obj, name):
-            if name == "OpenAI":
-                raise RuntimeError("Test error")
-            return True
+        The failure is injected at ``wrapt.FunctionWrapper`` because that is
+        where instrumentation now actually touches the SDK. Only AttributeError
+        and TypeError are tolerated per class (a client that cannot accept a
+        wrapped ``__init__`` is skipped); anything else is a real fault and
+        must reach the outer handler.
+        """
+        mock_wrapt = MagicMock()
+        mock_wrapt.FunctionWrapper.side_effect = RuntimeError("Test error")
 
         with patch.dict(
             "sys.modules",
-            {"openai": mock_openai, "anthropic": MagicMock(), "wrapt": MagicMock()},
+            {"openai": MagicMock(), "anthropic": MagicMock(), "wrapt": mock_wrapt},
         ):
-            with patch("builtins.hasattr", side_effect=mock_hasattr_side_effect):
-                instrumentor = CometAPIInstrumentor()
-                config = MagicMock()
-                config.fail_on_error = False
+            instrumentor = CometAPIInstrumentor()
+            config = MagicMock()
+            config.fail_on_error = False
 
-                # Should not raise exception
-                instrumentor.instrument(config)
+            # Should not raise exception
+            instrumentor.instrument(config)
 
-                mock_logger.error.assert_called_once()
+            mock_logger.error.assert_called_once()
 
     def test_instrument_exception_with_fail_on_error_true(self):
         """Test that instrument raises exceptions when fail_on_error is True."""
-        mock_openai = MagicMock()
-
-        def mock_hasattr_side_effect(obj, name):
-            if name == "OpenAI":
-                raise RuntimeError("Test error")
-            return True
+        mock_wrapt = MagicMock()
+        mock_wrapt.FunctionWrapper.side_effect = RuntimeError("Test error")
 
         with patch.dict(
             "sys.modules",
-            {"openai": mock_openai, "anthropic": MagicMock(), "wrapt": MagicMock()},
+            {"openai": MagicMock(), "anthropic": MagicMock(), "wrapt": mock_wrapt},
         ):
-            with patch("builtins.hasattr", side_effect=mock_hasattr_side_effect):
-                instrumentor = CometAPIInstrumentor()
-                config = MagicMock()
-                config.fail_on_error = True
+            instrumentor = CometAPIInstrumentor()
+            config = MagicMock()
+            config.fail_on_error = True
 
-                with self.assertRaises(RuntimeError):
-                    instrumentor.instrument(config)
+            with self.assertRaises(RuntimeError):
+                instrumentor.instrument(config)
 
     def test_is_cometapi_client_with_cometapi_base_url(self):
         """Test that _is_cometapi_client detects CometAPI clients correctly."""

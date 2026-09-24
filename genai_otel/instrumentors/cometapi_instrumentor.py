@@ -41,6 +41,38 @@ class CometAPIInstrumentor(BaseInstrumentor):
     # second time.
     _CLAIM_DOMAIN = "cometapi.com"
 
+    # Both the sync and async client of each SDK. Wrapping only the sync class
+    # left an async-only CometAPI application traced by nobody: the generic
+    # instrumentor stands aside for a claimed base URL, and this instrumentor
+    # never wrapped the class the application actually used. It also meant the
+    # claim itself was never registered when no sync client existed, since
+    # registration is gated on having wrapped something.
+    _OPENAI_CLIENT_CLASSES = ("OpenAI", "AsyncOpenAI")
+    _ANTHROPIC_CLIENT_CLASSES = ("Anthropic", "AsyncAnthropic")
+
+    @staticmethod
+    def _wrap_client_inits(module, class_names, wrapper, wrapt) -> bool:
+        """Wrap ``__init__`` on each named client class. Returns True if any were.
+
+        The return value is what gates both the dedup flag and the base-url
+        claim: neither should be set if there was nothing to wrap.
+        """
+        wrapped_any = False
+        for class_name in class_names:
+            client_class = getattr(module, class_name, None)
+            if client_class is None:
+                continue
+            try:
+                client_class.__init__ = wrapt.FunctionWrapper(client_class.__init__, wrapper)
+            except (AttributeError, TypeError) as e:
+                # Deliberately not naming the module here: `module` may be a
+                # test double without a __name__, and raising from inside the
+                # handler would defeat the guard it belongs to.
+                logger.debug("Could not wrap %s.__init__: %s", class_name, e)
+                continue
+            wrapped_any = True
+        return wrapped_any
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()
@@ -98,11 +130,7 @@ class CometAPIInstrumentor(BaseInstrumentor):
 
                 # Instrument OpenAI client initialization to detect CometAPI usage
                 # (guard prevents stacking wrappers if instrument() runs twice).
-                if (
-                    hasattr(openai, "OpenAI")
-                    and getattr(openai, "_genai_otel_cometapi_instrumented", False) is not True
-                ):
-                    original_openai_init = openai.OpenAI.__init__
+                if getattr(openai, "_genai_otel_cometapi_instrumented", False) is not True:
 
                     def wrapped_openai_init(wrapped, instance, args, kwargs):
                         result = wrapped(*args, **kwargs)
@@ -112,25 +140,25 @@ class CometAPIInstrumentor(BaseInstrumentor):
                             logger.debug("CometAPI client (OpenAI SDK) detected and instrumented")
                         return result
 
-                    openai.OpenAI.__init__ = wrapt.FunctionWrapper(
-                        original_openai_init, wrapped_openai_init
-                    )
-                    try:
-                        openai._genai_otel_cometapi_instrumented = True
-                    except Exception:  # noqa: BLE001
-                        pass
-                    self._instrumented = True
+                    # Both clients: an async-only CometAPI application was
+                    # traced by nobody, because the generic OpenAI
+                    # instrumentor steps aside for a claimed base URL and this
+                    # one only ever wrapped the sync class.
+                    if self._wrap_client_inits(
+                        openai, self._OPENAI_CLIENT_CLASSES, wrapped_openai_init, wrapt
+                    ):
+                        try:
+                            openai._genai_otel_cometapi_instrumented = True
+                        except Exception:  # noqa: BLE001
+                            pass
+                        self._instrumented = True
 
             if self._anthropic_available:
                 import anthropic
 
                 # Instrument Anthropic client initialization to detect CometAPI usage
                 # (guard prevents stacking wrappers if instrument() runs twice).
-                if (
-                    hasattr(anthropic, "Anthropic")
-                    and getattr(anthropic, "_genai_otel_cometapi_instrumented", False) is not True
-                ):
-                    original_anthropic_init = anthropic.Anthropic.__init__
+                if getattr(anthropic, "_genai_otel_cometapi_instrumented", False) is not True:
 
                     def wrapped_anthropic_init(wrapped, instance, args, kwargs):
                         result = wrapped(*args, **kwargs)
@@ -142,14 +170,14 @@ class CometAPIInstrumentor(BaseInstrumentor):
                             )
                         return result
 
-                    anthropic.Anthropic.__init__ = wrapt.FunctionWrapper(
-                        original_anthropic_init, wrapped_anthropic_init
-                    )
-                    try:
-                        anthropic._genai_otel_cometapi_instrumented = True
-                    except Exception:  # noqa: BLE001
-                        pass
-                    self._instrumented = True
+                    if self._wrap_client_inits(
+                        anthropic, self._ANTHROPIC_CLIENT_CLASSES, wrapped_anthropic_init, wrapt
+                    ):
+                        try:
+                            anthropic._genai_otel_cometapi_instrumented = True
+                        except Exception:  # noqa: BLE001
+                            pass
+                        self._instrumented = True
 
             if self._instrumented:
                 register_base_url_claim(self._CLAIM_DOMAIN, "cometapi")

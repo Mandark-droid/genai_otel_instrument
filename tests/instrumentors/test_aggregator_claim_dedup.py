@@ -6,6 +6,7 @@ nested span from the generic OpenAI/Anthropic instrumentor (which would also
 double-count token and cost metrics).
 """
 
+import asyncio
 import sys
 import types
 import unittest
@@ -89,6 +90,33 @@ def _make_fake_anthropic_module(response):
             self.messages = FakeMessages()
 
     module.Anthropic = FakeAnthropic
+    return module
+
+
+def _make_fake_anthropic_module_with_async(response):
+    """Like ``_make_fake_anthropic_module``, but with the async client too.
+
+    The real SDK exposes both, and having both is what reproduces the
+    async-only blind spot: CometAPI registers its base-url claim off the sync
+    client, the generic instrumentor then stands aside for that claim, and an
+    async client wrapped by neither is traced by nobody at all.
+    """
+    module = _make_fake_anthropic_module(response)
+
+    class FakeAsyncMessages:
+        def __init__(self):
+            async def create(**kwargs):
+                return response
+
+            self.create = create
+
+    class FakeAsyncAnthropic:
+        def __init__(self, base_url=None, api_key=None):
+            self.base_url = base_url
+            self.api_key = api_key
+            self.messages = FakeAsyncMessages()
+
+    module.AsyncAnthropic = FakeAsyncAnthropic
     return module
 
 
@@ -229,6 +257,43 @@ class TestAggregatorClaimDedup(unittest.TestCase):
                 model="claude-sonnet-5",
                 max_tokens=100,
                 messages=[{"role": "user", "content": "hi"}],
+            )
+
+            self.assertIs(result, response)
+            comet.tracer.start_span.assert_called_once()
+            generic.tracer.start_span.assert_not_called()
+
+    def test_cometapi_async_anthropic_client_is_traced_exactly_once(self):
+        """An async CometAPI client must be traced by CometAPI -- not by nobody.
+
+        This is the failure mode a claim can create rather than prevent: the
+        generic instrumentor correctly steps aside for the claimed base URL,
+        and if the dedicated instrumentor never wrapped the async client, the
+        call produces no span from anyone. Silent, and indistinguishable from
+        an application that simply made no calls.
+        """
+        response = _anthropic_style_response()
+        fake_anthropic = _make_fake_anthropic_module_with_async(response)
+        with patch.dict(sys.modules, {"openai": None, "anthropic": fake_anthropic}):
+            from genai_otel.instrumentors.anthropic_instrumentor import AnthropicInstrumentor
+            from genai_otel.instrumentors.cometapi_instrumentor import CometAPIInstrumentor
+
+            config = OTelConfig(service_name="test")
+            generic = AnthropicInstrumentor()
+            comet = CometAPIInstrumentor()
+            generic.instrument(config)
+            comet.instrument(config)
+
+            generic.tracer = _mock_tracer()
+            comet.tracer = _mock_tracer()
+
+            client = fake_anthropic.AsyncAnthropic(base_url="https://api.cometapi.com", api_key="k")
+            result = asyncio.run(
+                client.messages.create(
+                    model="claude-sonnet-5",
+                    max_tokens=100,
+                    messages=[{"role": "user", "content": "hi"}],
+                )
             )
 
             self.assertIs(result, response)
