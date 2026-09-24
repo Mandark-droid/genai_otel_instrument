@@ -260,10 +260,21 @@ class AnthropicInstrumentor(BaseInstrumentor):
         latency and no economics -- no token counts, and cost never calculated
         rather than calculated as zero.
 
-        Counts are merged with ``max`` rather than summed because Anthropic
-        reports them cumulatively: a tool-use stream sends several
-        ``message_delta`` events, each restating the running output total, and
-        adding those would multiply the bill.
+        Counts are merged with ``max`` rather than summed. This is not a
+        defensive guess -- it is what the provider documents. Anthropic's
+        streaming reference says, in a warning block:
+
+            "The token counts shown in the ``usage`` field of the
+            ``message_delta`` event are *cumulative*."
+
+            https://platform.claude.com/docs/en/build-with-claude/streaming
+
+        A tool-use stream sends several ``message_delta`` events, each
+        restating the running total rather than adding to it, so summing them
+        would report several times the tokens actually used and bill the
+        customer for them. **Do not "fix" this into a sum.**
+        ``test_cumulative_message_deltas_are_not_summed`` pins it: deltas of
+        5 then 9 must yield 9, and a sum would yield 14.
         """
         usage = self._extract_usage(chunk)
         if not usage:
