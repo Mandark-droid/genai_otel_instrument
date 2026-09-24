@@ -20,6 +20,7 @@ appear to carry usage and the bug under test would be invisible.
 """
 
 import asyncio
+import importlib
 import sys
 import types
 from types import SimpleNamespace
@@ -420,13 +421,32 @@ def test_extract_usage_keeps_cache_token_counts():
     assert usage["cache_creation_input_tokens"] == 50
 
 
-def test_accumulator_is_inert_for_providers_that_do_not_override():
-    """The base hook must leave timing.usage alone, or every provider changes."""
-    from genai_otel.instrumentors.base import _StreamTiming
-    from genai_otel.instrumentors.groq_instrumentor import GroqInstrumentor
+@pytest.mark.parametrize(
+    ("sdk_module", "instrumentor_module", "instrumentor_name"),
+    [
+        ("openai", "genai_otel.instrumentors.openai_instrumentor", "OpenAIInstrumentor"),
+        ("groq", "genai_otel.instrumentors.groq_instrumentor", "GroqInstrumentor"),
+    ],
+)
+def test_accumulator_is_inert_for_providers_that_do_not_override(
+    sdk_module, instrumentor_module, instrumentor_name
+):
+    """The base hook must leave ``timing.usage`` alone for every other provider.
 
-    with patch.dict(sys.modules, {"groq": MagicMock()}):
+    A provider that does not override it keeps reading usage off the final
+    chunk exactly as it always did, so adding Anthropic's accumulation moved
+    no other provider's token counts or cost. OpenAI is named explicitly
+    because it is the provider whose streamed cost accounting we most need to
+    be able to state has not changed.
+    """
+    from genai_otel.instrumentors.base import _StreamTiming
+
+    instrumentor_cls = getattr(importlib.import_module(instrumentor_module), instrumentor_name)
+
+    with patch.dict(sys.modules, {sdk_module: MagicMock()}):
         timing = _StreamTiming(0.0)
-        GroqInstrumentor()._accumulate_stream_usage(timing, MagicMock())
+        # A MagicMock chunk would happily yield usage to anything that looked
+        # for it; the assertion is that the default hook does not look at all.
+        instrumentor_cls()._accumulate_stream_usage(timing, MagicMock())
 
     assert timing.usage is None
