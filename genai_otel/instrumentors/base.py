@@ -263,6 +263,7 @@ class _StreamTiming:
         "last_chunk_time",
         "chunk_count",
         "last_chunk",
+        "usage",
         "emit_measurements",
     )
 
@@ -272,6 +273,10 @@ class _StreamTiming:
         self.last_chunk_time = start_time
         self.chunk_count = 0
         self.last_chunk: Any = None
+        # Usage assembled across chunks by a provider that splits it over
+        # several events. Stays None for providers that report it on the final
+        # chunk, and the finalizer then reads that chunk exactly as before.
+        self.usage: Optional[Dict[str, Any]] = None
         # False on an outer span whose inner provider span already recorded
         # this request. The outer span still spans the call - it is the parent -
         # but publishing the same numbers twice would double-count one request.
@@ -2198,6 +2203,30 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         timing.last_chunk_time = current_time
         timing.last_chunk = chunk  # Keep track of last chunk for usage extraction
 
+        # Give the provider a chance to fold usage it reports mid-stream. A
+        # failure here must never break the caller's iteration -- a missing
+        # token count is a reporting gap, a raised exception is an outage.
+        try:
+            self._accumulate_stream_usage(timing, chunk)
+        except Exception as e:  # noqa: BLE001 - measurement must not break the stream
+            logger.debug("Failed to accumulate streamed usage: %s", e)
+
+    def _accumulate_stream_usage(self, timing: "_StreamTiming", chunk) -> None:
+        """Fold usage reported part-way through a stream. Default: do nothing.
+
+        Most providers repeat the full usage on the final chunk, so the
+        finalizer can simply read that one. Some split it across events and
+        finish with an event carrying none at all -- Anthropic sends input
+        tokens on ``message_start``, output tokens on ``message_delta`` and
+        then a bare ``message_stop`` -- and for those, reading only the last
+        chunk finds nothing and the span is left with no tokens and no cost.
+
+        An instrumentor that overrides this sets ``timing.usage`` to the
+        usage dict assembled so far; the finalizer prefers it over the last
+        chunk. Leaving ``timing.usage`` None keeps the original behaviour
+        exactly, which is why this is opt-in per provider.
+        """
+
     def _measure_parsed_stream(
         self, span, parsed, start_time: float, model: str, emit_measurements: bool = True
     ):
@@ -2410,11 +2439,16 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         output_tokens = None
         last_chunk = timing.last_chunk
 
-        # Extract usage from last chunk and calculate cost
-        # Many providers (OpenAI, Anthropic, etc.) include usage in the final chunk
+        # Extract usage and calculate cost. Most providers repeat the full
+        # usage on the final chunk, so that chunk is enough. A provider that
+        # splits usage across events accumulates it via
+        # _accumulate_stream_usage instead, and what it assembled wins -- the
+        # final chunk in that case carries nothing to read.
         try:
-            if last_chunk is not None:
+            usage = timing.usage
+            if usage is None and last_chunk is not None:
                 usage = self._extract_usage(last_chunk)
+            if usage is not None or last_chunk is not None:
                 if usage and isinstance(usage, dict):
                     # Record token usage metrics and calculate cost
                     # This will set span attributes and record cost metrics

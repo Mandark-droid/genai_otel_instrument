@@ -6,6 +6,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Streamed Anthropic calls reported no tokens and no cost.** Anthropic spreads
+  usage across the stream — input tokens arrive on `message_start`, output tokens
+  on `message_delta`, and the stream ends on a bare `message_stop`. The stream
+  finalizer read usage from the final chunk only, found none, set no token
+  attributes and never reached the cost calculation. The attributes were *absent*
+  rather than zero, so a streamed call produced a span with latency and no
+  economics, and any roll-up that summed it understated spend by exactly the
+  streamed Anthropic traffic. This affected the **sync** path as much as the async
+  one. Usage is now folded across the stream, merged with `max` rather than summed
+  because Anthropic restates the counts cumulatively — summing a multi-delta
+  tool-use stream would have multiplied the bill.
+
+- **`AsyncAnthropic` emitted no spans at all.** Only `anthropic.Anthropic.__init__`
+  was wrapped, so an application built on the async client instrumented cleanly and
+  sent nothing. It is now instrumented alongside the sync client, reusing the same
+  client wrapper — `create_span_wrapper` already awaits coroutines and measures
+  async streams.
+
+- **The idempotency flag could permanently exclude the async and cloud clients.**
+  `_genai_otel_anthropic_instrumented` was set inside the sync-client branch, so a
+  run that wrapped `Anthropic` marked the module done and every later run returned
+  early. It is now set only after all client classes have been wrapped.
+
+- **`_extract_usage` tolerates `None` token counts**, which the streaming usage
+  models declare Optional. Previously a `None` raised inside the finalizer and lost
+  the whole usage dict, cost included.
+
+### Added
+
+- **Anthropic Bedrock, Vertex, AWS, Foundry and Google Cloud clients are now
+  instrumented.** These are the Anthropic SDK pointed at a hosted backend, and are
+  separate classes from `Anthropic`, so none of them were traced. They do not
+  overlap with the boto3-based `aws_bedrock_instrumentor` or the Google-SDK-based
+  `vertexai_instrumentor`, so there is no double-counting.
+
+- **`BaseInstrumentor._accumulate_stream_usage`**, an overridable hook for providers
+  that report usage across several stream events rather than on the final chunk.
+  Default behaviour is unchanged for every other provider.
+
+### Known limitations
+
+- `client.messages.stream()` is still not instrumented. It returns a context manager
+  rather than an iterator and does not set `stream=True`, so it needs a dedicated
+  wrapper; tracked separately.
+
 ## [1.29.0] - 2026-09-23
 
 ### Added

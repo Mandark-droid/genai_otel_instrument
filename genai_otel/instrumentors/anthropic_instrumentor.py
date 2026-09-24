@@ -29,6 +29,31 @@ class AnthropicInstrumentor(BaseInstrumentor):
 
     MEDIA_PROVIDER = "anthropic"
 
+    # Every client class the SDK exposes that carries a `messages` resource.
+    # They are independent classes, so wrapping `Anthropic` alone catches none
+    # of the others: an application built on `AsyncAnthropic` instrumented
+    # cleanly and emitted no spans whatsoever.
+    #
+    # The Bedrock and Vertex entries are the *Anthropic* SDK pointed at those
+    # clouds. They do not overlap with `aws_bedrock_instrumentor` (which wraps
+    # boto3) or `vertexai_instrumentor` (which wraps Google's SDK), so there is
+    # no double-counting. The cloud-hosted variants ship behind optional
+    # extras, so each name is probed rather than imported.
+    CLIENT_CLASSES = (
+        "Anthropic",
+        "AsyncAnthropic",
+        "AnthropicBedrock",
+        "AsyncAnthropicBedrock",
+        "AnthropicVertex",
+        "AsyncAnthropicVertex",
+        "AnthropicAWS",
+        "AsyncAnthropicAWS",
+        "AnthropicFoundry",
+        "AsyncAnthropicFoundry",
+        "AnthropicGoogleCloud",
+        "AsyncAnthropicGoogleCloud",
+    )
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()
@@ -68,20 +93,37 @@ class AnthropicInstrumentor(BaseInstrumentor):
                 self._instrumented = True
                 return
 
-            if hasattr(anthropic, "Anthropic"):
-                original_init = anthropic.Anthropic.__init__
+            def wrapped_init(wrapped, instance, args, kwargs):
+                result = wrapped(*args, **kwargs)
+                self._instrument_client(instance)
+                return result
 
-                def wrapped_init(wrapped, instance, args, kwargs):
-                    result = wrapped(*args, **kwargs)
-                    self._instrument_client(instance)
-                    return result
+            wrapped_classes = []
+            for class_name in self.CLIENT_CLASSES:
+                client_class = getattr(anthropic, class_name, None)
+                if client_class is None:
+                    continue
+                try:
+                    client_class.__init__ = wrapt.FunctionWrapper(
+                        client_class.__init__, wrapped_init
+                    )
+                except (AttributeError, TypeError) as e:
+                    logger.debug("Could not wrap anthropic.%s.__init__: %s", class_name, e)
+                    continue
+                wrapped_classes.append(class_name)
 
-                anthropic.Anthropic.__init__ = wrapt.FunctionWrapper(original_init, wrapped_init)
+            if wrapped_classes:
+                # Marked done only once every client class is wrapped. Setting
+                # this inside the `Anthropic` branch meant a run that wrapped
+                # the sync client alone flagged the module as instrumented,
+                # and every later run returned early -- so the async and
+                # cloud clients could never be picked up afterwards.
                 try:
                     anthropic._genai_otel_anthropic_instrumented = True
                 except Exception:  # noqa: BLE001
                     pass
                 self._instrumented = True
+                logger.debug("Instrumented Anthropic clients: %s", ", ".join(wrapped_classes))
                 logger.info("Anthropic instrumentation enabled")
 
         except Exception as e:
@@ -141,36 +183,108 @@ class AnthropicInstrumentor(BaseInstrumentor):
 
         return attrs
 
+    @staticmethod
+    def _usage_object(result):
+        """Return the usage payload of a response or stream event, or None.
+
+        Anthropic reports it in two shapes. A buffered ``Message`` and a
+        ``message_delta`` event carry ``.usage`` directly; ``message_start``
+        and the high-level ``message_stop`` carry it one level down, on the
+        partial or accumulated ``.message``.
+
+        A ``.usage`` that exists but is None means the provider reported no
+        usage for this event -- that is an answer, not an invitation to go
+        looking on ``.message``.
+        """
+        if hasattr(result, "usage"):
+            return result.usage
+        message = getattr(result, "message", None)
+        if message is not None:
+            return getattr(message, "usage", None)
+        return None
+
+    @staticmethod
+    def _token_count(usage, name: str) -> int:
+        """Read one token count, treating anything non-numeric as absent.
+
+        The streaming usage models declare several of these Optional, so a
+        real response can hand back None where the buffered one gives an int.
+        Adding None to an int would raise inside the finalizer and lose the
+        whole usage dict, cost included.
+        """
+        value = getattr(usage, name, 0)
+        return int(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else 0
+
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
-        """Extract token usage from Anthropic response.
+        """Extract token usage from an Anthropic response or stream event.
 
         Args:
-            result: The API response object.
+            result: The API response object, or one streamed event.
 
         Returns:
             Optional[Dict[str, int]]: Dictionary with token counts or None.
         """
-        if hasattr(result, "usage") and result.usage:
-            usage = result.usage
-            usage_dict = {
-                "prompt_tokens": getattr(usage, "input_tokens", 0),
-                "completion_tokens": getattr(usage, "output_tokens", 0),
-                "total_tokens": getattr(usage, "input_tokens", 0)
-                + getattr(usage, "output_tokens", 0),
-            }
+        usage = self._usage_object(result)
+        if not usage:
+            return None
 
-            # Extract cache tokens for Anthropic models (Phase 3.2)
-            # cache_read_input_tokens: Tokens that were read from cache
-            # cache_creation_input_tokens: Tokens that were written to cache
-            if hasattr(usage, "cache_read_input_tokens"):
-                usage_dict["cache_read_input_tokens"] = getattr(usage, "cache_read_input_tokens", 0)
-            if hasattr(usage, "cache_creation_input_tokens"):
-                usage_dict["cache_creation_input_tokens"] = getattr(
-                    usage, "cache_creation_input_tokens", 0
-                )
+        input_tokens = self._token_count(usage, "input_tokens")
+        output_tokens = self._token_count(usage, "output_tokens")
+        usage_dict = {
+            "prompt_tokens": input_tokens,
+            "completion_tokens": output_tokens,
+            "total_tokens": input_tokens + output_tokens,
+        }
 
-            return usage_dict
-        return None
+        # Extract cache tokens for Anthropic models (Phase 3.2)
+        # cache_read_input_tokens: Tokens that were read from cache
+        # cache_creation_input_tokens: Tokens that were written to cache
+        if hasattr(usage, "cache_read_input_tokens"):
+            usage_dict["cache_read_input_tokens"] = self._token_count(
+                usage, "cache_read_input_tokens"
+            )
+        if hasattr(usage, "cache_creation_input_tokens"):
+            usage_dict["cache_creation_input_tokens"] = self._token_count(
+                usage, "cache_creation_input_tokens"
+            )
+
+        return usage_dict
+
+    def _accumulate_stream_usage(self, timing, chunk) -> None:
+        """Fold usage across a streamed Anthropic message.
+
+        Anthropic spreads usage over the stream: ``message_start`` carries the
+        input tokens, ``message_delta`` the output tokens, and the final
+        ``message_stop`` carries none at all. The base finalizer reads only the
+        last chunk, so before this existed a streamed call produced a span with
+        latency and no economics -- no token counts, and cost never calculated
+        rather than calculated as zero.
+
+        Counts are merged with ``max`` rather than summed because Anthropic
+        reports them cumulatively: a tool-use stream sends several
+        ``message_delta`` events, each restating the running output total, and
+        adding those would multiply the bill.
+        """
+        usage = self._extract_usage(chunk)
+        if not usage:
+            return
+
+        merged = dict(timing.usage) if timing.usage else {}
+        for key, value in usage.items():
+            if not isinstance(value, (int, float)) or value <= 0:
+                continue
+            previous = merged.get(key, 0)
+            if not isinstance(previous, (int, float)):
+                previous = 0
+            merged[key] = max(previous, value)
+
+        if "prompt_tokens" in merged or "completion_tokens" in merged:
+            merged["total_tokens"] = merged.get("prompt_tokens", 0) + merged.get(
+                "completion_tokens", 0
+            )
+
+        if merged:
+            timing.usage = merged
 
     def _add_content_events(self, span, result, request_kwargs: dict):
         """Add prompt and completion content as span events and attributes.
