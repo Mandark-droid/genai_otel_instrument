@@ -56,6 +56,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runs. The yielded stream is a transparent proxy, so `get_final_message()`,
   `get_final_text()`, `until_done()`, `text_stream` and `response` are unaffected.
 
+  Two consequences of how the SDK is built, both deliberate and tested rather than
+  accidental. `until_done()` consumes the stream through the *wrapped* object
+  (`anthropic/lib/streaming/_messages.py:122-124`), and `get_final_message()` calls
+  it (`:93-99`), so neither passes through the measured iterator: usage and cost for
+  those callers are taken from `current_message_snapshot` instead, and TTFT is
+  correctly absent rather than invented. `text_stream` runs its own generator
+  (`:143`) and is likewise not measured for latency, though tokens and cost still
+  land. Measuring those two for latency would mean wrapping SDK internals, which is
+  not worth the coupling.
+
 - **CometAPI async clients were traced by nobody.** `cometapi_instrumentor` wrapped
   only the sync OpenAI and Anthropic clients. Because the generic instrumentors
   correctly stand aside for a claimed base URL, an async-only CometAPI application

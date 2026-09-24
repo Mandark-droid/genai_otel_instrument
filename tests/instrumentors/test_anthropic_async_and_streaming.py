@@ -133,7 +133,18 @@ def _make_fake_anthropic_module(
 
 
 class _FakeMessageStream:
-    """Stand-in for the SDK's MessageStream, including its non-iteration API."""
+    """Stand-in for the SDK's MessageStream, including its non-iteration API.
+
+    ``until_done`` and ``get_final_message`` are modelled on the real thing
+    deliberately, bypass included. In the SDK, ``until_done`` calls
+    ``consume_sync_iterator(self)`` (``lib/streaming/_messages.py:122-124``,
+    ``_utils/_streams.py:5-7``) and ``get_final_message`` calls ``until_done``
+    (``:93-99``). Reached through a proxy, the bound method's ``self`` is the
+    *wrapped* object, so iteration runs this class's ``__iter__`` and never the
+    proxy's measured one. A fake whose ``get_final_message`` simply returned
+    the message would hide that bypass and let the snapshot fallback pass for
+    the wrong reason.
+    """
 
     def __init__(self, events, final_message):
         self._events = events
@@ -143,7 +154,12 @@ class _FakeMessageStream:
     def __iter__(self):
         return iter(self._events)
 
+    def until_done(self):
+        for _ in self:  # `self` is the wrapped stream, not the proxy
+            pass
+
     def get_final_message(self):
+        self.until_done()
         return self._final
 
     def get_final_text(self):
@@ -154,6 +170,14 @@ class _FakeAsyncMessageStream(_FakeMessageStream):
     async def __aiter__(self):
         for event in self._events:
             yield event
+
+    async def until_done(self):
+        async for _ in self:
+            pass
+
+    async def get_final_message(self):
+        await self.until_done()
+        return self._final
 
 
 class _FakeStreamManager:
@@ -355,11 +379,15 @@ def test_async_messages_stream_is_measured(captured):
     assert attrs["gen_ai.usage.cost.total"] > 0
 
 
-def test_messages_stream_without_iterating_still_reports_usage(captured):
-    """get_final_message() consumes the stream internally, bypassing __iter__.
+def test_messages_stream_consumed_via_get_final_message_is_still_priced(captured):
+    """The snapshot fallback is the only thing carrying this path.
 
-    The span must still carry tokens and cost: how the caller chose to read
-    the answer is not a reason to report the call as unpriced.
+    ``get_final_message()`` calls ``until_done()``, which consumes the stream
+    through the *wrapped* object -- so the measured ``__iter__`` never runs and
+    no event is ever observed. Tokens and cost must still land, because how the
+    caller chose to read the answer is not a reason to report the call as
+    unpriced. TTFT legitimately cannot: nothing timed a first token, and an
+    invented one would be worse than an absent one.
     """
     spans, provider = captured
 
@@ -376,9 +404,81 @@ def test_messages_stream_without_iterating_still_reports_usage(captured):
             final = handle.get_final_message()
 
     assert final.id == "msg_1"
+    assert len(spans) == 1
+    attrs = _attrs(spans[0])
+    assert attrs["gen_ai.usage.prompt_tokens"] == PROMPT_TOKENS
+    assert attrs["gen_ai.usage.completion_tokens"] == COMPLETION_TOKENS
+    assert attrs["gen_ai.usage.cost.total"] > 0
+    # Not measured, and correctly not claimed.
+    assert "gen_ai.server.time_to_first_token" not in attrs
+    assert "gen_ai.server.ttft" not in attrs
+    assert "gen_ai.server.time_per_output_token" not in attrs
+
+
+def test_async_messages_stream_consumed_via_get_final_message_is_still_priced(captured):
+    """Async counterpart: until_done() bypasses __aiter__ the same way."""
+    spans, provider = captured
+
+    def stream(**kwargs):
+        return _FakeAsyncStreamManager(
+            _FakeAsyncMessageStream(_raw_stream_events(), _buffered_response())
+        )
+
+    fake = _make_fake_anthropic_module(async_stream=stream)
+    with patch.dict(sys.modules, {"anthropic": fake}):
+        inst = _prepare(AnthropicInstrumentor(), provider)
+        inst.instrument(OTelConfig(service_name="test"))
+
+        client = fake.AsyncAnthropic(base_url=None, api_key="k")
+
+        async def run():
+            async with client.messages.stream(model=MODEL, messages=[]) as handle:
+                return await handle.get_final_message()
+
+        final = asyncio.run(run())
+
+    assert final.id == "msg_1"
     attrs = _attrs(spans[0])
     assert attrs["gen_ai.usage.prompt_tokens"] == PROMPT_TOKENS
     assert attrs["gen_ai.usage.cost.total"] > 0
+    assert "gen_ai.server.time_to_first_token" not in attrs
+
+
+def test_messages_stream_reports_nothing_when_the_snapshot_is_unavailable(captured):
+    """A snapshot that raises must leave the span unpriced, not crash the call.
+
+    ``current_message_snapshot`` is guarded by a bare ``assert`` in the SDK, so
+    it raises before the first event -- and returns None under ``python -O``.
+    Both have to be survivable.
+    """
+    spans, provider = captured
+
+    class _NoSnapshotStream:
+        """Not a subclass: the base assigns the snapshot, a property cannot."""
+
+        def __iter__(self):
+            return iter(())
+
+        @property
+        def current_message_snapshot(self):
+            raise AssertionError("no snapshot yet")
+
+    def stream(**kwargs):
+        return _FakeStreamManager(_NoSnapshotStream())
+
+    fake = _make_fake_anthropic_module(sync_stream=stream)
+    with patch.dict(sys.modules, {"anthropic": fake}):
+        inst = _prepare(AnthropicInstrumentor(), provider)
+        inst.instrument(OTelConfig(service_name="test"))
+
+        client = fake.Anthropic(base_url=None, api_key="k")
+        with client.messages.stream(model=MODEL, messages=[]):
+            pass
+
+    assert len(spans) == 1, "the span leaked"
+    attrs = _attrs(spans[0])
+    assert "gen_ai.usage.prompt_tokens" not in attrs
+    assert "gen_ai.usage.cost.total" not in attrs
 
 
 def test_measured_stream_proxies_the_sdk_surface(captured):

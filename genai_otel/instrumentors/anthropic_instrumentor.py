@@ -364,9 +364,22 @@ class AnthropicInstrumentor(BaseInstrumentor):
     def _adopt_final_usage(self, timing, stream) -> None:
         """Take usage off the accumulated message when nothing was iterated.
 
-        ``until_done()`` and ``get_final_message()`` consume the stream
-        internally, so our measured ``__iter__`` never runs and no event is
-        ever observed. The snapshot holds the same usage the events carried.
+        This is load-bearing, not belt-and-braces. ``until_done()`` calls
+        ``consume_sync_iterator(self)``
+        (``anthropic/lib/streaming/_messages.py:122-124`` with
+        ``anthropic/_utils/_streams.py:5-7``), and ``get_final_message()``
+        calls ``until_done()`` (``:93-99``; async at ``:273-275`` and
+        ``:244-250``). Reached through the proxy, that bound method's ``self``
+        is the *wrapped* stream, so iteration runs the SDK's own ``__iter__``
+        and the measured one never sees an event. For the very common
+        ``with ... as s: s.get_final_message()`` this method is the only thing
+        that puts tokens and cost on the span.
+
+        The try/except is required in both Python modes and must not be
+        removed as defensive clutter: ``current_message_snapshot`` is guarded
+        by a bare ``assert`` (``_messages.py:126-129``), so it raises
+        AssertionError before the first event and returns None under
+        ``python -O``.
         """
         if stream is None:
             return
