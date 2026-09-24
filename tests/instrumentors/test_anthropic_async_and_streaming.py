@@ -99,31 +99,80 @@ def _buffered_response():
     )
 
 
-def _make_fake_anthropic_module(sync_create=None, async_create=None, extra_clients=()):
+def _make_fake_anthropic_module(
+    sync_create=None, async_create=None, extra_clients=(), sync_stream=None, async_stream=None
+):
     """Build a stand-in ``anthropic`` module exposing real client classes.
 
     Real classes rather than MagicMock attributes because ``instrument()``
     assigns to ``__init__``, which a MagicMock attribute cannot meaningfully
-    accept.
+    accept. ``stream`` is only set when asked for, so a client without it is
+    genuinely without it rather than carrying a None the wrapper would try to
+    wrap.
     """
     module = types.ModuleType("anthropic")
 
-    def _client_class(create):
+    def _client_class(create, stream=None):
         class _Client:
             def __init__(self, base_url=None, api_key=None):
                 self.base_url = base_url
                 self.api_key = api_key
                 self.messages = SimpleNamespace(create=create)
+                if stream is not None:
+                    self.messages.stream = stream
 
         return _Client
 
-    if sync_create is not None:
-        module.Anthropic = _client_class(sync_create)
-    if async_create is not None:
-        module.AsyncAnthropic = _client_class(async_create)
+    if sync_create is not None or sync_stream is not None:
+        module.Anthropic = _client_class(sync_create, sync_stream)
+    if async_create is not None or async_stream is not None:
+        module.AsyncAnthropic = _client_class(async_create, async_stream)
     for name in extra_clients:
         setattr(module, name, _client_class(sync_create or (lambda **kw: None)))
     return module
+
+
+class _FakeMessageStream:
+    """Stand-in for the SDK's MessageStream, including its non-iteration API."""
+
+    def __init__(self, events, final_message):
+        self._events = events
+        self._final = final_message
+        self.current_message_snapshot = final_message
+
+    def __iter__(self):
+        return iter(self._events)
+
+    def get_final_message(self):
+        return self._final
+
+    def get_final_text(self):
+        return "hi"
+
+
+class _FakeAsyncMessageStream(_FakeMessageStream):
+    async def __aiter__(self):
+        for event in self._events:
+            yield event
+
+
+class _FakeStreamManager:
+    def __init__(self, stream):
+        self._stream = stream
+
+    def __enter__(self):
+        return self._stream
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
+class _FakeAsyncStreamManager(_FakeStreamManager):
+    async def __aenter__(self):
+        return self._stream
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
 
 
 def _prepare(instrumentor, provider):
@@ -237,6 +286,148 @@ def test_cumulative_message_deltas_are_not_summed(captured):
     assert attrs["gen_ai.usage.completion_tokens"] == 9
     assert attrs["gen_ai.usage.prompt_tokens"] == 10
     assert attrs["gen_ai.usage.total_tokens"] == 19
+
+
+# --------------------------------------------------------------------------
+# messages.stream() -- the context-manager surface
+# --------------------------------------------------------------------------
+
+
+def test_sync_messages_stream_is_measured(captured):
+    """`with client.messages.stream(...)` produces one priced span.
+
+    Against 1.29.0 this surface produced no span at all: `stream()` was never
+    wrapped, because it returns a context manager rather than an iterator and
+    never sets `stream=True`.
+    """
+    spans, provider = captured
+
+    def stream(**kwargs):
+        return _FakeStreamManager(_FakeMessageStream(_raw_stream_events(), _buffered_response()))
+
+    fake = _make_fake_anthropic_module(sync_stream=stream)
+    with patch.dict(sys.modules, {"anthropic": fake}):
+        inst = _prepare(AnthropicInstrumentor(), provider)
+        inst.instrument(OTelConfig(service_name="test"))
+
+        client = fake.Anthropic(base_url=None, api_key="k")
+        with client.messages.stream(model=MODEL, messages=[]) as handle:
+            events = list(handle)
+            assert spans == [], "span closed before the with-block was left"
+        assert len(events) == 4
+
+    assert len(spans) == 1
+    attrs = _attrs(spans[0])
+    assert spans[0].name == "anthropic.messages.stream"
+    assert attrs["gen_ai.usage.prompt_tokens"] == PROMPT_TOKENS
+    assert attrs["gen_ai.usage.completion_tokens"] == COMPLETION_TOKENS
+    assert attrs["gen_ai.usage.cost.total"] > 0
+
+
+def test_async_messages_stream_is_measured(captured):
+    """`async with client.messages.stream(...)` reports the same."""
+    spans, provider = captured
+
+    def stream(**kwargs):
+        return _FakeAsyncStreamManager(
+            _FakeAsyncMessageStream(_raw_stream_events(), _buffered_response())
+        )
+
+    fake = _make_fake_anthropic_module(async_stream=stream)
+    with patch.dict(sys.modules, {"anthropic": fake}):
+        inst = _prepare(AnthropicInstrumentor(), provider)
+        inst.instrument(OTelConfig(service_name="test"))
+
+        client = fake.AsyncAnthropic(base_url=None, api_key="k")
+
+        async def run():
+            async with client.messages.stream(model=MODEL, messages=[]) as handle:
+                events = [event async for event in handle]
+                assert spans == [], "span closed before the with-block was left"
+            return events
+
+        assert len(asyncio.run(run())) == 4
+
+    assert len(spans) == 1
+    attrs = _attrs(spans[0])
+    assert attrs["gen_ai.usage.prompt_tokens"] == PROMPT_TOKENS
+    assert attrs["gen_ai.usage.completion_tokens"] == COMPLETION_TOKENS
+    assert attrs["gen_ai.usage.cost.total"] > 0
+
+
+def test_messages_stream_without_iterating_still_reports_usage(captured):
+    """get_final_message() consumes the stream internally, bypassing __iter__.
+
+    The span must still carry tokens and cost: how the caller chose to read
+    the answer is not a reason to report the call as unpriced.
+    """
+    spans, provider = captured
+
+    def stream(**kwargs):
+        return _FakeStreamManager(_FakeMessageStream(_raw_stream_events(), _buffered_response()))
+
+    fake = _make_fake_anthropic_module(sync_stream=stream)
+    with patch.dict(sys.modules, {"anthropic": fake}):
+        inst = _prepare(AnthropicInstrumentor(), provider)
+        inst.instrument(OTelConfig(service_name="test"))
+
+        client = fake.Anthropic(base_url=None, api_key="k")
+        with client.messages.stream(model=MODEL, messages=[]) as handle:
+            final = handle.get_final_message()
+
+    assert final.id == "msg_1"
+    attrs = _attrs(spans[0])
+    assert attrs["gen_ai.usage.prompt_tokens"] == PROMPT_TOKENS
+    assert attrs["gen_ai.usage.cost.total"] > 0
+
+
+def test_measured_stream_proxies_the_sdk_surface(captured):
+    """The proxy must not hide the rest of MessageStream.
+
+    Callers reach past iteration for get_final_message(), get_final_text() and
+    current_message_snapshot; returning a bare generator would break them all.
+    """
+    spans, provider = captured
+
+    def stream(**kwargs):
+        return _FakeStreamManager(_FakeMessageStream(_raw_stream_events(), _buffered_response()))
+
+    fake = _make_fake_anthropic_module(sync_stream=stream)
+    with patch.dict(sys.modules, {"anthropic": fake}):
+        inst = _prepare(AnthropicInstrumentor(), provider)
+        inst.instrument(OTelConfig(service_name="test"))
+
+        client = fake.Anthropic(base_url=None, api_key="k")
+        with client.messages.stream(model=MODEL, messages=[]) as handle:
+            # It really is the measuring proxy, not the raw SDK stream --
+            # otherwise this test would pass on unwrapped code and prove
+            # nothing about the proxy at all.
+            assert handle.__wrapped__ is not handle
+            assert len(list(handle)) == 4
+            assert handle.get_final_text() == "hi"
+            assert handle.get_final_message().id == "msg_1"
+            assert handle.current_message_snapshot.id == "msg_1"
+
+
+def test_messages_stream_records_an_error_and_does_not_leak_the_span(captured):
+    """An exception inside the with-block closes the span as an error."""
+    spans, provider = captured
+
+    def stream(**kwargs):
+        return _FakeStreamManager(_FakeMessageStream(_raw_stream_events(), _buffered_response()))
+
+    fake = _make_fake_anthropic_module(sync_stream=stream)
+    with patch.dict(sys.modules, {"anthropic": fake}):
+        inst = _prepare(AnthropicInstrumentor(), provider)
+        inst.instrument(OTelConfig(service_name="test"))
+
+        client = fake.Anthropic(base_url=None, api_key="k")
+        with pytest.raises(RuntimeError, match="caller blew up"):
+            with client.messages.stream(model=MODEL, messages=[]):
+                raise RuntimeError("caller blew up")
+
+    assert len(spans) == 1, "the span leaked or was never closed"
+    assert spans[0].status.status_code.name == "ERROR"
 
 
 # --------------------------------------------------------------------------

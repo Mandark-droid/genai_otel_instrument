@@ -47,11 +47,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that report usage across several stream events rather than on the final chunk.
   Default behaviour is unchanged for every other provider.
 
-### Known limitations
+- **`client.messages.stream()` is now instrumented, sync and async.** It returns a
+  context manager rather than an iterator and never sets `stream=True`, so the
+  generic wrapper saw an ordinary buffered call and produced no useful span. The
+  context manager now owns the span's lifetime — a caller may exhaust the stream,
+  abandon it half-way, or never iterate and ask only for `get_final_message()`, but
+  must always leave the `with` block, so that is the one place finalization reliably
+  runs. The yielded stream is a transparent proxy, so `get_final_message()`,
+  `get_final_text()`, `until_done()`, `text_stream` and `response` are unaffected.
 
-- `client.messages.stream()` is still not instrumented. It returns a context manager
-  rather than an iterator and does not set `stream=True`, so it needs a dedicated
-  wrapper; tracked separately.
+- **CometAPI async clients were traced by nobody.** `cometapi_instrumentor` wrapped
+  only the sync OpenAI and Anthropic clients. Because the generic instrumentors
+  correctly stand aside for a claimed base URL, an async-only CometAPI application
+  produced no span from anyone — silent, and indistinguishable from an application
+  making no calls. Registration of the claim was also gated on having wrapped a sync
+  client, so a purely async surface left the claim unregistered too.
 
 ## [1.29.0] - 2026-09-23
 

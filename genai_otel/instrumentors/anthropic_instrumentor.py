@@ -5,10 +5,16 @@ relevant attributes such as model name, message count, and token usage.
 """
 
 import logging
+import time
 from typing import Any, Dict, Optional
 
+import wrapt
+from opentelemetry import context as otel_context
+from opentelemetry import trace
+
 from ..config import OTelConfig
-from .base import BaseInstrumentor, find_base_url_claim
+from ..server_metrics import get_server_metrics
+from .base import BaseInstrumentor, _StreamTiming, find_base_url_claim
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +28,160 @@ def _cap_content(config, text):
     if isinstance(max_len, int) and max_len > 0:
         return text[:max_len]
     return text
+
+
+def _measured_iter(wrapped, instrumentor, span, timing, model):
+    """Yield a sync MessageStream's events, observing each one."""
+    for event in wrapped:
+        instrumentor._observe_stream_chunk(span, timing, event, model)
+        yield event
+
+
+async def _measured_aiter(wrapped, instrumentor, span, timing, model):
+    """Yield an async MessageStream's events, observing each one."""
+    async for event in wrapped:
+        instrumentor._observe_stream_chunk(span, timing, event, model)
+        yield event
+
+
+class _MeasuredMessageStream(wrapt.ObjectProxy):
+    """A MessageStream whose iteration is measured, and nothing else changed.
+
+    A transparent proxy rather than a replacement iterator: callers reach past
+    iteration for ``get_final_message()``, ``get_final_text()``,
+    ``until_done()``, ``text_stream`` and ``response``, and handing back a bare
+    generator would break every one of them.
+    """
+
+    def __init__(self, wrapped, instrumentor, span, timing, model):
+        super().__init__(wrapped)
+        # ObjectProxy reserves the `_self_` prefix for attributes belonging to
+        # the proxy rather than to the wrapped object.
+        self._self_instrumentor = instrumentor
+        self._self_span = span
+        self._self_timing = timing
+        self._self_model = model
+
+    def __iter__(self):
+        return _measured_iter(
+            self.__wrapped__,
+            self._self_instrumentor,
+            self._self_span,
+            self._self_timing,
+            self._self_model,
+        )
+
+
+class _MeasuredAsyncMessageStream(_MeasuredMessageStream):
+    """Async counterpart of :class:`_MeasuredMessageStream`."""
+
+    def __aiter__(self):
+        return _measured_aiter(
+            self.__wrapped__,
+            self._self_instrumentor,
+            self._self_span,
+            self._self_timing,
+            self._self_model,
+        )
+
+
+class _MeasuredStreamManagerBase:
+    """Owns the span for one ``messages.stream()`` call.
+
+    The context manager owns the span's lifetime, not the iterator. A caller
+    may exhaust the stream, abandon it half-way, or never iterate at all and
+    ask only for ``get_final_message()`` -- but it must always leave the
+    ``with`` block, so ``__exit__`` is the one place that reliably runs. Giving
+    ownership to the iterator instead would leak a span for every caller who
+    took the final message without iterating.
+    """
+
+    def __init__(self, manager, instrumentor, span, model):
+        self._manager = manager
+        self._instrumentor = instrumentor
+        self._span = span
+        self._model = model
+        self._timing = None
+        self._stream = None
+        self._finished = False
+        self._token = None
+
+    def _begin(self):
+        # Timed from __enter__, not from the stream() call: stream() only
+        # builds the manager, the request is issued on entry.
+        self._timing = _StreamTiming(time.time())
+        try:
+            self._token = otel_context.attach(trace.set_span_in_context(self._span))
+        except Exception as e:  # noqa: BLE001 - context must not break the call
+            logger.debug("Could not attach context for anthropic.messages.stream: %s", e)
+        server_metrics = get_server_metrics()
+        if server_metrics:
+            server_metrics.increment_requests_running()
+
+    def _finish(self, exc):
+        if self._finished:
+            return
+        self._finished = True
+        if self._token is not None:
+            try:
+                otel_context.detach(self._token)
+            except Exception as e:  # noqa: BLE001
+                logger.debug("Could not detach context for anthropic.messages.stream: %s", e)
+        if exc is not None:
+            self._instrumentor._fail_stream(self._span, exc)
+            return
+        timing = self._timing if self._timing is not None else _StreamTiming(time.time())
+        if timing.usage is None:
+            # Nothing was observed during iteration, so the caller took the
+            # answer some other way. The accumulated message still carries the
+            # usage; without this the span would report no cost purely because
+            # of how the caller chose to read the stream.
+            self._instrumentor._adopt_final_usage(timing, self._stream)
+        self._instrumentor._finalize_stream(self._span, timing, self._model)
+
+
+class _MeasuredStreamManager(_MeasuredStreamManagerBase):
+    """Sync ``with client.messages.stream(...) as stream:``."""
+
+    def __enter__(self):
+        self._begin()
+        try:
+            stream = self._manager.__enter__()
+        except BaseException as e:
+            self._finish(e)
+            raise
+        self._stream = stream
+        return _MeasuredMessageStream(
+            stream, self._instrumentor, self._span, self._timing, self._model
+        )
+
+    def __exit__(self, exc_type, exc, tb):
+        try:
+            return self._manager.__exit__(exc_type, exc, tb)
+        finally:
+            self._finish(exc)
+
+
+class _MeasuredAsyncStreamManager(_MeasuredStreamManagerBase):
+    """Async ``async with client.messages.stream(...) as stream:``."""
+
+    async def __aenter__(self):
+        self._begin()
+        try:
+            stream = await self._manager.__aenter__()
+        except BaseException as e:
+            self._finish(e)
+            raise
+        self._stream = stream
+        return _MeasuredAsyncMessageStream(
+            stream, self._instrumentor, self._span, self._timing, self._model
+        )
+
+    async def __aexit__(self, exc_type, exc, tb):
+        try:
+            return await self._manager.__aexit__(exc_type, exc, tb)
+        finally:
+            self._finish(exc)
 
 
 class AnthropicInstrumentor(BaseInstrumentor):
@@ -155,6 +315,69 @@ class AnthropicInstrumentor(BaseInstrumentor):
                 extract_attributes=self._extract_anthropic_attributes,
             )(original_create)
             client.messages.create = instrumented_create_method
+
+        if hasattr(client, "messages") and hasattr(client.messages, "stream"):
+            self._instrument_stream_method(client)
+
+    def _instrument_stream_method(self, client):
+        """Wrap ``messages.stream()``, whose span has to outlive the call.
+
+        ``stream()`` hands back a context manager rather than an iterator, and
+        never sets ``stream=True``. So ``create_span_wrapper`` sees an ordinary
+        buffered call and closes the span on the handshake -- while the
+        generation, the tokens and the cost all happen later, inside the
+        caller's ``with`` block. Measuring it needs the context-manager
+        protocol, which is why this path is wrapped by hand.
+        """
+        original_stream = client.messages.stream
+        instrumentor = self
+
+        def wrapped_stream(*args, **kwargs):
+            if not instrumentor._instrumented:
+                return original_stream(*args, **kwargs)
+
+            manager = original_stream(*args, **kwargs)
+            try:
+                span = instrumentor._start_stream_span(kwargs)
+            except Exception as e:  # noqa: BLE001 - never break the caller's call
+                logger.debug("Could not start span for anthropic.messages.stream: %s", e)
+                return manager
+
+            model = kwargs.get("model", "unknown")
+            if hasattr(manager, "__aenter__"):
+                return _MeasuredAsyncStreamManager(manager, instrumentor, span, model)
+            return _MeasuredStreamManager(manager, instrumentor, span, model)
+
+        client.messages.stream = wrapped_stream
+
+    def _start_stream_span(self, kwargs):
+        """Open the span for a ``messages.stream()`` call."""
+        attributes = {}
+        try:
+            attributes = self._with_provider_aliases(
+                self._extract_anthropic_attributes(None, (), kwargs)
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Failed to extract attributes for anthropic.messages.stream: %s", e)
+        return self.tracer.start_span("anthropic.messages.stream", attributes=attributes)
+
+    def _adopt_final_usage(self, timing, stream) -> None:
+        """Take usage off the accumulated message when nothing was iterated.
+
+        ``until_done()`` and ``get_final_message()`` consume the stream
+        internally, so our measured ``__iter__`` never runs and no event is
+        ever observed. The snapshot holds the same usage the events carried.
+        """
+        if stream is None:
+            return
+        try:
+            snapshot = getattr(stream, "current_message_snapshot", None)
+            usage = self._extract_usage(snapshot) if snapshot is not None else None
+        except Exception as e:  # noqa: BLE001 - a missing count is not an outage
+            logger.debug("Could not read the final Anthropic message snapshot: %s", e)
+            return
+        if usage:
+            timing.usage = usage
 
     def _extract_anthropic_attributes(
         self, instance: Any, args: Any, kwargs: Any
