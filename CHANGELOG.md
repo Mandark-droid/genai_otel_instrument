@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **One model call was reported twice when a framework sat over an instrumented
+  provider SDK.** A framework span (LangChain chat model and similar) and the provider
+  span beneath it both wrote the full tokens and cost and both recorded the token and
+  cost metrics. Reproduced with LangChain 1.4.6 over the OpenAI SDK:
+  `langchain.chat_model.invoke` 153 tokens / $0.0000867 and its child
+  `openai.chat.completion` 153 tokens / $0.0000867 for a single request, so anything
+  summing spans or reading the counters saw double. The provider span now keeps the
+  usage; an enclosing span that finds a span beneath it already recorded it writes no
+  `gen_ai.usage.*` token or cost attributes, records no token or cost metrics, and
+  sets `gen_ai.usage.recorded_by = "descendant"`. When nothing beneath it recorded
+  usage (the provider is not instrumented) the framework span keeps its own, as
+  before. This generalises the guard the LiteLLM instrumentor already had.
+
+### Added
+
+- `UsageHolderSpanProcessor`, registered first by `setup_auto_instrumentation()`. It
+  gives every span a usage holder linked to its parent's, which is what lets the rule
+  above hold for framework instrumentors that open their span themselves and for
+  application spans in between.
+
 ## [1.30.0] - 2026-09-24
 
 ### Fixed
