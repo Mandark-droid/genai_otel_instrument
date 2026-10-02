@@ -363,6 +363,16 @@ def setup_auto_instrumentation(config: OTelConfig):
 
     set_global_textmap(TraceContextTextMapPropagator())
 
+    # Registered first, so every span has its usage holder before any wrapper
+    # reads it. This is what lets a framework span leave the tokens and cost to
+    # the provider span beneath it instead of reporting the request twice.
+    try:
+        from .instrumentors.base import UsageHolderSpanProcessor
+
+        tracer_provider.add_span_processor(UsageHolderSpanProcessor())
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Failed to add usage holder processor: %s", e, exc_info=True)
+
     # Add cost enrichment processor for custom instrumentors (OpenAI, Ollama, etc.)
     # These instrumentors set cost attributes directly, so processor is mainly for logging
     # Also attempts to enrich OpenInference spans (smolagents, litellm, mcp), though

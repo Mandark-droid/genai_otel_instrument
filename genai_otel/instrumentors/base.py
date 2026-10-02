@@ -27,7 +27,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Status, StatusCode
 
@@ -324,6 +324,142 @@ def _note_inner_measurement() -> None:
     holder = _INNER_MEASUREMENT.get()
     if holder is not None:
         holder.append(True)
+
+
+# ---------------------------------------------------------------------------
+# One model call, one usage record.
+#
+# A framework span (a LangChain chat model, a graph run) and the provider span
+# beneath it both see the same usage: the framework hands back an object that
+# carries the provider's token counts. Both used to write the tokens and the
+# cost and to record the token and cost metrics, so a single request was
+# reported twice by anything that sums spans or reads the counters.
+#
+# Each span the base wrapper opens owns a holder that travels in the OTel
+# context alongside the span, so it is parented exactly as the span is and
+# survives every async path the span does. Recording usage on a span marks the
+# holders of the spans enclosing it. An enclosing span that finds its holder
+# marked leaves the usage to the span that already recorded it.
+#
+# The holder is also pinned to the span object, because a stream is finalised
+# after the wrapper has detached its context.
+# ---------------------------------------------------------------------------
+_USAGE_HOLDER_KEY = otel_context.create_key("genai_otel_usage_holder")
+_USAGE_HOLDER_ATTR = "_genai_otel_usage_holder"
+USAGE_RECORDED_BY = "gen_ai.usage.recorded_by"
+
+
+class _UsageHolder:
+    __slots__ = ("parent", "descendant_recorded")
+
+    def __init__(self, parent: Optional["_UsageHolder"]):
+        self.parent = parent
+        self.descendant_recorded = False
+
+
+# Holders for spans this module did not open itself. Several framework
+# instrumentors start their span directly (``tracer.start_as_current_span``) and
+# only then call ``_record_result_metrics``; a span in between may come from the
+# application or from other instrumentation. ``UsageHolderSpanProcessor`` gives
+# every span a holder, linked to its parent's by span id, so the chain is
+# complete whoever opened the spans. Without the processor (a tracer provider
+# this library did not set up) only spans opened by the base wrapper have one.
+_USAGE_HOLDERS: Dict[int, "_UsageHolder"] = {}
+_USAGE_HOLDERS_LOCK = threading.Lock()
+_USAGE_HOLDERS_MAX = 100_000  # spans that never end must not grow this forever
+
+
+def _span_id(span) -> Optional[int]:
+    try:
+        span_id = span.get_span_context().span_id
+        return span_id if isinstance(span_id, int) and span_id else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+class UsageHolderSpanProcessor(SpanProcessor):
+    """Give every span a usage holder linked to its parent's."""
+
+    def on_start(self, span, parent_context=None) -> None:
+        try:
+            span_id = _span_id(span)
+            if span_id is None:
+                return
+            parent_id = _span_id(trace.get_current_span(parent_context))
+            with _USAGE_HOLDERS_LOCK:
+                if len(_USAGE_HOLDERS) >= _USAGE_HOLDERS_MAX:
+                    _USAGE_HOLDERS.clear()
+                _USAGE_HOLDERS[span_id] = _UsageHolder(
+                    _USAGE_HOLDERS.get(parent_id) if parent_id is not None else None
+                )
+        except Exception:  # noqa: BLE001 - bookkeeping must never break a span
+            pass
+
+    def on_end(self, span) -> None:
+        try:
+            span_id = _span_id(span)
+            if span_id is not None:
+                with _USAGE_HOLDERS_LOCK:
+                    _USAGE_HOLDERS.pop(span_id, None)
+        except Exception:  # noqa: BLE001
+            pass
+
+    def shutdown(self) -> None:
+        with _USAGE_HOLDERS_LOCK:
+            _USAGE_HOLDERS.clear()
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return True
+
+
+def _usage_holder_of(span) -> Optional["_UsageHolder"]:
+    holder = getattr(span, _USAGE_HOLDER_ATTR, None)
+    if isinstance(holder, _UsageHolder):  # isinstance: a mock span answers any getattr
+        return holder
+    span_id = _span_id(span)
+    if span_id is None:
+        return None
+    holder = _USAGE_HOLDERS.get(span_id)
+    return holder if isinstance(holder, _UsageHolder) else None
+
+
+def _context_with_usage_holder(span, ctx):
+    """Return ``ctx`` carrying the usage holder for ``span``."""
+    try:
+        holder = _usage_holder_of(span)  # the processor's, when it is installed
+        if holder is None:
+            parent = otel_context.get_value(_USAGE_HOLDER_KEY)
+            holder = _UsageHolder(parent if isinstance(parent, _UsageHolder) else None)
+        try:
+            setattr(span, _USAGE_HOLDER_ATTR, holder)
+        except Exception:  # noqa: BLE001 - a span type that refuses attributes
+            pass
+        return otel_context.set_value(_USAGE_HOLDER_KEY, holder, ctx)
+    except Exception:  # noqa: BLE001 - never let bookkeeping break a call
+        return ctx
+
+
+def _descendant_recorded_usage(span) -> bool:
+    holder = _usage_holder_of(span)
+    return bool(holder is not None and holder.descendant_recorded)
+
+
+def _mark_usage_recorded(span) -> None:
+    """Tell every enclosing span that this request is accounted for."""
+    holder = _usage_holder_of(span)
+    seen = 0
+    ancestor = holder.parent if holder is not None else None
+    while ancestor is not None and seen < 64:  # bounded: a cycle must not hang a call
+        ancestor.descendant_recorded = True
+        ancestor = ancestor.parent
+        seen += 1
+
+
+def _leave_usage_to_descendant(span) -> None:
+    try:
+        span.set_attribute(USAGE_RECORDED_BY, "descendant")
+    except Exception:  # noqa: BLE001
+        pass
 
 
 class BaseInstrumentor(ABC):  # pylint: disable=R0902
@@ -869,7 +1005,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         span.end()
                         otel_context.detach(token)
 
-                ctx = trace.set_span_in_context(span)
+                ctx = _context_with_usage_holder(span, trace.set_span_in_context(span))
                 token = otel_context.attach(ctx)
                 # Begin accumulating budget consumption if this is an agent
                 # invocation. No-op for ordinary LLM spans.
@@ -1476,11 +1612,18 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 if est:
                     usage = est
                     estimated = True
+            if usage and isinstance(usage, dict) and _descendant_recorded_usage(span):
+                # A span beneath this one already recorded this request's tokens
+                # and cost (a framework over an instrumented provider SDK).
+                # Writing them again here would report one request twice.
+                _leave_usage_to_descendant(span)
+                usage = None
             if usage and isinstance(usage, dict):
                 # This span is accounting for the request. A wrapper further out
-                # (litellm around a provider SDK) reads this and stays silent, so
-                # one request is never billed twice.
+                # (litellm around a provider SDK, a framework around either) reads
+                # this and stays silent, so one request is never billed twice.
                 _note_inner_measurement()
+                _mark_usage_recorded(span)
                 if estimated:
                     try:
                         span.set_attribute("gen_ai.usage.token_count_estimated", True)
@@ -2339,9 +2482,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             return False, None
 
         if emit_measurements:
-            # Tell any wrapper further out (litellm around a provider SDK) that
-            # this request is already accounted for.
+            # Tell any wrapper further out (litellm around a provider SDK, a
+            # framework around either) that this request is already accounted
+            # for. Marked when the stream is handed over, not when it ends: the
+            # enclosing call may return before the stream has been read.
             _note_inner_measurement()
+            _mark_usage_recorded(span)
         return True, value
 
     def _record_time_to_first_token(self, span, ttft: float, model: str) -> None:
@@ -2448,6 +2594,10 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             usage = timing.usage
             if usage is None and last_chunk is not None:
                 usage = self._extract_usage(last_chunk)
+            if usage and _descendant_recorded_usage(span):
+                _leave_usage_to_descendant(span)
+                usage = None
+                last_chunk = None
             if usage is not None or last_chunk is not None:
                 if usage and isinstance(usage, dict):
                     # Record token usage metrics and calculate cost
