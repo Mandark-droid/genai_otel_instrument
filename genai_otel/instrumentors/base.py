@@ -121,6 +121,21 @@ def _get_default_cost_calculator() -> "CostCalculator":
     return _DEFAULT_COST_CALCULATOR
 
 
+_CUSTOM_COST_CALCULATORS: Dict[str, "CostCalculator"] = {}
+
+
+def _get_custom_cost_calculator(custom_pricing_json: str) -> "CostCalculator":
+    """One calculator per distinct custom-pricing document, shared by every instrumentor."""
+    calc = _CUSTOM_COST_CALCULATORS.get(custom_pricing_json)
+    if calc is None:
+        with _DEFAULT_COST_CALCULATOR_LOCK:
+            calc = _CUSTOM_COST_CALCULATORS.get(custom_pricing_json)
+            if calc is None:
+                calc = CostCalculator(custom_pricing_json=custom_pricing_json)
+                _CUSTOM_COST_CALCULATORS[custom_pricing_json] = calc
+    return calc
+
+
 # base_url domains claimed by dedicated aggregator instrumentors (OpenRouter,
 # CometAPI). Generic SDK instrumentors (OpenAI, Anthropic) consult this before
 # instrumenting a client: a client whose base_url is claimed gets its span AND
@@ -522,9 +537,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         self.tracer = trace.get_tracer(__name__)
         self.meter = metrics.get_meter(__name__)
         self.config: Optional[OTelConfig] = None
-        # Shared instance by default; replaced with a private one only when the
-        # user supplies custom pricing (see _setup_config).
-        self.cost_calculator = _get_default_cost_calculator()
+        # None = resolve from self.config on every use (see the cost_calculator property).
+        self._cost_calculator_override: Optional[CostCalculator] = None
         self._instrumented = False
 
         # Use shared metrics to avoid duplicate warnings
@@ -701,6 +715,27 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 BaseInstrumentor._shared_request_finish_counter = None
                 BaseInstrumentor._shared_request_success_counter = None
                 BaseInstrumentor._shared_request_failure_counter = None
+
+    @property
+    def cost_calculator(self) -> "CostCalculator":
+        """The calculator for this instrumentor's CURRENT configuration.
+
+        Custom pricing used to be applied only by ``_setup_config()``, which 38 of the 42
+        instrumentors never call (their ``instrument()`` assigns ``self.config`` directly),
+        so ``GENAI_CUSTOM_PRICING_JSON`` was silently ignored for OpenAI, Anthropic and most
+        others. Resolving here makes every instrumentor honour it. A calculator assigned
+        explicitly (tests, ``_setup_config``) still wins.
+        """
+        if self._cost_calculator_override is not None:
+            return self._cost_calculator_override
+        custom = getattr(getattr(self, "config", None), "custom_pricing_json", None)
+        if custom:
+            return _get_custom_cost_calculator(custom)
+        return _get_default_cost_calculator()
+
+    @cost_calculator.setter
+    def cost_calculator(self, value: "CostCalculator") -> None:
+        self._cost_calculator_override = value
 
     def _setup_config(self, config: OTelConfig):
         """Set up configuration and reinitialize cost calculator with custom pricing if provided.

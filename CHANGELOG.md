@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   constructed first; every other instrumentor read `None` and recorded no metrics. An
   application using two providers got metrics for one. The instruments now live on
   `BaseInstrumentor`.
+- **`GENAI_CUSTOM_PRICING_JSON` was ignored by 38 of 42 instrumentors**, OpenAI and
+  Anthropic included: custom pricing was applied only in `_setup_config()`, which their
+  `instrument()` never calls, so a custom-priced model read as unpriced. The cost
+  calculator is now resolved from the instrumentor's current configuration on every use.
 
 ## [1.31.1] - 2026-10-03
 
