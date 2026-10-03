@@ -248,8 +248,11 @@ AUGUST_2026_MODELS = [
     # missed by the original August sweep. Without an explicit key it fell
     # through to deepseek-v4-flash by substring, which happened to be the same
     # prompt/completion price but had no reasoning or cache-read rate at all.
-    ("deepseek-v4-flash-vision-exp", 0.00014, 0.00028),
-    ("deepseek/v4-flash-vision-exp", 0.00014, 0.00028),
+    # Prices below reflect the 2026-09-10 DeepSeek V4.1 Flash reprice/rename
+    # (see SEPTEMBER_2026_MODELS / deepseek-flash); both ids were repriced in
+    # place because they resolve to the same live model under the new name.
+    ("deepseek-v4-flash-vision-exp", 0.00015, 0.0006),
+    ("deepseek/v4-flash-vision-exp", 0.00015, 0.0006),
 ]
 
 
@@ -879,6 +882,9 @@ KNOWN_ZERO_CACHE_PRICES = frozenset(
         ("gpt-3-5-turbo", "cacheReadPrice"),
         ("zai-glm-4-7", "cacheWritePrice"),
         ("zai-glm-4.7", "cacheWritePrice"),
+        ("glm-5.3-flashx", "cacheWritePrice"),
+        ("zai/glm-5.3-flashx", "cacheWritePrice"),
+        ("zhipuai/glm-5.3-flashx", "cacheWritePrice"),
     }
 )
 
@@ -926,3 +932,137 @@ def test_tier_threshold_is_exact_not_a_paraphrase(calc, model, threshold):
         f"{model} states a rounded 200K threshold that is not the vendor's actual "
         f"{threshold}-token boundary"
     )
+
+
+# --- September 2026 sweep (monthly maintenance, run 2026-10-03) -------------
+# models.dev + first-party vendor docs, first-party-developer and
+# major-cloud-reseller providers only. Prices below are per-1k-token.
+SEPTEMBER_2026_MODELS = [
+    # Claude Sonnet 5.5 (2026-09-28) - the prior sweep (1.29.0) priced Opus 5.5
+    # and the GPT-6 Astra/Luna/Sol family but Sonnet 5.5 shipped a week later
+    # and was never added; every alias below fell through to Claude Sonnet 5
+    # (a different, older model) until this entry existed.
+    ("claude-sonnet-5-5", 0.002, 0.01),
+    ("claude-sonnet-5.5", 0.002, 0.01),
+    ("anthropic.claude-sonnet-5-5", 0.002, 0.01),
+    ("global.anthropic.claude-sonnet-5-5", 0.002, 0.01),
+    # GPT-6.1 Sol (2026-09-29).
+    ("gpt-6.1-sol", 0.002, 0.01),
+    ("gpt-6-1-sol", 0.002, 0.01),
+    ("global.openai.gpt-6.1-sol", 0.002, 0.01),
+    # Bedrock/Azure regional (non-global) endpoints carry a 10 percent premium,
+    # same pattern already established for Fable 5.1.
+    ("us.openai.gpt-6.1-sol", 0.0022, 0.011),
+    ("openai.gpt-6.1-sol", 0.0022, 0.011),
+    # Claude Opus 5.5 Bedrock regional premium - added in the prior sweep for
+    # the bare/dotted ids only; the regional endpoints were missing entirely,
+    # so a us./eu./au./jp. call was silently billed at the global (10% lower)
+    # rate. Claude Sonnet 5.5 is not affected: models.dev lists no regional
+    # Bedrock pricing for it as of this sweep.
+    ("us.anthropic.claude-opus-5-5", 0.0044, 0.022),
+    ("eu.anthropic.claude-opus-5-5", 0.0044, 0.022),
+    ("au.anthropic.claude-opus-5-5", 0.0044, 0.022),
+    ("jp.anthropic.claude-opus-5-5", 0.0044, 0.022),
+    # Same regional-premium gap for GPT-6 Astra/Luna/Sol (bare "openai."
+    # Bedrock prefix and "us." both carry the premium; "global." does not).
+    ("openai.gpt-6-astra", 0.011, 0.055),
+    ("us.openai.gpt-6-astra", 0.011, 0.055),
+    ("global.openai.gpt-6-astra", 0.01, 0.05),
+    ("openai.gpt-6-luna", 0.00011, 0.00055),
+    ("us.openai.gpt-6-luna", 0.00011, 0.00055),
+    ("global.openai.gpt-6-luna", 0.0001, 0.0005),
+    ("openai.gpt-6-sol", 0.0022, 0.011),
+    ("us.openai.gpt-6-sol", 0.0022, 0.011),
+    ("global.openai.gpt-6-sol", 0.002, 0.01),
+    # Grok 4.7 Bedrock regional premium.
+    ("us.xai.grok-4.7", 0.0022, 0.0066),
+    ("us-xai-grok-4-7", 0.0022, 0.0066),
+    # GLM-5.3 FlashX (2026-09-18) - without this entry the FlashX id fell
+    # through to the more expensive plain GLM-5.3 price.
+    ("glm-5.3-flashx", 0.00037, 0.00125),
+    ("zai/glm-5.3-flashx", 0.00037, 0.00125),
+    ("zhipuai/glm-5.3-flashx", 0.00037, 0.00125),
+    # Xiaomi MiMo V2.6 family (2026-09-21/22).
+    ("mimo-v2.6-flash", 0.00014, 0.00028),
+    ("mimo-v2.6-pro", 0.000435, 0.00087),
+    ("mimo-v2.6-pro-ultraspeed", 0.00435, 0.0087),
+    ("xiaomi/mimo-v2.6-pro", 0.000435, 0.00087),
+    # Meta Muse Spark 1.3 (2026-09-02).
+    ("muse-spark-1.3", 0.00125, 0.00425),
+    ("muse-spark-1.3-contributor", 0.0001, 0.0002),
+    # StepFun Step-5 Preview (2026-09-16).
+    ("step-5-preview", 0.000959, 0.002741),
+    # Alibaba Qwen3.8 Omni Flash (2026-09-17).
+    ("qwen3.8-omni-flash", 0.00015, 0.00047),
+    ("qwen3-8-omni-flash", 0.00015, 0.00047),
+    # Fireworks Ember-1 (2026-09-22), Fireworks-exclusive.
+    ("ember-1", 0.003, 0.015),
+    ("accounts/fireworks/models/ember-1", 0.003, 0.015),
+    # DeepSeek V4.1 Flash (2026-09-10) - renamed/repriced from DeepSeek V4
+    # Flash under the SAME canonical_model_id. First-party DeepSeek pricing
+    # ($0.15/$0.6 per 1M) wins over every reseller's markup ($0.3/$1.2 per 1M).
+    ("deepseek-flash", 0.00015, 0.0006),
+    ("deepseek-v4.1-flash", 0.00015, 0.0006),
+    ("deepseek-v4-1-flash", 0.00015, 0.0006),
+    ("deepseek-ai/DeepSeek-V4.1-Flash", 0.00015, 0.0006),
+    ("accounts/fireworks/models/deepseek-v4p1-flash", 0.00015, 0.0006),
+    # The repriced ids themselves.
+    ("deepseek-v4-flash", 0.00015, 0.0006),
+    ("deepseek-v4-flash-vision-exp", 0.00015, 0.0006),
+    # Baseten's "Fast" variant is a distinct SKU with its own vendor price -
+    # it must NOT silently inherit the regular Flash price.
+    ("deepseek-ai/DeepSeek-V4.1-Flash-Fast", 0.0006, 0.0024),
+]
+
+
+@pytest.mark.parametrize("model,prompt_price,completion_price", SEPTEMBER_2026_MODELS)
+def test_september_2026_models_priced(calc, model, prompt_price, completion_price):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["prompt"] == pytest.approx(prompt_price)
+    assert costs["completion"] == pytest.approx(completion_price)
+    assert costs["total"] == pytest.approx(prompt_price + completion_price)
+
+
+@pytest.mark.parametrize(
+    "requested,expected_key",
+    [
+        # Novel dated snapshots must route to the new family, not collapse
+        # onto a shorter sibling (sonnet-5-5 must not collapse onto
+        # sonnet-5, and the GPT-6.1 Sol dashed form must not collapse onto
+        # gpt-6-sol).
+        ("claude-sonnet-5-5-20260928", "claude-sonnet-5-5"),
+        ("gpt-6-1-sol-2026-09-29", "gpt-6-1-sol"),
+        ("mimo-v2.6-pro-ultraspeed-preview", "mimo-v2.6-pro-ultraspeed"),
+        ("glm-5.3-flashx-20260918", "glm-5.3-flashx"),
+        ("deepseek-v4.1-flash-20260910", "deepseek-v4.1-flash"),
+        # A regional Bedrock profile must not collapse onto the global rate.
+        ("bedrock/us.anthropic.claude-opus-5-5", "us.anthropic.claude-opus-5-5"),
+        ("bedrock/global.openai.gpt-6-astra", "global.openai.gpt-6-astra"),
+    ],
+)
+def test_september_2026_snapshot_alias_routing(calc, requested, expected_key):
+    assert calc._normalize_model_name(requested, "chat") == expected_key
+
+
+@pytest.mark.parametrize(
+    "model,prompt_price,completion_price",
+    [
+        # DigitalOcean's own literal ids carry the global/base rate, not the
+        # Bedrock regional premium. A dashed alias for the premium Bedrock id
+        # (same string, no region prefix) would collide with DigitalOcean's
+        # identical dashed id and silently overbill it, so no such alias
+        # exists; these must fall through to the base price.
+        ("openai-gpt-6-astra", 0.01, 0.05),
+        ("openai-gpt-6-luna", 0.0001, 0.0005),
+        ("openai-gpt-6-sol", 0.002, 0.01),
+        ("openai-gpt-6-1-sol", 0.002, 0.01),
+    ],
+)
+def test_digitalocean_openai_dashed_ids_keep_base_price(
+    calc, model, prompt_price, completion_price
+):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["prompt"] == pytest.approx(prompt_price)
+    assert costs["completion"] == pytest.approx(completion_price)
