@@ -16,7 +16,14 @@ import time
 from typing import Optional
 from urllib.parse import urlparse
 
-import requests
+# `requests` is an optional extra, not a dependency. Importing it unconditionally here
+# made `genai_otel.instrument()` fail in any application without it: the Ollama
+# instrumentor imports this module, so the whole library went down with it. Without
+# `requests` the poller does not start and says why once; everything else instruments.
+try:
+    import requests
+except ImportError:  # pragma: no cover - exercised in a subprocess by test_requests_optional
+    requests = None  # type: ignore[assignment]
 
 from ..server_metrics import get_server_metrics
 
@@ -190,6 +197,13 @@ class OllamaServerMetricsPoller:
 
     def start(self):
         """Start the background polling thread."""
+        if requests is None:
+            logger.warning(
+                "Ollama server metrics poller not started: the 'requests' package is not "
+                "installed (pip install 'genai-otel-instrument[ollama]' or 'requests'). "
+                "Ollama KV-cache and memory metrics will not be collected."
+            )
+            return
         if self._running:
             logger.warning("Ollama server metrics poller already running")
             return

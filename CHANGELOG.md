@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   usage (the provider is not instrumented) the framework span keeps its own, as
   before. This generalises the guard the LiteLLM instrumentor already had.
 
+- **`instrument()` failed outright in any application without `requests`.** The Ollama
+  server-metrics poller imported `requests` at module import time, but `requests` is only
+  an optional extra; the Ollama instrumentor imports the poller and `auto_instrument`
+  imports the instrumentors, so the whole library raised `ModuleNotFoundError: requests`
+  and the application got no instrumentation at all. Found on a service that ran without
+  self-monitoring for two weeks because of it. The import is now guarded; without
+  `requests` the poller does not start and logs one warning naming the missing package.
+
 ### Added
 
 - `UsageHolderSpanProcessor`, registered first by `setup_auto_instrumentation()`. It
