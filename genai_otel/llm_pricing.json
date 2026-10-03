@@ -819,7 +819,7 @@
   },
   "chat": {
     "jev": {
-      "promptPrice": 0.000042,
+      "promptPrice": 4.2e-05,
       "completionPrice": 0.0,
       "note": "TypeSafe Jev input $0.042/1M tokens; output tokens are free. Source: https://typesafe.ai/blog/introducing-system-one-models-and-jev"
     },
@@ -3076,16 +3076,18 @@
       "note": "DeepSeek V3.2 Speciale - same pricing as V3.2, specialized for mathematical reasoning"
     },
     "deepseek-v4-flash": {
-      "promptPrice": 0.00014,
-      "completionPrice": 0.00028,
-      "note": "DeepSeek V4 Flash - input $0.14/1M, output $0.28/1M (cache miss). Source: api-docs.deepseek.com/quick_start/pricing"
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "reasoningPrice": 0.0006,
+      "cacheReadPrice": 3e-06,
+      "note": "DeepSeek V4 Flash - this id was repriced 2026-09-10 when DeepSeek renamed/upgraded the model to V4.1 Flash (canonical_model_id deepseek/deepseek-v4.1-flash; see deepseek-flash). input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M (was $0.14/$0.28 cache-miss before the 2026-09-10 reprice). Source: api-docs.deepseek.com/quick_start/pricing"
     },
     "deepseek-v4-flash-vision-exp": {
-      "promptPrice": 0.00014,
-      "completionPrice": 0.00028,
-      "reasoningPrice": 0.00028,
-      "cacheReadPrice": 0.0000028,
-      "note": "DeepSeek V4 Flash Vision Exp - experimental multimodal (image input) variant. input $0.14/1M, output $0.28/1M, reasoning $0.28/1M, cache read $0.0028/1M. Released 2026-08-21. Source: models.dev / deepseek (api-docs.deepseek.com/quick_start/pricing)"
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "reasoningPrice": 0.0006,
+      "cacheReadPrice": 3e-06,
+      "note": "DeepSeek V4 Flash Vision Exp - this id was repriced 2026-09-10 to match the V4.1 Flash reprice/rename (canonical_model_id deepseek/deepseek-v4.1-flash; see deepseek-flash). input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M (was $0.14/$0.28/$0.28/$0.0028 before the 2026-09-10 reprice). Source: api-docs.deepseek.com/quick_start/pricing"
     },
     "deepseek-v4-pro": {
       "promptPrice": 0.000435,
@@ -3138,16 +3140,18 @@
       "note": "From LiteLLM - provider: deepseek"
     },
     "deepseek/v4-flash": {
-      "promptPrice": 0.00014,
-      "completionPrice": 0.00028,
-      "note": "Alias for deepseek-v4-flash"
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "reasoningPrice": 0.0006,
+      "cacheReadPrice": 3e-06,
+      "note": "Alias for deepseek-v4-flash (repriced 2026-09-10, see deepseek-flash)"
     },
     "deepseek/v4-flash-vision-exp": {
-      "promptPrice": 0.00014,
-      "completionPrice": 0.00028,
-      "reasoningPrice": 0.00028,
-      "cacheReadPrice": 0.0000028,
-      "note": "Alias for deepseek-v4-flash-vision-exp"
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "reasoningPrice": 0.0006,
+      "cacheReadPrice": 3e-06,
+      "note": "Alias for deepseek-v4-flash-vision-exp (repriced 2026-09-10, see deepseek-flash)"
     },
     "deepseek/v4-pro": {
       "promptPrice": 0.000435,
@@ -3428,7 +3432,7 @@
     "gemini-2.5-computer-use-preview": {
       "promptPrice": 0.00125,
       "completionPrice": 0.01,
-      "note": "Gemini 2.5 Computer Use Preview - \u2264200k tokens. >200k: $0.0025/$0.015"
+      "note": "Gemini 2.5 Computer Use Preview - ≤200k tokens. >200k: $0.0025/$0.015"
     },
     "gemini-2.5-flash": {
       "promptPrice": 0.0003,
@@ -3578,12 +3582,12 @@
     "gemini-3-pro": {
       "promptPrice": 0.002,
       "completionPrice": 0.012,
-      "note": "Gemini 3 Pro - \u2264200k tokens. >200k: $0.004/$0.018"
+      "note": "Gemini 3 Pro - ≤200k tokens. >200k: $0.004/$0.018"
     },
     "gemini-3-pro-preview": {
       "promptPrice": 0.002,
       "completionPrice": 0.012,
-      "note": "Gemini 3 Pro Preview - \u2264200k tokens. >200k: $0.004/$0.018"
+      "note": "Gemini 3 Pro Preview - ≤200k tokens. >200k: $0.004/$0.018"
     },
     "gemini-3.1-flash-image": {
       "promptPrice": 0.0005,
@@ -5543,7 +5547,7 @@
     "mimo-v2-5": {
       "promptPrice": 0.00014,
       "completionPrice": 0.00028,
-      "cacheReadPrice": 0.0000028,
+      "cacheReadPrice": 2.8e-06,
       "note": "MiMo-V2.5. input $0.14/1M, output $0.28/1M, cache read $0.0028/1M. Released 2026-04-22. 1048576 context. Source: models.dev / xiaomi"
     },
     "mimo-v2-5-pro": {
@@ -7352,7 +7356,7 @@
     "qwen3-max-2025-09-23": {
       "promptPrice": 0.00084,
       "completionPrice": 0.00336,
-      "note": "Qwen3 Max snapshot (Sept 2025) - Tiered: \u00a50.006-0.015/1K tokens input, \u00a50.024-0.06/1K output"
+      "note": "Qwen3 Max snapshot (Sept 2025) - Tiered: ¥0.006-0.015/1K tokens input, ¥0.024-0.06/1K output"
     },
     "qwen3-next-80b-a3b-instruct": {
       "promptPrice": 0.000525,
@@ -8677,9 +8681,460 @@
     "gpt-6-luna": {
       "promptPrice": 0.0001,
       "completionPrice": 0.0005,
-      "cacheReadPrice": 0.00001,
+      "cacheReadPrice": 1e-05,
       "cacheWritePrice": 0.000125,
       "note": "GPT-6 Luna. input $0.1/1M, output $0.5/1M, cache read $0.01/1M, cache write $0.125/1M. Released 2026-09-22. Above 272000 tokens of context the vendor charges {'input': 0.2, 'output': 0.75, 'cache_read': 0.02, 'cache_write': 0.25}/1M input; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: developers.openai.com / OpenAI"
+    },
+    "claude-sonnet-5-5": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025,
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "claude-sonnet-5.5": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025,
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "anthropic.claude-sonnet-5-5": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025,
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "anthropic-claude-sonnet-5-5": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025,
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "global.anthropic.claude-sonnet-5-5": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025,
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "global-anthropic-claude-sonnet-5-5": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025,
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "gpt-6.1-sol": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0001,
+      "cacheWritePrice": 0.0025,
+      "note": "GPT-6.1 Sol. input $2/1M, output $10/1M, cache read $0.1/1M, cache write $2.5/1M. Released 2026-09-29. Above 272000 tokens of context the vendor charges input $4/1M, output $15/1M, cache read $0.2/1M, cache write $5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: developers.openai.com / OpenAI"
+    },
+    "gpt-6-1-sol": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0001,
+      "cacheWritePrice": 0.0025,
+      "note": "GPT-6.1 Sol. input $2/1M, output $10/1M, cache read $0.1/1M, cache write $2.5/1M. Released 2026-09-29. Above 272000 tokens of context the vendor charges input $4/1M, output $15/1M, cache read $0.2/1M, cache write $5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: developers.openai.com / OpenAI"
+    },
+    "openai.gpt-6.1-sol": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00011,
+      "cacheWritePrice": 0.00275,
+      "note": "GPT-6.1 Sol on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $2.2/1M, output $11/1M, cache read $0.11/1M, cache write $2.75/1M. Source: models.dev / amazon-bedrock"
+    },
+    "global.openai.gpt-6.1-sol": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0001,
+      "cacheWritePrice": 0.0025,
+      "note": "GPT-6.1 Sol. input $2/1M, output $10/1M, cache read $0.1/1M, cache write $2.5/1M. Released 2026-09-29. Above 272000 tokens of context the vendor charges input $4/1M, output $15/1M, cache read $0.2/1M, cache write $5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: developers.openai.com / OpenAI"
+    },
+    "global-openai-gpt-6-1-sol": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0001,
+      "cacheWritePrice": 0.0025,
+      "note": "GPT-6.1 Sol. input $2/1M, output $10/1M, cache read $0.1/1M, cache write $2.5/1M. Released 2026-09-29. Above 272000 tokens of context the vendor charges input $4/1M, output $15/1M, cache read $0.2/1M, cache write $5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: developers.openai.com / OpenAI"
+    },
+    "us.openai.gpt-6.1-sol": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00011,
+      "cacheWritePrice": 0.00275,
+      "note": "GPT-6.1 Sol on a Bedrock/Azure regional (non-global) endpoint - 10% premium over the global endpoint: input $2.2/1M, output $11/1M, cache read $0.11/1M, cache write $2.75/1M. Above 272000 tokens of context the vendor charges input $4.4/1M, output $16.5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / amazon-bedrock"
+    },
+    "us-openai-gpt-6-1-sol": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00011,
+      "cacheWritePrice": 0.00275,
+      "note": "GPT-6.1 Sol on a Bedrock/Azure regional (non-global) endpoint - 10% premium over the global endpoint: input $2.2/1M, output $11/1M, cache read $0.11/1M, cache write $2.75/1M. Above 272000 tokens of context the vendor charges input $4.4/1M, output $16.5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: models.dev / amazon-bedrock"
+    },
+    "us.anthropic.claude-opus-5-5": {
+      "promptPrice": 0.0044,
+      "completionPrice": 0.022,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.0055,
+      "note": "Claude Opus 5.5 on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $4.4/1M, output $22/1M, cache read $0.22/1M, cache write $5.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "us-anthropic-claude-opus-5-5": {
+      "promptPrice": 0.0044,
+      "completionPrice": 0.022,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.0055,
+      "note": "Claude Opus 5.5 on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $4.4/1M, output $22/1M, cache read $0.22/1M, cache write $5.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "eu.anthropic.claude-opus-5-5": {
+      "promptPrice": 0.0044,
+      "completionPrice": 0.022,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.0055,
+      "note": "Claude Opus 5.5 on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $4.4/1M, output $22/1M, cache read $0.22/1M, cache write $5.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "eu-anthropic-claude-opus-5-5": {
+      "promptPrice": 0.0044,
+      "completionPrice": 0.022,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.0055,
+      "note": "Claude Opus 5.5 on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $4.4/1M, output $22/1M, cache read $0.22/1M, cache write $5.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "au.anthropic.claude-opus-5-5": {
+      "promptPrice": 0.0044,
+      "completionPrice": 0.022,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.0055,
+      "note": "Claude Opus 5.5 on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $4.4/1M, output $22/1M, cache read $0.22/1M, cache write $5.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "au-anthropic-claude-opus-5-5": {
+      "promptPrice": 0.0044,
+      "completionPrice": 0.022,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.0055,
+      "note": "Claude Opus 5.5 on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $4.4/1M, output $22/1M, cache read $0.22/1M, cache write $5.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "jp.anthropic.claude-opus-5-5": {
+      "promptPrice": 0.0044,
+      "completionPrice": 0.022,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.0055,
+      "note": "Claude Opus 5.5 on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $4.4/1M, output $22/1M, cache read $0.22/1M, cache write $5.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "jp-anthropic-claude-opus-5-5": {
+      "promptPrice": 0.0044,
+      "completionPrice": 0.022,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.0055,
+      "note": "Claude Opus 5.5 on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $4.4/1M, output $22/1M, cache read $0.22/1M, cache write $5.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "openai.gpt-6-astra": {
+      "promptPrice": 0.011,
+      "completionPrice": 0.055,
+      "cacheReadPrice": 0.0011,
+      "cacheWritePrice": 0.01375,
+      "note": "gpt-6-astra on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $11/1M, output $55/1M, cache read $1.1/1M, cache write $13.75/1M. Source: models.dev / amazon-bedrock"
+    },
+    "us.openai.gpt-6-astra": {
+      "promptPrice": 0.011,
+      "completionPrice": 0.055,
+      "cacheReadPrice": 0.0011,
+      "cacheWritePrice": 0.01375,
+      "note": "gpt-6-astra on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $11/1M, output $55/1M, cache read $1.1/1M, cache write $13.75/1M. Source: models.dev / amazon-bedrock"
+    },
+    "us-openai-gpt-6-astra": {
+      "promptPrice": 0.011,
+      "completionPrice": 0.055,
+      "cacheReadPrice": 0.0011,
+      "cacheWritePrice": 0.01375,
+      "note": "gpt-6-astra on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $11/1M, output $55/1M, cache read $1.1/1M, cache write $13.75/1M. Source: models.dev / amazon-bedrock"
+    },
+    "openai.gpt-6-luna": {
+      "promptPrice": 0.00011,
+      "completionPrice": 0.00055,
+      "cacheReadPrice": 1.1e-05,
+      "cacheWritePrice": 0.0001375,
+      "note": "gpt-6-luna on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $0.11/1M, output $0.55/1M, cache read $0.011/1M, cache write $0.1375/1M. Source: models.dev / amazon-bedrock"
+    },
+    "us.openai.gpt-6-luna": {
+      "promptPrice": 0.00011,
+      "completionPrice": 0.00055,
+      "cacheReadPrice": 1.1e-05,
+      "cacheWritePrice": 0.0001375,
+      "note": "gpt-6-luna on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $0.11/1M, output $0.55/1M, cache read $0.011/1M, cache write $0.1375/1M. Source: models.dev / amazon-bedrock"
+    },
+    "us-openai-gpt-6-luna": {
+      "promptPrice": 0.00011,
+      "completionPrice": 0.00055,
+      "cacheReadPrice": 1.1e-05,
+      "cacheWritePrice": 0.0001375,
+      "note": "gpt-6-luna on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $0.11/1M, output $0.55/1M, cache read $0.011/1M, cache write $0.1375/1M. Source: models.dev / amazon-bedrock"
+    },
+    "openai.gpt-6-sol": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.00275,
+      "note": "gpt-6-sol on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $2.2/1M, output $11/1M, cache read $0.22/1M, cache write $2.75/1M. Source: models.dev / amazon-bedrock"
+    },
+    "us.openai.gpt-6-sol": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.00275,
+      "note": "gpt-6-sol on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $2.2/1M, output $11/1M, cache read $0.22/1M, cache write $2.75/1M. Source: models.dev / amazon-bedrock"
+    },
+    "us-openai-gpt-6-sol": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.00275,
+      "note": "gpt-6-sol on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $2.2/1M, output $11/1M, cache read $0.22/1M, cache write $2.75/1M. Source: models.dev / amazon-bedrock"
+    },
+    "us.xai.grok-4.7": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.0066,
+      "cacheReadPrice": 0.00055,
+      "note": "Grok 4.7 on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $2.2/1M, output $6.6/1M, cache read $0.55/1M. Source: models.dev / amazon-bedrock"
+    },
+    "us-xai-grok-4-7": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.0066,
+      "cacheReadPrice": 0.00055,
+      "note": "Grok 4.7 on a Bedrock regional (non-global) endpoint - 10% premium over the global endpoint: input $2.2/1M, output $6.6/1M, cache read $0.55/1M. Source: models.dev / amazon-bedrock"
+    },
+    "glm-5.3-flashx": {
+      "promptPrice": 0.00037,
+      "completionPrice": 0.00125,
+      "cacheReadPrice": 7.5e-05,
+      "cacheWritePrice": 0.0,
+      "note": "GLM-5.3 FlashX. input $0.37/1M, output $1.25/1M, cache read $0.075/1M, no separate cache-write charge. Released 2026-09-18. Source: models.dev / zai, docs.z.ai"
+    },
+    "zai/glm-5.3-flashx": {
+      "promptPrice": 0.00037,
+      "completionPrice": 0.00125,
+      "cacheReadPrice": 7.5e-05,
+      "cacheWritePrice": 0.0,
+      "note": "GLM-5.3 FlashX. input $0.37/1M, output $1.25/1M, cache read $0.075/1M, no separate cache-write charge. Released 2026-09-18. Source: models.dev / zai, docs.z.ai"
+    },
+    "zhipuai/glm-5.3-flashx": {
+      "promptPrice": 0.00037,
+      "completionPrice": 0.00125,
+      "cacheReadPrice": 7.5e-05,
+      "cacheWritePrice": 0.0,
+      "note": "GLM-5.3 FlashX. input $0.37/1M, output $1.25/1M, cache read $0.075/1M, no separate cache-write charge. Released 2026-09-18. Source: models.dev / zai, docs.z.ai"
+    },
+    "mimo-v2.6-flash": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "cacheReadPrice": 2.8e-06,
+      "note": "Xiaomi MiMo V2.6 Flash. input $0.14/1M, output $0.28/1M, cache read $0.0028/1M. Released 2026-09-22. Source: models.dev / xiaomi"
+    },
+    "mimo-v2-6-flash": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "cacheReadPrice": 2.8e-06,
+      "note": "Xiaomi MiMo V2.6 Flash. input $0.14/1M, output $0.28/1M, cache read $0.0028/1M. Released 2026-09-22. Source: models.dev / xiaomi"
+    },
+    "xiaomi/mimo-v2.6-flash": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "cacheReadPrice": 2.8e-06,
+      "note": "Xiaomi MiMo V2.6 Flash. input $0.14/1M, output $0.28/1M, cache read $0.0028/1M. Released 2026-09-22. Source: models.dev / xiaomi"
+    },
+    "XiaomiMiMo/mimo-v2.6-flash": {
+      "promptPrice": 0.00014,
+      "completionPrice": 0.00028,
+      "cacheReadPrice": 2.8e-06,
+      "note": "Xiaomi MiMo V2.6 Flash. input $0.14/1M, output $0.28/1M, cache read $0.0028/1M. Released 2026-09-22. Source: models.dev / xiaomi"
+    },
+    "mimo-v2.6-pro": {
+      "promptPrice": 0.000435,
+      "completionPrice": 0.00087,
+      "cacheReadPrice": 3.6e-06,
+      "note": "Xiaomi MiMo V2.6 Pro. input $0.435/1M, output $0.87/1M, cache read $0.0036/1M. Released 2026-09-22. Source: models.dev / xiaomi"
+    },
+    "mimo-v2-6-pro": {
+      "promptPrice": 0.000435,
+      "completionPrice": 0.00087,
+      "cacheReadPrice": 3.6e-06,
+      "note": "Xiaomi MiMo V2.6 Pro. input $0.435/1M, output $0.87/1M, cache read $0.0036/1M. Released 2026-09-22. Source: models.dev / xiaomi"
+    },
+    "XiaomiMiMo/mimo-v2.6-pro": {
+      "promptPrice": 0.000435,
+      "completionPrice": 0.00087,
+      "cacheReadPrice": 3.6e-06,
+      "note": "Xiaomi MiMo V2.6 Pro. input $0.435/1M, output $0.87/1M, cache read $0.0036/1M. Released 2026-09-22. Source: models.dev / xiaomi"
+    },
+    "xiaomi/mimo-v2.6-pro": {
+      "promptPrice": 0.000435,
+      "completionPrice": 0.00087,
+      "cacheReadPrice": 3.6e-06,
+      "note": "Xiaomi MiMo V2.6 Pro. input $0.435/1M, output $0.87/1M, cache read $0.0036/1M. Released 2026-09-22. Source: models.dev / xiaomi"
+    },
+    "mimo-v2.6-pro-ultraspeed": {
+      "promptPrice": 0.00435,
+      "completionPrice": 0.0087,
+      "cacheReadPrice": 3.6e-05,
+      "note": "Xiaomi MiMo V2.6 Pro Ultraspeed. input $4.35/1M, output $8.7/1M, cache read $0.036/1M. Released 2026-09-21. Source: models.dev / xiaomi"
+    },
+    "mimo-v2-6-pro-ultraspeed": {
+      "promptPrice": 0.00435,
+      "completionPrice": 0.0087,
+      "cacheReadPrice": 3.6e-05,
+      "note": "Xiaomi MiMo V2.6 Pro Ultraspeed. input $4.35/1M, output $8.7/1M, cache read $0.036/1M. Released 2026-09-21. Source: models.dev / xiaomi"
+    },
+    "xiaomi/mimo-v2.6-pro-ultraspeed": {
+      "promptPrice": 0.00435,
+      "completionPrice": 0.0087,
+      "cacheReadPrice": 3.6e-05,
+      "note": "Xiaomi MiMo V2.6 Pro Ultraspeed. input $4.35/1M, output $8.7/1M, cache read $0.036/1M. Released 2026-09-21. Source: models.dev / xiaomi"
+    },
+    "XiaomiMiMo/mimo-v2.6-pro-ultraspeed": {
+      "promptPrice": 0.00435,
+      "completionPrice": 0.0087,
+      "cacheReadPrice": 3.6e-05,
+      "note": "Xiaomi MiMo V2.6 Pro Ultraspeed. input $4.35/1M, output $8.7/1M, cache read $0.036/1M. Released 2026-09-21. Source: models.dev / xiaomi"
+    },
+    "muse-spark-1.3": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.00425,
+      "cacheReadPrice": 0.00015,
+      "note": "Meta Muse Spark 1.3. input $1.25/1M, output $4.25/1M, cache read $0.15/1M. Released 2026-09-02. Source: models.dev / meta"
+    },
+    "muse-spark-1-3": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.00425,
+      "cacheReadPrice": 0.00015,
+      "note": "Meta Muse Spark 1.3. input $1.25/1M, output $4.25/1M, cache read $0.15/1M. Released 2026-09-02. Source: models.dev / meta"
+    },
+    "muse-spark-1.3-contributor": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "cacheReadPrice": 2e-06,
+      "note": "Meta Muse Spark 1.3 Contributor - discounted research/contributor tier. input $0.1/1M, output $0.2/1M, cache read $0.002/1M. Released 2026-09-02. Source: models.dev / meta"
+    },
+    "muse-spark-1-3-contributor": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0002,
+      "cacheReadPrice": 2e-06,
+      "note": "Meta Muse Spark 1.3 Contributor - discounted research/contributor tier. input $0.1/1M, output $0.2/1M, cache read $0.002/1M. Released 2026-09-02. Source: models.dev / meta"
+    },
+    "step-5-preview": {
+      "promptPrice": 0.000959,
+      "completionPrice": 0.002741,
+      "cacheReadPrice": 4.8e-05,
+      "note": "StepFun Step-5 Preview. input $0.959/1M, output $2.741/1M, cache read $0.048/1M. Released 2026-09-16. Source: models.dev / stepfun"
+    },
+    "qwen3.8-omni-flash": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00047,
+      "cacheReadPrice": 1.6e-05,
+      "note": "Qwen3.8 Omni Flash. input $0.15/1M, output $0.47/1M, cache read $0.016/1M. Released 2026-09-17. DashScope (China) pricing differs: $0.113/$0.382/1M. Source: models.dev / alibaba"
+    },
+    "qwen3-8-omni-flash": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.00047,
+      "cacheReadPrice": 1.6e-05,
+      "note": "Qwen3.8 Omni Flash. input $0.15/1M, output $0.47/1M, cache read $0.016/1M. Released 2026-09-17. DashScope (China) pricing differs: $0.113/$0.382/1M. Source: models.dev / alibaba"
+    },
+    "ember-1": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015,
+      "cacheReadPrice": 0.0003,
+      "note": "Fireworks Ember-1 - Fireworks-exclusive model built on Kimi K3, shorter reasoning traces. input $3/1M, output $15/1M, cache read $0.3/1M. Released 2026-09-22. Source: models.dev / fireworks-ai"
+    },
+    "accounts/fireworks/models/ember-1": {
+      "promptPrice": 0.003,
+      "completionPrice": 0.015,
+      "cacheReadPrice": 0.0003,
+      "note": "Fireworks Ember-1 - Fireworks-exclusive model built on Kimi K3, shorter reasoning traces. input $3/1M, output $15/1M, cache read $0.3/1M. Released 2026-09-22. Source: models.dev / fireworks-ai"
+    },
+    "deepseek-flash": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "reasoningPrice": 0.0006,
+      "cacheReadPrice": 3e-06,
+      "note": "DeepSeek V4.1 Flash (canonical_model_id deepseek/deepseek-v4.1-flash) - supersedes DeepSeek V4 Flash as of 2026-09-10 with a new price: input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M. First-party DeepSeek pricing used for all reseller aliases (Fireworks, DeepInfra, Together AI, HuggingFace, Baseten, Nebius publish a higher reseller markup of input $0.3/1M, output $1.2/1M). Source: api-docs.deepseek.com/quick_start/pricing"
+    },
+    "deepseek-v4.1-flash": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "reasoningPrice": 0.0006,
+      "cacheReadPrice": 3e-06,
+      "note": "DeepSeek V4.1 Flash (canonical_model_id deepseek/deepseek-v4.1-flash) - supersedes DeepSeek V4 Flash as of 2026-09-10 with a new price: input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M. First-party DeepSeek pricing used for all reseller aliases (Fireworks, DeepInfra, Together AI, HuggingFace, Baseten, Nebius publish a higher reseller markup of input $0.3/1M, output $1.2/1M). Source: api-docs.deepseek.com/quick_start/pricing"
+    },
+    "deepseek-v4-1-flash": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "reasoningPrice": 0.0006,
+      "cacheReadPrice": 3e-06,
+      "note": "DeepSeek V4.1 Flash (canonical_model_id deepseek/deepseek-v4.1-flash) - supersedes DeepSeek V4 Flash as of 2026-09-10 with a new price: input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M. First-party DeepSeek pricing used for all reseller aliases (Fireworks, DeepInfra, Together AI, HuggingFace, Baseten, Nebius publish a higher reseller markup of input $0.3/1M, output $1.2/1M). Source: api-docs.deepseek.com/quick_start/pricing"
+    },
+    "deepseek-ai/DeepSeek-V4.1-Flash": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "reasoningPrice": 0.0006,
+      "cacheReadPrice": 3e-06,
+      "note": "DeepSeek V4.1 Flash (canonical_model_id deepseek/deepseek-v4.1-flash) - supersedes DeepSeek V4 Flash as of 2026-09-10 with a new price: input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M. First-party DeepSeek pricing used for all reseller aliases (Fireworks, DeepInfra, Together AI, HuggingFace, Baseten, Nebius publish a higher reseller markup of input $0.3/1M, output $1.2/1M). Source: api-docs.deepseek.com/quick_start/pricing"
+    },
+    "accounts/fireworks/models/deepseek-v4p1-flash": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "reasoningPrice": 0.0006,
+      "cacheReadPrice": 3e-06,
+      "note": "DeepSeek V4.1 Flash (canonical_model_id deepseek/deepseek-v4.1-flash) - supersedes DeepSeek V4 Flash as of 2026-09-10 with a new price: input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M. First-party DeepSeek pricing used for all reseller aliases (Fireworks, DeepInfra, Together AI, HuggingFace, Baseten, Nebius publish a higher reseller markup of input $0.3/1M, output $1.2/1M). Source: api-docs.deepseek.com/quick_start/pricing"
+    },
+    "global.openai.gpt-6-astra": {
+      "promptPrice": 0.01,
+      "completionPrice": 0.05,
+      "cacheReadPrice": 0.001,
+      "cacheWritePrice": 0.0125,
+      "note": "gpt-6-astra on a Bedrock/Azure global endpoint - same rate as the public API: input $10/1M, output $50/1M, cache read $1/1M, cache write $12.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "global-openai-gpt-6-astra": {
+      "promptPrice": 0.01,
+      "completionPrice": 0.05,
+      "cacheReadPrice": 0.001,
+      "cacheWritePrice": 0.0125,
+      "note": "gpt-6-astra on a Bedrock/Azure global endpoint - same rate as the public API: input $10/1M, output $50/1M, cache read $1/1M, cache write $12.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "global.openai.gpt-6-luna": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0005,
+      "cacheReadPrice": 1e-05,
+      "cacheWritePrice": 0.000125,
+      "note": "gpt-6-luna on a Bedrock/Azure global endpoint - same rate as the public API: input $0.1/1M, output $0.5/1M, cache read $0.01/1M, cache write $0.125/1M. Source: models.dev / amazon-bedrock"
+    },
+    "global-openai-gpt-6-luna": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0005,
+      "cacheReadPrice": 1e-05,
+      "cacheWritePrice": 0.000125,
+      "note": "gpt-6-luna on a Bedrock/Azure global endpoint - same rate as the public API: input $0.1/1M, output $0.5/1M, cache read $0.01/1M, cache write $0.125/1M. Source: models.dev / amazon-bedrock"
+    },
+    "global.openai.gpt-6-sol": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025,
+      "note": "gpt-6-sol on a Bedrock/Azure global endpoint - same rate as the public API: input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "global-openai-gpt-6-sol": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.0025,
+      "note": "gpt-6-sol on a Bedrock/Azure global endpoint - same rate as the public API: input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: models.dev / amazon-bedrock"
+    },
+    "deepseek-ai/DeepSeek-V4.1-Flash-Fast": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0024,
+      "note": "DeepSeek V4.1 Flash Fast - Baseten-exclusive low-latency variant, single-source pricing (not corroborated by a second vendor). input $0.6/1M, output $2.4/1M. Released 2026-09-10. Source: models.dev / baseten"
     }
   },
   "speech_to_text": {
@@ -8962,11 +9417,11 @@
     "deepgram/nova-3-general": "2026-08-13",
     "deepgram/nova-3-medical": "2026-08-13",
     "deepgram/nova-3-multilingual": "2026-08-13",
-    "deepseek-v4-flash": "2026-08-13",
-    "deepseek-v4-flash-vision-exp": "2026-09-03",
+    "deepseek-v4-flash": "2026-10-03",
+    "deepseek-v4-flash-vision-exp": "2026-10-03",
     "deepseek-v4-pro": "2026-08-13",
-    "deepseek/v4-flash": "2026-08-13",
-    "deepseek/v4-flash-vision-exp": "2026-09-03",
+    "deepseek/v4-flash": "2026-10-03",
+    "deepseek/v4-flash-vision-exp": "2026-10-03",
     "deepseek/v4-pro": "2026-08-13",
     "eleven_english_v1": "2026-08-12",
     "eleven_monolingual_v1": "2026-08-12",
@@ -9002,6 +9457,74 @@
     "nano": "2026-08-13",
     "nemotron-3-5-lightning": "2026-08-13",
     "nemotron-3.5-lightning": "2026-08-13",
-    "nvidia/nemotron-3.5-lightning": "2026-08-13"
+    "nvidia/nemotron-3.5-lightning": "2026-08-13",
+    "claude-sonnet-5-5": "2026-10-03",
+    "claude-sonnet-5.5": "2026-10-03",
+    "anthropic.claude-sonnet-5-5": "2026-10-03",
+    "anthropic-claude-sonnet-5-5": "2026-10-03",
+    "global.anthropic.claude-sonnet-5-5": "2026-10-03",
+    "global-anthropic-claude-sonnet-5-5": "2026-10-03",
+    "gpt-6.1-sol": "2026-10-03",
+    "gpt-6-1-sol": "2026-10-03",
+    "openai.gpt-6.1-sol": "2026-10-03",
+    "global.openai.gpt-6.1-sol": "2026-10-03",
+    "global-openai-gpt-6-1-sol": "2026-10-03",
+    "us.openai.gpt-6.1-sol": "2026-10-03",
+    "us-openai-gpt-6-1-sol": "2026-10-03",
+    "us.anthropic.claude-opus-5-5": "2026-10-03",
+    "us-anthropic-claude-opus-5-5": "2026-10-03",
+    "eu.anthropic.claude-opus-5-5": "2026-10-03",
+    "eu-anthropic-claude-opus-5-5": "2026-10-03",
+    "au.anthropic.claude-opus-5-5": "2026-10-03",
+    "au-anthropic-claude-opus-5-5": "2026-10-03",
+    "jp.anthropic.claude-opus-5-5": "2026-10-03",
+    "jp-anthropic-claude-opus-5-5": "2026-10-03",
+    "openai.gpt-6-astra": "2026-10-03",
+    "us.openai.gpt-6-astra": "2026-10-03",
+    "us-openai-gpt-6-astra": "2026-10-03",
+    "openai.gpt-6-luna": "2026-10-03",
+    "us.openai.gpt-6-luna": "2026-10-03",
+    "us-openai-gpt-6-luna": "2026-10-03",
+    "openai.gpt-6-sol": "2026-10-03",
+    "us.openai.gpt-6-sol": "2026-10-03",
+    "us-openai-gpt-6-sol": "2026-10-03",
+    "us.xai.grok-4.7": "2026-10-03",
+    "us-xai-grok-4-7": "2026-10-03",
+    "glm-5.3-flashx": "2026-10-03",
+    "zai/glm-5.3-flashx": "2026-10-03",
+    "zhipuai/glm-5.3-flashx": "2026-10-03",
+    "mimo-v2.6-flash": "2026-10-03",
+    "mimo-v2-6-flash": "2026-10-03",
+    "xiaomi/mimo-v2.6-flash": "2026-10-03",
+    "XiaomiMiMo/mimo-v2.6-flash": "2026-10-03",
+    "mimo-v2.6-pro": "2026-10-03",
+    "mimo-v2-6-pro": "2026-10-03",
+    "XiaomiMiMo/mimo-v2.6-pro": "2026-10-03",
+    "xiaomi/mimo-v2.6-pro": "2026-10-03",
+    "mimo-v2.6-pro-ultraspeed": "2026-10-03",
+    "mimo-v2-6-pro-ultraspeed": "2026-10-03",
+    "xiaomi/mimo-v2.6-pro-ultraspeed": "2026-10-03",
+    "XiaomiMiMo/mimo-v2.6-pro-ultraspeed": "2026-10-03",
+    "muse-spark-1.3": "2026-10-03",
+    "muse-spark-1-3": "2026-10-03",
+    "muse-spark-1.3-contributor": "2026-10-03",
+    "muse-spark-1-3-contributor": "2026-10-03",
+    "step-5-preview": "2026-10-03",
+    "qwen3.8-omni-flash": "2026-10-03",
+    "qwen3-8-omni-flash": "2026-10-03",
+    "ember-1": "2026-10-03",
+    "accounts/fireworks/models/ember-1": "2026-10-03",
+    "deepseek-flash": "2026-10-03",
+    "deepseek-v4.1-flash": "2026-10-03",
+    "deepseek-v4-1-flash": "2026-10-03",
+    "deepseek-ai/DeepSeek-V4.1-Flash": "2026-10-03",
+    "accounts/fireworks/models/deepseek-v4p1-flash": "2026-10-03",
+    "global.openai.gpt-6-astra": "2026-10-03",
+    "global-openai-gpt-6-astra": "2026-10-03",
+    "global.openai.gpt-6-luna": "2026-10-03",
+    "global-openai-gpt-6-luna": "2026-10-03",
+    "global.openai.gpt-6-sol": "2026-10-03",
+    "global-openai-gpt-6-sol": "2026-10-03",
+    "deepseek-ai/DeepSeek-V4.1-Flash-Fast": "2026-10-03"
   }
 }

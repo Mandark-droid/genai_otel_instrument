@@ -4,6 +4,77 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.31.1] - 2026-10-03
+
+### Added
+
+- **Pricing for the September 2026 model releases**, the scheduled monthly
+  sweep (the 2026-08-03 run of this routine produced no branch, PR, or
+  release at all; this run backfills every first-party September release
+  that the per-release updates through 1.30.0 missed). Added Claude
+  Sonnet 5.5 (`claude-sonnet-5-5`, released 2026-09-28, with its Bedrock
+  global/regional aliases), GPT-6.1 Sol (`gpt-6.1-sol` and dashed alias,
+  released 2026-09-29), GLM-5.3 FlashX (`glm-5.3-flashx`, released
+  2026-09-18 - previously fell through to the more expensive plain GLM-5.3
+  price), the Xiaomi MiMo V2.6 family (`mimo-v2.6-flash`, `mimo-v2.6-pro`,
+  `mimo-v2.6-pro-ultraspeed`), Meta Muse Spark 1.3 and its contributor tier,
+  StepFun Step-5 Preview, Alibaba Qwen3.8 Omni Flash, and the
+  Fireworks-exclusive Ember-1.
+
+  **DeepSeek V4.1 Flash** (released 2026-09-10) repriced and renamed
+  DeepSeek V4 Flash under the same `canonical_model_id`
+  (`deepseek/deepseek-v4.1-flash`): input/output moved from $0.14/$0.28 to
+  $0.15/$0.60 per 1M, and the `deepseek-v4-flash` and
+  `deepseek-v4-flash-vision-exp` keys (plus their `deepseek/v4-flash*`
+  aliases) are updated in place since both ids resolve to the same live
+  model under the new price. The new `deepseek-flash` / `deepseek-v4.1-flash`
+  keys and every reseller alias (Fireworks, DeepInfra, Together AI,
+  HuggingFace, Baseten, Nebius) use DeepSeek's first-party rate rather than
+  each reseller's own ~2x markup. Baseten's "Fast" variant
+  (`deepseek-ai/DeepSeek-V4.1-Flash-Fast`) is a distinct, higher-priced SKU
+  and got its own key so it does not silently inherit the regular Flash
+  price.
+
+  **Closed a Bedrock regional-pricing gap left by the 1.29.0 sweep**: Claude
+  Opus 5.5's `us.`/`eu.`/`au.`/`jp.` regional endpoints, and the bare
+  "openai." Bedrock prefix plus `us.` regional endpoints for GPT-6
+  Astra/Luna/Sol, all carry a 10% premium over the global rate that had no
+  pricing key at all, so those calls were silently billed at the global
+  (10% lower) rate. Added the missing premium keys, plus the `global.`
+  entries that keep the non-premium global/public-API rate from being
+  shadowed by the new, longer premium keys.
+
+  **Fixed a DigitalOcean naming collision introduced by this same sweep**:
+  DigitalOcean's own literal ids (`openai-gpt-6-astra`, `openai-gpt-6-luna`,
+  `openai-gpt-6-sol`, `openai-gpt-6-1-sol`) are dashed strings identical to
+  what a naive dot-to-dash alias of the Bedrock premium id would produce, but
+  DigitalOcean bills these at the base/global rate, not the premium. No
+  dashed alias was added for the premium entries, so these ids correctly
+  fall through to the base price.
+
+  Deferred (no reliable price, or out of scope for this provider list):
+  Cohere `north-small-translate-09-2026` and NVIDIA's
+  `deepseek-ai/deepseek-v4.1-flash` (both quote $0/$0 free-tier listings on
+  models.dev - storing a zero would shadow the real price for the same
+  model); the Fireworks *router* alias
+  `accounts/fireworks/routers/deepseek-flash-latest` (a routing alias over
+  `deepseek-v4.1-flash`, not a distinct billable SKU); SAP AI Core's
+  `gemini-3.8-flash` listing (no cost data published - the model is already
+  priced via Google/Vertex).
+
+- **Regression tests** extended in `tests/test_pricing_new_models.py`: one
+  row per new or repriced chat model, novel-snapshot routing rows asserting
+  the new families do not collapse onto a shorter sibling, and a dedicated
+  test asserting the DigitalOcean dashed ids above keep the base price.
+
+### Pricing data sources
+
+Refreshed for this sweep: models.dev, cross-referenced against first-party
+docs (`platform.claude.com`, `developers.openai.com`, `docs.x.ai`,
+`api-docs.deepseek.com/quick_start/pricing`, `docs.z.ai`) and, for Bedrock
+regional pricing, `models.dev`'s `amazon-bedrock` provider table. First-party
+pricing always wins on conflict with a reseller's markup.
+
 ## [1.31.0] - 2026-10-03
 
 ### Fixed
