@@ -1059,7 +1059,9 @@ def test_september_2026_snapshot_alias_routing(calc, requested, expected_key):
         ("openai-gpt-6-1-sol", 0.002, 0.01),
     ],
 )
-def test_digitalocean_openai_dashed_ids_keep_base_price(calc, model, prompt_price, completion_price):
+def test_digitalocean_openai_dashed_ids_keep_base_price(
+    calc, model, prompt_price, completion_price
+):
     usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
     costs = calc.calculate_granular_cost(model, usage, "chat")
     assert costs["prompt"] == pytest.approx(prompt_price)
