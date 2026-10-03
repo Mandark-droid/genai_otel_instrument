@@ -10,6 +10,7 @@ closed its span the moment the call returned: near-zero latency, no tokens.
 
 import io
 import json
+from typing import Optional
 from unittest.mock import MagicMock
 
 from opentelemetry.sdk.trace import TracerProvider
@@ -55,7 +56,7 @@ ANTHROPIC_BODY = {
 }
 
 
-def _response(body: dict, headers: dict | None = None) -> dict:
+def _response(body: dict, headers: Optional[dict] = None) -> dict:
     return {
         "body": OneShotBody(json.dumps(body).encode()),
         "contentType": "application/json",
