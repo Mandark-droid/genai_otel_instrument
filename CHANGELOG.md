@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.33.0] - 2026-10-04
+
 ### Changed
 
 - **Server metrics say whose queue they describe** (`server_metrics_source`, the cross-SDK contract's
