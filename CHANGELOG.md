@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Bedrock `invoke_model` recorded no tokens on a real call.** boto3 returns the body as a
+  botocore `StreamingBody`, readable once; the instrumentor passed it to `json.loads`, which
+  failed silently (only tests using a `str` body passed). The body is now read once and the
+  caller gets a re-readable copy; tokens come from Bedrock's
+  `x-amzn-bedrock-input/output-token-count` headers (every model family), else the body,
+  where Anthropic's `input_tokens` / `output_tokens` are now read as well as Titan / Nova's
+  camelCase. The response text is captured from a real body too.
+- **Bedrock `invoke_model_with_response_stream` closed its span at once.** It has no
+  `stream=True` argument, so the generic wrapper ended the span when the call returned:
+  near-zero latency and no tokens. It is now wrapped like `converse_stream`, the span stays
+  open until the event stream is exhausted, and the tokens come from the final chunk's
+  `amazon-bedrock-invocationMetrics`.
 - **A streamed OpenAI Responses call recorded no tokens and no cost.** Its usage arrives on
   the terminal `response.completed` event as `event.response.usage`, and the stream
   finalizer reads `.usage` from the last chunk only. The OpenAI instrumentor now takes it from

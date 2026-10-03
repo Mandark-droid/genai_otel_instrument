@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 from typing import Any, Dict, Optional
@@ -37,6 +38,99 @@ def _converse_blocks_text(blocks: Any) -> str:
                     parts.append(text)
         return "".join(parts)
     return ""
+
+
+class _ReplayBody:
+    """A response body that can be read again after the instrumentor read it.
+
+    boto3 hands invoke_model's body back as a botocore ``StreamingBody`` that can be read
+    ONCE. Reading it for usage would leave the caller an empty body, so the bytes are read
+    once and the caller gets this in its place. Used only when botocore's own class is not
+    importable.
+    """
+
+    def __init__(self, data: bytes) -> None:
+        self._raw = io.BytesIO(data)
+        self._genai_otel_bytes = data
+
+    def read(self, amt: Optional[int] = None) -> bytes:
+        return self._raw.read() if amt is None else self._raw.read(amt)
+
+    def iter_chunks(self, chunk_size: int = 1024):
+        while True:
+            chunk = self._raw.read(chunk_size)
+            if not chunk:
+                return
+            yield chunk
+
+    def iter_lines(self, chunk_size: int = 1024, keepends: bool = False):
+        yield from self._genai_otel_bytes.splitlines(keepends)
+
+    def close(self) -> None:
+        self._raw.close()
+
+    def readable(self) -> bool:
+        return True
+
+
+def _replay_body(data: bytes) -> Any:
+    try:
+        from botocore.response import StreamingBody
+
+        body = StreamingBody(io.BytesIO(data), len(data))
+        body._genai_otel_bytes = data  # type: ignore[attr-defined]
+        return body
+    except Exception:  # noqa: BLE001 - botocore absent or changed: the plain replay works
+        return _ReplayBody(data)
+
+
+def _body_bytes(body: Any) -> Optional[bytes]:
+    """The response body's bytes, if they can be had without consuming the caller's copy."""
+    if isinstance(body, bytes):
+        return body
+    if isinstance(body, str):
+        return body.encode("utf-8")
+    data = getattr(body, "_genai_otel_bytes", None)
+    return data if isinstance(data, bytes) else None
+
+
+def _counts(input_tokens: Any, output_tokens: Any) -> Optional[Dict[str, int]]:
+    try:
+        inp, out = int(input_tokens or 0), int(output_tokens or 0)
+    except (TypeError, ValueError):
+        return None
+    if not inp and not out:
+        return None
+    return {"prompt_tokens": inp, "completion_tokens": out, "total_tokens": inp + out}
+
+
+def _usage_from_payload(payload: Any) -> Optional[Dict[str, int]]:
+    """Token counts from an invoke_model body or a stream chunk, whatever the model family."""
+    if not isinstance(payload, dict):
+        return None
+    metrics = payload.get("amazon-bedrock-invocationMetrics")
+    if isinstance(metrics, dict):
+        found = _counts(metrics.get("inputTokenCount"), metrics.get("outputTokenCount"))
+        if found:
+            return found
+    usage = payload.get("usage")
+    if isinstance(usage, dict):
+        # Titan / Nova spell it inputTokens; Anthropic's Messages body input_tokens.
+        found = _counts(
+            usage.get("inputTokens", usage.get("input_tokens")),
+            usage.get("outputTokens", usage.get("output_tokens")),
+        )
+        if found:
+            return found
+    meta = payload.get("usageMetadata")
+    if isinstance(meta, dict):
+        inp = meta.get("promptTokenCount", 0) or 0
+        out = meta.get("candidatesTokenCount", 0) or 0
+        found = _counts(inp, out)
+        if found:
+            found["total_tokens"] = meta.get("totalTokenCount", inp + out)
+            return found
+    return None
 
 
 class AWSBedrockInstrumentor(BaseInstrumentor):
@@ -99,17 +193,20 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
             client.invoke_model = self.create_span_wrapper(
                 span_name="aws.bedrock.invoke_model",
                 extract_attributes=self._extract_aws_bedrock_attributes,
-            )(original_invoke_model)
+            )(self._with_replayable_body(original_invoke_model))
 
         # The streaming sibling of the call above: same request shape, same
         # extractor. Without it the covered path went dark the moment a caller
         # streamed.
+        # There is no stream=True argument for the generic wrapper to key on, so it
+        # closed the span the moment the call returned: near-zero latency, no tokens.
         if hasattr(client, "invoke_model_with_response_stream"):
-            original_ims = client.invoke_model_with_response_stream
-            client.invoke_model_with_response_stream = self.create_span_wrapper(
+            client.invoke_model_with_response_stream = self._wrap_event_stream(
+                client.invoke_model_with_response_stream,
                 span_name="aws.bedrock.invoke_model_with_response_stream",
+                stream_key="body",
                 extract_attributes=self._extract_aws_bedrock_attributes,
-            )(original_ims)
+            )
 
         # Converse is the unified API AWS points callers at, and the practical
         # path for every non-Anthropic model. Being model-agnostic, it needs no
@@ -123,6 +220,22 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
 
         if hasattr(client, "converse_stream"):
             client.converse_stream = self._wrap_converse_stream(client.converse_stream)
+
+    @staticmethod
+    def _with_replayable_body(original):
+        """Read invoke_model's one-shot body once and hand the caller a re-readable copy."""
+
+        def call(*args, **kwargs):
+            result = original(*args, **kwargs)
+            try:
+                body = result.get("body") if hasattr(result, "get") else None
+                if body is not None and hasattr(body, "read") and _body_bytes(body) is None:
+                    result["body"] = _replay_body(body.read())
+            except Exception as e:  # noqa: BLE001 - never break the caller's response
+                logger.debug("Could not buffer the Bedrock response body: %s", e)
+            return result
+
+        return call
 
     def _extract_aws_bedrock_attributes(
         self, instance: Any, args: Any, kwargs: Any
@@ -263,6 +376,14 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
         return attrs
 
     def _wrap_converse_stream(self, original):
+        return self._wrap_event_stream(
+            original,
+            span_name="aws.bedrock.converse_stream",
+            stream_key="stream",
+            extract_attributes=self._extract_converse_attributes,
+        )
+
+    def _wrap_event_stream(self, original, span_name: str, stream_key: str, extract_attributes):
         """Span wrapper for converse_stream.
 
         Bedrock hands back ``{"stream": EventStream}`` immediately -- the model
@@ -285,13 +406,11 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
 
             attributes: Dict[str, Any] = {}
             try:
-                attributes = instrumentor._extract_converse_attributes(None, args, kwargs)
+                attributes = extract_attributes(None, args, kwargs)
             except Exception as e:  # noqa: BLE001
-                logger.warning("Failed to extract converse_stream attributes: %s", e)
+                logger.warning("Failed to extract %s attributes: %s", span_name, e)
 
-            span = instrumentor.tracer.start_span(
-                "aws.bedrock.converse_stream", attributes=attributes
-            )
+            span = instrumentor.tracer.start_span(span_name, attributes=attributes)
             start_time = time.time()
             model = kwargs.get("modelId", "unknown")
 
@@ -312,7 +431,7 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                 span.end()
                 return result
 
-            stream = result.get("stream") if hasattr(result, "get") else None
+            stream = result.get(stream_key) if hasattr(result, "get") else None
             if stream is None:
                 # Nothing to measure -- close the span rather than leak it.
                 span.set_status(Status(StatusCode.OK))
@@ -320,9 +439,9 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                 return result
 
             if instrumentor.request_counter:
-                instrumentor.request_counter.add(1, {"operation": "aws.bedrock.converse_stream"})
+                instrumentor.request_counter.add(1, {"operation": span_name})
 
-            result["stream"] = instrumentor._wrap_streaming_response(
+            result[stream_key] = instrumentor._wrap_streaming_response(
                 stream, span, start_time, model
             )
             return result
@@ -362,6 +481,26 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:  # pylint: disable=R1705
         if hasattr(result, "get"):
+            # invoke_model_with_response_stream: each event is {"chunk": {"bytes": ...}}; the
+            # last carries amazon-bedrock-invocationMetrics for every model family.
+            chunk = result.get("chunk")
+            if isinstance(chunk, dict) and chunk.get("bytes") is not None:
+                try:
+                    return _usage_from_payload(json.loads(_body_bytes(chunk["bytes"]) or b"{}"))
+                except (ValueError, TypeError):
+                    return None
+
+            # invoke_model: Bedrock reports the counts in response headers for every model,
+            # whatever the body's shape.
+            headers = (result.get("ResponseMetadata") or {}).get("HTTPHeaders") or {}
+            if isinstance(headers, dict):
+                found = _counts(
+                    headers.get("x-amzn-bedrock-input-token-count"),
+                    headers.get("x-amzn-bedrock-output-token-count"),
+                )
+                if found:
+                    return found
+
             # Converse reports usage at the top level in camelCase, with no
             # `body` and no `contentType` -- the contentType gate below would
             # return None and leave the span priced at zero.
@@ -376,35 +515,15 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                 if converse is not None:
                     return converse
 
-            content_type = result.get("contentType", "").lower()
-            body_str = result.get("body", "")
+            content_type = str(result.get("contentType", "") or "").lower()
+            body_bytes = _body_bytes(result.get("body"))
 
-            if "application/json" in content_type and body_str:
+            if body_bytes and ("json" in content_type or not content_type):
                 try:
-                    body = json.loads(body_str)
-                    if "usage" in body and isinstance(body["usage"], dict):
-                        usage = body["usage"]
-                        input_tokens = usage.get("inputTokens", 0)
-                        output_tokens = usage.get("outputTokens", 0)
-                        return {
-                            "prompt_tokens": input_tokens,
-                            "completion_tokens": output_tokens,
-                            "total_tokens": input_tokens + output_tokens,
-                        }
-                    elif "usageMetadata" in body and isinstance(body["usageMetadata"], dict):
-                        usage = body["usageMetadata"]
-                        input_tokens = usage.get("promptTokenCount", 0)
-                        output_tokens = usage.get("candidatesTokenCount", 0)
-                        return {
-                            "prompt_tokens": input_tokens,
-                            "completion_tokens": output_tokens,
-                            "total_tokens": usage.get(
-                                "totalTokenCount", input_tokens + output_tokens
-                            ),
-                        }
-                except json.JSONDecodeError:
+                    return _usage_from_payload(json.loads(body_bytes))
+                except (ValueError, TypeError):
                     logger.debug("Failed to parse Bedrock response body as JSON.")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     logger.debug("Error extracting usage from Bedrock response: %s", e)
         return None
 
@@ -459,12 +578,10 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
         # Extract response content for evaluation support
         try:
             if hasattr(result, "get"):
-                body_str = result.get("body", "")
+                body_bytes = _body_bytes(result.get("body"))
+                body_str = body_bytes.decode("utf-8") if body_bytes else ""
 
                 if body_str:
-                    # Parse response body
-                    if isinstance(body_str, bytes):
-                        body_str = body_str.decode("utf-8")
 
                     body = json.loads(body_str) if isinstance(body_str, str) else body_str
 
