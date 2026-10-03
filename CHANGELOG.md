@@ -29,6 +29,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `gen_ai.power.cost` always, and `gen_ai.co2.emissions` whenever codecarbon was not
   installed (codecarbon's own figures were right). The tests pinned the wrong value and
   are corrected.
+- **Cost calculation failed or was mislabelled on shapes the shipped pricing file
+  contains.** 9 embeddings entries are `{promptPrice, ...}` objects and 4 image entries are
+  bare numbers: the calculator raised `TypeError` on all 13 and the span got no cost. The
+  `speech_to_text` table had no call-type branch and was unreachable. `pricing_source`,
+  `price_checked` and `deprecation` looked embedding and image calls up in the chat table
+  (`dall-e-3` reported `unpriced`). `completion_tokens_details=None` or
+  `reasoning_tokens=None` raised `TypeError`. All fixed; a test now runs every shipped
+  entry through the calculator.
+- **Five chat pricing keys were unreachable**: `MiniMax-M2.5`, `MiniMax-M2.7`, `MiniMax-M3`,
+  `moonshotai/Kimi-K2.6` and `moonshotai/Kimi-K2.7-Code` each had a lowercase twin, and
+  lookup is case-insensitive, so the later twin always won. The lowercase twins are removed;
+  for MiniMax this means the entries carrying cache read / write prices are now the ones used.
 
 ## [1.31.1] - 2026-10-03
 

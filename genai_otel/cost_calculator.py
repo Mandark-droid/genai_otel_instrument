@@ -262,6 +262,10 @@ class CostCalculator:
             return self._calculate_image_cost(model, usage)
         if call_type == "audio":
             return self._calculate_audio_cost(model, usage)
+        if call_type == "speech_to_text":
+            # The speech_to_text table (promptPrice / completionPrice per 1,000 tokens)
+            # shipped with no branch here, so all of its entries were unreachable.
+            return self._calculate_speech_to_text_cost(model, usage)
 
         logger.warning("Unknown call type '%s' for cost calculation.", call_type)
         return 0.0
@@ -311,6 +315,24 @@ class CostCalculator:
         granular = self._calculate_chat_cost_granular(model, usage)
         return granular["total"]
 
+    CALL_TYPE_SECTION = {
+        "chat": "chat",
+        "embedding": "embeddings",
+        "image": "images",
+        "audio": "audio",
+        "speech_to_text": "speech_to_text",
+    }
+
+    def _section_for(self, call_type: str) -> str:
+        """The pricing section a call type is priced from.
+
+        Call types are singular, sections plural. Looking the call type up as a section
+        sent every embedding and image call to the CHAT table: dall-e-3 read "unpriced"
+        and text-embedding-3-small "estimated" although both are priced.
+        """
+        category = self.CALL_TYPE_SECTION.get(call_type, call_type)
+        return category if category in self.pricing_data else "chat"
+
     def pricing_source(self, model: str, call_type: str = "chat") -> str:
         """Report where this model's price came from.
 
@@ -327,7 +349,7 @@ class CostCalculator:
                               Indicative only, not a billable figure.
             ``"unpriced"``  - no price could be determined; cost will be 0.0.
         """
-        category = call_type if call_type in self.pricing_data else "chat"
+        category = self._section_for(call_type)
         if self._normalize_model_name(model, category):
             return "table"
         if category == "chat" and self._extract_param_count_from_model_name(model) is not None:
@@ -350,7 +372,7 @@ class CostCalculator:
         registry = self.pricing_data.get(self.PRICES_CHECKED_KEY)
         if not isinstance(registry, dict) or not registry:
             return None
-        category = call_type if call_type in self.pricing_data else "chat"
+        category = self._section_for(call_type)
         key = self._normalize_model_name(model, category)
         if key and key in registry:
             return registry[key]
@@ -416,7 +438,7 @@ class CostCalculator:
         if not isinstance(registry, dict) or not registry:
             return None
 
-        category = call_type if call_type in self.pricing_data else "chat"
+        category = self._section_for(call_type)
         key = self._normalize_model_name(model, category)
         if key and key in registry:
             return registry[key]
@@ -492,7 +514,11 @@ class CostCalculator:
         completion_cost = (completion_tokens / 1000) * pricing.get("completionPrice", 0.0)
 
         # Reasoning tokens (OpenAI o1 models)
-        reasoning_tokens = usage.get("completion_tokens_details", {}).get("reasoning_tokens", 0)
+        # Providers send completion_tokens_details=None, or reasoning_tokens=None, for
+        # models that do not reason; both used to raise TypeError and lose the cost.
+        reasoning_tokens = (usage.get("completion_tokens_details") or {}).get(
+            "reasoning_tokens"
+        ) or 0
         reasoning_cost = 0.0
         if reasoning_tokens > 0 and "reasoningPrice" in pricing:
             reasoning_cost = (reasoning_tokens / 1000) * pricing.get("reasoningPrice", 0.0)
@@ -528,9 +554,27 @@ class CostCalculator:
             logger.debug("Pricing not found for embedding model: %s", model)
             return 0.0
 
-        price_per_1k_tokens = self.pricing_data["embeddings"][model_key]
+        entry = self.pricing_data["embeddings"][model_key]
+        # Most entries are a bare per-1k-token price; some are {"promptPrice": ...}
+        # objects, on which the multiplication below raised TypeError.
+        price_per_1k_tokens = entry.get("promptPrice", 0.0) if isinstance(entry, dict) else entry
         total_tokens = usage.get("prompt_tokens", 0) or usage.get("total_tokens", 0)
         return (total_tokens / 1000) * price_per_1k_tokens
+
+    def _calculate_speech_to_text_cost(self, model: str, usage: Dict[str, Any]) -> float:
+        """Speech-to-text entries are priced like chat: per 1,000 prompt / completion tokens."""
+        model_key = self._normalize_model_name(model, "speech_to_text")
+        if not model_key:
+            logger.debug("Pricing not found for speech-to-text model: %s", model)
+            return 0.0
+        entry = self.pricing_data["speech_to_text"][model_key]
+        if not isinstance(entry, dict):
+            return 0.0
+        prompt_tokens = usage.get("prompt_tokens", 0) or 0
+        completion_tokens = usage.get("completion_tokens", 0) or 0
+        return (prompt_tokens / 1000) * entry.get("promptPrice", 0.0) + (
+            completion_tokens / 1000
+        ) * entry.get("completionPrice", 0.0)
 
     def _calculate_image_cost(self, model: str, usage: Dict[str, Any]) -> float:
         """Calculate cost for image generation models."""
@@ -543,6 +587,11 @@ class CostCalculator:
         quality = usage.get("quality", "standard")
         size = usage.get("size")
         n = usage.get("n", 1)
+
+        # A bare number is a flat price per image, whatever the size or quality.
+        # `quality not in pricing_info` raised TypeError on it.
+        if isinstance(pricing_info, (int, float)):
+            return float(pricing_info) * n
 
         if quality not in pricing_info:
             logger.warning("Quality '%s' not found for image model %s", quality, model_key)

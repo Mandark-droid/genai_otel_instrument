@@ -5595,21 +5595,6 @@
       "note": "Xiaomi MiMo-V2.5-Pro-UltraSpeed (Jun 8, 2026) - low-latency tier, input $1.305/1M, output $2.61/1M, cache hit $0.0108/1M, 1M context. Source: platform.xiaomimimo.com + models.dev",
       "cacheReadPrice": 1.08e-05
     },
-    "minimax-m2.5": {
-      "promptPrice": 0.0003,
-      "completionPrice": 0.0012,
-      "note": "MiniMax M2.5 (Feb 2026)"
-    },
-    "minimax-m2.7": {
-      "promptPrice": 0.0003,
-      "completionPrice": 0.0012,
-      "note": "MiniMax M2.7 (2026)"
-    },
-    "minimax-m3": {
-      "promptPrice": 0.0003,
-      "completionPrice": 0.0012,
-      "note": "MiniMax M3 (2026) - lowercase alias"
-    },
     "minimax-minimax-m2": {
       "promptPrice": 0.0003,
       "completionPrice": 0.0012,
@@ -6293,16 +6278,6 @@
       "promptPrice": 0.0006,
       "completionPrice": 0.003,
       "note": "Moonshot AI - Kimi K2.5 via OpenRouter"
-    },
-    "moonshotai/kimi-k2.6": {
-      "promptPrice": 0.0006,
-      "completionPrice": 0.0028,
-      "note": "Moonshot Kimi K2.6 via OpenRouter aggregate (third-party providers)"
-    },
-    "moonshotai/kimi-k2.7-code": {
-      "promptPrice": 0.00095,
-      "completionPrice": 0.004,
-      "note": "Moonshot Kimi K2.7 Code via provider prefix"
     },
     "morph-v3-fast": {
       "promptPrice": 0.0008,
