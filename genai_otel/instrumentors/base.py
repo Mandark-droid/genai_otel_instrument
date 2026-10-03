@@ -121,6 +121,31 @@ def _get_default_cost_calculator() -> "CostCalculator":
     return _DEFAULT_COST_CALCULATOR
 
 
+# Attribute keys that carry prompt or completion TEXT. With content capture off none of
+# them may reach a span. Several instrumentors used to write some of them regardless
+# (gen_ai.response in Bedrock, Groq, Mistral, SambaNova and Azure OpenAI; the Responses
+# API's and Bedrock Converse's instructions). The guard sits where the base wrapper writes
+# attributes, so a new instrumentor cannot forget it.
+_CONTENT_KEYS = frozenset({"gen_ai.response", "gen_ai.request.instructions", "gen_ai.prompt"})
+_CONTENT_PREFIXES = ("gen_ai.prompt.", "gen_ai.completion.")
+
+
+def strip_content_attributes(
+    attrs: Dict[str, Any], config: Optional["OTelConfig"]
+) -> Dict[str, Any]:
+    """Drop prompt / completion text from ``attrs`` unless content capture is on.
+
+    Without a config (direct use, unit tests) attributes pass unchanged, as before.
+    """
+    if not config or getattr(config, "enable_content_capture", False):
+        return attrs
+    return {
+        k: v
+        for k, v in attrs.items()
+        if k not in _CONTENT_KEYS and not k.startswith(_CONTENT_PREFIXES)
+    }
+
+
 _CUSTOM_COST_CALCULATORS: Dict[str, "CostCalculator"] = {}
 
 
@@ -986,6 +1011,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     try:
                         extracted_attrs = extract_attributes(instance, args, kwargs)
                         extracted_attrs = self._with_provider_aliases(extracted_attrs)
+                        extracted_attrs = strip_content_attributes(extracted_attrs, self.config)
                         for key, value in extracted_attrs.items():
                             if isinstance(value, (str, int, float, bool)):
                                 initial_attributes[key] = value
@@ -1598,6 +1624,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 response_attrs = self._extract_response_attributes(result)
                 if response_attrs and isinstance(response_attrs, dict):
                     response_attrs = self._with_provider_aliases(response_attrs)
+                    response_attrs = strip_content_attributes(response_attrs, self.config)
                     for key, value in response_attrs.items():
                         if isinstance(value, (str, int, float, bool)):
                             span.set_attribute(key, value)

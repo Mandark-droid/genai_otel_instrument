@@ -10,7 +10,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
-from .base import BaseInstrumentor, find_base_url_claim
+from .base import BaseInstrumentor, find_base_url_claim, strip_content_attributes
 
 logger = logging.getLogger(__name__)
 
@@ -270,15 +270,21 @@ class OpenAIInstrumentor(BaseInstrumentor):
                         span.set_attribute("gen_ai.latency", duration)
 
                         # Extract response attributes
-                        response_attrs = instrumentor._extract_response_attributes(result)
+                        response_attrs = strip_content_attributes(
+                            instrumentor._extract_response_attributes(result),
+                            instrumentor.config,
+                        )
                         for key, value in response_attrs.items():
                             span.set_attribute(key, value)
 
                         # Record metrics
                         instrumentor._record_result_metrics(span, result, start_time, kwargs)
 
-                        # Add content events
-                        instrumentor._add_content_events(span, result, kwargs)
+                        # Content events only with content capture on. This async path
+                        # called them unconditionally, so every AsyncOpenAI application
+                        # put prompts and completions on its spans whatever it was told.
+                        if instrumentor.config and instrumentor.config.enable_content_capture:
+                            instrumentor._add_content_events(span, result, kwargs)
 
                         span.set_status(Status(StatusCode.OK))
                         return result

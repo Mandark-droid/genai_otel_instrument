@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Anthropic included: custom pricing was applied only in `_setup_config()`, which their
   `instrument()` never calls, so a custom-priced model read as unpriced. The cost
   calculator is now resolved from the instrumentor's current configuration on every use.
+- **Prompt and completion text reached spans with content capture OFF.** The AsyncOpenAI
+  wrapper added content events unconditionally; Bedrock, Groq, Mistral, SambaNova and
+  Azure OpenAI wrote `gen_ai.response` regardless; the Responses API and Bedrock Converse
+  wrote `gen_ai.request.instructions` regardless. A single guard
+  (`strip_content_attributes`) now sits where the base wrapper writes request and response
+  attributes, and the async OpenAI path honours the setting.
 
 ## [1.31.1] - 2026-10-03
 
