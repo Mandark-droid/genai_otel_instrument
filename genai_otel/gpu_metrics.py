@@ -1362,10 +1362,12 @@ class GPUMetricsCollector:
                 try:
                     handle = self.nvml.nvmlDeviceGetHandleByIndex(i)
                     power_w = self.nvml.nvmlDeviceGetPowerUsage(handle) / 1000.0  # Watts
-                    delta_time_hours = (current_time - self.last_timestamp[i]) / 3600.0
-                    delta_energy_wh = (power_w / 1000.0) * (
-                        delta_time_hours * 3600.0
-                    )  # Wh (power in kW * hours = kWh, but track in Wh for precision)
+                    delta_seconds = current_time - self.last_timestamp[i]
+                    # Energy in watt-hours = watts x seconds / 3600. This used to compute
+                    # (watts / 1000) x seconds - kilowatt-seconds - and then treat it as
+                    # watt-hours, so energy, power cost and the manual CO2 figure were all
+                    # 3.6 times too high (300 W for 10 s is 0.833 Wh; it reported 3.0).
+                    delta_energy_wh = power_w * delta_seconds / 3600.0
                     self.cumulative_energy_wh[i] += delta_energy_wh
 
                     # Calculate and record CO2 emissions using manual calculation

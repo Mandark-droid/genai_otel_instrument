@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wrote `gen_ai.request.instructions` regardless. A single guard
   (`strip_content_attributes`) now sits where the base wrapper writes request and response
   attributes, and the async OpenAI path honours the setting.
+- **GPU energy, power cost and the manual CO2 figure were 3.6 times too high.** The
+  collector computed `(watts / 1000) x seconds` (kilowatt-seconds) and used it as
+  watt-hours: 300 W for 10 s is 0.833 Wh and was recorded as 3.0. Affected
+  `gen_ai.power.cost` always, and `gen_ai.co2.emissions` whenever codecarbon was not
+  installed (codecarbon's own figures were right). The tests pinned the wrong value and
+  are corrected.
 
 ## [1.31.1] - 2026-10-03
 

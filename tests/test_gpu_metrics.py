@@ -338,10 +338,12 @@ class TestGPUMetricsCollector:
         )
         # Power usage is 150W (150000 mW)
         # delta_time_hours = (1000 - 990) / 3600 = 10 / 3600 hours
-        # delta_energy_wh = (150 / 1000) * (10 / 3600 * 3600) = 0.15 * 10 = 1.5 Wh
-        # delta_co2_g = (1.5 / 1000) * 0.4 = 0.0006 gCO2e
-        collector.co2_counter.add.assert_called_once_with(pytest.approx(0.0006), {"gpu_id": "0"})
-        assert collector.cumulative_energy_wh[0] == pytest.approx(1.5)
+        # 150 W for 10 s = 1500 J = 1500 / 3600 Wh = 0.41667 Wh (not 1.5: that was kW x s)
+        # delta_co2_g = (0.41667 / 1000) * 0.4 = 0.000166667 gCO2e
+        collector.co2_counter.add.assert_called_once_with(
+            pytest.approx(150 * 10 / 3600 / 1000 * 0.4), {"gpu_id": "0"}
+        )
+        assert collector.cumulative_energy_wh[0] == pytest.approx(150 * 10 / 3600)
         assert collector.last_timestamp[0] == pytest.approx(1000.0)
         assert collector._stop_event.wait.call_count == 2
         collector._stop_event.wait.assert_has_calls([call(1), call(1)])
@@ -364,7 +366,7 @@ class TestGPUMetricsCollector:
         collector._collect_loop()
 
         collector.co2_counter.add.assert_not_called()
-        assert collector.cumulative_energy_wh[0] == 1.5
+        assert collector.cumulative_energy_wh[0] == pytest.approx(150 * 10 / 3600)
         assert collector.last_timestamp[0] == 1000.0
 
     @patch("genai_otel.gpu_metrics.time.time", return_value=1000.0)
@@ -387,9 +389,8 @@ class TestGPUMetricsCollector:
 
         # Power usage is 150W (150000 mW)
         # delta_time_hours = (1000 - 990) / 3600 = 10 / 3600 hours
-        # delta_energy_wh = (150 / 1000) * (10 / 3600 * 3600) = 0.15 * 10 = 1.5 Wh
-        # delta_cost_usd = (1.5 / 1000) * 0.12 = 0.00018 USD
-        expected_cost = (1.5 / 1000.0) * 0.12
+        # 150 W for 10 s = 0.41667 Wh; delta_cost_usd = (0.41667 / 1000) * 0.12
+        expected_cost = (150 * 10 / 3600 / 1000.0) * 0.12
         collector.power_cost_counter.add.assert_called_once()
         call_args = collector.power_cost_counter.add.call_args
         assert call_args[0][0] == pytest.approx(expected_cost)
@@ -414,9 +415,8 @@ class TestGPUMetricsCollector:
         collector._collect_loop()
 
         # Same power and time, but different rate
-        # delta_energy_wh = 1.5 Wh
-        # delta_cost_usd = (1.5 / 1000) * 0.25 = 0.000375 USD
-        expected_cost = (1.5 / 1000.0) * 0.25
+        # 150 W for 10 s = 0.41667 Wh; delta_cost_usd = (0.41667 / 1000) * 0.25
+        expected_cost = (150 * 10 / 3600 / 1000.0) * 0.25
         call_args = collector.power_cost_counter.add.call_args
         assert call_args[0][0] == pytest.approx(expected_cost)
 
