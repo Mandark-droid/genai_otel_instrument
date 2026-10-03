@@ -6,7 +6,14 @@ It includes KV cache metrics, request queue metrics, and other server-level obse
 
 import logging
 import threading
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional
+
+# Whose queue a sample describes (the cross-SDK contract, SDK_ADDITIONS section 12).
+# "engine": a poller read it from the serving engine; "client": the in-flight count of
+# this library's own calls. TraceVerse stores the two apart (migration 177).
+ENGINE = "engine"
+CLIENT = "client"
+_SOURCE_KEY = "server_metrics_source"
 
 from opentelemetry.metrics import Meter, ObservableGauge, Observation
 
@@ -40,6 +47,13 @@ class ServerMetricsCollector:
         self._num_requests_running = 0
         self._num_requests_waiting = 0
         self._num_requests_max = 0
+        # True once an application sets the running count itself: the value is then no
+        # longer only this library's in-flight count, so it is not labelled "client".
+        self._running_set_by_app = False
+        # What engine pollers read, kept apart from the values above so neither
+        # overwrites the other and each sample can say where it came from.
+        self._engine_kv_cache_usage: Dict[str, float] = {}
+        self._engine_requests: Dict[str, int] = {}
 
         # Create observable gauges
         self.kv_cache_gauge = self.meter.create_observable_gauge(
@@ -75,59 +89,110 @@ class ServerMetricsCollector:
             observations = []
             for model_name, usage in self._kv_cache_usage.items():
                 observations.append(Observation(value=usage, attributes={"model": model_name}))
+            for model_name, usage in self._engine_kv_cache_usage.items():
+                observations.append(
+                    Observation(value=usage, attributes={"model": model_name, _SOURCE_KEY: ENGINE})
+                )
             return observations
+
+    def _engine_observation(self, name: str) -> List[Observation]:
+        if name not in self._engine_requests:
+            return []
+        return [Observation(value=self._engine_requests[name], attributes={_SOURCE_KEY: ENGINE})]
 
     def _observe_requests_running(self, options) -> list:
         """Observable callback for running requests."""
         with self._lock:
-            return [Observation(value=self._num_requests_running)]
+            attributes = {} if self._running_set_by_app else {_SOURCE_KEY: CLIENT}
+            return [Observation(value=self._num_requests_running, attributes=attributes)] + (
+                self._engine_observation("running")
+            )
 
     def _observe_requests_waiting(self, options) -> list:
         """Observable callback for waiting requests."""
         with self._lock:
-            return [Observation(value=self._num_requests_waiting)]
+            return [Observation(value=self._num_requests_waiting)] + self._engine_observation(
+                "waiting"
+            )
 
     def _observe_requests_max(self, options) -> list:
         """Observable callback for max requests."""
         with self._lock:
-            return [Observation(value=self._num_requests_max)]
+            return [Observation(value=self._num_requests_max)] + self._engine_observation("max")
 
     # Public API for manual instrumentation
 
-    def set_kv_cache_usage(self, model_name: str, usage_percent: float):
+    def set_kv_cache_usage(
+        self, model_name: str, usage_percent: float, source: Optional[str] = None
+    ):
         """Set KV cache usage for a specific model.
 
         Args:
             model_name: Name of the model
             usage_percent: Cache usage as percentage (0-100)
+            source: "engine" when a poller read it from the serving engine; the sample is
+                then labelled server_metrics_source="engine" and kept apart from values
+                the application sets.
+        """
+        value = min(100.0, max(0.0, usage_percent))
+        with self._lock:
+            if source == ENGINE:
+                self._engine_kv_cache_usage[model_name] = value
+            else:
+                self._kv_cache_usage[model_name] = value
+
+    def replace_engine_kv_cache_usage(self, usage_by_model: Dict[str, float]):
+        """Replace every engine KV-cache entry with what the engine reports now.
+
+        A model the engine has unloaded disappears instead of keeping its last value
+        (SDK_ADDITIONS section 12).
         """
         with self._lock:
-            self._kv_cache_usage[model_name] = min(100.0, max(0.0, usage_percent))
+            self._engine_kv_cache_usage = {
+                model: min(100.0, max(0.0, usage)) for model, usage in usage_by_model.items()
+            }
 
-    def set_requests_running(self, count: int):
+    def _set_engine(self, name: str, count: int) -> None:
+        with self._lock:
+            self._engine_requests[name] = max(0, count)
+
+    def set_requests_running(self, count: int, source: Optional[str] = None):
         """Set number of currently running requests.
 
         Args:
             count: Number of active requests
+            source: "engine" for a poller's reading of the engine's queue.
         """
+        if source == ENGINE:
+            self._set_engine("running", count)
+            return
         with self._lock:
             self._num_requests_running = max(0, count)
+            self._running_set_by_app = True
 
-    def set_requests_waiting(self, count: int):
+    def set_requests_waiting(self, count: int, source: Optional[str] = None):
         """Set number of requests waiting in queue.
 
         Args:
             count: Number of queued requests
+            source: "engine" for a poller's reading of the engine's queue.
         """
+        if source == ENGINE:
+            self._set_engine("waiting", count)
+            return
         with self._lock:
             self._num_requests_waiting = max(0, count)
 
-    def set_requests_max(self, count: int):
+    def set_requests_max(self, count: int, source: Optional[str] = None):
         """Set maximum concurrent request capacity.
 
         Args:
             count: Maximum request capacity
+            source: "engine" for a poller's reading of the engine's capacity.
         """
+        if source == ENGINE:
+            self._set_engine("max", count)
+            return
         with self._lock:
             self._num_requests_max = max(0, count)
 

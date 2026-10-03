@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Server metrics say whose queue they describe** (`server_metrics_source`, the cross-SDK contract's
+  section 12, already followed by the .NET and Java SDKs). The Ollama poller now writes through a separate
+  engine store: its KV-cache and capacity samples carry `server_metrics_source="engine"` and no longer
+  overwrite values an application sets. `gen_ai.server.requests.running` carries `"client"` while it is only
+  this library's in-flight count, and no label once an application sets it. `set_kv_cache_usage` and
+  `set_requests_running` / `_waiting` / `_max` take an optional `source="engine"`.
+- **An unloaded Ollama model disappears from `gen_ai.server.kv_cache.usage`.** The poller replaces the
+  engine's KV-cache entries on every poll (`replace_engine_kv_cache_usage`) instead of keeping each model's
+  last value.
+
 ## [1.32.0] - 2026-10-03
 
 ### Fixed

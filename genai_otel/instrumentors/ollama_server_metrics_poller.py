@@ -264,13 +264,14 @@ class OllamaServerMetricsPoller:
             # This gives visibility into how many models can be loaded simultaneously
             # Note: This is approximate - actual capacity depends on VRAM
             if num_models > 0:
-                server_metrics.set_requests_max(num_models)
+                server_metrics.set_requests_max(num_models, source="engine")
 
             logger.debug(f"Ollama has {num_models} models loaded in memory")
 
             # Process each model's VRAM usage and details
             total_vram_bytes = 0
             total_size_bytes = 0
+            engine_kv: dict = {}
 
             for model_info in models:
                 model_name = model_info.get("name", "unknown")
@@ -290,8 +291,8 @@ class OllamaServerMetricsPoller:
                     # This is an approximation - actual KV cache varies with context
                     vram_usage_pct = min(100.0, (size_vram / (8 * 1024**3)) * 100)
 
-                # Update KV cache usage for this model
-                server_metrics.set_kv_cache_usage(model_name, vram_usage_pct)
+                # KV cache usage for this model, as the engine reports it now
+                engine_kv[model_name] = vram_usage_pct
 
                 # Extract model details for logging
                 details = model_info.get("details", {})
@@ -305,6 +306,10 @@ class OllamaServerMetricsPoller:
                     f"Size={size_total / 1024**3:.2f}GB, "
                     f"Params={param_size}, Quant={quant_level}, Format={model_format}"
                 )
+
+            # Replace, not merge: a model Ollama has unloaded must disappear rather than
+            # keep its last value (SDK_ADDITIONS section 12).
+            server_metrics.replace_engine_kv_cache_usage(engine_kv)
 
             # Log aggregate metrics
             if total_vram_bytes > 0:

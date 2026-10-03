@@ -257,3 +257,50 @@ def test_observable_gauge_callbacks(meter_provider):
     assert expected_metrics.issubset(
         metric_names
     ), f"Missing metrics: {expected_metrics - metric_names}"
+
+
+def _points(reader, name):
+    for resource_metric in reader.get_metrics_data().resource_metrics:
+        for scope_metric in resource_metric.scope_metrics:
+            for metric in scope_metric.metrics:
+                if metric.name == name:
+                    return [(dict(dp.attributes), dp.value) for dp in metric.data.data_points]
+    return []
+
+
+def test_engine_samples_are_labelled_and_kept_apart(meter_provider):
+    """SDK_ADDITIONS section 12: a poller's reading says it came from the engine and
+    never overwrites what the application set (TraceVerse stores them apart)."""
+    provider, reader = meter_provider
+    collector = ServerMetricsCollector(provider.get_meter("test"))
+    collector.set_requests_waiting(1)
+    collector.set_requests_waiting(7, source="engine")
+    collector.set_kv_cache_usage("app-model", 90.0)
+    collector.set_kv_cache_usage("engine-model", 31.5, source="engine")
+
+    waiting = _points(reader, "gen_ai.server.requests.waiting")
+    assert ({}, 1) in waiting
+    assert ({"server_metrics_source": "engine"}, 7) in waiting
+    kv = _points(reader, "gen_ai.server.kv_cache.usage")
+    assert ({"model": "app-model"}, 90.0) in kv
+    assert ({"model": "engine-model", "server_metrics_source": "engine"}, 31.5) in kv
+
+
+def test_running_is_the_client_count_until_an_application_sets_it(meter_provider):
+    provider, reader = meter_provider
+    collector = ServerMetricsCollector(provider.get_meter("test"))
+    collector.increment_requests_running()
+    assert _points(reader, "gen_ai.server.requests.running") == [
+        ({"server_metrics_source": "client"}, 1)
+    ]
+    collector.set_requests_running(4)
+    assert _points(reader, "gen_ai.server.requests.running") == [({}, 4)]
+
+
+def test_an_unloaded_model_disappears_from_the_engine_kv_cache(meter_provider):
+    provider, reader = meter_provider
+    collector = ServerMetricsCollector(provider.get_meter("test"))
+    collector.replace_engine_kv_cache_usage({"a": 10.0, "b": 20.0})
+    collector.replace_engine_kv_cache_usage({"b": 150.0})
+    kv = _points(reader, "gen_ai.server.kv_cache.usage")
+    assert kv == [({"model": "b", "server_metrics_source": "engine"}, 100.0)]

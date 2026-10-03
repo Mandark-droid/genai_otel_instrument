@@ -114,13 +114,13 @@ def test_collect_metrics_success(poller, mock_server_metrics):
         # Verify requests.get was called
         # Note: We can't easily verify the exact call args because requests.get is mocked globally
 
-        # Verify server metrics were updated
-        assert mock_server_metrics.set_kv_cache_usage.call_count == 2
-        # Verify both models were updated
-        calls = mock_server_metrics.set_kv_cache_usage.call_args_list
-        models_updated = {call[0][0] for call in calls}
-        assert "llama2:latest" in models_updated
-        assert "mistral:latest" in models_updated
+        # The engine's KV-cache entries are replaced in one call, so an unloaded model
+        # disappears (SDK_ADDITIONS section 12), and the capacity is labelled as engine's.
+        mock_server_metrics.replace_engine_kv_cache_usage.assert_called_once()
+        usage = mock_server_metrics.replace_engine_kv_cache_usage.call_args[0][0]
+        assert set(usage) == {"llama2:latest", "mistral:latest"}
+        mock_server_metrics.set_requests_max.assert_called_once_with(2, source="engine")
+        mock_server_metrics.set_kv_cache_usage.assert_not_called()
 
 
 def test_collect_metrics_with_max_vram(mock_server_metrics):
@@ -151,9 +151,9 @@ def test_collect_metrics_with_max_vram(mock_server_metrics):
         poller._collect_metrics()
 
         # Verify cache usage was calculated as percentage
-        mock_server_metrics.set_kv_cache_usage.assert_called_once()
-        model_name, usage_pct = mock_server_metrics.set_kv_cache_usage.call_args[0]
-        assert model_name == "llama2:latest"
+        usage = mock_server_metrics.replace_engine_kv_cache_usage.call_args[0][0]
+        assert list(usage) == ["llama2:latest"]
+        usage_pct = usage["llama2:latest"]
         # 12GB / 24GB = 50%
         assert 49.0 < usage_pct < 51.0
 
