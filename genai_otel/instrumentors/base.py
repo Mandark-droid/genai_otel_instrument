@@ -560,6 +560,10 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     @classmethod
     def _ensure_shared_metrics_created(cls):
         """Ensure shared metrics are created only once across all instrumentor instances."""
+        # The instruments are stored on BaseInstrumentor, never on `cls`. Assigning to
+        # `cls` put them on whichever SUBCLASS happened to be constructed first; every
+        # other instrumentor class then read the base class's None and recorded no
+        # token, cost or latency metrics at all.
         global _SHARED_METRICS_CREATED
 
         with _SHARED_METRICS_LOCK:
@@ -570,63 +574,65 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 meter = metrics.get_meter(__name__)
 
                 # Create shared metrics once using semantic conventions
-                cls._shared_request_counter = meter.create_counter(
+                BaseInstrumentor._shared_request_counter = meter.create_counter(
                     SC.GEN_AI_REQUESTS, description="Number of GenAI requests"
                 )
-                cls._shared_token_counter = meter.create_counter(
+                BaseInstrumentor._shared_token_counter = meter.create_counter(
                     SC.GEN_AI_CLIENT_TOKEN_USAGE, description="Token usage for GenAI operations"
                 )
                 # Note: Histogram buckets should be configured via Views in MeterProvider
                 # The advisory parameter is provided as a hint but Views take precedence
-                cls._shared_latency_histogram = meter.create_histogram(
+                BaseInstrumentor._shared_latency_histogram = meter.create_histogram(
                     SC.GEN_AI_CLIENT_OPERATION_DURATION,
                     description="GenAI client operation duration",
                     unit="s",
                 )
-                cls._shared_cost_counter = meter.create_counter(
+                BaseInstrumentor._shared_cost_counter = meter.create_counter(
                     SC.GEN_AI_USAGE_COST, description="Cost of GenAI operations", unit="USD"
                 )
                 # Granular cost counters (Phase 3.2)
-                cls._shared_prompt_cost_counter = meter.create_counter(
+                BaseInstrumentor._shared_prompt_cost_counter = meter.create_counter(
                     "gen_ai.usage.cost.prompt", description="Prompt tokens cost", unit="USD"
                 )
-                cls._shared_completion_cost_counter = meter.create_counter(
+                BaseInstrumentor._shared_completion_cost_counter = meter.create_counter(
                     "gen_ai.usage.cost.completion", description="Completion tokens cost", unit="USD"
                 )
-                cls._shared_reasoning_cost_counter = meter.create_counter(
+                BaseInstrumentor._shared_reasoning_cost_counter = meter.create_counter(
                     "gen_ai.usage.cost.reasoning",
                     description="Reasoning tokens cost (o1 models)",
                     unit="USD",
                 )
-                cls._shared_cache_read_cost_counter = meter.create_counter(
+                BaseInstrumentor._shared_cache_read_cost_counter = meter.create_counter(
                     "gen_ai.usage.cost.cache_read",
                     description="Cache read cost (Anthropic)",
                     unit="USD",
                 )
-                cls._shared_cache_write_cost_counter = meter.create_counter(
+                BaseInstrumentor._shared_cache_write_cost_counter = meter.create_counter(
                     "gen_ai.usage.cost.cache_write",
                     description="Cache write cost (Anthropic)",
                     unit="USD",
                 )
-                cls._shared_error_counter = meter.create_counter(
+                BaseInstrumentor._shared_error_counter = meter.create_counter(
                     "gen_ai.client.errors", description="Number of GenAI client errors"
                 )
                 # Streaming metrics (Phase 3.4)
                 # Note: Buckets should be configured via Views in MeterProvider
-                cls._shared_token_budget_utilization_histogram = meter.create_histogram(
-                    SC.GEN_AI_INVOKE_AGENT_TOKEN_BUDGET_UTILIZATION,
-                    description=(
-                        "Fraction of an agent invocation's configured token budget "
-                        "that it consumed"
-                    ),
-                    unit="1",
+                BaseInstrumentor._shared_token_budget_utilization_histogram = (
+                    meter.create_histogram(
+                        SC.GEN_AI_INVOKE_AGENT_TOKEN_BUDGET_UTILIZATION,
+                        description=(
+                            "Fraction of an agent invocation's configured token budget "
+                            "that it consumed"
+                        ),
+                        unit="1",
+                    )
                 )
-                cls._shared_ttft_histogram = meter.create_histogram(
+                BaseInstrumentor._shared_ttft_histogram = meter.create_histogram(
                     SC.GEN_AI_SERVER_TTFT,
                     description="Time to first token in seconds",
                     unit="s",
                 )
-                cls._shared_tbt_histogram = meter.create_histogram(
+                BaseInstrumentor._shared_tbt_histogram = meter.create_histogram(
                     SC.GEN_AI_SERVER_TBT,
                     description="Time between tokens in seconds",
                     unit="s",
@@ -634,37 +640,37 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 # Upstream semconv spellings of the same two ideas. Recorded
                 # alongside the abbreviations above so consumers reading either
                 # name get data (issue #21).
-                cls._shared_time_to_first_token_histogram = meter.create_histogram(
+                BaseInstrumentor._shared_time_to_first_token_histogram = meter.create_histogram(
                     SC.GEN_AI_SERVER_TIME_TO_FIRST_TOKEN,
                     description="Time to first token in seconds",
                     unit="s",
                 )
-                cls._shared_time_per_output_token_histogram = meter.create_histogram(
+                BaseInstrumentor._shared_time_per_output_token_histogram = meter.create_histogram(
                     SC.GEN_AI_SERVER_TIME_PER_OUTPUT_TOKEN,
                     description="Time per output token after the first, in seconds",
                     unit="s",
                 )
                 # Token distribution histograms
-                cls._shared_prompt_tokens_histogram = meter.create_histogram(
+                BaseInstrumentor._shared_prompt_tokens_histogram = meter.create_histogram(
                     "gen_ai.client.token.usage.prompt",
                     description="Distribution of prompt tokens per request",
                     unit="tokens",
                 )
-                cls._shared_completion_tokens_histogram = meter.create_histogram(
+                BaseInstrumentor._shared_completion_tokens_histogram = meter.create_histogram(
                     "gen_ai.client.token.usage.completion",
                     description="Distribution of completion tokens per request",
                     unit="tokens",
                 )
                 # Finish reason tracking counters
-                cls._shared_request_finish_counter = meter.create_counter(
+                BaseInstrumentor._shared_request_finish_counter = meter.create_counter(
                     "gen_ai.server.request.finish",
                     description="Number of finished requests by finish reason",
                 )
-                cls._shared_request_success_counter = meter.create_counter(
+                BaseInstrumentor._shared_request_success_counter = meter.create_counter(
                     "gen_ai.server.request.success",
                     description="Number of successfully completed requests",
                 )
-                cls._shared_request_failure_counter = meter.create_counter(
+                BaseInstrumentor._shared_request_failure_counter = meter.create_counter(
                     "gen_ai.server.request.failure",
                     description="Number of failed requests",
                 )
@@ -675,26 +681,26 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             except Exception as e:
                 logger.error("Failed to create shared metrics: %s", e, exc_info=True)
                 # Create dummy metrics that do nothing to avoid crashes
-                cls._shared_request_counter = None
-                cls._shared_token_counter = None
-                cls._shared_latency_histogram = None
-                cls._shared_cost_counter = None
-                cls._shared_prompt_cost_counter = None
-                cls._shared_completion_cost_counter = None
-                cls._shared_reasoning_cost_counter = None
-                cls._shared_cache_read_cost_counter = None
-                cls._shared_cache_write_cost_counter = None
-                cls._shared_error_counter = None
-                cls._shared_token_budget_utilization_histogram = None
-                cls._shared_ttft_histogram = None
-                cls._shared_tbt_histogram = None
-                cls._shared_time_to_first_token_histogram = None
-                cls._shared_time_per_output_token_histogram = None
-                cls._shared_prompt_tokens_histogram = None
-                cls._shared_completion_tokens_histogram = None
-                cls._shared_request_finish_counter = None
-                cls._shared_request_success_counter = None
-                cls._shared_request_failure_counter = None
+                BaseInstrumentor._shared_request_counter = None
+                BaseInstrumentor._shared_token_counter = None
+                BaseInstrumentor._shared_latency_histogram = None
+                BaseInstrumentor._shared_cost_counter = None
+                BaseInstrumentor._shared_prompt_cost_counter = None
+                BaseInstrumentor._shared_completion_cost_counter = None
+                BaseInstrumentor._shared_reasoning_cost_counter = None
+                BaseInstrumentor._shared_cache_read_cost_counter = None
+                BaseInstrumentor._shared_cache_write_cost_counter = None
+                BaseInstrumentor._shared_error_counter = None
+                BaseInstrumentor._shared_token_budget_utilization_histogram = None
+                BaseInstrumentor._shared_ttft_histogram = None
+                BaseInstrumentor._shared_tbt_histogram = None
+                BaseInstrumentor._shared_time_to_first_token_histogram = None
+                BaseInstrumentor._shared_time_per_output_token_histogram = None
+                BaseInstrumentor._shared_prompt_tokens_histogram = None
+                BaseInstrumentor._shared_completion_tokens_histogram = None
+                BaseInstrumentor._shared_request_finish_counter = None
+                BaseInstrumentor._shared_request_success_counter = None
+                BaseInstrumentor._shared_request_failure_counter = None
 
     def _setup_config(self, config: OTelConfig):
         """Set up configuration and reinitialize cost calculator with custom pricing if provided.

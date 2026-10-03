@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Only the first instrumentor constructed recorded metrics.** The shared token, cost,
+  latency and error instruments were stored on whichever instrumentor SUBCLASS was
+  constructed first; every other instrumentor read `None` and recorded no metrics. An
+  application using two providers got metrics for one. The instruments now live on
+  `BaseInstrumentor`.
+
 ## [1.31.1] - 2026-10-03
 
 ### Added
