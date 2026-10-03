@@ -8,6 +8,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
+from ._gemini_usage import gemini_usage
 from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
@@ -88,27 +89,8 @@ class VertexAIInstrumentor(BaseInstrumentor):
         try:
             # Handle response with usage_metadata
             if hasattr(result, "usage_metadata") and result.usage_metadata:
-                usage_metadata = result.usage_metadata
-
-                # Try snake_case first (Python SDK style)
-                prompt_tokens = getattr(usage_metadata, "prompt_token_count", None)
-                candidates_tokens = getattr(usage_metadata, "candidates_token_count", None)
-                total_tokens = getattr(usage_metadata, "total_token_count", None)
-
-                # Fallback to camelCase (REST API style)
-                if prompt_tokens is None:
-                    prompt_tokens = getattr(usage_metadata, "promptTokenCount", 0)
-                if candidates_tokens is None:
-                    candidates_tokens = getattr(usage_metadata, "candidatesTokenCount", 0)
-                if total_tokens is None:
-                    total_tokens = getattr(usage_metadata, "totalTokenCount", 0)
-
-                if prompt_tokens or candidates_tokens:
-                    return {
-                        "prompt_tokens": int(prompt_tokens or 0),
-                        "completion_tokens": int(candidates_tokens or 0),
-                        "total_tokens": int(total_tokens or 0),
-                    }
+                # Thinking and cached tokens included; snake and camel case; see _gemini_usage.
+                return gemini_usage(result.usage_metadata)
 
             return None
         except Exception as e:

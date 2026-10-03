@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Gemini thinking tokens were not counted or billed.** Gemini 2.5+ reports thinking in
+  `thoughts_token_count`, outside `candidates_token_count`, and bills it as output. The
+  Google AI and Vertex AI instrumentors read only the candidates, so a thinking-heavy call
+  under-counted its output tokens and its cost. Thinking tokens are now part of the output
+  count and reported as reasoning tokens; `cached_content_token_count` is reported as cache
+  reads; unset counts (None in google-genai) are 0, and a response with no counts at all is
+  "not reported" rather than a measured zero. One shared helper, `_gemini_usage.py`.
 - **Bedrock `invoke_model` recorded no tokens on a real call.** boto3 returns the body as a
   botocore `StreamingBody`, readable once; the instrumentor passed it to `json.loads`, which
   failed silently (only tests using a `str` body passed). The body is now read once and the

@@ -333,10 +333,9 @@ class TestGoogleAIInstrumentor(unittest.TestCase):
 
         usage = instrumentor._extract_usage(result)
 
-        self.assertIsNotNone(usage)
-        self.assertEqual(usage["prompt_tokens"], 0)
-        self.assertEqual(usage["completion_tokens"], 0)
-        self.assertEqual(usage["total_tokens"], 0)
+        # No counts reported is "not reported", not a measured zero: returning zeros
+        # priced the call at $0 instead of flagging it unpriced.
+        self.assertIsNone(usage)
 
     def test_extract_response_attributes(self):
         """Test that _extract_response_attributes extracts correct attributes."""

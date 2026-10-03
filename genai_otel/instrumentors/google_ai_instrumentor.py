@@ -12,6 +12,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
+from ._gemini_usage import gemini_usage
 from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
@@ -334,12 +335,8 @@ class GoogleAIInstrumentor(BaseInstrumentor):
         """
         # Try new SDK format first (usage_metadata)
         if hasattr(result, "usage_metadata") and result.usage_metadata:
-            usage = result.usage_metadata
-            return {
-                "prompt_tokens": getattr(usage, "prompt_token_count", 0),
-                "completion_tokens": getattr(usage, "candidates_token_count", 0),
-                "total_tokens": getattr(usage, "total_token_count", 0),
-            }
+            # Thinking and cached tokens included; see _gemini_usage.
+            return gemini_usage(result.usage_metadata)
 
         # Try alternative attribute names (in case SDK changes)
         if hasattr(result, "usage") and result.usage:
