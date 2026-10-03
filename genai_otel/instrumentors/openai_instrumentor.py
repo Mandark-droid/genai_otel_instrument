@@ -522,6 +522,26 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
         return attrs
 
+    # Responses stream events that carry the final response, and with it the usage.
+    _RESPONSES_TERMINAL_EVENTS = ("response.completed", "response.incomplete", "response.failed")
+
+    def _accumulate_stream_usage(self, timing, chunk) -> None:
+        """Take a streamed Responses call's usage from its terminal event.
+
+        A Responses stream ends with ``response.completed`` (or ``.incomplete`` when an
+        output cap was hit, ``.failed`` on error), and the usage is on that event's
+        ``response``, not on the event itself. The finalizer reads ``.usage`` from the last
+        chunk, so a streamed Responses call recorded no tokens and was never priced.
+        Chat Completions streams carry ``usage`` on the final chunk and are left to the
+        finalizer, as before.
+        """
+        if getattr(chunk, "type", None) not in self._RESPONSES_TERMINAL_EVENTS:
+            return
+        response = getattr(chunk, "response", None)
+        usage = self._extract_usage(response) if response is not None else None
+        if usage:
+            timing.usage = usage
+
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from OpenAI response.
 

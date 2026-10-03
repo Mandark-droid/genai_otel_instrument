@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A streamed OpenAI Responses call recorded no tokens and no cost.** Its usage arrives on
+  the terminal `response.completed` event as `event.response.usage`, and the stream
+  finalizer reads `.usage` from the last chunk only. The OpenAI instrumentor now takes it from
+  `response.completed`, `response.incomplete` (an output cap was hit, still billed) or
+  `response.failed`, including reasoning and cached tokens.
 - **Anthropic, Azure OpenAI, Groq and Mistral spans named no operation.** They set no
   `gen_ai.operation.name`, which the OTel GenAI conventions require and which backends use to
   tell one model call from a framework or tool span: TraceVerse counted none of these calls as
