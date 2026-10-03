@@ -40,8 +40,7 @@ def test_import_genai_otel_without_requests():
 
 
 def test_instrument_without_requests():
-    proc = _run(
-        """
+    proc = _run("""
         import os
         os.environ['OTEL_EXPORTER_OTLP_ENDPOINT'] = 'http://127.0.0.1:9'
         os.environ['GENAI_ENABLE_GPU_METRICS'] = 'false'
@@ -49,23 +48,20 @@ def test_instrument_without_requests():
         import genai_otel
         genai_otel.instrument(service_name='no-requests-app')
         print('instrumented')
-        """
-    )
+        """)
     assert proc.returncode == 0, proc.stderr[-2000:]
     assert "instrumented" in proc.stdout
 
 
 def test_ollama_poller_without_requests_does_not_start_and_says_why():
-    proc = _run(
-        """
+    proc = _run("""
         import logging
         logging.basicConfig(level=logging.WARNING)
         from genai_otel.instrumentors import ollama_server_metrics_poller as p
         poller = p.start_ollama_metrics_poller(interval=60)
         print('running', poller._running)
         p.stop_ollama_metrics_poller()
-        """
-    )
+        """)
     assert proc.returncode == 0, proc.stderr[-2000:]
     assert "running False" in proc.stdout
     assert "requests" in proc.stderr  # one warning naming what is missing
