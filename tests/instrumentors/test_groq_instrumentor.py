@@ -162,6 +162,8 @@ class TestGroqInstrumentor(unittest.TestCase):
 
         # Verify span attributes were set
         mock_span.set_attribute.assert_any_call("gen_ai.system", "groq")
+        # A chat call names its operation: without it the platform never counts it as one request.
+        mock_span.set_attribute.assert_any_call("gen_ai.operation.name", "chat")
         mock_span.set_attribute.assert_any_call("gen_ai.request.model", "llama-3.1-70b")
 
         # Verify metrics were recorded

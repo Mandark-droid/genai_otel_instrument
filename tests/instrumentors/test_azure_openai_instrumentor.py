@@ -139,6 +139,7 @@ class TestAzureOpenAIInstrumentor(unittest.TestCase):
 
             # Verify span attributes were set
             mock_span.set_attribute.assert_any_call("gen_ai.system", "azure_openai")
+            mock_span.set_attribute.assert_any_call("gen_ai.operation.name", "chat")
             mock_span.set_attribute.assert_any_call("gen_ai.request.model", "gpt-4")
 
             # Verify request counter was incremented

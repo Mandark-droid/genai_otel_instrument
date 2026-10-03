@@ -137,6 +137,7 @@ class TestMistralAIInstrumentor(unittest.TestCase):
         }
 
         attrs = instrumentor._extract_chat_attributes(None, None, kwargs)
+        assert attrs["gen_ai.operation.name"] == "chat"
 
         self.assertIn("gen_ai.request.first_message", attrs)
         self.assertIn("user", attrs["gen_ai.request.first_message"])
@@ -184,3 +185,13 @@ class TestMistralAIInstrumentor(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_mistral_embeddings_name_their_operation():
+    """The platform counts a span as one model request only when it names the operation."""
+    from genai_otel.instrumentors.mistralai_instrumentor import MistralAIInstrumentor
+
+    attrs = MistralAIInstrumentor()._extract_embeddings_attributes(
+        None, None, {"model": "mistral-embed", "inputs": ["x"]}
+    )
+    assert attrs["gen_ai.operation.name"] == "embeddings"

@@ -292,6 +292,7 @@ class MistralAIInstrumentor(BaseInstrumentor):
         model = kwargs.get("model", "unknown")
         attributes = {
             "gen_ai.system": "mistralai",
+            "gen_ai.operation.name": "chat",
             "gen_ai.request.model": model,
             "gen_ai.request.type": "chat",
         }
@@ -323,6 +324,7 @@ class MistralAIInstrumentor(BaseInstrumentor):
         model = kwargs.get("model", "mistral-embed")
         attributes = {
             "gen_ai.system": "mistralai",
+            "gen_ai.operation.name": "embeddings",
             "gen_ai.request.model": model,
             "gen_ai.request.type": "embedding",
         }

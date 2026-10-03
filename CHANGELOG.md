@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Anthropic, Azure OpenAI, Groq and Mistral spans named no operation.** They set no
+  `gen_ai.operation.name`, which the OTel GenAI conventions require and which backends use to
+  tell one model call from a framework or tool span: TraceVerse counted none of these calls as
+  model requests. Chat calls now set `chat`, Mistral embeddings `embeddings`.
 - **Only the first instrumentor constructed recorded metrics.** The shared token, cost,
   latency and error instruments were stored on whichever instrumentor SUBCLASS was
   constructed first; every other instrumentor read `None` and recorded no metrics. An

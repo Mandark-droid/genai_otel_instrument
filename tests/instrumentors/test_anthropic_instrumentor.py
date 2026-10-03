@@ -193,6 +193,7 @@ class TestAnthropicInstrumentor(unittest.TestCase):
         }
 
         attrs = instrumentor._extract_anthropic_attributes(None, None, kwargs)
+        assert attrs["gen_ai.operation.name"] == "chat"
 
         self.assertEqual(attrs["gen_ai.system"], "anthropic")
         self.assertEqual(attrs["gen_ai.request.model"], "claude-3-opus-20240229")

@@ -113,6 +113,7 @@ class GroqInstrumentor(BaseInstrumentor):
                 model = kwargs.get("model", "unknown")
 
                 span.set_attribute("gen_ai.system", "groq")
+                span.set_attribute("gen_ai.operation.name", "chat")
                 span.set_attribute("gen_ai.request.model", model)
 
                 # Capture request content for evaluation support

@@ -410,6 +410,7 @@ class AnthropicInstrumentor(BaseInstrumentor):
         messages = kwargs.get("messages", [])
 
         attrs["gen_ai.system"] = "anthropic"
+        attrs["gen_ai.operation.name"] = "chat"
         attrs["gen_ai.request.model"] = model
         attrs["gen_ai.request.message_count"] = len(messages)
 
