@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.32.0] - 2026-10-03
+
 ### Fixed
 
 - **Gemini thinking tokens were not counted or billed.** Gemini 2.5+ reports thinking in
