@@ -5,11 +5,16 @@ pytest-mock>=3.10.0
 pytest-asyncio>=0.21.0
 
 # Code quality
-black>=23.0.0
+# Keep the Python 3.9-compatible Black release aligned with pyproject.toml.
+black>=26.3.1; python_version >= '3.10'
+black>=25.11.0,<26; python_version < '3.10'
 isort>=5.12.0
 pylint>=2.17.0
 mypy>=1.0.0
 flake8>=6.0.0
+
+# SDKs imported directly by the test suite (Python 3.10+)
+mcp>=1.0.0; python_version >= '3.10'
 
 # Build and publish
 build>=0.10.0
@@ -21,13 +26,15 @@ wheel>=0.40.0
 safety>=2.3.0
 bandit>=1.7.0
 
-# Documentation
-sphinx>=5.0.0
-sphinx-rtd-theme>=1.2.0
+# Documentation (MkDocs 2.0 is not yet compatible with this site's plugins)
+mkdocs>=1.6.0,<2.0
+mkdocs-material>=9.5.0
+mkdocstrings[python]>=0.24.0
 
 # Optional provider libraries for testing
 openai>=1.0.0
 anthropic>=0.18.0
+google-antigravity>=0.1.20; python_version >= '3.10'
 
 # LLM Frameworks
 langchain>=0.1.0
