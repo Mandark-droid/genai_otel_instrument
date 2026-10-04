@@ -1606,7 +1606,12 @@ configuration and the redactor / store backends.</p>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>langgraph<span class="o">]</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>google-adk<span class="o">]</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>autogen-agentchat<span class="o">]</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[strands]'</span><span class="w">   </span><span class="c1"># Strands Harness (Python 3.10+)</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[antigravity]'</span><span class="w">  </span><span class="c1"># Google Antigravity SDK (Python 3.10+)</span>
 </code></pre></div>
+<p>Strands Harness is opt-in. Enable it explicitly with
+<code>enabled_instrumentors=["strands"]</code>; the base package does not import Strands
+unless this integration is enabled.</p>
 <h3 id="openinference-python-310">OpenInference (Python 3.10+)<a class="headerlink" href="#openinference-python-310" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openinference<span class="o">]</span>
 </code></pre></div>

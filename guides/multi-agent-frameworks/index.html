@@ -721,6 +721,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#google-antigravity-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Google Antigravity SDK
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#autogen-legacy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -769,6 +780,17 @@
     <span class="md-ellipsis">
       
         Pydantic AI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strands-harness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strands Harness
       
     </span>
   </a>
@@ -1387,6 +1409,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#google-antigravity-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Google Antigravity SDK
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#autogen-legacy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1442,6 +1475,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#strands-harness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strands Harness
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#other-frameworks" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1484,7 +1528,7 @@
 
 
 <h1 id="multi-agent-frameworks">Multi-Agent Frameworks<a class="headerlink" href="#multi-agent-frameworks" title="Permanent link">&para;</a></h1>
-<p>TraceVerde instruments 8 multi-agent and LLM frameworks with complete trace hierarchy.</p>
+<p>TraceVerde instruments 9 multi-agent and LLM frameworks with complete trace hierarchy.</p>
 <h2 id="crewai">CrewAI<a class="headerlink" href="#crewai" title="Permanent link">&para;</a></h2>
 <p>Complete span hierarchy: Crew -&gt; Task -&gt; Agent -&gt; LLM calls.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>crewai<span class="o">]</span>
@@ -1542,33 +1586,57 @@
 </code></pre></div>
 <p>Instruments <code>Runner.run_async()</code> and <code>InMemoryRunner.run_debug()</code>. Captures agent name, model, tools, sub-agents, and session info.</p>
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_adk_example.py">Google ADK example</a>.</p>
-<h2 id="autogen-legacy">AutoGen (Legacy)<a class="headerlink" href="#autogen-legacy" title="Permanent link">&para;</a></h2>
-<p>Microsoft multi-agent conversations with group chats.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>autogen<span class="o">]</span>
+<h2 id="google-antigravity-sdk">Google Antigravity SDK<a class="headerlink" href="#google-antigravity-sdk" title="Permanent link">&para;</a></h2>
+<p>Native instrumentation for the Google Antigravity Python agent SDK. The
+<code>antigravity.agent.chat</code> span covers the full lazy response stream, including
+token usage reported after the stream is consumed. Prompts and generated text
+are recorded only when content capture is enabled.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[antigravity]'</span>
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span><span class="n">service_name</span><span class="o">=</span><span class="s2">"autogen-example"</span><span class="p">)</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">autogen</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">assistant</span> <span class="o">=</span> <span class="n">autogen</span><span class="o">.</span><span class="n">AssistantAgent</span><span class="p">(</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">"assistant"</span><span class="p">,</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">llm_config</span><span class="o">=</span><span class="p">{</span><span class="s2">"config_list"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"model"</span><span class="p">:</span> <span class="s2">"gpt-4"</span><span class="p">,</span> <span class="s2">"api_key"</span><span class="p">:</span> <span class="s2">"..."</span><span class="p">}]},</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="p">)</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="n">user_proxy</span> <span class="o">=</span> <span class="n">autogen</span><span class="o">.</span><span class="n">UserProxyAgent</span><span class="p">(</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">"user"</span><span class="p">,</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>    <span class="n">human_input_mode</span><span class="o">=</span><span class="s2">"NEVER"</span><span class="p">,</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>    <span class="n">max_consecutive_auto_reply</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>    <span class="n">code_execution_config</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="p">)</span>
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="n">user_proxy</span><span class="o">.</span><span class="n">initiate_chat</span><span class="p">(</span>
-<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>    <span class="n">assistant</span><span class="p">,</span>
-<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>    <span class="n">message</span><span class="o">=</span><span class="s2">"What is the capital of France?"</span><span class="p">,</span>
-<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>    <span class="n">max_turns</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="p">)</span>
-<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="c1"># Traces: initiate_chat -&gt; OpenAI calls with cost tracking</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">"my-antigravity-app"</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">"antigravity"</span><span class="p">],</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">)</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">google.antigravity</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">LocalAgentConfig</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="k">async</span> <span class="k">with</span> <span class="n">Agent</span><span class="p">(</span><span class="n">LocalAgentConfig</span><span class="p">())</span> <span class="k">as</span> <span class="n">agent</span><span class="p">:</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">agent</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span><span class="s2">"Explain OpenTelemetry in one sentence."</span><span class="p">)</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="nb">print</span><span class="p">(</span><span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+</code></pre></div>
+<p>The <code>google-antigravity</code> extra requires Python 3.10+. The SDK's response is
+lazy, so consume it (for example with <code>await response.text()</code>) to finish the
+span and record usage.</p>
+<p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/antigravity/example.py">Antigravity example</a>.</p>
+<h2 id="autogen-legacy">AutoGen (Legacy)<a class="headerlink" href="#autogen-legacy" title="Permanent link">&para;</a></h2>
+<p>Microsoft multi-agent conversations with group chats.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>autogen<span class="o">]</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span><span class="n">service_name</span><span class="o">=</span><span class="s2">"autogen-example"</span><span class="p">)</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">autogen</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">assistant</span> <span class="o">=</span> <span class="n">autogen</span><span class="o">.</span><span class="n">AssistantAgent</span><span class="p">(</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">"assistant"</span><span class="p">,</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="n">llm_config</span><span class="o">=</span><span class="p">{</span><span class="s2">"config_list"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"model"</span><span class="p">:</span> <span class="s2">"gpt-4"</span><span class="p">,</span> <span class="s2">"api_key"</span><span class="p">:</span> <span class="s2">"..."</span><span class="p">}]},</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">)</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="n">user_proxy</span> <span class="o">=</span> <span class="n">autogen</span><span class="o">.</span><span class="n">UserProxyAgent</span><span class="p">(</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">"user"</span><span class="p">,</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="n">human_input_mode</span><span class="o">=</span><span class="s2">"NEVER"</span><span class="p">,</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="n">max_consecutive_auto_reply</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    <span class="n">code_execution_config</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="p">)</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="n">user_proxy</span><span class="o">.</span><span class="n">initiate_chat</span><span class="p">(</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>    <span class="n">assistant</span><span class="p">,</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>    <span class="n">message</span><span class="o">=</span><span class="s2">"What is the capital of France?"</span><span class="p">,</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>    <span class="n">max_turns</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="p">)</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="c1"># Traces: initiate_chat -&gt; OpenAI calls with cost tracking</span>
 </code></pre></div>
 <p><strong>Instrumented methods:</strong></p>
 <ul>
@@ -1578,7 +1646,7 @@
 </ul>
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/autogen_example.py">AutoGen example</a>.</p>
 <h2 id="autogen-agentchat-v04">AutoGen AgentChat (v0.4+)<a class="headerlink" href="#autogen-agentchat-v04" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>autogen-agentchat<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>autogen-agentchat<span class="o">]</span>
 </code></pre></div>
 <p>Instruments agent <code>run()</code>/<code>run_stream()</code> and team execution (RoundRobinGroupChat, SelectorGroupChat, Swarm). Captures participants, task content, and termination conditions.</p>
 <h2 id="openai-agents-sdk">OpenAI Agents SDK<a class="headerlink" href="#openai-agents-sdk" title="Permanent link">&para;</a></h2>
@@ -1587,14 +1655,42 @@
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openai_agents_example.py">OpenAI Agents example</a>.</p>
 <h2 id="aws-bedrock-agents">AWS Bedrock Agents<a class="headerlink" href="#aws-bedrock-agents" title="Permanent link">&para;</a></h2>
 <p>Managed agent runtime with knowledge bases and RAG.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>aws<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>aws<span class="o">]</span>
 </code></pre></div>
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bedrock_agents_example.py">Bedrock Agents example</a>.</p>
 <h2 id="pydantic-ai">Pydantic AI<a class="headerlink" href="#pydantic-ai" title="Permanent link">&para;</a></h2>
 <p>Type-safe agents with Pydantic validation and multi-provider support.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>pydantic-ai<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>pydantic-ai<span class="o">]</span>
 </code></pre></div>
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pydantic_ai_example.py">Pydantic AI example</a>.</p>
+<h2 id="strands-harness">Strands Harness<a class="headerlink" href="#strands-harness" title="Permanent link">&para;</a></h2>
+<p>Native instrumentation for the optional Strands Harness runtime. It uses the
+Harness hook API to preserve agent, delegated-agent, model, tool, MCP, and
+context-compaction relationships while allowing the Strands SDK's own provider
+spans to remain in place.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'genai-otel-instrument[strands]'</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">"my-strands-app"</span><span class="p">,</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">"strands"</span><span class="p">],</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="n">enable_content_capture</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="p">)</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">strands_harness</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_harness</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="n">agent</span> <span class="o">=</span> <span class="n">create_harness</span><span class="p">(</span><span class="n">instructions</span><span class="o">=</span><span class="s2">"Answer in one paragraph."</span><span class="p">,</span> <span class="n">session</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="n">result</span> <span class="o">=</span> <span class="n">agent</span><span class="p">(</span><span class="s2">"Explain OpenTelemetry."</span><span class="p">)</span>
+</code></pre></div>
+<p>The logical hierarchy is <code>harness.run</code> -&gt; <code>agent.run</code>, with <code>llm.request</code>,
+<code>tool.call</code>, <code>mcp.call</code>, <code>context.compaction</code>, and <code>subagent.run</code> children when
+those operations are exposed by the installed Harness version. Prompts, tool
+arguments/results, MCP payloads, memory contents, and model output are omitted
+unless the existing GenAI content-capture setting is enabled. Provider-level
+spans are enriched when active, avoiding duplicate model/tool spans. The extra
+currently targets <code>strands-harness&gt;=0.1.1</code> on Python 3.10+.</p>
+<p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/strands_harness/example.py">Strands Harness example</a>.</p>
 <h2 id="other-frameworks">Other Frameworks<a class="headerlink" href="#other-frameworks" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
