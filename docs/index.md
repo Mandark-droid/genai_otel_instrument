@@ -8,7 +8,7 @@ TraceVerde provides production-ready, zero-code instrumentation for GenAI applic
 
 - **Zero-Code Setup** - Just install and set env vars, or add one line of code
 - **26 LLM Providers** - OpenAI, Anthropic, Google AI, AWS Bedrock, Azure, Cohere, Mistral, Together AI, Groq, Ollama, TypeSafe AI / Jev, and more
-- **8 Multi-Agent Frameworks** - CrewAI, LangGraph, Google ADK, AutoGen, OpenAI Agents SDK, Pydantic AI, Haystack, DSPy
+- **9 Multi-Agent Frameworks** - CrewAI, LangGraph, Google ADK, Antigravity, AutoGen, OpenAI Agents SDK, Pydantic AI, Haystack, DSPy
 - **Automatic Cost Tracking** - 1,700+ model pricing database with per-request cost breakdown
 - **GPU Metrics** - Real-time NVIDIA and AMD GPU monitoring (utilization, memory, temperature, power)
 - **MCP Tool Instrumentation** - Databases, caches, vector DBs, message queues, object storage
@@ -41,7 +41,7 @@ response = client.chat.completions.create(
 - [Quick Start](getting-started/quickstart.md) - Get up and running in minutes
 - [Configuration](getting-started/configuration.md) - Environment variables and options
 - [LLM Providers](guides/llm-providers.md) - 26 providers with code examples
-- [Multi-Agent Frameworks](guides/multi-agent-frameworks.md) - CrewAI, LangGraph, Google ADK, AutoGen, and more
+- [Multi-Agent Frameworks](guides/multi-agent-frameworks.md) - CrewAI, LangGraph, Google ADK, Antigravity, AutoGen, and more
 - [MCP Tools](guides/mcp-tools.md) - Databases, caches, vector DBs, message queues
 - [Cost Tracking](guides/cost-tracking.md) - Automatic cost calculation for 1,700+ models
 - [GPU Metrics](guides/gpu-metrics.md) - NVIDIA and AMD GPU monitoring
@@ -52,7 +52,7 @@ response = client.chat.completions.create(
 90+ ready-to-run examples for every provider, framework, and evaluation feature:
 
 - [OpenAI](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openai/), [Anthropic](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/anthropic/), [Google AI](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_ai/), [Ollama](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/ollama/), [AWS Bedrock](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/aws_bedrock/)
-- [CrewAI](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/crewai_example.py), [LangGraph](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/langgraph_example.py), [Google ADK](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_adk_example.py), [AutoGen](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/autogen_example.py)
+- [CrewAI](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/crewai_example.py), [LangGraph](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/langgraph_example.py), [Google ADK](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_adk_example.py), [Antigravity](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/antigravity/example.py), [AutoGen](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/autogen_example.py)
 - [PII Detection](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/), [Toxicity](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/toxicity_detection/), [Bias](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bias_detection/), [Prompt Injection](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/prompt_injection/)
 
 Browse all examples in the [examples/ directory](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples).
