@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.34.0] - 2026-10-04
+
+### Added
+
+- Native, opt-in Google Antigravity SDK instrumentation. `antigravity.agent.chat`
+  spans cover lazy response streaming and report turn token usage; install the
+  Python 3.10+ extra with `pip install 'genai-otel-instrument[antigravity]'`.
+
 ## [1.33.0] - 2026-10-04
 
 ### Changed
@@ -4487,7 +4495,10 @@ This is the first public release of genai-otel-instrument, a comprehensive OpenT
 - Fixed tests for base/redis and auto instrument (a701603)
 - Updated `test_auto_instrument.py` assertions to match new OTLP exporter configuration (exporters now read endpoint from environment variables instead of direct parameters)
 
-[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.29.0...HEAD
+[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.34.0...HEAD
+[1.34.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.33.0...v1.34.0
+[1.33.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.32.0...v1.33.0
+[1.32.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.31.1...v1.32.0
 [1.29.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.28.0...v1.29.0
 [1.22.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.21.0...v1.22.0
 [1.21.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.20.2...v1.21.0

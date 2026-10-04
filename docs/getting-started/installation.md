@@ -60,6 +60,7 @@ pip install genai-otel-instrument[langgraph]
 pip install genai-otel-instrument[google-adk]
 pip install genai-otel-instrument[autogen-agentchat]
 pip install 'genai-otel-instrument[strands]'   # Strands Harness (Python 3.10+)
+pip install 'genai-otel-instrument[antigravity]'  # Google Antigravity SDK (Python 3.10+)
 ```
 
 Strands Harness is opt-in. Enable it explicitly with

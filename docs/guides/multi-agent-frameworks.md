@@ -1,6 +1,6 @@
 # Multi-Agent Frameworks
 
-TraceVerde instruments 8 multi-agent and LLM frameworks with complete trace hierarchy.
+TraceVerde instruments 9 multi-agent and LLM frameworks with complete trace hierarchy.
 
 ## CrewAI
 
@@ -78,6 +78,38 @@ pip install genai-otel-instrument[google-adk]
 Instruments `Runner.run_async()` and `InMemoryRunner.run_debug()`. Captures agent name, model, tools, sub-agents, and session info.
 
 See [Google ADK example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_adk_example.py).
+
+## Google Antigravity SDK
+
+Native instrumentation for the Google Antigravity Python agent SDK. The
+`antigravity.agent.chat` span covers the full lazy response stream, including
+token usage reported after the stream is consumed. Prompts and generated text
+are recorded only when content capture is enabled.
+
+```bash
+pip install 'genai-otel-instrument[antigravity]'
+```
+
+```python
+import genai_otel
+
+genai_otel.instrument(
+    service_name="my-antigravity-app",
+    enabled_instrumentors=["antigravity"],
+)
+
+from google.antigravity import Agent, LocalAgentConfig
+
+async with Agent(LocalAgentConfig()) as agent:
+    response = await agent.chat("Explain OpenTelemetry in one sentence.")
+    print(await response.text())
+```
+
+The `google-antigravity` extra requires Python 3.10+. The SDK's response is
+lazy, so consume it (for example with `await response.text()`) to finish the
+span and record usage.
+
+See the [Antigravity example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/antigravity/example.py).
 
 ## AutoGen (Legacy)
 

@@ -9,6 +9,7 @@ are not installed.
 """
 
 from .anthropic_instrumentor import AnthropicInstrumentor
+from .antigravity_instrumentor import AntigravityInstrumentor
 from .anyscale_instrumentor import AnyscaleInstrumentor
 from .autogen_agentchat_instrumentor import AutoGenAgentChatInstrumentor
 from .autogen_instrumentor import AutoGenInstrumentor
@@ -58,6 +59,7 @@ __all__ = [
     "OpenAIAgentsInstrumentor",
     "OpenRouterInstrumentor",
     "AnthropicInstrumentor",
+    "AntigravityInstrumentor",
     "GoogleADKInstrumentor",
     "GoogleAIInstrumentor",
     "AWSBedrockInstrumentor",

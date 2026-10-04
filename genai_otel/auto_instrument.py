@@ -59,6 +59,7 @@ from .semconv import SemanticConvention as SC
 try:
     from .instrumentors import (
         AnthropicInstrumentor,
+        AntigravityInstrumentor,
         AnyscaleInstrumentor,
         AutoGenAgentChatInstrumentor,
         AutoGenInstrumentor,
@@ -105,6 +106,7 @@ except ImportError:
     # Fallback for testing or if instrumentors are in different structure
     from genai_otel.instrumentors import (
         AnthropicInstrumentor,
+        AntigravityInstrumentor,
         AnyscaleInstrumentor,
         AutoGenAgentChatInstrumentor,
         AutoGenInstrumentor,
@@ -198,6 +200,7 @@ def _check_openinference():
 
 # Defines the available instrumentors. This is now at the module level for easier mocking in tests.
 INSTRUMENTORS = {
+    "antigravity": AntigravityInstrumentor,  # Google Antigravity agent SDK
     "openai": OpenAIInstrumentor,
     "agents": OpenAIAgentsInstrumentor,  # OpenAI Agents SDK
     "openai_agents": OpenAIAgentsInstrumentor,  # OpenAI Agents SDK (alias)

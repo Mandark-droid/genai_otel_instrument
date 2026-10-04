@@ -74,7 +74,7 @@ DEFAULT_INSTRUMENTORS = [
 # Enable with GENAI_ENABLED_INSTRUMENTORS="...,litellm_latency".
 # Strands is also opt-in because it is an optional Python 3.10+ agent runtime
 # dependency and installs its own hooks.
-OPT_IN_INSTRUMENTORS = ["litellm_latency", "strands"]
+OPT_IN_INSTRUMENTORS = ["litellm_latency", "strands", "antigravity"]
 
 # Add OpenInference instrumentors only for Python >= 3.10
 # IMPORTANT: Order matters! Load in this specific sequence:

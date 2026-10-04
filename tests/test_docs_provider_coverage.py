@@ -31,6 +31,7 @@ README = REPO_ROOT / "README.md"
 # docs/guides/multi-agent-frameworks.md and docs/guides/mcp-tools.md instead.
 NON_PROVIDER_KEYS = {
     "agents",
+    "antigravity",
     "autogen",
     "autogen_agentchat",
     "bedrock_agents",

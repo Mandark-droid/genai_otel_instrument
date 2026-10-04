@@ -41,7 +41,7 @@ certificate file that signed the endpoint. The exporter appends the signal path
 |----------|---------|-------------|
 | `GENAI_ENABLED_INSTRUMENTORS` | all defaults | Comma-separated list of instrumentors to enable |
 
-Default instrumentors: `openai`, `openrouter`, `cometapi`, `anthropic`, `google.generativeai`, `boto3`, `azure.ai.openai`, `cohere`, `mistralai`, `together`, `groq`, `ollama`, `vllm`, `llamacpp`, `vertexai`, `replicate`, `anyscale`, `sambanova`, `sarvamai`, `elevenlabs`, `langchain`, `langgraph`, `llama_index`, `transformers`, `autogen`, `autogen_agentchat`, `google_adk`, `pydantic_ai`, `openai_agents`, `bedrock_agents`, `crewai`, `smolagents` (3.10+), `litellm` (3.10+), `typesafe` (3.10+)
+Default instrumentors: `openai`, `openrouter`, `cometapi`, `anthropic`, `google.generativeai`, `boto3`, `azure.ai.openai`, `cohere`, `mistralai`, `together`, `groq`, `ollama`, `vllm`, `llamacpp`, `vertexai`, `replicate`, `anyscale`, `sambanova`, `sarvamai`, `elevenlabs`, `langchain`, `langgraph`, `llama_index`, `transformers`, `autogen`, `autogen_agentchat`, `google_adk`, `pydantic_ai`, `openai_agents`, `bedrock_agents`, `crewai`, `smolagents` (3.10+), `litellm` (3.10+), `typesafe` (3.10+). `antigravity` and `strands` are opt-in.
 
 **Opt-in instrumentors** (not enabled by default; add them to `GENAI_ENABLED_INSTRUMENTORS` explicitly):
 

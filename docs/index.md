@@ -2,7 +2,7 @@
 
 **The most comprehensive OpenTelemetry auto-instrumentation library for LLM/GenAI applications.**
 
-TraceVerde provides production-ready, zero-code instrumentation for GenAI applications. Install, set two environment variables, and get complete observability across 26 LLM providers, 8 multi-agent frameworks, and 20+ MCP tools.
+TraceVerde provides production-ready, zero-code instrumentation for GenAI applications. Install, set two environment variables, and get complete observability across 26 LLM providers, 9 multi-agent frameworks, and 20+ MCP tools.
 
 ## Key Features
 
