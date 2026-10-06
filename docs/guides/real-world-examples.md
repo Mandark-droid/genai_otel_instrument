@@ -19,7 +19,7 @@ python examples/real_world/voice_rag_replay.py `
   --audio REDACTED-PATH/apps/tracesense/data/samples/audio/audio_001_account_balance.wav `
   --corpus REDACTED-PATH/apps/tracesense/data/kb_corpus.py `
   --transcript "Please check my account balance and recent transactions." `
-  --endpoint http://192.168.18.128:4318
+  --endpoint http://<collector-host>:4318
 ```
 
 The example does not claim to call an ASR, embedding, vector database, or LLM
@@ -35,7 +35,7 @@ in the Chaos Lab: PDF/image ingestion and structured document extraction.
 ```powershell
 python examples/real_world/document_ocr_replay.py `
   --document REDACTED-PATH/apps/tracesense/data/samples/documents/invoice_001.pdf `
-  --endpoint http://192.168.18.128:4318
+  --endpoint http://<collector-host>:4318
 ```
 
 The emitted OCR span must report `type=document` and

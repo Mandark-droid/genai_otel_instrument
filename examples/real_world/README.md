@@ -18,7 +18,7 @@ python examples/real_world/voice_rag_replay.py `
   --audio REDACTED-PATH/apps/tracesense/data/samples/audio/audio_001_account_balance.wav `
   --corpus REDACTED-PATH/apps/tracesense/data/kb_corpus.py `
   --transcript "Please check my account balance and recent transactions." `
-  --endpoint http://192.168.18.128:4318
+  --endpoint http://<collector-host>:4318
 ```
 
 The speech span must contain `type=audio` and `media_mime_type=audio/wav`.
@@ -35,7 +35,7 @@ inputs are emitted as `type=image` with their actual image MIME type.
 ```powershell
 python examples/real_world/document_ocr_replay.py `
   --document REDACTED-PATH/apps/tracesense/data/samples/documents/invoice_001.pdf `
-  --endpoint http://192.168.18.128:4318
+  --endpoint http://<collector-host>:4318
 ```
 
 For a local shape-only check, add `--no-export`. This replay reads the file
