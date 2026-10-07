@@ -645,13 +645,14 @@ class TestSarvamAIInstrumentor(unittest.TestCase):
             loudness=1.5,
         )
 
-        mock_span.set_attribute.assert_any_call("gen_ai.request.model", "bulbul-v3")
+        # The name as requested: there is no model called "bulbul-v3".
+        mock_span.set_attribute.assert_any_call("gen_ai.request.model", "bulbul:v3")
         mock_span.set_attribute.assert_any_call("sarvam.tts.pace", 1.2)
         mock_span.set_attribute.assert_any_call("sarvam.tts.pitch", 0.5)
         mock_span.set_attribute.assert_any_call("sarvam.tts.loudness", 1.5)
 
     def test_tts_default_model_is_bulbul_v2(self):
-        """Test TTS uses bulbul-v2 as default model when not specified."""
+        """Test TTS records the SDK default, bulbul:v2, when no model is specified."""
         instrumentor = SarvamAIInstrumentor()
 
         mock_client = MagicMock()
@@ -669,7 +670,7 @@ class TestSarvamAIInstrumentor(unittest.TestCase):
             text="Hello", target_language_code="en-IN", speaker="shubh"
         )
 
-        mock_span.set_attribute.assert_any_call("gen_ai.request.model", "bulbul-v2")
+        mock_span.set_attribute.assert_any_call("gen_ai.request.model", "bulbul:v2")
 
     def test_transliterate_has_model_attribute(self):
         """Test transliterate sets model attribute to sarvam-transliterate."""

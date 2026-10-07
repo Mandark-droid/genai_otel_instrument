@@ -815,7 +815,27 @@
       "per_1k_chars": 0.0117
     },
     "playht/Play3.0-mini": 0.03,
-    "playht/PlayDialog": 0.05
+    "playht/PlayDialog": 0.05,
+    "sarvam/saarika:v2.5": {
+      "per_second": 8.77193e-05,
+      "note": "Sarvam STT (Saarika/Saaras): INR 30/hour of audio, checked 2026-10-08; converted at INR 95/USD"
+    },
+    "sarvam/saaras:v2.5": {
+      "per_second": 8.77193e-05,
+      "note": "Sarvam STT (Saarika/Saaras): INR 30/hour of audio, checked 2026-10-08; converted at INR 95/USD"
+    },
+    "sarvam/saarika:v3": {
+      "per_second": 8.77193e-05,
+      "note": "Sarvam STT (Saarika/Saaras): INR 30/hour of audio, checked 2026-10-08; converted at INR 95/USD"
+    },
+    "sarvam/saaras:v3": {
+      "per_second": 8.77193e-05,
+      "note": "Sarvam STT (Saarika/Saaras): INR 30/hour of audio, checked 2026-10-08; converted at INR 95/USD"
+    },
+    "sarvam/bulbul:v3": {
+      "per_1k_chars": 0.031579,
+      "note": "Sarvam Bulbul v3 TTS: INR 3.00 per 1,000 characters, checked 2026-10-08; converted at INR 95/USD"
+    }
   },
   "chat": {
     "jev": {
@@ -7578,9 +7598,9 @@
       "note": "sap-abap-1. input $0.48/1M, output $1.7/1M. Released 2025-11-26. 32768 context. Source: models.dev / sap-ai-core"
     },
     "sarvam-105b": {
-      "promptPrice": 0.0,
-      "completionPrice": 0.0,
-      "note": "Sarvam-105B (Feb 2026) - 106B MoE / ~10.3B active, free on sarvam.ai/api-pricing, 128K context"
+      "promptPrice": 0.00030821,
+      "completionPrice": 0.00077053,
+      "note": "Sarvam-105B: INR 29.28 in / INR 73.20 out per 1M tokens (cached input INR 10.98), sarvam.ai/api-pricing checked 2026-10-08; converted at INR 95/USD"
     },
     "sarvam-30b": {
       "promptPrice": 0.0,
@@ -9110,6 +9130,16 @@
       "promptPrice": 0.0006,
       "completionPrice": 0.0024,
       "note": "DeepSeek V4.1 Flash Fast - Baseten-exclusive low-latency variant, single-source pricing (not corroborated by a second vendor). input $0.6/1M, output $2.4/1M. Released 2026-09-10. Source: models.dev / baseten"
+    },
+    "sarvam-105b-chat": {
+      "promptPrice": 0.00030821,
+      "completionPrice": 0.00077053,
+      "note": "Sarvam-105B: INR 29.28 in / INR 73.20 out per 1M tokens (cached input INR 10.98), sarvam.ai/api-pricing checked 2026-10-08; converted at INR 95/USD"
+    },
+    "sarvam-105b-conversations": {
+      "promptPrice": 0.00030821,
+      "completionPrice": 0.00077053,
+      "note": "Sarvam-105B: INR 29.28 in / INR 73.20 out per 1M tokens (cached input INR 10.98), sarvam.ai/api-pricing checked 2026-10-08; converted at INR 95/USD"
     }
   },
   "speech_to_text": {
@@ -9169,54 +9199,24 @@
       "note": "Sarvam AI - sarvam-m chat model (free tier)"
     },
     "sarvam-translate:v1": {
-      "promptPrice": 2.4e-05,
-      "completionPrice": 2.4e-05,
-      "note": "Sarvam AI - Translation (22 Indic languages, ~INR 20/10K chars)"
+      "promptPrice": 0.024,
+      "completionPrice": 0.024,
+      "note": "Sarvam AI - Translation (22 Indic languages, ~INR 20/10K chars) -- per 1K characters (was stored per character and read as per 1K, 1000x low)"
     },
     "mayura:v1": {
-      "promptPrice": 2.4e-05,
-      "completionPrice": 2.4e-05,
-      "note": "Sarvam AI - Mayura translation model (12 languages, ~INR 20/10K chars)"
-    },
-    "saarika:v2.5": {
-      "promptPrice": 3.6e-05,
-      "completionPrice": 0.0,
-      "note": "Sarvam AI - Speech-to-text (~INR 30/hour of audio)"
-    },
-    "saaras:v2.5": {
-      "promptPrice": 3.6e-05,
-      "completionPrice": 0.0,
-      "note": "Sarvam AI - Speech-to-text + translate (~INR 30/hour of audio)"
-    },
-    "bulbul-v3": {
-      "promptPrice": 3.6e-05,
-      "completionPrice": 0.0,
-      "note": "Sarvam AI - Text-to-speech Bulbul V3 (~INR 30/10K chars)"
-    },
-    "bulbul-v2": {
-      "promptPrice": 1.8e-05,
-      "completionPrice": 0.0,
-      "note": "Sarvam AI - Text-to-speech Bulbul V2 (~INR 15/10K chars)"
-    },
-    "saarika:v2.5-diarization": {
-      "promptPrice": 5.4e-05,
-      "completionPrice": 0.0,
-      "note": "Sarvam AI - STT + Diarization (~INR 45/hour of audio)"
-    },
-    "saaras:v2.5-diarization": {
-      "promptPrice": 5.4e-05,
-      "completionPrice": 0.0,
-      "note": "Sarvam AI - STT + Translate + Diarization (~INR 45/hour of audio)"
+      "promptPrice": 0.024,
+      "completionPrice": 0.024,
+      "note": "Sarvam AI - Mayura translation model (12 languages, ~INR 20/10K chars) -- per 1K characters (was stored per character and read as per 1K, 1000x low)"
     },
     "sarvam-transliterate": {
-      "promptPrice": 2.4e-05,
+      "promptPrice": 0.024,
       "completionPrice": 0.0,
-      "note": "Sarvam AI - Transliteration (~INR 20/10K chars)"
+      "note": "Sarvam AI - Transliteration (~INR 20/10K chars) -- per 1K characters (was stored per character and read as per 1K, 1000x low)"
     },
     "sarvam-detect-language": {
-      "promptPrice": 4.2e-06,
+      "promptPrice": 0.0042,
       "completionPrice": 0.0,
-      "note": "Sarvam AI - Language identification (~INR 3.50/10K chars)"
+      "note": "Sarvam AI - Language identification (~INR 3.50/10K chars) -- per 1K characters (was stored per character and read as per 1K, 1000x low)"
     },
     "sarvam-vision": {
       "promptPrice": 0.0,
@@ -9500,6 +9500,14 @@
     "global-openai-gpt-6-luna": "2026-10-03",
     "global.openai.gpt-6-sol": "2026-10-03",
     "global-openai-gpt-6-sol": "2026-10-03",
-    "deepseek-ai/DeepSeek-V4.1-Flash-Fast": "2026-10-03"
+    "deepseek-ai/DeepSeek-V4.1-Flash-Fast": "2026-10-03",
+    "sarvam-105b": "2026-10-08",
+    "sarvam-105b-chat": "2026-10-08",
+    "sarvam-105b-conversations": "2026-10-08",
+    "sarvam/saarika:v2.5": "2026-10-08",
+    "sarvam/saaras:v2.5": "2026-10-08",
+    "sarvam/saarika:v3": "2026-10-08",
+    "sarvam/saaras:v3": "2026-10-08",
+    "sarvam/bulbul:v3": "2026-10-08"
   }
 }

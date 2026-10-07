@@ -33,6 +33,39 @@ def _cap_content(config, text):
     return text
 
 
+def _wav_seconds(audio) -> float | None:
+    """Duration of a WAV payload in seconds, or None when it cannot be read.
+
+    Sarvam bills speech-to-text per hour of audio, so a transcription is priced from the
+    audio it was sent, never from the transcript. Accepts a path, raw bytes,
+    a ``(name, bytes)`` upload tuple or a seekable binary file, whose position is restored.
+    Anything that is not a readable WAV yields None: no duration, no cost -- never a guess.
+    """
+    import io
+    import wave
+
+    try:
+        if isinstance(audio, tuple) and len(audio) >= 2:
+            audio = audio[1]
+        if isinstance(audio, (bytes, bytearray)):
+            source = io.BytesIO(audio)
+        elif isinstance(audio, str):
+            source = audio
+        elif hasattr(audio, "read") and hasattr(audio, "seek") and hasattr(audio, "tell"):
+            pos = audio.tell()
+            try:
+                source = io.BytesIO(audio.read())
+            finally:
+                audio.seek(pos)
+        else:
+            return None
+        with wave.open(source, "rb") as w:
+            rate = w.getframerate()
+            return w.getnframes() / float(rate) if rate else None
+    except Exception:  # noqa: BLE001 - not a WAV, or unreadable: unpriced, not fatal
+        return None
+
+
 def _safe_kwarg(kwargs, key, default=None):
     """Safely extract a kwarg value, handling SDK OMIT/NotGiven sentinels.
 
@@ -78,6 +111,34 @@ class SarvamAIInstrumentor(BaseInstrumentor):
         if model_name and model_name.startswith("bulbul"):
             return model_name.replace(":", "-")
         return model_name
+
+    def _record_sarvam_audio_cost(self, span, model: str, usage: dict, start_time: float):
+        """Record latency and the media-priced cost of a speech call.
+
+        Speech is billed by media, not by token: text-to-speech per 1,000 characters,
+        speech-to-text per second of audio. Both resolve through the ``audio`` pricing
+        section under ``sarvam/<model>`` (the name exactly as requested). Cost is recorded
+        only when a rate is found: a zero for an unpriced model would read as free.
+        """
+        try:
+            duration = time.time() - start_time
+            if self.latency_histogram:
+                self.latency_histogram.record(duration, {"operation": span.name})
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Failed to record latency for span '%s': %s", span.name, e)
+
+        if not (self.config and self.config.enable_cost_tracking):
+            return
+        try:
+            cost = self.cost_calculator.calculate_cost(f"sarvam/{model}", usage, "audio")
+            if cost and cost > 0:
+                span.set_attribute("gen_ai.usage.cost.total", cost)
+                if self.cost_counter:
+                    self.cost_counter.add(cost, {"model": model, "provider": "sarvam"})
+            else:
+                logger.debug("No audio pricing found for Sarvam model '%s'", model)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Failed to calculate Sarvam audio cost for '%s': %s", model, e)
 
     def _record_sarvam_cost(self, span, model: str, char_count: int, start_time: float):
         """Record latency and character-based cost for Sarvam text/audio operations.
@@ -457,13 +518,16 @@ class SarvamAIInstrumentor(BaseInstrumentor):
 
                     result = original_transcribe(*args, **kwargs)
 
-                    # Record transcript length and calculate cost based on transcript chars
-                    transcript_chars = 0
                     if hasattr(result, "transcript"):
-                        transcript_chars = len(result.transcript)
-                        span.set_attribute("sarvam.transcript_length", transcript_chars)
+                        span.set_attribute("sarvam.transcript_length", len(result.transcript))
 
-                    instrumentor._record_sarvam_cost(span, model, transcript_chars, start_time)
+                    # Billed per hour of audio: price the audio that was sent.
+                    seconds = _wav_seconds(_safe_kwarg(kwargs, "file"))
+                    usage = {}
+                    if seconds is not None:
+                        span.set_attribute("gen_ai.usage.audio_duration_seconds", round(seconds, 3))
+                        usage = {"seconds": seconds}
+                    instrumentor._record_sarvam_audio_cost(span, model, usage, start_time)
 
                     return result
 
@@ -499,13 +563,16 @@ class SarvamAIInstrumentor(BaseInstrumentor):
 
                     result = original_stt_translate(*args, **kwargs)
 
-                    # Record latency (use transcript chars as proxy for cost)
-                    transcript_chars = 0
                     if hasattr(result, "transcript"):
-                        transcript_chars = len(result.transcript)
-                        span.set_attribute("sarvam.transcript_length", transcript_chars)
+                        span.set_attribute("sarvam.transcript_length", len(result.transcript))
 
-                    instrumentor._record_sarvam_cost(span, model, transcript_chars, start_time)
+                    # Billed per hour of audio: price the audio that was sent.
+                    seconds = _wav_seconds(_safe_kwarg(kwargs, "file"))
+                    usage = {}
+                    if seconds is not None:
+                        span.set_attribute("gen_ai.usage.audio_duration_seconds", round(seconds, 3))
+                        usage = {"seconds": seconds}
+                    instrumentor._record_sarvam_audio_cost(span, model, usage, start_time)
 
                     return result
 
@@ -521,9 +588,10 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     "sarvam.text_to_speech.convert"
                 ) as span:
                     start_time = time.time()
-                    # Extract model from kwargs; SDK default is bulbul:v2 when not specified
-                    raw_model = _safe_kwarg(kwargs, "model", "bulbul-v2")
-                    model = instrumentor._normalize_sarvam_tts_model(str(raw_model))
+                    # The name exactly as requested: the span used to say
+                    # `bulbul-v3` for a `bulbul:v3` call, a model that does not exist under
+                    # that name. The SDK default is bulbul:v2 when none is given.
+                    model = str(_safe_kwarg(kwargs, "model", "bulbul:v2"))
                     span.set_attribute("gen_ai.system", "sarvam")
                     span.set_attribute("gen_ai.operation.name", "text_to_speech")
                     span.set_attribute("gen_ai.request.type", "text_to_speech")
@@ -588,8 +656,11 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     if isinstance(duration, (int, float)) and duration > 0:
                         span.set_attribute("gen_ai.usage.audio_duration_seconds", float(duration))
 
-                    # Record latency and character-based cost
-                    instrumentor._record_sarvam_cost(span, model, char_count, start_time)
+                    # Billed per 1,000 characters of input text.
+                    span.set_attribute("gen_ai.usage.characters", char_count)
+                    instrumentor._record_sarvam_audio_cost(
+                        span, model, {"characters": char_count} if char_count else {}, start_time
+                    )
 
                     return result
 
@@ -608,8 +679,9 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                 span = instrumentor.tracer.start_span("sarvam.text_to_speech.stream")
                 start_time = time.time()
                 try:
-                    raw_model = _safe_kwarg(kwargs, "model", "bulbul-v2")
-                    model = instrumentor._normalize_sarvam_tts_model(str(raw_model))
+                    model = str(
+                        _safe_kwarg(kwargs, "model", "bulbul:v2")
+                    )  # as requested, not normalised
                     text = kwargs.get("text", "") or ""
                     span.set_attribute("gen_ai.system", "sarvam")
                     span.set_attribute("gen_ai.operation.name", "text_to_speech")
@@ -625,7 +697,10 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     output_format = _safe_kwarg(kwargs, "output_audio_codec")
                     if output_format:
                         span.set_attribute("gen_ai.response.output_format", str(output_format))
-                    instrumentor._record_sarvam_cost(span, model, len(text), start_time)
+                    span.set_attribute("gen_ai.usage.characters", len(text))
+                    instrumentor._record_sarvam_audio_cost(
+                        span, model, {"characters": len(text)} if text else {}, start_time
+                    )
                     result = original_stream(*args, **kwargs)
                     if hasattr(result, "__aiter__"):
                         return instrumentor._wrap_async_streaming_response(

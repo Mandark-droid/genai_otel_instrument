@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Sarvam speech is priced from its media, at the published rates.** Speech-to-text and
+  text-to-speech now resolve through the `audio` pricing section under `sarvam/<model>`:
+  - Transcription is billed per second of the audio sent. The duration is read from the WAV
+    payload and recorded as `gen_ai.usage.audio_duration_seconds`.
+  - Transcription used to be priced per transcript character, and `saaras:v3` had no price, so
+    those spans carried no cost at all. Audio that cannot be read as WAV still records no cost,
+    rather than a guessed one.
+  - Text-to-speech is billed per 1,000 characters. `bulbul:v3` is INR 3.00 per 1,000 characters.
+- **Text-to-speech spans keep the model name as requested.** `gen_ai.request.model` was
+  `bulbul-v3` for a `bulbul:v3` request, a name the API does not use.
+- **Sarvam-105B is no longer priced as free.** `sarvam-105b`, `sarvam-105b-chat` and
+  `sarvam-105b-conversations` are INR 29.28 per 1M input and INR 73.20 per 1M output tokens.
+- **Sarvam translation, transliteration and language identification read their prices in the right
+  unit.** The table stored per-character prices where the calculator reads per 1,000, so they were
+  1,000x low. Each entry keeps its own stated rate.
+- Sarvam prices were checked on sarvam.ai/api-pricing on 2026-10-08 and converted at INR 95 per
+  USD. The superseded per-character STT and TTS rows are removed.
+
 ## [1.34.0] - 2026-10-04
 
 ### Added
