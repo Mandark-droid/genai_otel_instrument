@@ -39,10 +39,28 @@ def test_import_genai_otel_without_requests():
     assert "ok" in proc.stdout
 
 
+def _http_exporter_requires_requests() -> bool:
+    """opentelemetry-exporter-otlp-proto-http 1.45 declares `requests` and builds a requests
+    transport whenever an exporter is constructed. With it, "the HTTP exporter is installed but
+    `requests` is not" cannot happen, so the no-`requests` path is exercised over gRPC instead:
+    what this file guards is that genai-otel's OWN code never needs `requests`."""
+    from importlib.metadata import PackageNotFoundError, requires
+
+    try:
+        reqs = requires("opentelemetry-exporter-otlp-proto-http") or []
+    except PackageNotFoundError:
+        return False
+    return any(
+        r.split(";")[0].strip().lower().startswith("requests") and "extra ==" not in r for r in reqs
+    )
+
+
 def test_instrument_without_requests():
-    code = """
+    grpc = _http_exporter_requires_requests()
+    code = f"""
         import os
-        os.environ['OTEL_EXPORTER_OTLP_ENDPOINT'] = 'http://127.0.0.1:9'
+        os.environ['OTEL_EXPORTER_OTLP_PROTOCOL'] = {'grpc' if grpc else 'http/protobuf'!r}
+        os.environ['OTEL_EXPORTER_OTLP_ENDPOINT'] = {'http://127.0.0.1:9' if not grpc else 'http://127.0.0.1:4317'!r}
         os.environ['GENAI_ENABLE_GPU_METRICS'] = 'false'
         os.environ['GENAI_FAIL_ON_ERROR'] = 'true'
         import genai_otel

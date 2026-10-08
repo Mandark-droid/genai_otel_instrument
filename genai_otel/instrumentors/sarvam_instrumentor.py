@@ -34,7 +34,7 @@ def _cap_content(config, text):
     return text
 
 
-def _wav_seconds(audio) -> float | None:
+def _wav_seconds(audio) -> Optional[float]:
     """Duration of a WAV payload in seconds, or None when it cannot be read.
 
     Sarvam bills speech-to-text per hour of audio, so a transcription is priced from the
