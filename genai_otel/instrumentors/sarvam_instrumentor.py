@@ -726,59 +726,109 @@ class SarvamAIInstrumentor(BaseInstrumentor):
 
             client.text_to_speech.convert = wrapped_convert
 
-        # Some Sarvam SDK versions expose a dedicated streaming method. Keep
-        # the span open until the caller drains the audio iterator so TTFT is
-        # measured at the first audio chunk rather than at method return.
-        if hasattr(client, "text_to_speech") and callable(
-            getattr(client.text_to_speech, "stream", None)
-        ):
-            original_stream = client.text_to_speech.stream
-            instrumentor = self
+        # Streamed text-to-speech. sarvamai 0.1.x names it `convert_stream` (an iterator of
+        # audio bytes, MP3 by default); some versions expose `stream`. Wrapping only
+        # `stream` left every streamed call untraced on 0.1.36: no span, no cost. The span
+        # stays open until the caller drains the iterator, so time to first audio is
+        # measured at the first chunk rather than at method return.
+        tts = getattr(client, "text_to_speech", None)
+        for method_name in ("convert_stream", "stream"):
+            if tts is not None and callable(getattr(tts, method_name, None)):
+                setattr(
+                    tts, method_name, self._wrap_tts_stream(getattr(tts, method_name), method_name)
+                )
 
-            def wrapped_stream(*args, **kwargs):
-                span = instrumentor.tracer.start_span("sarvam.text_to_speech.stream")
-                start_time = time.time()
-                try:
-                    model = str(
-                        _safe_kwarg(kwargs, "model", "bulbul:v2")
-                    )  # as requested, not normalised
-                    text = kwargs.get("text", "") or ""
-                    span.set_attribute("gen_ai.system", "sarvam")
-                    span.set_attribute("gen_ai.operation.name", "text_to_speech")
-                    span.set_attribute("gen_ai.request.type", "text_to_speech")
-                    span.set_attribute("gen_ai.request.model", model)
-                    span.set_attribute("gen_ai.request.streamed", True)
-                    speaker = _safe_kwarg(kwargs, "speaker")
-                    if speaker:
-                        span.set_attribute("gen_ai.request.voice_id", str(speaker))
-                    sample_rate = _safe_kwarg(kwargs, "speech_sample_rate")
-                    if sample_rate is not None:
-                        span.set_attribute("gen_ai.request.audio.sample_rate", int(sample_rate))
-                    output_format = _safe_kwarg(kwargs, "output_audio_codec")
-                    if output_format:
-                        span.set_attribute("gen_ai.response.output_format", str(output_format))
-                    span.set_attribute("gen_ai.usage.characters", len(text))
-                    instrumentor._record_sarvam_audio_cost(
-                        span, model, {"characters": len(text)} if text else {}, start_time
+    def _wrap_tts_stream(self, original, method_name: str):
+        """A streamed text-to-speech call: span, cost from the text, audio when drained."""
+        instrumentor = self
+
+        def wrapped_stream(*args, **kwargs):
+            span = instrumentor.tracer.start_span(f"sarvam.text_to_speech.{method_name}")
+            start_time = time.time()
+            try:
+                model = str(_safe_kwarg(kwargs, "model", "bulbul:v2"))  # as requested
+                text = kwargs.get("text", "") or ""
+                span.set_attribute("gen_ai.system", "sarvam")
+                span.set_attribute("gen_ai.operation.name", "text_to_speech")
+                span.set_attribute("gen_ai.request.type", "text_to_speech")
+                span.set_attribute("gen_ai.request.model", model)
+                span.set_attribute("gen_ai.request.streamed", True)
+                speaker = _safe_kwarg(kwargs, "speaker")
+                if speaker:
+                    span.set_attribute("gen_ai.request.voice_id", str(speaker))
+                sample_rate = _safe_kwarg(kwargs, "speech_sample_rate")
+                if sample_rate is not None:
+                    span.set_attribute("gen_ai.request.audio.sample_rate", int(sample_rate))
+                output_format = _safe_kwarg(kwargs, "output_audio_codec")
+                if output_format:
+                    span.set_attribute("gen_ai.response.output_format", str(output_format))
+                span.set_attribute("gen_ai.usage.characters", len(text))
+                if instrumentor.request_counter:
+                    instrumentor.request_counter.add(
+                        1, {"model": model, "operation": "text_to_speech", "provider": "sarvam"}
                     )
-                    result = original_stream(*args, **kwargs)
-                    if hasattr(result, "__aiter__"):
-                        return instrumentor._wrap_async_streaming_response(
-                            result, span, start_time, model
-                        )
-                    if hasattr(result, "__iter__") and not isinstance(
-                        result, (str, bytes, dict, list, tuple)
-                    ):
-                        return instrumentor._wrap_streaming_response(
-                            result, span, start_time, model
-                        )
-                    span.end()
-                    return result
-                except Exception:
-                    span.end()
-                    raise
+                instrumentor._record_sarvam_audio_cost(
+                    span, model, {"characters": len(text)} if text else {}, start_time
+                )
+                instrumentor._emit_speech_parts(span, "prompt", "user", [text_part(text)])
+                # The streamed endpoint defaults to MP3 (Sarvam API docs).
+                mime = audio_mime(codec=output_format, default="audio/mpeg")
+                result = original(*args, **kwargs)
+                if hasattr(result, "__aiter__"):
+                    if instrumentor._speech_media_enabled():
+                        result = instrumentor._buffer_audio_async(result, span, mime)
+                    return instrumentor._wrap_async_streaming_response(
+                        result, span, start_time, model
+                    )
+                if hasattr(result, "__iter__") and not isinstance(
+                    result, (str, bytes, dict, list, tuple)
+                ):
+                    if instrumentor._speech_media_enabled():
+                        result = instrumentor._buffer_audio(result, span, mime)
+                    return instrumentor._wrap_streaming_response(result, span, start_time, model)
+                span.end()
+                return result
+            except Exception:
+                span.end()
+                raise
 
-            client.text_to_speech.stream = wrapped_stream
+        return wrapped_stream
+
+    def _emit_streamed_audio(self, span, buf: bytearray, total: int, mime: str) -> None:
+        if total > 0:
+            self._emit_speech_parts(
+                span, "completion", "assistant", [audio_part(bytes(buf), mime, total)]
+            )
+
+    def _buffer_audio(self, stream, span, mime: str):
+        """Yield the caller's chunks unchanged, keeping a copy bounded by the media cap.
+
+        Recorded when the stream ends; an abandoned stream records nothing, since part of
+        an utterance would read as what was said.
+        """
+        cap = self._media_max_bytes()
+        buf = bytearray()
+        total = 0
+        for chunk in stream:
+            if isinstance(chunk, (bytes, bytearray)):
+                total += len(chunk)
+                if len(buf) <= cap:
+                    buf.extend(chunk[: cap + 1 - len(buf)])
+            yield chunk
+        self._emit_streamed_audio(span, buf, total, mime)
+
+    async def _buffer_audio_async(self, stream, span, mime: str):
+        """Async counterpart of :meth:`_buffer_audio`."""
+        cap = self._media_max_bytes()
+        buf = bytearray()
+        total = 0
+        async for chunk in stream:
+            if isinstance(chunk, (bytes, bytearray)):
+                total += len(chunk)
+                if len(buf) <= cap:
+                    buf.extend(chunk[: cap + 1 - len(buf)])
+            yield chunk
+        self._emit_streamed_audio(span, buf, total, mime)
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from Sarvam AI response.

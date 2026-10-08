@@ -262,3 +262,53 @@ class TestElevenLabs:
         ]
         assert out == [b"aa", b"bbb"]
         assert span.attrs["gen_ai.completion.0.content.0.media_byte_size"] == 5
+
+
+class TestSarvamStreamedSpeech:
+    """sarvamai 0.1.x streams through `convert_stream`; only `stream` was wrapped, so every
+    streamed call went untraced."""
+
+    def _client(self, chunks):
+        tts = SimpleNamespace(convert_stream=lambda **kw: iter(chunks))
+        return SimpleNamespace(text_to_speech=tts)
+
+    def test_convert_stream_is_traced_priced_and_reaches_the_caller_whole(self, tmp_path):
+        span = _Span()
+        inst = _sarvam(_config(tmp_path), span)
+        client = self._client([b"ID3", b"aaaa"])
+        inst._instrument_client(client)
+        out = list(client.text_to_speech.convert_stream(text="नमस्ते", model="bulbul:v3"))
+        assert out == [b"ID3", b"aaaa"]
+        inst.tracer.start_span.assert_called_with("sarvam.text_to_speech.convert_stream")
+        a = span.attrs
+        assert a["gen_ai.operation.name"] == "text_to_speech"
+        assert a["gen_ai.request.model"] == "bulbul:v3"
+        assert a["gen_ai.usage.characters"] == len("नमस्ते")
+        assert a["gen_ai.prompt.0.content.0.text"] == "नमस्ते"
+        assert a["gen_ai.completion.0.content.0.media_mime_type"] == "audio/mpeg"
+        assert a["gen_ai.completion.0.content.0.media_byte_size"] == 7
+        assert getattr(span, "ended", False)
+
+    def test_media_off_streams_untouched_and_records_no_audio(self, tmp_path):
+        span = _Span()
+        inst = _sarvam(_config(tmp_path, media="off", content=False), span)
+        client = self._client([b"aa"])
+        inst._instrument_client(client)
+        assert list(client.text_to_speech.convert_stream(text="hi")) == [b"aa"]
+        assert not any(k.startswith(("gen_ai.prompt.", "gen_ai.completion.")) for k in span.attrs)
+
+    @pytest.mark.asyncio
+    async def test_async_convert_stream_records_its_audio(self, tmp_path):
+        span = _Span()
+        inst = _sarvam(_config(tmp_path), span)
+
+        async def agen():
+            for c in (b"aa", b"bbb"):
+                yield c
+
+        tts = SimpleNamespace(convert_stream=lambda **kw: agen())
+        inst._instrument_client(SimpleNamespace(text_to_speech=tts))
+        out = [c async for c in tts.convert_stream(text="hi", output_audio_codec="wav")]
+        assert out == [b"aa", b"bbb"]
+        assert span.attrs["gen_ai.completion.0.content.0.media_mime_type"] == "audio/wav"
+        assert span.attrs["gen_ai.completion.0.content.0.media_byte_size"] == 5

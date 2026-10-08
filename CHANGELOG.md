@@ -33,11 +33,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     cap plus one byte is read; an over-cap payload is a `reference_only` part with its real size.
   - ElevenLabs text-to-speech streams reach the caller unchanged. A copy is kept as they are read
     and recorded when the stream ends. A stream the caller abandons records no audio.
-  - Sarvam's `text_to_speech.stream` is not captured yet. Speech parts are not mirrored into
-    `gen_ai.input.messages` / `gen_ai.output.messages`.
+  - Speech parts are not mirrored into `gen_ai.input.messages` / `gen_ai.output.messages`.
+  - Known gap: on `AsyncSarvamAI` the wrappers are synchronous, so a span closes before the
+    awaited call runs and records no transcript or returned audio. The sync client is unaffected.
 
 ### Fixed
 
+- **Streamed Sarvam text-to-speech is traced.** sarvamai 0.1.x streams through
+  `text_to_speech.convert_stream`; only `stream` was wrapped, so every streamed call had no span
+  and no cost. Both names are wrapped now, sync and async, with the cost from the text and the
+  streamed audio (MP3 by default) captured when media capture is on.
 - **Sarvam speech is priced from its media, at the published rates.** Speech-to-text and
   text-to-speech now resolve through the `audio` pricing section under `sarvam/<model>`:
   - Transcription is billed per second of the audio sent. The duration is read from the WAV
