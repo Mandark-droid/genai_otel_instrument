@@ -244,25 +244,29 @@ standard `OTEL_BSP_SCHEDULE_DELAY`, trading export frequency for exposure.
 
 ## Host and Instance Identity
 
-Spans carry host, OS, process and instance attributes so that traffic can be
-attributed to a machine and to one instance among several running on it. All of
-them are OpenTelemetry registry names, and all are controlled by standard
-`OTEL_*` variables - see
+Spans carry host, OS and instance attributes so that traffic can be attributed
+to a machine and to one instance among several running on it. Process attributes
+(the OS user, the executable path and the full command line) and `host.ip` (every
+interface address) are opt-in: they describe the machine rather than the service,
+and on a workstation that is a description of the person using it. All of them
+are OpenTelemetry registry names, controlled by standard `OTEL_*` variables - see
 [Resource Attributes](../reference/semantic-conventions.md#resource-attributes)
 for the full list.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS` | `host,os,process` | SDK detectors to run. Set to `host,os` to drop process attributes, or `otel` for none |
+| `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS` | `host,os` | SDK detectors to run. Add `process` for the process attributes (`host,os,process`), or set `otel` for none |
+| `GENAI_OTEL_RESOURCE_HOST_IP` | `false` | `true` fills `host.ip` with the host's non-loopback addresses. A value in `OTEL_RESOURCE_ATTRIBUTES` is used either way |
 | `OTEL_SERVICE_INSTANCE_ID` | | Instance identifier. **Recommended** - set it to something your orchestrator already guarantees unique and stable, such as a pod name |
 | `OTEL_RESOURCE_ATTRIBUTES` | | Any additional resource attributes, `key=value` comma-separated. Always wins over what the library detects |
 | `GENAI_SERVICE_INSTANCE_ID_MODE` | `random` | How `service.instance.id` is generated when not set explicitly. `random` or `derived` |
 
-!!! note "Defaults differ under the hardened profiles"
-    `GENAI_PROFILE=strict|bfsi|bank` defaults the detector list to `host,os`,
-    leaving out `process` so that no command line reaches the backend. Host and
-    instance identity are unaffected. Setting
-    `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS` explicitly overrides this.
+!!! note "Changed in 1.35: process attributes and `host.ip` are opt-in"
+    Until 1.35 the default was `host,os,process` plus `host.ip`, and only
+    `GENAI_PROFILE=strict|bfsi|bank` left out `process`. Every profile now
+    defaults to `host,os`. To restore the old resource, set
+    `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS=host,os,process` and
+    `GENAI_OTEL_RESOURCE_HOST_IP=true`.
 
 ### Choosing how `service.instance.id` is generated
 

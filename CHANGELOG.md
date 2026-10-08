@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Spans no longer describe the machine they came from unless asked.** The default resource
+  ran the `host`, `os` and `process` detectors and always filled `host.ip`, so every span carried
+  the OS user, the executable path, the full command line and every interface address. On a
+  developer's laptop running a sample app, that is a description of that person's machine.
+  - `process` is now off by default for every profile, as it already was under
+    `GENAI_PROFILE=strict|bfsi|bank`. Enable it with
+    `OTEL_EXPERIMENTAL_RESOURCE_DETECTORS=host,os,process`.
+  - `host.ip` is filled only with `GENAI_OTEL_RESOURCE_HOST_IP=true`, or from
+    `OTEL_RESOURCE_ATTRIBUTES` as before.
+  - `host.name`, `host.arch`, `os.*` and `service.instance.id` are unchanged, so traffic is still
+    separated by machine and instance.
+
 ### Added
 
 - **Sarvam and ElevenLabs speech calls capture their audio.** Only the chat providers went

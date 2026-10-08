@@ -48,7 +48,10 @@ RESOURCE_ENV_VARS = (
     "OTEL_SERVICE_NAME",
     "OTEL_ENVIRONMENT",
     "GENAI_SERVICE_INSTANCE_ID_MODE",
+    "GENAI_OTEL_RESOURCE_HOST_IP",
 )
+
+WITH_PROCESS = {"OTEL_EXPERIMENTAL_RESOURCE_DETECTORS": "host,os,process"}
 
 
 @pytest.fixture
@@ -128,9 +131,14 @@ def test_host_ip_puts_the_useful_address_first(clean_env):
     assert ranks == sorted(ranks), f"link-local addresses sort ahead of routable ones: {addresses}"
 
 
+def test_host_ip_is_not_emitted_by_default(clean_env):
+    """Every interface address of a workstation is not something a span should carry unasked."""
+    assert HOST_IP not in build_resource("test-service", "9.9.9").attributes
+
+
 def test_host_ip_is_a_sequence_on_the_resource(clean_env):
     """host.ip is defined as an array, so it must not collapse to a bare string."""
-    value = build_resource("test-service", "9.9.9").attributes.get(HOST_IP)
+    value = _build(GENAI_OTEL_RESOURCE_HOST_IP="true").attributes.get(HOST_IP)
     if value is None:
         pytest.skip("this host has no non-loopback address")
     assert not isinstance(value, str)
@@ -233,8 +241,17 @@ def test_unknown_instance_id_mode_falls_back_to_random(clean_env):
 # ---------------------------------------------------------------------------
 
 
-def test_process_attributes_are_present_by_default(clean_env):
-    resource = build_resource("test-service", "9.9.9")
+def test_process_attributes_are_absent_by_default(clean_env):
+    """The OS user, executable path and command line describe the machine, not the service."""
+    attrs = build_resource("test-service", "9.9.9").attributes
+    assert not any(
+        k.startswith("process.") and not k.startswith("process.runtime") for k in attrs
+    ), sorted(attrs)
+    assert attrs.get(HOST_NAME) and attrs.get(SERVICE_INSTANCE_ID), "identity must survive"
+
+
+def test_process_attributes_are_present_when_requested(clean_env):
+    resource = _build(**WITH_PROCESS)
     assert resource.attributes.get(PROCESS_PID)
     assert resource.attributes.get(PROCESS_COMMAND_LINE) is not None
     assert resource.attributes.get(PROCESS_COMMAND) is not None
@@ -250,7 +267,7 @@ def test_command_line_survives_the_sdk_making_argv_opt_in(clean_env):
     either way. Regression caught end-to-end, not by the unit suite, because
     the suite ran against an older SDK than a fresh install resolves to.
     """
-    resource = build_resource("test-service", "9.9.9")
+    resource = _build(**WITH_PROCESS)
     assert resource.attributes.get(PROCESS_COMMAND_LINE) is not None
     assert resource.attributes.get(PROCESS_COMMAND_ARGS) is not None
 
@@ -269,7 +286,7 @@ def test_argv_is_not_requested_under_a_hardened_profile(clean_env):
 
 
 def test_command_args_are_a_sequence(clean_env):
-    args = build_resource("test-service", "9.9.9").attributes.get(PROCESS_COMMAND_ARGS)
+    args = _build(**WITH_PROCESS).attributes.get(PROCESS_COMMAND_ARGS)
     assert args is not None and not isinstance(args, str)
 
 
@@ -379,7 +396,7 @@ def test_command_line_is_rebuilt_from_the_redacted_args(clean_env):
     """The joined string and the array must never disagree."""
     argv = ["serve.py", "--api-key", "sk-live-abcdef", "--port", "8080"]
     with fake_argv(argv):
-        resource = build_resource("test-service", "9.9.9")
+        resource = _build(**WITH_PROCESS)
     args = list(resource.attributes[PROCESS_COMMAND_ARGS])
     assert "sk-live-abcdef" not in args
     assert args == ["serve.py", "--api-key", PLACEHOLDER, "--port", "8080"]
@@ -389,7 +406,7 @@ def test_command_line_is_rebuilt_from_the_redacted_args(clean_env):
 
 def test_clean_command_line_is_left_alone(clean_env):
     with fake_argv(["serve.py", "--port", "8080"]):
-        resource = build_resource("test-service", "9.9.9")
+        resource = _build(**WITH_PROCESS)
     assert list(resource.attributes[PROCESS_COMMAND_ARGS]) == ["serve.py", "--port", "8080"]
 
 

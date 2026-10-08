@@ -210,9 +210,10 @@ once.
 | `process.runtime.name` / `.version` / `.description` | Python runtime |
 
 The `host.*`, `os.*` and `process.*` groups come from the OpenTelemetry SDK's
-own detectors, which this library enables by default via
-`OTEL_EXPERIMENTAL_RESOURCE_DETECTORS`. `host.ip` has no upstream detector and
-is resolved by the library.
+own detectors. This library enables `host` and `os` by default via
+`OTEL_EXPERIMENTAL_RESOURCE_DETECTORS`; `process` is opt-in (add it to that
+variable). `host.ip` has no upstream detector and is resolved by the library
+only when `GENAI_OTEL_RESOURCE_HOST_IP=true`.
 
 !!! warning "Credential values in `process.command_args` are redacted"
     A value following a flag whose name looks like a credential

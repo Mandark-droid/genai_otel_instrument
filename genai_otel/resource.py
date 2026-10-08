@@ -19,7 +19,14 @@ Two rules govern what is emitted here:
    fills in what nobody else supplied.
 
 ``host.ip`` is the one registry attribute with no upstream detector, so it is
-derived here.
+derived here -- on request only.
+
+What is on by default is what separates traffic and nothing more: ``host.name``,
+``host.arch``, ``os.*`` and ``service.instance.id``. The ``process`` detector (the
+OS user, the executable path and the full command line) and ``host.ip`` (every
+interface address) described the developer's workstation on every span a sample
+or desktop app sent, so both are opt-in: ``OTEL_EXPERIMENTAL_RESOURCE_DETECTORS``
+naming ``process``, and ``GENAI_OTEL_RESOURCE_HOST_IP=true``.
 """
 
 import ipaddress
@@ -62,13 +69,19 @@ LEGACY_DISTRO_VERSION = "telemetry.auto.version"
 DISTRO_NAME = "genai-otel-instrument"
 
 # The upstream detectors, all built in and registered as entry points.
-_DEFAULT_DETECTORS = "host,os,process"
-
-# `process.command_line` reproduces whatever was typed to start the process. The
-# hardened profiles exist to keep exactly that class of content off the wire, so
-# they do not opt in to the process detector. Host and instance identity - the
-# part needed to separate traffic - are unaffected.
+#
+# `process` is NOT on by default. It reports the OS user, the executable path and
+# the full command line -- on a laptop running a sample app, a description of that
+# person's machine on every span. It was already off under the hardened profiles;
+# it is now off for everyone, and an operator who wants it names it in
+# OTEL_EXPERIMENTAL_RESOURCE_DETECTORS. Host and instance identity, the part needed
+# to separate traffic, are unaffected.
+_DEFAULT_DETECTORS = "host,os"
 _HARDENED_DETECTORS = "host,os"
+
+# `host.ip` lists every non-loopback interface (VPN, docker, Wi-Fi). Filled only on
+# request; an operator can also supply it through OTEL_RESOURCE_ATTRIBUTES.
+_HOST_IP_ENV = "GENAI_OTEL_RESOURCE_HOST_IP"
 _HARDENED_PROFILES = frozenset({"strict", "bfsi", "bank"})
 
 # semconv designates this namespace for a `service.instance.id` derived from an
@@ -206,6 +219,10 @@ def process_argv() -> List[str]:
     Python 3.10, and this package supports 3.9.
     """
     return list(getattr(sys, "orig_argv", sys.argv))
+
+
+def _host_ip_requested() -> bool:
+    return os.getenv(_HOST_IP_ENV, "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def _process_detector_enabled() -> bool:
@@ -358,7 +375,7 @@ def build_resource(service_name: str, distro_version: str, profile: str = "") ->
     # Fill in only what neither a detector nor OTEL_RESOURCE_ATTRIBUTES gave us,
     # so an operator's explicit value is never second-guessed.
     fallbacks: Dict[str, object] = {}
-    if not resource.attributes.get(HOST_IP):
+    if _host_ip_requested() and not resource.attributes.get(HOST_IP):
         addresses = host_ip_addresses()
         if addresses:
             fallbacks[HOST_IP] = list(addresses)
