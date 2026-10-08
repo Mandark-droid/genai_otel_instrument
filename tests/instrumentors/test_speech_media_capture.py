@@ -336,3 +336,11 @@ class TestDurationIsReadBeforeTheSdkConsumesTheFile:
         client.speech_to_text.transcribe(file=io.BytesIO(_wav(36.0)), model="saaras:v3")
         assert span.attrs["gen_ai.usage.audio_duration_seconds"] == pytest.approx(36.0)
         assert span.attrs.get("gen_ai.usage.cost.total", 0) > 0
+
+
+def test_the_default_tts_model_is_priced():
+    """bulbul:v2 is the SDK's default; dropping its old row left default calls unpriced."""
+    from genai_otel.cost_calculator import CostCalculator
+
+    cost = CostCalculator().calculate_cost("sarvam/bulbul:v2", {"characters": 1000}, "audio")
+    assert cost == pytest.approx(3.0 / 95, rel=1e-3)

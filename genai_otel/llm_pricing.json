@@ -835,6 +835,10 @@
     "sarvam/bulbul:v3": {
       "per_1k_chars": 0.031579,
       "note": "Sarvam Bulbul v3 TTS: INR 3.00 per 1,000 characters, checked 2026-10-08; converted at INR 95/USD"
+    },
+    "sarvam/bulbul:v2": {
+      "per_1k_chars": 0.031579,
+      "note": "Sarvam Bulbul v2 TTS: the published TTS rate, INR 3.00 per 1,000 characters (the pricing page states one TTS rate for all versions), checked 2026-10-08; converted at INR 95/USD"
     }
   },
   "chat": {
@@ -9508,6 +9512,7 @@
     "sarvam/saaras:v2.5": "2026-10-08",
     "sarvam/saarika:v3": "2026-10-08",
     "sarvam/saaras:v3": "2026-10-08",
-    "sarvam/bulbul:v3": "2026-10-08"
+    "sarvam/bulbul:v3": "2026-10-08",
+    "sarvam/bulbul:v2": "2026-10-08"
   }
 }
