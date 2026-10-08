@@ -160,8 +160,10 @@ Crew Execution
 ### Multimodal Observability (v1.1.0)
 
 First-class capture of image, audio, video, and document content parts on
-OpenAI, Anthropic, Google Gemini, and Groq spans. Bytes are offloaded to your
-configured object store (MinIO / S3 / filesystem / HTTP) and referenced from
+OpenAI, Anthropic, Google Gemini, and Groq spans, and of the audio on Sarvam and
+ElevenLabs speech calls (the audio sent for transcription, the audio text-to-speech
+returns; the transcript and spoken text follow content capture). Bytes are offloaded
+to your configured object store (MinIO / S3 / filesystem / HTTP) and referenced from
 spans by URI — they never appear inline in span attributes.
 
 ```bash

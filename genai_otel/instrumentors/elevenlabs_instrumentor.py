@@ -15,6 +15,7 @@ import logging
 import time
 
 from ..config import OTelConfig
+from ..media.speech import audio_mime, audio_part, read_audio, text_part
 from ..semconv import genai_semconv_modes
 from .base import BaseInstrumentor
 
@@ -202,7 +203,40 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
         # Characters are known before the audio arrives, so cost does not depend
         # on the caller draining the iterator.
         self._record_media_cost(span, model, {"characters": char_count})
+        # The text that was spoken (content capture only).
+        self._emit_speech_parts(span, "prompt", "user", [text_part(text)])
         return model
+
+    @staticmethod
+    def _tts_mime(args, kwargs) -> str:
+        # ElevenLabs' default output is mp3_44100_128.
+        return audio_mime(codec=_arg(kwargs, args, "output_format", 4), default="audio/mpeg")
+
+    def _emit_tts_audio(self, span, buf: bytearray, total: int, mime: str) -> None:
+        """Record the audio a TTS stream produced, once the caller has drained it."""
+        if total <= 0:
+            return
+        self._emit_speech_parts(
+            span, "completion", "assistant", [audio_part(bytes(buf), mime, total)]
+        )
+
+    def _buffer_audio(self, stream, span, mime: str):
+        """Yield the caller's audio chunks unchanged, keeping a copy bounded by the media cap.
+
+        Only when media capture is on. The copy is recorded when the stream ends; a stream
+        the caller abandons records nothing, since half a sentence of audio would read as
+        what was said.
+        """
+        cap = self._media_max_bytes()
+        buf = bytearray()
+        total = 0
+        for chunk in stream:
+            if isinstance(chunk, (bytes, bytearray)):
+                total += len(chunk)
+                if len(buf) <= cap:
+                    buf.extend(chunk[: cap + 1 - len(buf)])
+            yield chunk
+        self._emit_tts_audio(span, buf, total, mime)
 
     def _wrap_tts(self, tts, method_name: str, is_async: bool):
         """Wrap a TTS method, preserving its streaming return value.
@@ -225,7 +259,11 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
                     stream = original(*args, **kwargs)
                     if hasattr(stream, "__aiter__"):
                         return instrumentor._wrap_async_audio_stream(
-                            stream, span, start_time, model
+                            stream,
+                            span,
+                            start_time,
+                            model,
+                            mime=instrumentor._tts_mime(args, kwargs),
                         )
                     result = await stream if hasattr(stream, "__await__") else stream
                     span.end()
@@ -246,20 +284,34 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
             except Exception:
                 span.end()
                 raise
+            if instrumentor._speech_media_enabled() and hasattr(stream, "__iter__"):
+                stream = instrumentor._buffer_audio(
+                    stream, span, instrumentor._tts_mime(args, kwargs)
+                )
             # _wrap_streaming_response records TTFT/TBT and ends the span when the
             # iterator is drained or raises.
             return instrumentor._wrap_streaming_response(stream, span, start_time, model)
 
         setattr(tts, method_name, wrapped_tts)
 
-    async def _wrap_async_audio_stream(self, stream, span, start_time: float, model: str):
+    async def _wrap_async_audio_stream(
+        self, stream, span, start_time: float, model: str, mime: str = "audio/mpeg"
+    ):
         """Async counterpart of ``_wrap_streaming_response`` for audio byte streams."""
         from opentelemetry.trace import Status, StatusCode
 
         first = True
         chunks = 0
+        keep = self._speech_media_enabled()
+        cap = self._media_max_bytes()
+        buf = bytearray()
+        total = 0
         try:
             async for chunk in stream:
+                if keep and isinstance(chunk, (bytes, bytearray)):
+                    total += len(chunk)
+                    if len(buf) <= cap:
+                        buf.extend(chunk[: cap + 1 - len(buf)])
                 if first:
                     # Time to the first audio byte. TPOT has no meaning here --
                     # a TTS stream has no output tokens to divide by - so it is
@@ -269,6 +321,8 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
                 chunks += 1
                 yield chunk
             span.set_attribute("gen_ai.streaming.chunk_count", chunks)
+            if keep:
+                self._emit_tts_audio(span, buf, total, mime)
             if self.latency_histogram:
                 self.latency_histogram.record(time.time() - start_time, {"operation": span.name})
             span.set_status(Status(StatusCode.OK))
@@ -293,7 +347,14 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
             self.request_counter.add(1, {"model": model, "provider": PROVIDER})
         return model
 
-    def _stt_record_result(self, span, model: str, result, start_time: float):
+    def _stt_audio_part(self, args, kwargs):
+        """The audio sent for transcription, read before the SDK consumes the file."""
+        if not self._speech_media_enabled():
+            return None
+        data, name, size = read_audio(kwargs.get("file"), self._media_max_bytes())
+        return audio_part(data, audio_mime(name, kwargs.get("file_format")), size)
+
+    def _stt_record_result(self, span, model: str, result, start_time: float, audio=None):
         """Record transcription duration, transcript size and cost."""
         duration = time.time() - start_time
         if self.latency_histogram:
@@ -312,6 +373,9 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
         text = getattr(result, "text", None)
         if isinstance(text, str):
             span.set_attribute("gen_ai.response.transcript_length", len(text))
+        # Audio in (media capture), transcript out (content capture).
+        self._emit_speech_parts(span, "prompt", "user", [audio])
+        self._emit_speech_parts(span, "completion", "assistant", [text_part(text)])
         language = getattr(result, "language_code", None)
         if language:
             span.set_attribute("gen_ai.response.language_code", str(language))
@@ -335,8 +399,9 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
                 ) as span:
                     start_time = time.time()
                     model = instrumentor._stt_span_setup(span, args, kwargs)
+                    audio = instrumentor._stt_audio_part(args, kwargs)
                     result = await original(*args, **kwargs)
-                    instrumentor._stt_record_result(span, model, result, start_time)
+                    instrumentor._stt_record_result(span, model, result, start_time, audio)
                     return result
 
             stt.convert = wrapped_async_stt
@@ -348,8 +413,9 @@ class ElevenLabsInstrumentor(BaseInstrumentor):
             ) as span:
                 start_time = time.time()
                 model = instrumentor._stt_span_setup(span, args, kwargs)
+                audio = instrumentor._stt_audio_part(args, kwargs)
                 result = original(*args, **kwargs)
-                instrumentor._stt_record_result(span, model, result, start_time)
+                instrumentor._stt_record_result(span, model, result, start_time, audio)
                 return result
 
         stt.convert = wrapped_stt

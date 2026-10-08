@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Sarvam and ElevenLabs speech calls capture their audio.** Only the chat providers went
+  through the media offload, so a voice app had to upload its own recordings to make a call
+  reviewable. Speech-to-text now records the audio it was sent and text-to-speech the audio it
+  returned, as `gen_ai.prompt.0.content.0.*` / `gen_ai.completion.0.content.0.*` audio parts,
+  through the same store, size cap, modality allow-list and redactor as every other media part.
+  The transcript and the spoken text are recorded as text parts.
+  - Off by default: audio needs `GENAI_OTEL_MEDIA_CAPTURE_MODE`, text needs content capture.
+  - The audio file is read before the SDK uploads it and returned to where it was. At most the
+    cap plus one byte is read; an over-cap payload is a `reference_only` part with its real size.
+  - ElevenLabs text-to-speech streams reach the caller unchanged. A copy is kept as they are read
+    and recorded when the stream ends. A stream the caller abandons records no audio.
+  - Sarvam's `text_to_speech.stream` is not captured yet. Speech parts are not mirrored into
+    `gen_ai.input.messages` / `gen_ai.output.messages`.
+
 ### Fixed
 
 - **Sarvam speech is priced from its media, at the published rates.** Speech-to-text and

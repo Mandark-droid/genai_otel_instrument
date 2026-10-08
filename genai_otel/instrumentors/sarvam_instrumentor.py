@@ -17,6 +17,7 @@ from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
 from ..config import OTelConfig
+from ..media.speech import audio_mime, audio_part, decode_base64_audio, read_audio, text_part
 from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
@@ -111,6 +112,60 @@ class SarvamAIInstrumentor(BaseInstrumentor):
         if model_name and model_name.startswith("bulbul"):
             return model_name.replace(":", "-")
         return model_name
+
+    def _stt_audio_part(self, kwargs):
+        """The audio a speech-to-text call sends, read BEFORE the SDK consumes the file.
+
+        None unless media capture is on. Read first because a file object is at its end
+        once the SDK has uploaded it.
+        """
+        if not self._speech_media_enabled():
+            return None
+        data, name, size = read_audio(_safe_kwarg(kwargs, "file"), self._media_max_bytes())
+        return audio_part(data, audio_mime(name, _safe_kwarg(kwargs, "input_audio_codec")), size)
+
+    def _record_stt_media(self, span, audio, result) -> None:
+        """Speech-to-text: the customer's audio in, the transcript out."""
+        self._emit_speech_parts(span, "prompt", "user", [audio])
+        transcript = (
+            result.get("transcript")
+            if isinstance(result, dict)
+            else getattr(result, "transcript", None)
+        )
+        self._emit_speech_parts(span, "completion", "assistant", [text_part(transcript)])
+
+    def _record_tts_media(self, span, text, result, codec) -> None:
+        """Text-to-speech: the text in, the audio Sarvam returned (base64 WAV by default) out."""
+        self._emit_speech_parts(span, "prompt", "user", [text_part(text)])
+        if not self._speech_media_enabled():
+            return
+        audios = (
+            result.get("audios") if isinstance(result, dict) else getattr(result, "audios", None)
+        )
+        if not isinstance(audios, (list, tuple)):
+            return
+        mime = audio_mime(codec=codec)
+        cap = self._media_max_bytes()
+        parts = []
+        for b64 in audios:
+            data, over = decode_base64_audio(b64, cap)
+            if data is not None:
+                parts.append(audio_part(data, mime))
+            elif over:
+                # Too large to decode: recorded as an audio part with no bytes, so the
+                # span still says audio was returned and why it is not stored.
+                from ..media import ContentPart  # noqa: WPS433
+
+                parts.append(
+                    ContentPart(
+                        type="audio",
+                        media_mime_type=mime,
+                        media_byte_size=over,
+                        media_source="reference_only",
+                        extra={"stripped_reason": "size_exceeded"},
+                    )
+                )
+        self._emit_speech_parts(span, "completion", "assistant", parts)
 
     def _record_sarvam_audio_cost(self, span, model: str, usage: dict, start_time: float):
         """Record latency and the media-priced cost of a speech call.
@@ -516,7 +571,9 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     if instrumentor.request_counter:
                         instrumentor.request_counter.add(1, {"model": model, "provider": "sarvam"})
 
+                    audio = instrumentor._stt_audio_part(kwargs)
                     result = original_transcribe(*args, **kwargs)
+                    instrumentor._record_stt_media(span, audio, result)
 
                     if hasattr(result, "transcript"):
                         span.set_attribute("sarvam.transcript_length", len(result.transcript))
@@ -561,7 +618,9 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     if instrumentor.request_counter:
                         instrumentor.request_counter.add(1, {"model": model, "provider": "sarvam"})
 
+                    audio = instrumentor._stt_audio_part(kwargs)
                     result = original_stt_translate(*args, **kwargs)
+                    instrumentor._record_stt_media(span, audio, result)
 
                     if hasattr(result, "transcript"):
                         span.set_attribute("sarvam.transcript_length", len(result.transcript))
@@ -645,6 +704,7 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                         )
 
                     result = original_convert(*args, **kwargs)
+                    instrumentor._record_tts_media(span, text, result, output_audio_codec)
 
                     duration = None
                     if isinstance(result, dict):

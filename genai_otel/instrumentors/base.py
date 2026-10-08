@@ -986,6 +986,81 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         """Override in subclasses to return List[ContentPart] from a result."""
         return None
 
+    # ------------------------------------------------------------------
+    # Speech media: payloads that are audio files and bytes, not chat messages.
+    # ------------------------------------------------------------------
+    def _speech_media_enabled(self) -> bool:
+        """Audio is captured only when media capture is on (it is off by default)."""
+        return bool(self.config) and getattr(self.config, "media_capture_mode", "off") != "off"
+
+    def _speech_text_enabled(self) -> bool:
+        """Transcripts and spoken text are content: captured only with content capture on."""
+        return bool(self.config) and bool(getattr(self.config, "enable_content_capture", False))
+
+    def _media_max_bytes(self) -> int:
+        try:
+            return int(
+                getattr(self.config, "media_max_bytes", 10 * 1024 * 1024) or 10 * 1024 * 1024
+            )
+        except (TypeError, ValueError):
+            return 10 * 1024 * 1024
+
+    def _emit_speech_parts(self, span, side: str, role: str, parts: list) -> None:
+        """Record one speech message (audio and/or text) as content-part attributes.
+
+        For the speech SDKs, whose request or response is an audio file rather than a
+        chat message (speech-to-text in, text-to-speech out). Audio goes through
+        ``offload_part`` -- the same size cap, modality allow-list, redactor and store
+        as every other media part -- and only when media capture is on; text only with
+        content capture on. Never raises: capture must not fail the traced call.
+        """
+        try:
+            kept = [
+                p
+                for p in parts
+                if p is not None
+                and (
+                    (p.type == "text" and self._speech_text_enabled())
+                    or (p.type != "text" and self._speech_media_enabled())
+                )
+            ]
+            if not kept:
+                return
+            from ..media import (  # noqa: WPS433 - lazy, as in _emit_media_attributes
+                get_store,
+                offload_part,
+            )
+
+            store = None
+            if (
+                any(p.type != "text" for p in kept)
+                and getattr(self.config, "media_capture_mode", "off") == "full"
+            ):
+                try:
+                    store = get_store(self.config)
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("Failed to initialize media store: %s", e)
+            trace_id_hex = ""
+            try:
+                ctx = span.get_span_context()
+                if ctx and ctx.trace_id:
+                    trace_id_hex = f"{ctx.trace_id:032x}"
+            except Exception:  # noqa: BLE001
+                pass
+            role_key = SC.GEN_AI_PROMPT_ROLE if side == "prompt" else SC.GEN_AI_COMPLETION_ROLE
+            span.set_attribute(role_key.format(n=0), role)
+            for m, part in enumerate(kept):
+                try:
+                    offload_part(part, config=self.config, store=store, trace_id=trace_id_hex)
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("offload_part (speech) failed: %s", e)
+                declared = part.extra.get("declared_size") if part.extra else None
+                if part.extra and part.extra.get("stripped_reason") == "size_exceeded" and declared:
+                    part.media_byte_size = int(declared)
+                self._set_part_attrs(span, side, 0, m, part)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Failed to emit speech media for span: %s", e)
+
     def create_span_wrapper(
         self, span_name: str, extract_attributes: Optional[Callable[[Any, Any, Any], Dict]] = None
     ) -> Callable:
