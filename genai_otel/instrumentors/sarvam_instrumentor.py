@@ -571,6 +571,10 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     if instrumentor.request_counter:
                         instrumentor.request_counter.add(1, {"model": model, "provider": "sarvam"})
 
+                    # Measured BEFORE the call: the SDK uploads (reads) a file object, which
+                    # leaves it at its end, so a duration read afterwards came back empty and
+                    # the call went unpriced.
+                    seconds = _wav_seconds(_safe_kwarg(kwargs, "file"))
                     audio = instrumentor._stt_audio_part(kwargs)
                     result = original_transcribe(*args, **kwargs)
                     instrumentor._record_stt_media(span, audio, result)
@@ -579,7 +583,6 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                         span.set_attribute("sarvam.transcript_length", len(result.transcript))
 
                     # Billed per hour of audio: price the audio that was sent.
-                    seconds = _wav_seconds(_safe_kwarg(kwargs, "file"))
                     usage = {}
                     if seconds is not None:
                         span.set_attribute("gen_ai.usage.audio_duration_seconds", round(seconds, 3))
@@ -618,6 +621,10 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     if instrumentor.request_counter:
                         instrumentor.request_counter.add(1, {"model": model, "provider": "sarvam"})
 
+                    # Measured BEFORE the call: the SDK uploads (reads) a file object, which
+                    # leaves it at its end, so a duration read afterwards came back empty and
+                    # the call went unpriced.
+                    seconds = _wav_seconds(_safe_kwarg(kwargs, "file"))
                     audio = instrumentor._stt_audio_part(kwargs)
                     result = original_stt_translate(*args, **kwargs)
                     instrumentor._record_stt_media(span, audio, result)
@@ -626,7 +633,6 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                         span.set_attribute("sarvam.transcript_length", len(result.transcript))
 
                     # Billed per hour of audio: price the audio that was sent.
-                    seconds = _wav_seconds(_safe_kwarg(kwargs, "file"))
                     usage = {}
                     if seconds is not None:
                         span.set_attribute("gen_ai.usage.audio_duration_seconds", round(seconds, 3))

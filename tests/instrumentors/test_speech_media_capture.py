@@ -312,3 +312,27 @@ class TestSarvamStreamedSpeech:
         assert out == [b"aa", b"bbb"]
         assert span.attrs["gen_ai.completion.0.content.0.media_mime_type"] == "audio/wav"
         assert span.attrs["gen_ai.completion.0.content.0.media_byte_size"] == 5
+
+
+class TestDurationIsReadBeforeTheSdkConsumesTheFile:
+    """Found end to end: the real SDK reads (uploads) a file object, leaving it at its end.
+    The duration was read afterwards, came back empty, and the call went unpriced."""
+
+    def test_a_consumed_file_object_is_still_priced(self, tmp_path):
+        span = _Span()
+        inst = _sarvam(_config(tmp_path, media="off", content=False), span)
+        inst.config.enable_cost_tracking = True
+        from genai_otel.cost_calculator import CostCalculator
+
+        inst.cost_calculator = CostCalculator()
+        client = MagicMock()
+
+        def transcribe(**kw):
+            kw["file"].read()
+            return SimpleNamespace(transcript="ok")
+
+        client.speech_to_text.transcribe = transcribe
+        inst._instrument_client(client)
+        client.speech_to_text.transcribe(file=io.BytesIO(_wav(36.0)), model="saaras:v3")
+        assert span.attrs["gen_ai.usage.audio_duration_seconds"] == pytest.approx(36.0)
+        assert span.attrs.get("gen_ai.usage.cost.total", 0) > 0

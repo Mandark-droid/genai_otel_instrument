@@ -39,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A Sarvam transcription of a file object is priced.** The audio length was read after the SDK
+  had uploaded the file, which leaves a file object at its end, so the duration came back empty
+  and the call carried no cost. It is read before the call now. Raw bytes and `(name, bytes)`
+  tuples were unaffected. Found by an end-to-end run against the platform.
 - **Streamed Sarvam text-to-speech is traced.** sarvamai 0.1.x streams through
   `text_to_speech.convert_stream`; only `stream` was wrapped, so every streamed call had no span
   and no cost. Both names are wrapped now, sync and async, with the cost from the text and the
