@@ -124,6 +124,7 @@ class LiteLLMLatencyInstrumentor(BaseInstrumentor):
                     model,
                     kwargs,
                     emit_measurements=not holder,
+                    sync_call=True,
                 )
                 if handled:
                     handed_to_stream = True

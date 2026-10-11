@@ -305,6 +305,7 @@ class _StreamTiming:
         "last_chunk",
         "usage",
         "emit_measurements",
+        "started",
     )
 
     def __init__(self, start_time: float, emit_measurements: bool = True):
@@ -321,6 +322,146 @@ class _StreamTiming:
         # this request. The outer span still spans the call - it is the parent -
         # but publishing the same numbers twice would double-count one request.
         self.emit_measurements = emit_measurements
+        # True once the measuring generator has begun to run. A stream closed
+        # before that has no pending yield for its span to be finalized at.
+        self.started = False
+
+
+def _is_sampled_out(span) -> bool:
+    """True for a span the sampler dropped. Anything that cannot say is treated as live."""
+    is_recording = getattr(span, "is_recording", None)
+    return callable(is_recording) and is_recording() is False
+
+
+class _MeasuredStream(wrapt.ObjectProxy):
+    """The SDK's stream, with its iteration measured and nothing else changed.
+
+    A transparent proxy rather than a replacement iterator. Callers use a stream
+    as more than an iterable: langchain-openai reads one inside
+    ``with stream as response:``, and others reach for ``close()`` and
+    ``response``. A bare generator in its place breaks the caller's application,
+    not just a span.
+    """
+
+    def __init__(self, wrapped, measured, timing, finish_unread):
+        super().__init__(wrapped)
+        # ObjectProxy reserves the `_self_` prefix for attributes belonging to
+        # the proxy rather than to the wrapped object.
+        self._self_measured = measured
+        self._self_timing = timing
+        self._self_finish_unread = finish_unread
+
+    def __iter__(self):
+        # The generator itself, so a `for` loop pays nothing per chunk for
+        # going through the proxy.
+        return self._self_measured
+
+    def __next__(self):
+        return next(self._self_measured)
+
+    def __enter__(self):
+        enter = getattr(self.__wrapped__, "__enter__", None)
+        if enter is not None:
+            enter()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._self_end_measurement()
+        leave = getattr(self.__wrapped__, "__exit__", None)
+        if leave is not None:
+            return leave(exc_type, exc_value, traceback)
+        return None
+
+    def close(self):
+        self._self_end_measurement()
+        close = getattr(self.__wrapped__, "close", None)
+        if close is not None:
+            return close()
+        return None
+
+    def _self_end_measurement(self):
+        """End the span of a stream the caller is done with, read or not.
+
+        Never raises: the caller is closing a connection, and bookkeeping that
+        fails here (or a generator another thread is still inside) must not stop
+        the SDK's own close from running.
+        """
+        timing = self._self_timing
+        started, timing.started = timing.started, True
+        try:
+            # Raises GeneratorExit at the pending yield, which finalizes the span.
+            # A no-op on a stream that already ran to its end or failed.
+            self._self_measured.close()
+            if not started:
+                # A generator that never ran has no pending yield to finalize at.
+                self._self_finish_unread()
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Could not end stream measurement: %s", e)
+
+
+class _MeasuredAsyncStream(wrapt.ObjectProxy):
+    """Async counterpart of :class:`_MeasuredStream`.
+
+    Pydantic AI reads an OpenAI stream inside ``async with response:``.
+    """
+
+    def __init__(self, wrapped, measured, timing, finish_unread):
+        super().__init__(wrapped)
+        self._self_measured = measured
+        self._self_timing = timing
+        self._self_finish_unread = finish_unread
+
+    def __aiter__(self):
+        return self._self_measured
+
+    def __anext__(self):
+        return self._self_measured.__anext__()
+
+    async def __aenter__(self):
+        enter = getattr(self.__wrapped__, "__aenter__", None)
+        if enter is not None:
+            await enter()
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self._self_end_measurement()
+        leave = getattr(self.__wrapped__, "__aexit__", None)
+        if leave is not None:
+            return await leave(exc_type, exc_value, traceback)
+        return None
+
+    async def close(self):
+        await self._self_end_measurement()
+        await self._self_close_wrapped("close", "aclose")
+
+    async def aclose(self):
+        await self._self_end_measurement()
+        await self._self_close_wrapped("aclose", "close")
+
+    async def _self_close_wrapped(self, *names):
+        """Close the SDK stream by whichever of ``names`` it has, first one first.
+
+        SDK streams spell it ``close()`` (openai) and async generators
+        ``aclose()``; a caller reaching for either name must close the stream.
+        """
+        for name in names:
+            method = getattr(self.__wrapped__, name, None)
+            if method is not None:
+                closing = method()
+                if inspect.isawaitable(closing):
+                    await closing
+                return
+
+    async def _self_end_measurement(self):
+        """End the span of a stream the caller is done with, read or not. Never raises."""
+        timing = self._self_timing
+        started, timing.started = timing.started, True
+        try:
+            await self._self_measured.aclose()
+            if not started:
+                self._self_finish_unread()
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Could not end stream measurement: %s", e)
 
 
 # Set for the duration of a call by a wrapper that sits *outside* a provider SDK
@@ -1128,11 +1269,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     ctx = trace.set_span_in_context(span)
                     token = otel_context.attach(ctx)
                     fast_start = time.time()
-                    try:
-                        if BaseInstrumentor._blocking_active:
-                            self._enforce_precall_policy(span, kwargs)
-                        invoked = True
-                        result = wrapped(*args, **kwargs)
+
+                    def _count_sampled_out():
                         try:
                             if self.request_counter:
                                 self.request_counter.add(1, {"operation": span_name})
@@ -1142,9 +1280,36 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 )
                         except Exception:  # pragma: no cover - metrics must never break the call
                             pass
+
+                    deferred = False
+                    try:
+                        if BaseInstrumentor._blocking_active:
+                            self._enforce_precall_policy(span, kwargs)
+                        invoked = True
+                        result = wrapped(*args, **kwargs)
+                        if inspect.iscoroutine(result):
+                            # The work happens where the coroutine is awaited. Ended
+                            # here, the span left that work with nothing to inherit
+                            # the sampling decision from: its children became roots
+                            # and were sampled on their own, as partial traces.
+                            deferred = True
+
+                            async def _sampled_out():
+                                run_token = otel_context.attach(trace.set_span_in_context(span))
+                                try:
+                                    value = await result
+                                    _count_sampled_out()
+                                    return value
+                                finally:
+                                    otel_context.detach(run_token)
+                                    span.end()
+
+                            return _sampled_out()
+                        _count_sampled_out()
                         return result
                     finally:
-                        span.end()
+                        if not deferred:
+                            span.end()
                         otel_context.detach(token)
 
                 ctx = _context_with_usage_holder(span, trace.set_span_in_context(span))
@@ -1198,9 +1363,29 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     # coroutine completes so nested async calls inherit this
                     # span as their parent.
                     if inspect.iscoroutine(result):
+                        # Nothing has run yet: the work happens wherever this
+                        # coroutine is awaited, and under asyncio.run, gather
+                        # or create_task that is another task with its own
+                        # context. Left attached here, the span would stay the
+                        # caller's current span for good - the detach would
+                        # run in the other context and fail - and a second
+                        # call made before the first is awaited would nest
+                        # under it. So the caller's context is put back now,
+                        # and the span is made current again where it runs.
+                        budgeted = getattr(span, "_genai_budget_token", None) is not None
+                        if budgeted:
+                            self._abandon_agent_budget(span)
+                        otel_context.detach(token)
 
                         async def _async_traced():
                             handed_to_stream = False
+                            # Built here rather than reused from the call, so what
+                            # the caller put in its context before awaiting is seen.
+                            run_token = otel_context.attach(
+                                _context_with_usage_holder(span, trace.set_span_in_context(span))
+                            )
+                            if budgeted:
+                                self._begin_agent_budget(span, initial_attributes)
                             try:
                                 actual_result = await result
 
@@ -1269,7 +1454,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 raise
 
                             finally:
-                                otel_context.detach(token)
+                                if budgeted:
+                                    self._finish_agent_budget(span)
+                                otel_context.detach(run_token)
                                 # When the stream wrapper took over it owns the
                                 # span's end and the running-requests decrement.
                                 if not handed_to_stream:
@@ -1291,11 +1478,14 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         )
                         logger.debug("Detected streaming response for model: %s", stream_model)
                         handled, value = self._install_stream_measurement(
-                            span, result, start_time, stream_model, kwargs
+                            span, result, start_time, stream_model, kwargs, sync_call=True
                         )
                         if handled:
                             if self.request_counter:
                                 self.request_counter.add(1, {"operation": span.name})
+                            # The stream is read after this call returns, so a
+                            # budget frame opened for it here would never close.
+                            self._abandon_agent_budget(span)
                             # Detach context before handing the span over; the
                             # stream wrapper owns its lifecycle from here.
                             otel_context.detach(token)
@@ -1305,6 +1495,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     # These return immediately but the actual work happens during
                     # iteration, so keep the span open until iteration completes.
                     if inspect.isasyncgen(result):
+                        # Iterated later, possibly elsewhere: see the stream case.
+                        self._abandon_agent_budget(span)
 
                         async def _async_gen_traced():
                             try:
@@ -1339,6 +1531,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
                     # Handle sync generators (e.g. stream())
                     if inspect.isgenerator(result):
+                        self._abandon_agent_budget(span)
 
                         def _gen_traced():
                             try:
@@ -1588,6 +1781,17 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 span._genai_budget_token = token
         except Exception as e:  # pragma: no cover - defensive
             logger.debug("Could not begin agent budget accounting: %s", e)
+
+    def _abandon_agent_budget(self, span) -> None:
+        """Drop an accounting frame that was opened in a context the work will not run in."""
+        try:
+            token = getattr(span, "_genai_budget_token", None)
+            if token is None:
+                return
+            span._genai_budget_token = None
+            agent_budget.pop_frame(token)
+        except Exception as e:  # pragma: no cover - defensive
+            logger.debug("Could not abandon agent budget accounting: %s", e)
 
     def _finish_agent_budget(self, span) -> None:
         """Emit budget consumption and utilization, then end the accounting frame."""
@@ -2405,9 +2609,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     ):
         """Wrap a streaming response to capture TTFT, TPOT and end-of-stream usage.
 
-        This generator wrapper yields chunks from the streaming response while
-        measuring time to first token (TTFT) and time between tokens (TBT).
-        The span is finalized when the stream completes or errors.
+        Hands back the stream itself as far as the caller can tell - still a
+        context manager if it was one, with its ``close()`` and ``response`` -
+        with iteration measuring time to first token (TTFT) and time between
+        tokens (TBT). The span is finalized when the stream completes, errors,
+        or is closed or abandoned.
 
         Args:
             stream: The streaming response iterator
@@ -2415,11 +2621,33 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             start_time: Request start time (for TTFT calculation)
             model: Model name/identifier for metric attributes
 
-        Yields:
-            Chunks from the original stream
+        Returns:
+            The stream, proxied so that iterating it is measured
         """
-        timing = _StreamTiming(start_time, emit_measurements)
+        if _is_sampled_out(span):
+            # A sampled-out span has no name or attributes to measure onto; the
+            # finalizer raised on the caller's first chunk. Nothing to record.
+            self._end_unmeasured_stream(span)
+            return stream
 
+        timing = _StreamTiming(start_time, emit_measurements)
+        return _MeasuredStream(
+            stream,
+            self._measured_chunks(stream, span, timing, model),
+            timing,
+            lambda: self._finalize_stream(span, timing, model),
+        )
+
+    def _end_unmeasured_stream(self, span) -> None:
+        """End a span whose stream is handed back as it came."""
+        span.end()
+        server_metrics = get_server_metrics()
+        if server_metrics:
+            server_metrics.decrement_requests_running()
+
+    def _measured_chunks(self, stream, span, timing: "_StreamTiming", model: str):
+        """Yield a stream's chunks, observing each one and finalizing the span."""
+        timing.started = True
         try:
             for chunk in stream:
                 self._observe_stream_chunk(span, timing, chunk, model)
@@ -2432,10 +2660,15 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         except Exception as e:
             self._fail_stream(span, e)
             raise
+        except BaseException:
+            # KeyboardInterrupt and the like are not errors of the stream, but
+            # the span still has to end.
+            self._finalize_stream(span, timing, model)
+            raise
 
         self._finalize_stream(span, timing, model)
 
-    async def _wrap_async_streaming_response(
+    def _wrap_async_streaming_response(
         self, stream, span, start_time: float, model: str, emit_measurements: bool = True
     ):
         """Async counterpart of :meth:`_wrap_streaming_response`.
@@ -2452,11 +2685,24 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             start_time: Request start time (for TTFT calculation)
             model: Model name/identifier for metric attributes
 
-        Yields:
-            Chunks from the original stream
+        Returns:
+            The stream, proxied so that iterating it is measured
         """
-        timing = _StreamTiming(start_time, emit_measurements)
+        if _is_sampled_out(span):
+            self._end_unmeasured_stream(span)
+            return stream
 
+        timing = _StreamTiming(start_time, emit_measurements)
+        return _MeasuredAsyncStream(
+            stream,
+            self._measured_chunks_async(stream, span, timing, model),
+            timing,
+            lambda: self._finalize_stream(span, timing, model),
+        )
+
+    async def _measured_chunks_async(self, stream, span, timing: "_StreamTiming", model: str):
+        """Async counterpart of :meth:`_measured_chunks`."""
+        timing.started = True
         try:
             async for chunk in stream:
                 self._observe_stream_chunk(span, timing, chunk, model)
@@ -2468,6 +2714,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             raise
         except Exception as e:
             self._fail_stream(span, e)
+            raise
+        except BaseException:
+            # A consumer cancelled while waiting for a chunk (client disconnect,
+            # a timeout) raises CancelledError, which is not an Exception.
+            self._finalize_stream(span, timing, model)
             raise
 
         self._finalize_stream(span, timing, model)
@@ -2584,6 +2835,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         model: str,
         kwargs,
         emit_measurements: bool = True,
+        sync_call: bool = False,
     ):
         """Arrange for a streamed call to be measured. Returns ``(handled, value)``.
 
@@ -2602,7 +2854,14 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             return False, None
 
         handled = False
-        if hasattr(result, "__aiter__"):
+        # Some stream objects are iterable both ways (litellm's is). One that came
+        # back from a synchronous call will be read with a plain `for`.
+        if sync_call and hasattr(result, "__next__") and hasattr(result, "__aiter__"):
+            value = self._wrap_streaming_response(
+                result, span, start_time, model, emit_measurements
+            )
+            handled = True
+        elif hasattr(result, "__aiter__"):
             value = self._wrap_async_streaming_response(
                 result, span, start_time, model, emit_measurements
             )

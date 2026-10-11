@@ -831,6 +831,324 @@ def test_streaming_omits_tpot_when_output_token_count_unknown(instrumentor, monk
     inst.time_per_output_token_histogram.record.assert_not_called()
 
 
+# A measured stream has to stay the SDK's stream. langchain-openai reads one with
+# `with stream as response:` and Pydantic AI with `async with response:`, so
+# handing back a bare generator broke the caller's application, not just a span.
+
+_USAGE_CHUNK = {"usage": {"prompt_tokens": 3, "completion_tokens": 5, "total_tokens": 8}}
+
+
+class _SDKStream:
+    """Shaped like openai.Stream: iterable, a context manager, closable."""
+
+    def __init__(self, chunks):
+        self.response = "http-response"
+        self.closed = False
+        self._iterator = iter(chunks)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self._iterator)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
+
+    def close(self):
+        self.closed = True
+
+
+class _AsyncSDKStream:
+    """Shaped like openai.AsyncStream."""
+
+    def __init__(self, chunks):
+        self.response = "http-response"
+        self.closed = False
+        self._chunks = list(chunks)
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if not self._chunks:
+            raise StopAsyncIteration
+        return self._chunks.pop(0)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.close()
+
+    async def close(self):
+        self.closed = True
+
+
+def test_measured_stream_is_still_a_context_manager(instrumentor):
+    inst, mock_span = instrumentor
+    sdk_stream = _SDKStream([{"delta": "a"}, _USAGE_CHUNK])
+
+    with inst._wrap_streaming_response(sdk_stream, mock_span, 1000.0, "gpt-4o") as stream:
+        chunks = list(stream)
+
+    assert chunks == [{"delta": "a"}, _USAGE_CHUNK]
+    assert sdk_stream.closed
+    # Iteration inside the block is the measured one.
+    assert "gen_ai.server.time_to_first_token" in _span_attrs(mock_span)
+    mock_span.end.assert_called_once()
+
+
+def test_measured_stream_keeps_the_sdk_stream_interface(instrumentor):
+    inst, mock_span = instrumentor
+    sdk_stream = _SDKStream([{"delta": "a"}, _USAGE_CHUNK])
+
+    stream = inst._wrap_streaming_response(sdk_stream, mock_span, 1000.0, "gpt-4o")
+
+    assert stream.response == "http-response"
+    assert isinstance(stream, _SDKStream)
+    assert next(stream) == {"delta": "a"}
+    assert "gen_ai.server.time_to_first_token" in _span_attrs(mock_span)
+
+
+def test_closing_a_measured_stream_early_ends_its_span_once(instrumentor):
+    inst, mock_span = instrumentor
+    sdk_stream = _SDKStream([{"delta": "a"}, {"delta": "b"}, _USAGE_CHUNK])
+    stream = inst._wrap_streaming_response(sdk_stream, mock_span, 1000.0, "gpt-4o")
+
+    next(stream)
+    stream.close()
+    stream.close()
+
+    assert sdk_stream.closed
+    mock_span.end.assert_called_once()
+
+
+def test_measured_stream_never_read_still_ends_its_span(instrumentor):
+    inst, mock_span = instrumentor
+    sdk_stream = _SDKStream([{"delta": "a"}])
+
+    with inst._wrap_streaming_response(sdk_stream, mock_span, 1000.0, "gpt-4o"):
+        pass
+
+    assert sdk_stream.closed
+    mock_span.end.assert_called_once()
+
+
+def test_measured_stream_error_fails_the_span_once(instrumentor):
+    inst, mock_span = instrumentor
+
+    def broken():
+        yield {"delta": "a"}
+        raise RuntimeError("connection dropped")
+
+    with pytest.raises(RuntimeError):
+        with inst._wrap_streaming_response(broken(), mock_span, 1000.0, "gpt-4o") as stream:
+            list(stream)
+
+    mock_span.record_exception.assert_called_once()
+    mock_span.end.assert_called_once()
+
+
+def test_measured_async_stream_is_still_an_async_context_manager(instrumentor):
+    inst, mock_span = instrumentor
+    sdk_stream = _AsyncSDKStream([{"delta": "a"}, _USAGE_CHUNK])
+
+    async def consume():
+        wrapped = inst._wrap_async_streaming_response(sdk_stream, mock_span, 1000.0, "gpt-4o")
+        async with wrapped as stream:
+            return [chunk async for chunk in stream]
+
+    assert asyncio.run(consume()) == [{"delta": "a"}, _USAGE_CHUNK]
+    assert sdk_stream.closed
+    assert "gen_ai.server.time_to_first_token" in _span_attrs(mock_span)
+    mock_span.end.assert_called_once()
+
+
+def test_measured_async_stream_keeps_the_sdk_stream_interface(instrumentor):
+    inst, mock_span = instrumentor
+    sdk_stream = _AsyncSDKStream([{"delta": "a"}, {"delta": "b"}, _USAGE_CHUNK])
+
+    async def consume():
+        stream = inst._wrap_async_streaming_response(sdk_stream, mock_span, 1000.0, "gpt-4o")
+        assert stream.response == "http-response"
+        assert isinstance(stream, _AsyncSDKStream)
+        first = await stream.__anext__()
+        await stream.close()
+        await stream.close()
+        return first
+
+    assert asyncio.run(consume()) == {"delta": "a"}
+    assert sdk_stream.closed
+    mock_span.end.assert_called_once()
+
+
+def test_measured_async_stream_never_read_still_ends_its_span(instrumentor):
+    inst, mock_span = instrumentor
+    sdk_stream = _AsyncSDKStream([{"delta": "a"}])
+
+    async def consume():
+        async with inst._wrap_async_streaming_response(sdk_stream, mock_span, 1000.0, "gpt-4o"):
+            pass
+
+    asyncio.run(consume())
+    assert sdk_stream.closed
+    mock_span.end.assert_called_once()
+
+
+def test_measured_async_generator_can_still_be_closed_with_aclose(instrumentor):
+    """Providers that hand back an async generator are closed with aclose()."""
+    inst, mock_span = instrumentor
+
+    async def chunks():
+        yield {"delta": "a"}
+        yield _USAGE_CHUNK
+
+    async def consume():
+        stream = inst._wrap_async_streaming_response(chunks(), mock_span, 1000.0, "gpt-4o")
+        first = await stream.__anext__()
+        await stream.aclose()
+        return first
+
+    assert asyncio.run(consume()) == {"delta": "a"}
+    mock_span.end.assert_called_once()
+
+
+def test_sampled_out_span_hands_the_stream_back_untouched(instrumentor):
+    """A sampled-out span has no name and no attributes to measure onto.
+
+    Wrapping it anyway raised AttributeError in the application on the first chunk.
+    """
+    from opentelemetry import trace as otel_trace
+
+    inst, _ = instrumentor
+    span = otel_trace.NonRecordingSpan(otel_trace.INVALID_SPAN_CONTEXT)
+
+    sdk_stream = _SDKStream([{"delta": "a"}])
+    assert inst._wrap_streaming_response(sdk_stream, span, 1000.0, "gpt-4o") is sdk_stream
+
+    async_stream = _AsyncSDKStream([{"delta": "a"}])
+    wrapped = inst._wrap_async_streaming_response(async_stream, span, 1000.0, "gpt-4o")
+    assert wrapped is async_stream
+
+
+def test_cancelled_stream_ends_its_span(instrumentor):
+    """A consumer cancelled while waiting for a chunk raises CancelledError, which is
+    not an Exception. The span was never ended and the request stayed 'running'."""
+    inst, mock_span = instrumentor
+
+    class _Hanging:
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            await asyncio.sleep(3600)
+
+    async def consume():
+        stream = inst._wrap_async_streaming_response(_Hanging(), mock_span, 1000.0, "gpt-4o")
+        waiting = asyncio.ensure_future(stream.__anext__())
+        await asyncio.sleep(0)
+        waiting.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiting
+
+    asyncio.run(consume())
+    mock_span.end.assert_called_once()
+
+
+def test_measurement_failure_on_close_still_closes_the_sdk_stream(instrumentor):
+    """Bookkeeping must never stand between the caller and closing its connection."""
+    inst, mock_span = instrumentor
+    inst._finalize_stream = MagicMock(side_effect=RuntimeError("metrics backend down"))
+
+    sdk_stream = _SDKStream([{"delta": "a"}])
+    with inst._wrap_streaming_response(sdk_stream, mock_span, 1000.0, "gpt-4o"):
+        pass
+    assert sdk_stream.closed
+
+    async_stream = _AsyncSDKStream([{"delta": "a"}])
+
+    async def consume():
+        async with inst._wrap_async_streaming_response(async_stream, mock_span, 1000.0, "gpt-4o"):
+            pass
+
+    asyncio.run(consume())
+    assert async_stream.closed
+
+
+def test_aclose_closes_an_sdk_stream_that_only_has_close(instrumentor):
+    """openai.AsyncStream spells it close(); a caller may reach for either name."""
+    inst, mock_span = instrumentor
+    sdk_stream = _AsyncSDKStream([{"delta": "a"}, _USAGE_CHUNK])
+
+    async def consume():
+        stream = inst._wrap_async_streaming_response(sdk_stream, mock_span, 1000.0, "gpt-4o")
+        await stream.__anext__()
+        await stream.aclose()
+
+    asyncio.run(consume())
+    assert sdk_stream.closed
+    mock_span.end.assert_called_once()
+
+
+class _DualProtocolStream:
+    """Iterable both ways, as litellm's stream wrapper is."""
+
+    def __init__(self, chunks):
+        self._chunks = list(chunks)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self._chunks:
+            raise StopIteration
+        return self._chunks.pop(0)
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if not self._chunks:
+            raise StopAsyncIteration
+        return self._chunks.pop(0)
+
+
+def test_sync_call_measures_a_dual_protocol_stream_synchronously(instrumentor):
+    """Picked as an async stream, a sync caller's loop ran unmeasured and the span
+    never ended."""
+    inst, mock_span = instrumentor
+    stream = _DualProtocolStream([{"delta": "a"}, _USAGE_CHUNK])
+
+    handled, value = inst._install_stream_measurement(
+        mock_span, stream, 1000.0, "gpt-4o", {"stream": True}, sync_call=True
+    )
+
+    assert handled
+    assert list(value) == [{"delta": "a"}, _USAGE_CHUNK]
+    assert "gen_ai.server.time_to_first_token" in _span_attrs(mock_span)
+    mock_span.end.assert_called_once()
+
+
+def test_async_call_measures_a_dual_protocol_stream_asynchronously(instrumentor):
+    inst, mock_span = instrumentor
+    stream = _DualProtocolStream([{"delta": "a"}, _USAGE_CHUNK])
+
+    handled, value = inst._install_stream_measurement(
+        mock_span, stream, 1000.0, "gpt-4o", {"stream": True}
+    )
+
+    async def consume():
+        return [chunk async for chunk in value]
+
+    assert handled
+    assert asyncio.run(consume()) == [{"delta": "a"}, _USAGE_CHUNK]
+    mock_span.end.assert_called_once()
+
+
 def test_non_streaming_call_omits_streaming_latency_attributes(instrumentor):
     """A non-streamed call must not carry TTFT/TPOT - absent beats zero."""
     inst, mock_span = instrumentor
@@ -1343,7 +1661,11 @@ async def test_async_wrapper_handles_exception(instrumentor):
 
 @pytest.mark.asyncio
 async def test_async_wrapper_detaches_context(instrumentor):
-    """Test that async wrapper detaches OTel context after completion."""
+    """Test that async wrapper detaches OTel context after completion.
+
+    The context is attached twice: once around the call that builds the
+    coroutine, undone before it returns, and once where the coroutine runs.
+    """
     inst, mock_span = instrumentor
 
     async def async_func(*args, **kwargs):
@@ -1351,11 +1673,11 @@ async def test_async_wrapper_detaches_context(instrumentor):
         return {"usage": None}
 
     with patch("genai_otel.instrumentors.base.otel_context") as mock_ctx:
-        mock_ctx.attach.return_value = "test_token"
+        mock_ctx.attach.side_effect = ["call_token", "run_token"]
         wrapped = inst.create_span_wrapper("test.async_span")(async_func)
         await wrapped()
 
-        mock_ctx.detach.assert_called_once_with("test_token")
+        assert [c.args[0] for c in mock_ctx.detach.call_args_list] == ["call_token", "run_token"]
 
 
 @pytest.mark.asyncio
@@ -1367,13 +1689,13 @@ async def test_async_wrapper_detaches_context_on_error(instrumentor):
         raise RuntimeError("boom")
 
     with patch("genai_otel.instrumentors.base.otel_context") as mock_ctx:
-        mock_ctx.attach.return_value = "test_token"
+        mock_ctx.attach.side_effect = ["call_token", "run_token"]
         wrapped = inst.create_span_wrapper("test.async_span")(async_func)
 
         with pytest.raises(RuntimeError):
             await wrapped()
 
-        mock_ctx.detach.assert_called_once_with("test_token")
+        assert [c.args[0] for c in mock_ctx.detach.call_args_list] == ["call_token", "run_token"]
 
 
 @pytest.mark.asyncio
