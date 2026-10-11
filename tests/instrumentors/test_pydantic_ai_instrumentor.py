@@ -195,7 +195,9 @@ class TestAgainstRealPackageLayout(unittest.TestCase):
         self.tracer = provider.get_tracer("test")
         self.instrumentor = PydanticAIInstrumentor()
         self.instrumentor.tracer = self.tracer
-        self.instrumentor.instrument(OTelConfig())
+        # Content capture on, so the tests can see that the output is read from the
+        # current API. It is recorded only on request.
+        self.instrumentor.instrument(OTelConfig(enable_content_capture=True))
 
         # OpenTelemetry reports a context detached in the wrong Context by logging.
         self.context_log = _LogRecords()
@@ -1166,6 +1168,26 @@ class TestOlderPydanticAIShapes(unittest.TestCase):
             self.assertNotEqual(type(handed_back[0]).__name__, "_TracedAgentContext")
             # An ordinary run_stream() is still traced.
             self.assertEqual(type(agent.run_stream("hi")).__name__, "_TracedAgentContext")
+
+
+class TestOutputFollowsTheContentSwitch(unittest.TestCase):
+    """The model's output is content. It is recorded only when content capture is on."""
+
+    def _response_attributes(self, enable_content_capture):
+        with patch.dict("sys.modules", {"pydantic_ai": MagicMock()}):
+            instrumentor = PydanticAIInstrumentor()
+            instrumentor.config = OTelConfig(enable_content_capture=enable_content_capture)
+            result = MagicMock(spec=["output"])
+            result.output = "the model's answer"
+            return instrumentor._extract_response_attributes(result)
+
+    def test_output_is_not_recorded_with_content_capture_off(self):
+        self.assertNotIn("pydantic_ai.result.data", self._response_attributes(False))
+
+    def test_output_is_recorded_with_content_capture_on(self):
+        attrs = self._response_attributes(True)
+
+        self.assertEqual(attrs["pydantic_ai.result.data"], "the model's answer")
 
 
 if __name__ == "__main__":

@@ -1091,6 +1091,25 @@ class TestCrewAIResponseAttributes(unittest.TestCase):
         self.assertEqual(attrs["crewai.output.pydantic"], "Greeting(text='hi')")
         self.assertNotIn("crewai.output.json", attrs)
 
+    def test_pydantic_output_follows_the_content_switch(self):
+        """A structured output is the model's answer, so it is content."""
+
+        class Output:
+            raw = '{"text": "hi"}'
+            pydantic = "Greeting(text='hi')"
+            json = None
+
+        self.instrumentor.config = OTelConfig(enable_content_capture=False)
+        self.assertNotIn(
+            "crewai.output.pydantic", self.instrumentor._extract_response_attributes(Output())
+        )
+
+        self.instrumentor.config = OTelConfig(enable_content_capture=True)
+        self.assertEqual(
+            self.instrumentor._extract_response_attributes(Output())["crewai.output.pydantic"],
+            "Greeting(text='hi')",
+        )
+
     def test_absent_pydantic_output_is_not_reported_as_none(self):
         class Output:
             raw = "plain"

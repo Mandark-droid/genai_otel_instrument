@@ -30,7 +30,12 @@ from opentelemetry.trace import Status, StatusCode
 
 from ..config import OTelConfig
 from ..server_metrics import get_server_metrics
-from .base import BaseInstrumentor, _context_with_usage_holder, strip_content_attributes
+from .base import (
+    BaseInstrumentor,
+    _context_with_usage_holder,
+    content_capture_on,
+    strip_content_attributes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -767,7 +772,8 @@ class PydanticAIInstrumentor(BaseInstrumentor):
             data = _read(result, "output")
             if data is _MISSING:
                 data = _read(result, "data")
-            if data is not _MISSING:
+            # The output is the model's answer: content, recorded only on request.
+            if data is not _MISSING and content_capture_on(getattr(self, "config", None)):
                 try:
                     # If data is a Pydantic model, convert to dict
                     if hasattr(data, "model_dump"):

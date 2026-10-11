@@ -36,7 +36,7 @@ from opentelemetry.trace import Status, StatusCode
 
 from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
-from .base import BaseInstrumentor, _context_with_usage_holder
+from .base import BaseInstrumentor, _context_with_usage_holder, content_capture_on
 
 logger = logging.getLogger(__name__)
 
@@ -1027,8 +1027,10 @@ class CrewAIInstrumentor(BaseInstrumentor):
                 attrs["crewai.output.json"] = str(json_output)[:500]
 
             # If result has pydantic attribute
+            # The structured output is the model's answer: content, recorded only
+            # on request.
             pydantic_output = self._read_output_field(result, "pydantic")
-            if pydantic_output is not None:
+            if pydantic_output is not None and content_capture_on(getattr(self, "config", None)):
                 attrs["crewai.output.pydantic"] = str(pydantic_output)[:500]
 
         except Exception as e:

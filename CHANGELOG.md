@@ -89,8 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A task with `async_execution=True` has a span that covers the work and carries its output.
   - The crew span's own token usage is that kickoff's, not the LLM's lifetime total, and an LLM
     shared by several agents or by `kickoff_for_each` copies is counted once.
-  - `crewai.output.pydantic` is recorded for structured outputs, and `crewai.output.json` is the
-    JSON rather than a bound-method repr.
+  - `crewai.output.pydantic` is recorded for structured outputs when content capture is on, and
+    `crewai.output.json` is the JSON rather than a bound-method repr.
   - A warning is logged when CrewAI's telemetry owns the global tracer provider (CrewAI older
     than 1.15.15 imported before `instrument()`), because no span is exported in that case.
 - **LangGraph** (checked against 0.1.19, 0.2.76, 0.6.11 and 1.2.14 with real runs):
@@ -118,7 +118,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     it used to end, empty, before the block was entered.
   - `agent.iter()` is traced, as `pydantic_ai.agent.iter`.
   - Tool names, output type, output, token usage, response model and finish reason are read
-    from the current API. Each had been renamed, so none was recorded.
+    from the current API. Each had been renamed, so none was recorded. The output
+    (`pydantic_ai.result.data`) is recorded only when content capture is on.
   - On Pydantic AI before 2.0, `pydantic_ai.result.timestamp` is the timestamp. It was the text
     of a bound method, which embeds the whole result it belongs to. `run_stream_sync()` there
     has no agent span of its own, because it never leaves its `run_stream()` block.

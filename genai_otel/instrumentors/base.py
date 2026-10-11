@@ -146,6 +146,15 @@ def strip_content_attributes(
     }
 
 
+def content_capture_on(config: Optional["OTelConfig"]) -> bool:
+    """Whether prompt / completion text may be put on a span.
+
+    Without a config (direct use, unit tests) it may, as in
+    :func:`strip_content_attributes`.
+    """
+    return config is None or bool(getattr(config, "enable_content_capture", False))
+
+
 _CUSTOM_COST_CALCULATORS: Dict[str, "CostCalculator"] = {}
 
 
