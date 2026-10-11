@@ -225,6 +225,35 @@ def _host_ip_requested() -> bool:
     return os.getenv(_HOST_IP_ENV, "").strip().lower() in ("1", "true", "yes", "on")
 
 
+def _registered_detectors() -> Optional[frozenset]:
+    """Names of the resource detectors the installed SDK registers, or None if unknown."""
+    try:
+        from opentelemetry.util._importlib_metadata import entry_points
+
+        return frozenset(
+            entry_point.name
+            for entry_point in entry_points(group="opentelemetry_resource_detector")
+        )
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _supported_detectors(detectors: str) -> str:
+    """Drop the detectors this SDK does not have.
+
+    ``host`` arrived after SDK 1.27, and ``Resource.create`` on those versions
+    raises ``StopIteration`` for a name it cannot find rather than skipping it.
+    Asking for it by default took the tracer provider down with the resource.
+    """
+    registered = _registered_detectors()
+    if registered is None:
+        return detectors
+    supported = ",".join(name for name in detectors.split(",") if name in registered)
+    # Never an empty list: the SDK's own default detector says the same thing
+    # on every version, and an empty name is not skipped by all of them.
+    return supported or "otel"
+
+
 def _process_detector_enabled() -> bool:
     detectors = os.getenv("OTEL_EXPERIMENTAL_RESOURCE_DETECTORS", "")
     return "process" in {name.strip() for name in detectors.split(",")}
@@ -331,7 +360,8 @@ def build_resource(service_name: str, distro_version: str, profile: str = "") ->
     default_detectors = (
         _HARDENED_DETECTORS if profile.strip().lower() in _HARDENED_PROFILES else _DEFAULT_DETECTORS
     )
-    os.environ.setdefault("OTEL_EXPERIMENTAL_RESOURCE_DETECTORS", default_detectors)
+    if "OTEL_EXPERIMENTAL_RESOURCE_DETECTORS" not in os.environ:
+        os.environ["OTEL_EXPERIMENTAL_RESOURCE_DETECTORS"] = _supported_detectors(default_detectors)
 
     attributes: Dict[str, object] = {
         SERVICE_NAME: service_name,

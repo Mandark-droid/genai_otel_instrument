@@ -21,7 +21,12 @@ from unittest.mock import patch
 
 import pytest
 
-from genai_otel.resource import build_resource, host_ip_addresses, redact_command_args
+from genai_otel.resource import (
+    _registered_detectors,
+    build_resource,
+    host_ip_addresses,
+    redact_command_args,
+)
 
 # Registry names, spelled out rather than imported, so that a rename in the
 # (explicitly unstable) semconv package surfaces here as a failure instead of
@@ -303,6 +308,64 @@ def test_operator_can_restore_the_old_minimal_resource(clean_env):
     assert PROCESS_PID not in resource.attributes
     # Instance identity is ours, not a detector's, so it survives.
     assert resource.attributes.get(SERVICE_INSTANCE_ID)
+
+
+def _sdk_registering(*names):
+    """Stand in for an SDK that registers only these resource detectors."""
+    return patch("genai_otel.resource._registered_detectors", return_value=frozenset(names))
+
+
+def test_registered_detectors_are_read_from_the_installed_sdk():
+    """'otel' is the SDK's own default detector, so every SDK registers it."""
+    assert "otel" in _registered_detectors()
+
+
+def test_default_detectors_are_never_narrowed_to_nothing(clean_env):
+    """An SDK with neither default detector is asked for the one it always runs."""
+    with _sdk_registering("otel"):
+        build_resource("test-service", "9.9.9")
+        assert os.environ["OTEL_EXPERIMENTAL_RESOURCE_DETECTORS"] == "otel"
+
+
+def test_registered_detectors_are_unknown_when_the_registry_cannot_be_read():
+    def broken(**_):
+        raise RuntimeError("no entry point metadata")
+
+    with patch("opentelemetry.util._importlib_metadata.entry_points", broken):
+        assert _registered_detectors() is None
+
+
+def test_default_detectors_skip_what_the_sdk_does_not_register(clean_env):
+    """SDK 1.27 has no 'host' detector, and raises StopIteration when asked for one.
+
+    That exception left the process with no tracer provider at all, so the
+    default list is narrowed to what the installed SDK registers.
+    """
+    with _sdk_registering("os", "otel", "process"):
+        resource = build_resource("test-service", "9.9.9")
+        assert os.environ["OTEL_EXPERIMENTAL_RESOURCE_DETECTORS"] == "os"
+    assert resource.attributes.get(OS_TYPE)
+    assert resource.attributes.get(SERVICE_INSTANCE_ID)
+
+
+def test_default_detectors_are_unchanged_on_a_current_sdk(clean_env):
+    with _sdk_registering("host", "os", "otel", "process", "service_instance"):
+        build_resource("test-service", "9.9.9")
+        assert os.environ["OTEL_EXPERIMENTAL_RESOURCE_DETECTORS"] == "host,os"
+
+
+def test_default_detectors_are_unchanged_when_the_registry_cannot_be_read(clean_env):
+    with patch("genai_otel.resource._registered_detectors", return_value=None):
+        build_resource("test-service", "9.9.9")
+        assert os.environ["OTEL_EXPERIMENTAL_RESOURCE_DETECTORS"] == "host,os"
+
+
+def test_an_explicit_detector_list_is_never_narrowed(clean_env):
+    """Narrowing is for our default. A list the operator wrote is theirs."""
+    with _sdk_registering("os", "otel"):
+        with patch.dict(os.environ, {"OTEL_EXPERIMENTAL_RESOURCE_DETECTORS": "host,os"}):
+            build_resource("test-service", "9.9.9")
+            assert os.environ["OTEL_EXPERIMENTAL_RESOURCE_DETECTORS"] == "host,os"
 
 
 def test_hardened_profile_omits_the_process_detector(clean_env):
