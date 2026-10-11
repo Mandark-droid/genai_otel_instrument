@@ -26,6 +26,17 @@ def _cap_content(config, text):
     return text
 
 
+def _set_number(attrs: Dict[str, Any], key: str, value: Any) -> None:
+    """Record a numeric request parameter, and nothing else.
+
+    A caller that leaves a parameter alone may still pass it: frameworks hand the
+    SDK its ``NOT_GIVEN`` / ``Omit`` sentinel, or ``None``. Neither is a setting,
+    and the sentinel is not a legal attribute value.
+    """
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        attrs[key] = value
+
+
 def _responses_content_to_text(content: Any) -> str:
     """Flatten a Responses content value to plain text.
 
@@ -241,7 +252,13 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 handed_to_stream = False
                 try:
                     if extract_attributes:
-                        attrs = extract_attributes(None, args, kwargs)
+                        # The request side carries content too (the Responses
+                        # API's instructions). Only the response side was
+                        # stripped here, so an AsyncOpenAI application put its
+                        # instructions on the span with content capture off.
+                        attrs = strip_content_attributes(
+                            extract_attributes(None, args, kwargs), instrumentor.config
+                        )
                         for key, value in attrs.items():
                             span.set_attribute(key, value)
 
@@ -324,16 +341,11 @@ class OpenAIInstrumentor(BaseInstrumentor):
         attrs["gen_ai.request.message_count"] = len(messages)
 
         # Request parameters (NEW)
-        if "temperature" in kwargs:
-            attrs["gen_ai.request.temperature"] = kwargs["temperature"]
-        if "top_p" in kwargs:
-            attrs["gen_ai.request.top_p"] = kwargs["top_p"]
-        if "max_tokens" in kwargs:
-            attrs["gen_ai.request.max_tokens"] = kwargs["max_tokens"]
-        if "frequency_penalty" in kwargs:
-            attrs["gen_ai.request.frequency_penalty"] = kwargs["frequency_penalty"]
-        if "presence_penalty" in kwargs:
-            attrs["gen_ai.request.presence_penalty"] = kwargs["presence_penalty"]
+        _set_number(attrs, "gen_ai.request.temperature", kwargs.get("temperature"))
+        _set_number(attrs, "gen_ai.request.top_p", kwargs.get("top_p"))
+        _set_number(attrs, "gen_ai.request.max_tokens", kwargs.get("max_tokens"))
+        _set_number(attrs, "gen_ai.request.frequency_penalty", kwargs.get("frequency_penalty"))
+        _set_number(attrs, "gen_ai.request.presence_penalty", kwargs.get("presence_penalty"))
 
         # Tool/function definitions (Phase 3.1)
         if "tools" in kwargs:
@@ -501,14 +513,11 @@ class OpenAIInstrumentor(BaseInstrumentor):
         if instructions:
             attrs["gen_ai.request.instructions"] = _cap_content(config, instructions)
 
-        if "temperature" in kwargs:
-            attrs["gen_ai.request.temperature"] = kwargs["temperature"]
-        if "top_p" in kwargs:
-            attrs["gen_ai.request.top_p"] = kwargs["top_p"]
+        _set_number(attrs, "gen_ai.request.temperature", kwargs.get("temperature"))
+        _set_number(attrs, "gen_ai.request.top_p", kwargs.get("top_p"))
         # Responses spells the output cap `max_output_tokens`; the semantic
         # convention attribute stays `gen_ai.request.max_tokens`.
-        if "max_output_tokens" in kwargs:
-            attrs["gen_ai.request.max_tokens"] = kwargs["max_output_tokens"]
+        _set_number(attrs, "gen_ai.request.max_tokens", kwargs.get("max_output_tokens"))
 
         if "tools" in kwargs:
             try:

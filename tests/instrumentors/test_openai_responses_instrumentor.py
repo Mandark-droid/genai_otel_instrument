@@ -200,6 +200,99 @@ class TestRequestAttributes:
 
         assert "llm.tools" in attrs
 
+    def test_parameters_left_unset_are_not_recorded(self):
+        """A framework passes the SDK's "not given" sentinel for what it leaves alone.
+
+        Pydantic AI does on every request. The sentinel is an object, not a
+        number, and the SDK rejected it with a warning per attribute per call.
+        """
+        attrs = OpenAIInstrumentor()._extract_responses_attributes(
+            None,
+            (),
+            {
+                "model": "gpt-5.6",
+                "input": "hi",
+                "temperature": _NotGiven(),
+                "top_p": None,
+                "max_output_tokens": _NotGiven(),
+            },
+        )
+
+        assert "gen_ai.request.temperature" not in attrs
+        assert "gen_ai.request.top_p" not in attrs
+        assert "gen_ai.request.max_tokens" not in attrs
+
+    def test_chat_parameters_left_unset_are_not_recorded(self):
+        attrs = OpenAIInstrumentor()._extract_openai_attributes(
+            None,
+            (),
+            {
+                "model": "gpt-5.6",
+                "messages": [{"role": "user", "content": "hi"}],
+                "temperature": _NotGiven(),
+                "top_p": _NotGiven(),
+                "max_tokens": None,
+                "frequency_penalty": _NotGiven(),
+                "presence_penalty": 0.5,
+            },
+        )
+
+        for name in ("temperature", "top_p", "max_tokens", "frequency_penalty"):
+            assert "gen_ai.request." + name not in attrs
+        assert attrs["gen_ai.request.presence_penalty"] == 0.5
+
+
+class _NotGiven:
+    """Stands in for openai.NOT_GIVEN / openai.Omit."""
+
+
+def _async_request_attributes(enable_content_capture):
+    """Attributes on the span of one AsyncOpenAI Responses call with instructions."""
+    import asyncio
+    from unittest.mock import patch
+
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    from genai_otel.config import OTelConfig
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+
+    async def create(*args, **kwargs):
+        return Obj(id="resp_1")
+
+    instrumentor = OpenAIInstrumentor()
+    instrumentor.config = OTelConfig(
+        service_name="t", enable_content_capture=enable_content_capture
+    )
+    with patch("opentelemetry.trace.get_tracer", return_value=provider.get_tracer(__name__)):
+        wrapped = instrumentor._create_async_span_wrapper(
+            span_name="openai.responses",
+            extract_attributes=instrumentor._extract_responses_attributes,
+        )(create)
+        asyncio.run(wrapped(model="gpt-5.6", input="hi", instructions="Be terse."))
+
+    (span,) = exporter.get_finished_spans()
+    return dict(span.attributes or {})
+
+
+class TestAsyncRequestContent:
+    """The async client strips request content exactly as the sync one does."""
+
+    def test_instructions_stay_off_the_span_with_content_capture_off(self):
+        attrs = _async_request_attributes(enable_content_capture=False)
+
+        assert "gen_ai.request.instructions" not in attrs
+        assert attrs["gen_ai.request.model"] == "gpt-5.6"
+
+    def test_instructions_are_recorded_with_content_capture_on(self):
+        attrs = _async_request_attributes(enable_content_capture=True)
+
+        assert attrs["gen_ai.request.instructions"] == "Be terse."
+
 
 class TestResponseAttributes:
     def test_response_id_and_model_recorded(self):
