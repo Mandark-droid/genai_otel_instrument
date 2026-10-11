@@ -9,22 +9,79 @@ trace hierarchy. ThreadPoolExecutor is patched to propagate context across
 threads used internally by CrewAI.
 
 IMPORTANT: CrewAI has built-in telemetry that conflicts with OpenTelemetry.
-This instrumentor automatically disables CrewAI's built-in telemetry by setting
-the CREWAI_TELEMETRY_OPT_OUT environment variable to prevent conflicts.
+Up to CrewAI 1.15.14 it installs its own TracerProvider as the global one while
+CrewAI is being imported and creates its spans through the global tracer, so either
+its spans land in the application's traces or the application's spans go to CrewAI's
+collector, depending on who set the provider first. Later releases keep that
+provider private and only export their own spans.
+
+This instrumentor switches that telemetry off by setting CREWAI_DISABLE_TELEMETRY=true
+before it imports CrewAI. That is the variable CrewAI reads: 0.130 and later have it,
+0.86 does not, and for releases without it there is nothing to set. A value the
+application has set itself is left alone.
 """
 
+import contextvars
+import functools
+import inspect
 import logging
 import os
+import time
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from opentelemetry import context as otel_context
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 
 from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
-from .base import BaseInstrumentor
+from .base import BaseInstrumentor, _context_with_usage_holder
 
 logger = logging.getLogger(__name__)
+
+# The variable CrewAI's own telemetry reads.
+_TELEMETRY_SWITCH = "CREWAI_DISABLE_TELEMETRY"
+
+# Crew instances whose run is already being traced in the current context.
+# Crew.kickoff_async() runs Crew.kickoff() on a worker thread and both are wrapped,
+# so without this one crew run is reported as two nested crew spans.
+_ACTIVE_CREWS: contextvars.ContextVar = contextvars.ContextVar(
+    "genai_otel_crewai_active_crews", default=frozenset()
+)
+
+# Where a kickoff's own token usage is left on its result for _extract_usage().
+_KICKOFF_USAGE_ATTR = "_genai_otel_kickoff_usage"
+_USAGE_FIELDS = ("prompt_tokens", "completion_tokens", "total_tokens", "cached_prompt_tokens")
+
+
+def _disable_crewai_telemetry() -> bool:
+    """Set CrewAI's telemetry switch unless the application already chose a value.
+
+    Returns:
+        bool: True when this call set the variable.
+    """
+    if _TELEMETRY_SWITCH in os.environ:
+        return False
+    os.environ[_TELEMETRY_SWITCH] = "true"
+    return True
+
+
+def _count(value: Any) -> int:
+    """A token counter as an int; anything else (a mock, None) counts as zero."""
+    return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+
+def _forget_active_crew(token) -> None:
+    """Stop treating a crew as running. Never raises into the caller.
+
+    A kickoff coroutine that is closed from another context (a cancelled task
+    finalised at loop shutdown) cannot reset a token made in its own.
+    """
+    try:
+        _ACTIVE_CREWS.reset(token)
+    except (ValueError, LookupError):
+        pass
 
 
 class CrewAIInstrumentor(BaseInstrumentor):
@@ -38,12 +95,17 @@ class CrewAIInstrumentor(BaseInstrumentor):
 
     def _check_availability(self):
         """Check if CrewAI library is available."""
+        # CrewAI builds its telemetry exporter while the package is being imported,
+        # so the switch has to be in the environment before the import below.
+        switched = _disable_crewai_telemetry()
         try:
             import crewai
 
             self._crewai_available = True
             logger.debug("CrewAI library detected and available for instrumentation")
         except ImportError:
+            if switched:
+                os.environ.pop(_TELEMETRY_SWITCH, None)
             logger.debug("CrewAI library not installed, instrumentation will be skipped")
             self._crewai_available = False
 
@@ -53,9 +115,11 @@ class CrewAIInstrumentor(BaseInstrumentor):
         Instruments all crew execution methods (sync and async):
         - Crew.kickoff() / kickoff_async() / akickoff() - Main execution
         - Crew.kickoff_for_each() / kickoff_for_each_async() / akickoff_for_each() - Batch
-        - Task.execute_sync() / execute_async() - Task execution
-        - Agent.execute_task() - Agent task execution
+        - Task.execute_sync() / execute_async() / aexecute_sync() - Task execution
+        - Agent.execute_task() / aexecute_task() - Agent task execution
         - concurrent.futures.ThreadPoolExecutor - Automatic context propagation
+
+        The a-prefixed Task and Agent methods are the ones Crew.akickoff() runs.
 
         Args:
             config (OTelConfig): The OpenTelemetry configuration object.
@@ -73,12 +137,26 @@ class CrewAIInstrumentor(BaseInstrumentor):
         self.config = config
 
         # Disable CrewAI's built-in telemetry to prevent conflicts with OpenTelemetry
-        # CrewAI has its own telemetry system that interferes with OTel tracing
+        # CrewAI has its own telemetry system that interferes with OTel tracing.
+        # CREWAI_TELEMETRY_OPT_OUT is what this library has always set, but CrewAI does
+        # not read it (checked from 0.28 to 1.15.27); it stays so that nothing looking
+        # for it sees a change.
         os.environ["CREWAI_TELEMETRY_OPT_OUT"] = "true"
-        logger.info("Disabled CrewAI built-in telemetry (CREWAI_TELEMETRY_OPT_OUT=true)")
+        _disable_crewai_telemetry()
+        switch = os.environ.get(_TELEMETRY_SWITCH, "")
+        if switch.strip().lower() == "true":
+            logger.info("Disabled CrewAI built-in telemetry (%s=true)", _TELEMETRY_SWITCH)
+        else:
+            logger.info(
+                "CrewAI built-in telemetry left as the application set it (%s=%s)",
+                _TELEMETRY_SWITCH,
+                switch,
+            )
 
         try:
             import crewai
+
+            self._warn_if_crewai_telemetry_is_global(crewai)
 
             # Create span wrappers for each operation type
             crew_wrapper = self.create_span_wrapper(
@@ -106,22 +184,40 @@ class CrewAIInstrumentor(BaseInstrumentor):
                 ]:
                     if hasattr(crewai.Crew, method_name):
                         original = getattr(crewai.Crew, method_name)
-                        setattr(crewai.Crew, method_name, crew_wrapper(original))
+                        setattr(
+                            crewai.Crew,
+                            method_name,
+                            self._traced_crew_method(original, crew_wrapper),
+                        )
                         logger.debug("Instrumented Crew.%s()", method_name)
 
             # Instrument Task execution methods
             if hasattr(crewai, "Task"):
-                for method_name in ["execute_sync", "execute_async"]:
+                for method_name in ["execute_sync", "aexecute_sync"]:
                     if hasattr(crewai.Task, method_name):
                         original = getattr(crewai.Task, method_name)
-                        setattr(crewai.Task, method_name, task_wrapper(original))
+                        setattr(
+                            crewai.Task, method_name, self._traced_method(original, task_wrapper)
+                        )
                         logger.debug("Instrumented Task.%s()", method_name)
+                # execute_async hands back a Future, so its span is ended by the Future
+                if hasattr(crewai.Task, "execute_async"):
+                    crewai.Task.execute_async = self._traced_future_method(
+                        crewai.Task.execute_async,
+                        "crewai.task.execution",
+                        self._extract_task_attributes,
+                    )
+                    logger.debug("Instrumented Task.execute_async()")
 
             # Instrument Agent execution
             if hasattr(crewai, "Agent"):
-                if hasattr(crewai.Agent, "execute_task"):
-                    crewai.Agent.execute_task = agent_wrapper(crewai.Agent.execute_task)
-                    logger.debug("Instrumented Agent.execute_task()")
+                for method_name in ["execute_task", "aexecute_task"]:
+                    if hasattr(crewai.Agent, method_name):
+                        original = getattr(crewai.Agent, method_name)
+                        setattr(
+                            crewai.Agent, method_name, self._traced_method(original, agent_wrapper)
+                        )
+                        logger.debug("Instrumented Agent.%s()", method_name)
 
             # Patch ThreadPoolExecutor.submit to propagate context automatically
             # This ensures any threaded execution by CrewAI maintains trace context
@@ -134,6 +230,306 @@ class CrewAIInstrumentor(BaseInstrumentor):
             logger.error("Failed to instrument CrewAI: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
+
+    def _warn_if_crewai_telemetry_is_global(self, crewai_module: Any) -> None:
+        """Say so when CrewAI's telemetry provider is the process-wide TracerProvider.
+
+        CrewAI up to 1.15.14 installs its telemetry provider globally while the package
+        is imported. An application that imports CrewAI before calling instrument()
+        has therefore already lost the set-once race: every span this library creates
+        is exported to CrewAI's collector and none reaches the application's exporter.
+        Switching CrewAI's telemetry off afterwards does not undo that.
+        """
+        try:
+            telemetry = getattr(getattr(crewai_module, "telemetry", None), "Telemetry", None)
+            provider = getattr(getattr(telemetry, "_instance", None), "provider", None)
+            if provider is not None and provider is trace.get_tracer_provider():
+                logger.warning(
+                    "CrewAI's telemetry TracerProvider is the global OpenTelemetry provider: "
+                    "spans from this library are being exported to CrewAI's telemetry "
+                    "collector, not to your exporter. This CrewAI release installs its "
+                    "provider when it is imported, and it was imported before "
+                    "genai_otel.instrument(). Call genai_otel.instrument() before importing "
+                    "crewai, set %s=true in the environment before the process starts, or "
+                    "upgrade CrewAI to 1.15.15 or later.",
+                    _TELEMETRY_SWITCH,
+                )
+        except Exception as e:
+            logger.debug("Could not inspect CrewAI's telemetry provider: %s", e)
+
+    def _traced_method(self, original: Callable, span_wrapper: Callable) -> Callable:
+        """Wrap one CrewAI method in a span.
+
+        For an ``async def`` the span is opened when the coroutine runs, not when it is
+        created. The base wrapper attaches the span's context as soon as it is called
+        and detaches it once the awaited call has finished; applied directly to a
+        coroutine function those two happen in different contexts whenever the
+        coroutine is handed to ``asyncio.run`` or ``create_task``. The detach then
+        fails ("Failed to detach context") and the span stays current in the caller,
+        so whatever the caller does next is parented to a span that has ended.
+        """
+        traced = span_wrapper(original)
+        if not inspect.iscoroutinefunction(original):
+            return traced
+
+        @functools.wraps(original)
+        async def method(instance, *args, **kwargs):
+            return await traced.__get__(instance, type(instance))(*args, **kwargs)
+
+        return method
+
+    def _traced_crew_method(self, original: Callable, span_wrapper: Callable) -> Callable:
+        """Wrap one Crew entry point: one span per crew run, carrying that run's usage.
+
+        A crew whose run is already being traced in this context is called straight
+        through, which is what keeps kickoff_async() -> kickoff() from producing a
+        second crew span. kickoff_for_each() runs copies of the crew, so each copy
+        still gets its own span under the batch span.
+        """
+        is_async = inspect.iscoroutinefunction(original)
+        traced = span_wrapper(self._measuring_usage(original, is_async))
+
+        if is_async:
+
+            @functools.wraps(original)
+            async def method(crew, *args, **kwargs):
+                active = _ACTIVE_CREWS.get()
+                if id(crew) in active:
+                    return await original(crew, *args, **kwargs)
+                token = _ACTIVE_CREWS.set(active | {id(crew)})
+                try:
+                    return await traced.__get__(crew, type(crew))(*args, **kwargs)
+                finally:
+                    _forget_active_crew(token)
+
+        else:
+
+            @functools.wraps(original)
+            def method(crew, *args, **kwargs):
+                active = _ACTIVE_CREWS.get()
+                if id(crew) in active:
+                    return original(crew, *args, **kwargs)
+                token = _ACTIVE_CREWS.set(active | {id(crew)})
+                try:
+                    return traced.__get__(crew, type(crew))(*args, **kwargs)
+                finally:
+                    _forget_active_crew(token)
+
+        return method
+
+    def _measuring_usage(self, original: Callable, is_async: bool) -> Callable:
+        """Return ``original`` with each run's own token usage attached to its result."""
+        if is_async:
+
+            @functools.wraps(original)
+            async def method(crew, *args, **kwargs):
+                before = self._llm_counters(crew)
+                result = await original(crew, *args, **kwargs)
+                self._attach_kickoff_usage(result, crew, before)
+                return result
+
+        else:
+
+            @functools.wraps(original)
+            def method(crew, *args, **kwargs):
+                before = self._llm_counters(crew)
+                result = original(crew, *args, **kwargs)
+                self._attach_kickoff_usage(result, crew, before)
+                return result
+
+        return method
+
+    def _llm_counters(self, crew: Any) -> Optional[Dict[int, Dict[str, int]]]:
+        """Read the lifetime token counters of each distinct LLM object the crew uses.
+
+        Returns:
+            Counters keyed by LLM object identity, or None when an agent's LLM keeps
+            none (CrewAI before 1.0), in which case CrewOutput.token_usage is the only
+            figure there is.
+        """
+        try:
+            agents = list(getattr(crew, "agents", None) or [])
+            manager = getattr(crew, "manager_agent", None)
+            if manager is not None:
+                agents.append(manager)
+            llms = [getattr(agent, "llm", None) for agent in agents]
+            if not llms or not all(
+                callable(getattr(llm, "get_token_usage_summary", None)) for llm in llms
+            ):
+                return None
+            # The manager's LLM exists before the manager agent does (hierarchical process)
+            manager_llm = getattr(crew, "manager_llm", None)
+            if callable(getattr(manager_llm, "get_token_usage_summary", None)):
+                llms.append(manager_llm)
+
+            counters: Dict[int, Dict[str, int]] = {}
+            for llm in llms:
+                # Keyed by the counter, not the LLM object: Crew.copy() gives every
+                # copied agent a shallow copy of its LLM, and the copies share one
+                # counter. Counting per object reported it once for each copy.
+                key = id(getattr(llm, "_token_usage", None) or llm)
+                if key not in counters:
+                    summary = llm.get_token_usage_summary()
+                    counters[key] = {
+                        name: _count(getattr(summary, name, 0)) for name in _USAGE_FIELDS
+                    }
+            return counters
+        except Exception as e:
+            logger.debug("Failed to read CrewAI LLM token counters: %s", e)
+            return None
+
+    def _attach_kickoff_usage(
+        self, result: Any, crew: Any, before: Optional[Dict[int, Dict[str, int]]]
+    ) -> None:
+        """Leave what this run used on its result, where _extract_usage() looks first.
+
+        CrewOutput.token_usage adds up, over the crew's agents, each agent's LLM
+        lifetime counters. It therefore grows with every kickoff of the same crew, and
+        an LLM object shared by several agents is added once per agent. The change in
+        each distinct LLM's counters across the call is what this run used. Runs that
+        share an LLM object and overlap in time are counted into each other; no
+        snapshot can tell them apart.
+        """
+        if before is None:
+            return
+        try:
+            if not hasattr(result, "token_usage"):
+                return
+            after = self._llm_counters(crew)
+            if after is None:
+                return
+            used = dict.fromkeys(_USAGE_FIELDS, 0)
+            for key, counters in after.items():
+                start = before.get(key, {})
+                for name in _USAGE_FIELDS:
+                    used[name] += max(counters[name] - start.get(name, 0), 0)
+            setattr(result, _KICKOFF_USAGE_ATTR, used)
+        except Exception as e:
+            logger.debug("Failed to measure CrewAI kickoff usage: %s", e)
+
+    def _traced_future_method(
+        self,
+        original: Callable,
+        span_name: str,
+        extract_attributes: Callable[[Any, Any, Any], Dict[str, Any]],
+    ) -> Callable:
+        """Wrap a method that returns a ``concurrent.futures.Future`` straight away.
+
+        Task.execute_async() starts the work on a thread and returns its Future. The
+        base wrapper ends the span when the method returns, which is before the work
+        has started: the task span lasted a few milliseconds, had no output, and was OK
+        whatever happened on the thread. Here the Future ends the span instead.
+        """
+
+        @functools.wraps(original)
+        def method(instance, *args, **kwargs):
+            if not self._instrumented:
+                return original(instance, *args, **kwargs)
+            try:
+                span = self.tracer.start_span(
+                    span_name,
+                    attributes=self._initial_attributes(
+                        span_name, extract_attributes, instance, args, kwargs
+                    ),
+                )
+                # Current while the thread is started: CrewAI copies the context into
+                # it, which is what parents the agent and LLM spans to this one.
+                token = otel_context.attach(
+                    _context_with_usage_holder(span, trace.set_span_in_context(span))
+                )
+            except Exception as e:
+                logger.debug("Could not start span '%s': %s", span_name, e)
+                return original(instance, *args, **kwargs)
+
+            start_time = time.time()
+            try:
+                result = original(instance, *args, **kwargs)
+            except Exception as e:
+                self._end_span(span, start_time, kwargs, error=e)
+                raise
+            finally:
+                otel_context.detach(token)
+
+            add_done_callback = getattr(result, "add_done_callback", None)
+            if callable(add_done_callback):
+                add_done_callback(
+                    lambda future: self._end_span(span, start_time, kwargs, future=future)
+                )
+            else:
+                self._end_span(span, start_time, kwargs, result=result)
+            return result
+
+        return method
+
+    def _initial_attributes(
+        self,
+        span_name: str,
+        extract_attributes: Callable[[Any, Any, Any], Dict[str, Any]],
+        instance: Any,
+        args: Any,
+        kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Build span-start attributes the way the base wrapper does."""
+        attrs: Dict[str, Any] = {}
+        try:
+            extracted = self._with_provider_aliases(extract_attributes(instance, args, kwargs))
+            for key, value in extracted.items():
+                attrs[key] = value if isinstance(value, (str, int, float, bool)) else str(value)
+        except Exception as e:
+            logger.warning("Failed to extract attributes for span '%s': %s", span_name, e)
+
+        for key, extractor in (
+            ("session.id", getattr(self.config, "session_id_extractor", None)),
+            ("user.id", getattr(self.config, "user_id_extractor", None)),
+        ):
+            if not extractor:
+                continue
+            try:
+                value = extractor(instance, args, kwargs)
+                if value:
+                    attrs[key] = value
+                    if key == "session.id":
+                        attrs["gen_ai.conversation.id"] = value
+            except Exception as e:
+                logger.debug("Failed to extract %s: %s", key, e)
+        return attrs
+
+    def _end_span(
+        self,
+        span: Any,
+        start_time: float,
+        kwargs: Any,
+        result: Any = None,
+        future: Any = None,
+        error: Optional[BaseException] = None,
+    ) -> None:
+        """Record the outcome on a span opened by _traced_future_method() and end it."""
+        try:
+            if future is not None:
+                try:
+                    error = future.exception()
+                except BaseException as e:  # noqa: BLE001 - a cancelled Future raises
+                    error = e
+                if error is None:
+                    result = future.result()
+            if not span.is_recording():
+                return
+            if error is None:
+                if self.request_counter:
+                    self.request_counter.add(1, {"operation": span.name})
+                self._record_result_metrics(span, result, start_time, kwargs)
+                span.set_status(Status(StatusCode.OK))
+            else:
+                if self.error_counter:
+                    self.error_counter.add(
+                        1, {"operation": span.name, "error_type": type(error).__name__}
+                    )
+                span.set_status(Status(StatusCode.ERROR, str(error)))
+                span.record_exception(error)
+        except Exception as e:
+            logger.debug("Failed to record the outcome of a CrewAI span: %s", e)
+        finally:
+            span.end()
 
     def _patch_thread_pool_executor(self):
         """Patch ThreadPoolExecutor to automatically propagate OpenTelemetry context.
@@ -535,6 +931,11 @@ class CrewAIInstrumentor(BaseInstrumentor):
         token_process, so usage is available even when individual LLM provider
         responses don't include it.
 
+        From CrewAI 1.0 that aggregate is built from counters that live on the LLM
+        objects for their whole lifetime, so it is not the usage of one kickoff. When
+        the run was measured (see _attach_kickoff_usage) that measurement is used
+        instead.
+
         Args:
             result: The crew execution result (CrewOutput).
 
@@ -548,6 +949,13 @@ class CrewAIInstrumentor(BaseInstrumentor):
                 completion_tokens = getattr(usage, "completion_tokens", 0) or 0
                 total_tokens = getattr(usage, "total_tokens", 0) or 0
                 cached_prompt_tokens = getattr(usage, "cached_prompt_tokens", 0) or 0
+
+                measured = getattr(result, _KICKOFF_USAGE_ATTR, None)
+                if isinstance(measured, dict):
+                    prompt_tokens = measured["prompt_tokens"]
+                    completion_tokens = measured["completion_tokens"]
+                    total_tokens = measured["total_tokens"]
+                    cached_prompt_tokens = measured["cached_prompt_tokens"]
 
                 # Only return if there are actual tokens recorded
                 if total_tokens > 0 or prompt_tokens > 0 or completion_tokens > 0:
@@ -587,6 +995,12 @@ class CrewAIInstrumentor(BaseInstrumentor):
                 attrs["crewai.output"] = self._cap_content(result.raw)
                 attrs["crewai.output_length"] = len(str(result.raw))
 
+            # An agent given a response model returns the model itself (CrewAI 1.x)
+            elif callable(getattr(result, "model_dump_json", None)):
+                dumped = result.model_dump_json()
+                attrs["crewai.output"] = self._cap_content(dumped)
+                attrs["crewai.output_length"] = len(dumped)
+
             # If result has tasks_output attribute (list of task results)
             if hasattr(result, "tasks_output"):
                 try:
@@ -605,24 +1019,31 @@ class CrewAIInstrumentor(BaseInstrumentor):
                 except Exception as e:
                     logger.debug("Failed to extract tasks_output: %s", e)
 
-            # If result has json attribute
-            if hasattr(result, "json"):
-                try:
-                    attrs["crewai.output.json"] = str(result.json)[:500]
-                except Exception as e:
-                    logger.debug("Failed to extract JSON output: %s", e)
+            # If result has json attribute. CrewOutput.json and TaskOutput.json raise
+            # unless the task asked for JSON, and on a bare pydantic model `json` is
+            # a method rather than the output.
+            json_output = self._read_output_field(result, "json")
+            if json_output is not None and not callable(json_output):
+                attrs["crewai.output.json"] = str(json_output)[:500]
 
             # If result has pydantic attribute
-            if hasattr(result, "pydantic"):
-                try:
-                    attrs["crewai.output.pydantic"] = str(result.pydantic)[:500]
-                except Exception as e:
-                    logger.debug("Failed to extract Pydantic output: %s", e)
+            pydantic_output = self._read_output_field(result, "pydantic")
+            if pydantic_output is not None:
+                attrs["crewai.output.pydantic"] = str(pydantic_output)[:500]
 
         except Exception as e:
             logger.debug("Failed to extract response attributes: %s", e)
 
         return attrs
+
+    @staticmethod
+    def _read_output_field(result: Any, name: str) -> Any:
+        """Read an optional field of a CrewAI result; a property that raises is None."""
+        try:
+            return getattr(result, name, None)
+        except Exception:
+            # Expected for every plain-text result, so not worth a log line
+            return None
 
     def _extract_finish_reason(self, result) -> Optional[str]:
         """Extract finish reason from crew execution result.

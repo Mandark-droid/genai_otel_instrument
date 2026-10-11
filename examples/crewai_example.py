@@ -20,8 +20,8 @@ import genai_otel
 
 # Initialize instrumentation - CrewAI is enabled automatically
 # NOTE: CrewAI's built-in telemetry is automatically disabled by the instrumentor
-# to prevent conflicts with OpenTelemetry tracing. The instrumentor sets
-# CREWAI_TELEMETRY_OPT_OUT=true environment variable automatically.
+# to prevent conflicts with OpenTelemetry tracing. The instrumentor sets the
+# CREWAI_DISABLE_TELEMETRY=true environment variable unless you set it yourself.
 genai_otel.instrument(
     service_name="crewai-example",
     # endpoint="http://localhost:4318",
@@ -209,8 +209,7 @@ print()
 print("=" * 80)
 print("Telemetry Data Collected:")
 print("=" * 80)
-print(
-    """
+print("""
 For each crew execution, the following data is automatically collected:
 
 TRACES (Spans with proper parent-child hierarchy):
@@ -254,14 +253,12 @@ METRICS:
 - genai.cost: Total cost for all LLM calls in the crew
 
 View these metrics in your observability platform (Grafana, Jaeger, etc.)
-"""
-)
+""")
 
 print("=" * 80)
 print("CrewAI Framework Features:")
 print("=" * 80)
-print(
-    """
+print("""
 Key Features Instrumented:
 - Crew Execution: Tracks all kickoff variants (sync and async):
   - kickoff(), kickoff_async(), akickoff()
@@ -284,8 +281,7 @@ Benefits:
 - Task-oriented workflow with expected outputs
 - Built-in collaboration between specialized agents
 - Zero-code instrumentation with full observability
-"""
-)
+""")
 
 print("=" * 80)
 print("Example complete! Check your OTLP collector/Grafana for traces and metrics.")
