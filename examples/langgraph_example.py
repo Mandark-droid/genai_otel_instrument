@@ -95,7 +95,7 @@ builder.add_edge("node_a", "node_b")
 builder.add_edge("node_b", "node_c")
 builder.add_edge("node_c", END)
 
-# Compile the graph (this is what gets instrumented)
+# Compile the graph. Every graph is traced when it runs, however it was built.
 graph = builder.compile()
 
 # Run the graph
@@ -268,8 +268,7 @@ print()
 print("=" * 80)
 print("Telemetry Data Collected:")
 print("=" * 80)
-print(
-    """
+print("""
 For each graph execution, the following data is automatically collected:
 
 TRACES (Spans):
@@ -290,7 +289,6 @@ TRACES (Spans):
   - langgraph.thread_id: Thread ID for persistence (if using checkpoints)
   - langgraph.checkpoint_id: Checkpoint ID for resumability
   - langgraph.message_count: Message count (for conversational workflows)
-  - langgraph.steps: Number of execution steps
 
 SESSION ID PROPAGATION:
   session.id is set on all graph execution spans for session aggregation.
@@ -301,27 +299,23 @@ SESSION ID PROPAGATION:
   4. Auto-generated UUID (fallback for every invocation)
 
 METRICS:
-- genai.requests: Graph execution count
-- genai.tokens: Token usage from LLM calls within nodes
-- genai.latency: Graph execution duration
-- genai.cost: Total cost for LLM calls (if nodes use LLMs)
+- gen_ai.requests: Graph execution count
+- gen_ai.client.token.usage: Token usage from LLM calls within nodes
+- gen_ai.client.operation.duration: Graph execution duration
+- gen_ai.usage.cost: Total cost for LLM calls (if nodes use LLMs)
 
 View these metrics in your observability platform (Grafana, Jaeger, etc.)
-"""
-)
+""")
 
 print("=" * 80)
 print("LangGraph Framework Features:")
 print("=" * 80)
-print(
-    """
+print("""
 Key Features Instrumented:
 - Graph Execution: Tracks invoke(), stream(), ainvoke(), astream()
-- Node Structure: Monitors graph topology (nodes and edges)
-- State Management: Captures state updates across execution
-- Conditional Logic: Tracks branching and routing decisions
-- Streaming: Observability for streaming graph execution
-- Checkpoints: Monitors persistence and resumability
+- Node Structure: Records graph topology (nodes and edges) on the graph span
+- Streaming: One span covering each streamed graph run
+- Checkpoints: Records the thread_id and checkpoint_id passed in the config
 - Session Tracking: Auto session.id on all spans for session aggregation
 - Async Support: Full support for async graph execution
 
@@ -338,8 +332,7 @@ Benefits:
 - Checkpointing for fault tolerance
 - Time-travel debugging with state history
 - Complete observability with zero code changes
-"""
-)
+""")
 
 print("=" * 80)
 print("Example complete! Check your OTLP collector/Grafana for traces and metrics.")

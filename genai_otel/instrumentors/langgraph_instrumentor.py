@@ -1,19 +1,94 @@
 """OpenTelemetry instrumentor for the LangGraph framework.
 
-This instrumentor automatically traces graph execution, nodes, edges, state updates,
-and checkpoints using the LangGraph stateful workflow framework.
+Every runnable LangGraph graph is a ``langgraph.pregel.Pregel``: a compiled
+``StateGraph``, a prebuilt agent, the copy ``with_config()`` returns, a functional-API
+entrypoint. This instrumentor wraps the four run methods of that class (``invoke``,
+``stream``, ``ainvoke``, ``astream``), so each graph run is one span, and whatever its
+nodes call (LLM clients, tools, other graphs) is traced beneath it.
+
+Nodes, edges and checkpoints get no spans of their own. The graph's structure is
+recorded as attributes on the run span.
 """
 
-import json
+import contextvars
+import importlib.util
 import logging
+import sys
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
+
+from opentelemetry import context as otel_context
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 
 from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
-from .base import BaseInstrumentor
+from ..server_metrics import get_server_metrics
+from .base import BaseInstrumentor, strip_content_attributes
 
 logger = logging.getLogger(__name__)
+
+# Pregel.invoke() is a loop over self.stream(), and ainvoke() over self.astream(). All
+# four are wrapped, so one invoke used to produce two graph spans, the inner one with a
+# session id of its own. A run method leaves a note naming its graph here; the stream
+# call it then makes on that graph takes the note and adds no span.
+_INNER_STREAM: contextvars.ContextVar = contextvars.ContextVar(
+    "genai_otel_langgraph_inner_stream", default=None
+)
+
+# Set on the Pregel class once its run methods are wrapped, so a second instrumentor
+# instance cannot stack another layer of wrappers, and spans, on top.
+_WRAPPED_FLAG = "_genai_otel_langgraph_wrapped"
+
+
+def _module_available(name: str) -> bool:
+    """Whether ``name`` can be imported, decided without importing it."""
+    if name in sys.modules:
+        return sys.modules[name] is not None
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def _is_inner_stream(instance: Any) -> bool:
+    """True, once, for the stream call that ``instance``'s own invoke/ainvoke makes."""
+    note = _INNER_STREAM.get()
+    if note is not None and note[0] is instance:
+        note[0] = None
+        return True
+    return False
+
+
+# The instrumentor the class-level wrappers trace with. The wrappers are installed
+# once and stay on Pregel, while uninstrument() followed by instrument() builds a new
+# instrumentor on a new tracer provider; bound to the first one, they would keep
+# writing to a provider that has been shut down.
+_ACTIVE: Optional["LangGraphInstrumentor"] = None
+
+
+def _dispatch_to_active(method_name: str):
+    """A wrapt wrapper that hands the call to the current instrumentor's method."""
+
+    def wrapper(wrapped, instance, args, kwargs):
+        active = _ACTIVE
+        if active is None:
+            return wrapped(*args, **kwargs)
+        return getattr(active, method_name)(wrapped, instance, args, kwargs)
+
+    return wrapper
+
+
+def _forget_inner_stream(note) -> None:
+    """Drop the one-shot note. Never raises into the caller.
+
+    A pending run that is closed from another context (a cancelled task finalised
+    at loop shutdown) cannot reset a token made in its own.
+    """
+    try:
+        _INNER_STREAM.reset(note)
+    except (ValueError, LookupError):
+        pass
 
 
 class LangGraphInstrumentor(BaseInstrumentor):
@@ -30,11 +105,17 @@ class LangGraphInstrumentor(BaseInstrumentor):
         try:
             import langgraph
 
-            self._langgraph_available = True
-            logger.debug("LangGraph library detected and available for instrumentation")
+            # ``langgraph`` is a namespace package that langgraph-checkpoint,
+            # langgraph-prebuilt and others install into as well, so the import above
+            # succeeds with the graph runtime itself absent. Look for the runtime.
+            self._langgraph_available = _module_available("langgraph.pregel")
         except ImportError:
-            logger.debug("LangGraph library not installed, instrumentation will be skipped")
             self._langgraph_available = False
+
+        if self._langgraph_available:
+            logger.debug("LangGraph library detected and available for instrumentation")
+        else:
+            logger.debug("LangGraph library not installed, instrumentation will be skipped")
 
     def instrument(self, config: OTelConfig):
         """Instrument LangGraph framework if available.
@@ -47,7 +128,7 @@ class LangGraphInstrumentor(BaseInstrumentor):
             return
 
         # Idempotency guard: repeated instrument() calls must not stack wrappers
-        # on the shared StateGraph.compile method.
+        # on the shared Pregel run methods.
         if self._instrumented:
             logger.debug("LangGraph already instrumented, skipping repeat instrument()")
             return
@@ -56,121 +137,288 @@ class LangGraphInstrumentor(BaseInstrumentor):
 
         try:
             import wrapt
-            from langgraph.graph import StateGraph
+            from langgraph.pregel import Pregel
 
-            # Instrument StateGraph.compile() to wrap the resulting CompiledGraph
-            if hasattr(StateGraph, "compile"):
-                original_compile = StateGraph.compile
+            # Wrap the run methods on the class, not on each compiled graph. Wrappers
+            # stored on the instance did not survive Pregel.copy(), which with_config()
+            # uses and which rebuilds the graph from its instance attributes: the copy
+            # (what langchain.agents.create_agent returns) was not traced at all, and on
+            # LangGraph 0.2.x the copy itself raised TypeError.
+            if vars(Pregel).get(_WRAPPED_FLAG):
+                logger.debug("LangGraph run methods already wrapped, not wrapping again")
+            else:
+                wrappers = {
+                    "invoke": "_wrap_graph_invoke",
+                    "ainvoke": "_wrap_graph_ainvoke",
+                    "stream": "_wrap_graph_stream",
+                    "astream": "_wrap_graph_astream",
+                }
+                for name, method_name in wrappers.items():
+                    original = getattr(Pregel, name, None)
+                    if original is not None:
+                        setattr(
+                            Pregel,
+                            name,
+                            wrapt.FunctionWrapper(original, _dispatch_to_active(method_name)),
+                        )
+                setattr(Pregel, _WRAPPED_FLAG, True)
 
-                def wrapped_compile(wrapped, instance, args, kwargs):
-                    # Get the compiled graph
-                    compiled_graph = wrapped(*args, **kwargs)
-
-                    # Instrument the compiled graph's execution methods. This must
-                    # never break the host's compile() call, so contain any failure.
-                    try:
-                        self._instrument_compiled_graph(compiled_graph, instance)
-                    except Exception as e:
-                        logger.debug("Failed to instrument compiled graph: %s", e)
-
-                    return compiled_graph
-
-                StateGraph.compile = wrapt.FunctionWrapper(original_compile, wrapped_compile)
-
-                self._instrumented = True
-                logger.info("LangGraph instrumentation enabled")
+            global _ACTIVE
+            _ACTIVE = self
+            self._instrumented = True
+            logger.info("LangGraph instrumentation enabled")
 
         except Exception as e:
             logger.error("Failed to instrument LangGraph: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
 
-    def _instrument_compiled_graph(self, compiled_graph, state_graph):
-        """Instrument a compiled graph's execution methods.
+    def _graph_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
+        """Attributes for a run of ``instance``, whose StateGraph is its ``builder``."""
+        return self._extract_graph_attributes(
+            instance, args, kwargs, getattr(instance, "builder", None)
+        )
 
-        Args:
-            compiled_graph: The compiled graph object.
-            state_graph: The original StateGraph instance.
-        """
-        import wrapt
-
-        # Instrument invoke method (synchronous execution)
-        if hasattr(compiled_graph, "invoke"):
-            original_invoke = compiled_graph.invoke
-            compiled_graph.invoke = wrapt.FunctionWrapper(
-                original_invoke,
-                lambda w, i, a, kw: self._wrap_graph_invoke(
-                    w, i, a, kw, state_graph, is_async=False
-                ),
-            )
-
-        # Instrument stream method (synchronous streaming)
-        if hasattr(compiled_graph, "stream"):
-            original_stream = compiled_graph.stream
-            compiled_graph.stream = wrapt.FunctionWrapper(
-                original_stream,
-                lambda w, i, a, kw: self._wrap_graph_stream(
-                    w, i, a, kw, state_graph, is_async=False
-                ),
-            )
-
-        # Instrument ainvoke method (asynchronous execution)
-        if hasattr(compiled_graph, "ainvoke"):
-            original_ainvoke = compiled_graph.ainvoke
-            compiled_graph.ainvoke = wrapt.FunctionWrapper(
-                original_ainvoke,
-                lambda w, i, a, kw: self._wrap_graph_invoke(
-                    w, i, a, kw, state_graph, is_async=True
-                ),
-            )
-
-        # Instrument astream method (asynchronous streaming)
-        if hasattr(compiled_graph, "astream"):
-            original_astream = compiled_graph.astream
-            compiled_graph.astream = wrapt.FunctionWrapper(
-                original_astream,
-                lambda w, i, a, kw: self._wrap_graph_stream(
-                    w, i, a, kw, state_graph, is_async=True
-                ),
-            )
-
-    def _wrap_graph_invoke(self, wrapped, instance, args, kwargs, state_graph, is_async):
-        """Wrap graph invoke/ainvoke method with span.
+    def _wrap_graph_invoke(self, wrapped, instance, args, kwargs):
+        """Wrap graph invoke method with span.
 
         Args:
             wrapped: The original method.
             instance: The compiled graph instance.
             args: Positional arguments.
             kwargs: Keyword arguments.
-            state_graph: The original StateGraph instance.
-            is_async: Whether this is async invocation.
         """
-        operation_name = "graph.ainvoke" if is_async else "graph.invoke"
-        return self.create_span_wrapper(
-            span_name=f"langgraph.{operation_name}",
-            extract_attributes=lambda i, a, kw: self._extract_graph_attributes(
-                i, a, kw, state_graph
-            ),
-        )(wrapped)(*args, **kwargs)
+        traced = self.create_span_wrapper(
+            span_name="langgraph.graph.invoke",
+            extract_attributes=lambda i, a, kw: self._graph_attributes(instance, a, kw),
+        )(wrapped)
+        note = _INNER_STREAM.set([instance])
+        try:
+            return traced(*args, **kwargs)
+        finally:
+            _forget_inner_stream(note)
 
-    def _wrap_graph_stream(self, wrapped, instance, args, kwargs, state_graph, is_async):
-        """Wrap graph stream/astream method with span.
+    def _wrap_graph_ainvoke(self, wrapped, instance, args, kwargs):
+        """Wrap graph ainvoke method with span.
 
         Args:
             wrapped: The original method.
             instance: The compiled graph instance.
             args: Positional arguments.
             kwargs: Keyword arguments.
-            state_graph: The original StateGraph instance.
-            is_async: Whether this is async streaming.
         """
-        operation_name = "graph.astream" if is_async else "graph.stream"
-        return self.create_span_wrapper(
-            span_name=f"langgraph.{operation_name}",
-            extract_attributes=lambda i, a, kw: self._extract_graph_attributes(
-                i, a, kw, state_graph
-            ),
-        )(wrapped)(*args, **kwargs)
+        traced = self.create_span_wrapper(
+            span_name="langgraph.graph.ainvoke",
+            extract_attributes=lambda i, a, kw: self._graph_attributes(instance, a, kw),
+        )(wrapped)
+
+        async def _ainvoke():
+            # The span is opened here, when the coroutine runs, not when ainvoke() is
+            # called. The caller may hand the coroutine to another task (asyncio.run,
+            # gather, create_task). A span made current at the call stayed current in
+            # the caller's context after it had ended, and adopted every later run.
+            note = _INNER_STREAM.set([instance])
+            try:
+                return await traced(*args, **kwargs)
+            finally:
+                _forget_inner_stream(note)
+
+        return _ainvoke()
+
+    def _wrap_graph_stream(self, wrapped, instance, args, kwargs):
+        """Wrap graph stream method with span.
+
+        Args:
+            wrapped: The original method.
+            instance: The compiled graph instance.
+            args: Positional arguments.
+            kwargs: Keyword arguments.
+        """
+        chunks = wrapped(*args, **kwargs)
+        if not self._instrumented or _is_inner_stream(instance):
+            return chunks
+        return self._trace_stream(
+            chunks, "langgraph.graph.stream", instance, args, kwargs, otel_context.get_current()
+        )
+
+    def _wrap_graph_astream(self, wrapped, instance, args, kwargs):
+        """Wrap graph astream method with span.
+
+        Args:
+            wrapped: The original method.
+            instance: The compiled graph instance.
+            args: Positional arguments.
+            kwargs: Keyword arguments.
+        """
+        chunks = wrapped(*args, **kwargs)
+        if not self._instrumented or _is_inner_stream(instance):
+            return chunks
+        return self._trace_astream(
+            chunks, "langgraph.graph.astream", instance, args, kwargs, otel_context.get_current()
+        )
+
+    # A streamed run is traced here rather than through the base span wrapper. That
+    # wrapper starts the span, and makes it current, when stream() is called and leaves
+    # it current until the generator is exhausted. The graph does nothing until it is
+    # iterated, so a stream that was never iterated never ended its span, and one the
+    # consumer stopped reading left its span current in the consumer's context.
+
+    def _trace_stream(self, chunks, span_name, instance, args, kwargs, parent):
+        """Yield ``chunks`` inside a span that lasts as long as the iteration does.
+
+        ``parent`` is the context in which the stream was requested. The span starts
+        at the first iteration, which may be after the caller's own span has ended,
+        and it still belongs under it.
+        """
+        iterator = iter(chunks)
+        started = self._start_stream_span(span_name, instance, args, kwargs, parent)
+        if started is None:
+            yield from iterator
+            return
+
+        span, context = started
+        exhausted = False
+        try:
+            while True:
+                # Current only while the graph produces the next chunk, which is when
+                # its nodes run. Nothing stays attached across the yield.
+                token = otel_context.attach(context)
+                try:
+                    chunk = next(iterator)
+                except StopIteration:
+                    exhausted = True
+                    break
+                finally:
+                    otel_context.detach(token)
+                yield chunk
+        except Exception as e:
+            self._record_stream_error(span, span_name, e)
+            raise
+        finally:
+            try:
+                close = getattr(iterator, "close", None)
+                if not exhausted and close is not None:
+                    # The consumer stopped early: let the graph unwind inside its span.
+                    token = otel_context.attach(context)
+                    try:
+                        close()
+                    finally:
+                        otel_context.detach(token)
+            finally:
+                self._end_stream_span(span, span_name, exhausted)
+
+    async def _trace_astream(self, chunks, span_name, instance, args, kwargs, parent):
+        """Async counterpart of :meth:`_trace_stream`."""
+        iterator = chunks.__aiter__()
+        started = self._start_stream_span(span_name, instance, args, kwargs, parent)
+        if started is None:
+            async for chunk in iterator:
+                yield chunk
+            return
+
+        span, context = started
+        exhausted = False
+        try:
+            while True:
+                token = otel_context.attach(context)
+                try:
+                    chunk = await iterator.__anext__()
+                except StopAsyncIteration:
+                    exhausted = True
+                    break
+                finally:
+                    otel_context.detach(token)
+                yield chunk
+        except Exception as e:
+            self._record_stream_error(span, span_name, e)
+            raise
+        finally:
+            try:
+                aclose = getattr(iterator, "aclose", None)
+                if not exhausted and aclose is not None:
+                    token = otel_context.attach(context)
+                    try:
+                        await aclose()
+                    finally:
+                        otel_context.detach(token)
+            finally:
+                self._end_stream_span(span, span_name, exhausted)
+
+    def _start_stream_span(
+        self, span_name, instance, args, kwargs, parent=None
+    ) -> Optional[Tuple[Any, Any]]:
+        """Start the span for a streamed run, with what the base wrapper puts on a span.
+
+        Returns the span and the context that makes it current, or None when the span
+        could not be set up: tracing must never cost the caller the stream.
+        """
+        try:
+            attributes: Dict[str, Any] = {}
+            try:
+                extracted = self._graph_attributes(instance, args, kwargs)
+                extracted = self._with_provider_aliases(extracted)
+                extracted = strip_content_attributes(extracted, self.config)
+                for key, value in extracted.items():
+                    if isinstance(value, (str, int, float, bool)):
+                        attributes[key] = value
+                    else:
+                        attributes[key] = str(value)
+            except Exception as e:
+                logger.warning("Failed to extract attributes for span '%s': %s", span_name, e)
+
+            span = self.tracer.start_span(span_name, context=parent, attributes=attributes)
+
+            if self.config:
+                if self.config.session_id_extractor:
+                    try:
+                        session_id = self.config.session_id_extractor(instance, args, kwargs)
+                        if session_id:
+                            span.set_attribute("session.id", session_id)
+                            span.set_attribute("gen_ai.conversation.id", session_id)
+                    except Exception as e:
+                        logger.debug("Failed to extract session ID: %s", e)
+                if self.config.user_id_extractor:
+                    try:
+                        user_id = self.config.user_id_extractor(instance, args, kwargs)
+                        if user_id:
+                            span.set_attribute("user.id", user_id)
+                    except Exception as e:
+                        logger.debug("Failed to extract user ID: %s", e)
+
+            server_metrics = get_server_metrics()
+            if server_metrics:
+                server_metrics.increment_requests_running()
+
+            return span, trace.set_span_in_context(span)
+        except Exception as e:
+            logger.error("Span creation failed for '%s': %s", span_name, e, exc_info=True)
+            return None
+
+    def _record_stream_error(self, span, span_name, error) -> None:
+        """Mark a streamed run's span as failed."""
+        try:
+            if self.error_counter:
+                self.error_counter.add(
+                    1, {"operation": span_name, "error_type": type(error).__name__}
+                )
+            span.set_status(Status(StatusCode.ERROR, str(error)))
+            span.record_exception(error)
+        except Exception as e:
+            logger.debug("Failed to record error on span '%s': %s", span_name, e)
+
+    def _end_stream_span(self, span, span_name, exhausted) -> None:
+        """End a streamed run's span. Only a stream read to its end counts as a run."""
+        try:
+            if exhausted:
+                if self.request_counter:
+                    self.request_counter.add(1, {"operation": span_name})
+                span.set_status(Status(StatusCode.OK))
+            span.end()
+            server_metrics = get_server_metrics()
+            if server_metrics:
+                server_metrics.decrement_requests_running()
+        except Exception as e:
+            logger.debug("Failed to end span '%s': %s", span_name, e)
 
     def _cap_content(self, text: Any, default: int = 200) -> str:
         """Cap captured content per ``config.content_max_length``.
@@ -206,11 +454,18 @@ class LangGraphInstrumentor(BaseInstrumentor):
         """
         attrs = {}
 
+        # The run config is the second positional parameter of every run method, and
+        # graph.invoke(input, config) is the usual way to pass it (it is also how
+        # invoke() itself calls stream()). Reading only the keyword lost the thread id.
+        config = kwargs.get("config")
+        if config is None and len(args) > 1:
+            config = args[1]
+
         # Core attributes
         attrs["gen_ai.system"] = "langgraph"
         attrs["gen_ai.operation.name"] = "graph.execution"
         # LangGraph carries recursion_limit in the run config dict.
-        attrs.update(extract_budget_attributes(kwargs, kwargs.get("config"), instance))
+        attrs.update(extract_budget_attributes(kwargs, config, instance))
 
         # Extract graph structure information from StateGraph
         try:
@@ -264,16 +519,17 @@ class LangGraphInstrumentor(BaseInstrumentor):
                 logger.debug("Failed to extract input state: %s", e)
 
         # Extract config if provided
-        config = kwargs.get("config")
         if config:
             try:
                 # Extract configurable values
                 if isinstance(config, dict):
                     if "configurable" in config:
                         configurable = config["configurable"]
-                        if "thread_id" in configurable:
+                        # LangGraph runs a subgraph with a config of its own, in which
+                        # these keys can be present and None.
+                        if configurable.get("thread_id") is not None:
                             attrs["langgraph.thread_id"] = configurable["thread_id"]
-                        if "checkpoint_id" in configurable:
+                        if configurable.get("checkpoint_id") is not None:
                             attrs["langgraph.checkpoint_id"] = configurable["checkpoint_id"]
 
                     # Extract recursion limit
