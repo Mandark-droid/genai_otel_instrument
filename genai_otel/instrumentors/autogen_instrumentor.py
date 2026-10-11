@@ -8,15 +8,21 @@ into the Microsoft Agent Framework (public preview Oct 2025). This instrumentor
 supports the current AutoGen release.
 
 Requirements:
-    pip install pyautogen  # or autogen (legacy package name)
+    A package that provides ``import autogen`` with ConversableAgent:
+    pip install "pyautogen~=0.2.0"  # Microsoft's 0.2 line (0.2.35 verified)
+    pip install autogen             # AG2 classic (0.14.1 verified)
+    ``pyautogen`` 0.10 is an empty proxy for autogen-agentchat and ``ag2`` 1.x has
+    no ``autogen`` module; neither has anything to wrap here.
 """
 
 import logging
 from typing import Any, Dict, Optional
 
+from opentelemetry import trace
+
 from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
-from .base import BaseInstrumentor
+from .base import BaseInstrumentor, _descendant_recorded_usage
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +36,31 @@ class AutoGenInstrumentor(BaseInstrumentor):
         self._autogen_available = False
         self._check_availability()
 
+    @staticmethod
+    def _has_legacy_api(module: Any) -> bool:
+        """Whether ``module`` carries the classic ConversableAgent API.
+
+        ``pyautogen`` 0.10 and later is an empty proxy package for
+        ``autogen-agentchat``: it imports, but there is nothing in it to wrap.
+        """
+        try:
+            return hasattr(module, "ConversableAgent")
+        except Exception:  # a lazy attribute that fails; instrument() reports it
+            return True
+
     def _check_availability(self):
         """Check if AutoGen library is available."""
+        found_without_api = None
+
         # Try pyautogen first (newer package name)
         try:
             import autogen
 
-            self._autogen_available = True
-            logger.debug("AutoGen library detected and available for instrumentation")
-            return
+            if self._has_legacy_api(autogen):
+                self._autogen_available = True
+                logger.debug("AutoGen library detected and available for instrumentation")
+                return
+            found_without_api = "autogen"
         except ImportError:
             pass
 
@@ -46,12 +68,25 @@ class AutoGenInstrumentor(BaseInstrumentor):
         try:
             import pyautogen
 
-            self._autogen_available = True
-            logger.debug("AutoGen library (pyautogen) detected and available for instrumentation")
-            return
+            if self._has_legacy_api(pyautogen):
+                self._autogen_available = True
+                logger.debug(
+                    "AutoGen library (pyautogen) detected and available for instrumentation"
+                )
+                return
+            found_without_api = "pyautogen"
         except ImportError:
+            pass
+
+        self._autogen_available = False
+        if found_without_api:
+            logger.debug(
+                "'%s' is installed but has no ConversableAgent API (pyautogen 0.10+ is a "
+                "proxy for autogen-agentchat); legacy AutoGen instrumentation will be skipped",
+                found_without_api,
+            )
+        else:
             logger.debug("AutoGen library not installed, instrumentation will be skipped")
-            self._autogen_available = False
 
     def instrument(self, config: OTelConfig):
         """Instrument AutoGen framework if available.
@@ -106,9 +141,18 @@ class AutoGenInstrumentor(BaseInstrumentor):
                     autogen.GroupChat.select_speaker = select_speaker_wrapper(original)
                     logger.debug("Instrumented GroupChat.select_speaker()")
 
-            # Instrument GroupChatManager.run if available
+            # Instrument the group chat run. The group chat is driven by
+            # GroupChatManager.run_chat(), which the manager registers as a reply
+            # function when it is built. pyautogen 0.2 has no GroupChatManager.run()
+            # at all, and the one AG2 inherits from ConversableAgent only starts a
+            # background thread and returns, so a span around it ends before the
+            # chat has run. run() stays as the fallback where run_chat() is missing.
             if hasattr(autogen, "GroupChatManager"):
-                if hasattr(autogen.GroupChatManager, "run"):
+                if hasattr(autogen.GroupChatManager, "run_chat"):
+                    original = autogen.GroupChatManager.run_chat
+                    autogen.GroupChatManager.run_chat = group_run_wrapper(original)
+                    logger.debug("Instrumented GroupChatManager.run_chat()")
+                elif hasattr(autogen.GroupChatManager, "run"):
                     original = autogen.GroupChatManager.run
                     autogen.GroupChatManager.run = group_run_wrapper(original)
                     logger.debug("Instrumented GroupChatManager.run()")
@@ -313,7 +357,18 @@ class AutoGenInstrumentor(BaseInstrumentor):
             return None
         try:
             llm_config = getattr(agent, "llm_config", None)
-            if not llm_config or not isinstance(llm_config, dict):
+            if not llm_config:
+                return None
+
+            if not isinstance(llm_config, dict):
+                # AG2 replaces the dict with an LLMConfig object whose config_list
+                # holds one entry object per model.
+                model = self._config_string(llm_config, "model")
+                if model:
+                    return model
+                config_list = getattr(llm_config, "config_list", None)
+                if isinstance(config_list, (list, tuple)) and config_list:
+                    return self._config_string(config_list[0], "model")
                 return None
 
             # Direct model field
@@ -329,6 +384,15 @@ class AutoGenInstrumentor(BaseInstrumentor):
         except Exception:
             pass
         return None
+
+    @staticmethod
+    def _config_string(source: Any, key: str) -> Optional[str]:
+        """Read a non-empty string setting from a dict or a config object."""
+        try:
+            value = source.get(key) if isinstance(source, dict) else getattr(source, key, None)
+        except Exception:
+            return None
+        return value if isinstance(value, str) and value else None
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         """Extract token usage from AutoGen ChatResult.cost.
@@ -411,8 +475,11 @@ class AutoGenInstrumentor(BaseInstrumentor):
                         if "name" in last_message:
                             attrs["autogen.conversation.last_speaker"] = last_message["name"]
 
-            # Extract cost from ChatResult.cost (CostDict)
-            if hasattr(result, "cost"):
+            # Extract cost from ChatResult.cost (CostDict). It is the sum of the LLM
+            # calls made inside the conversation: when an instrumented provider span
+            # beneath this one already recorded them, the base wrapper leaves tokens
+            # and cost to that span, and repeating the cost here would double it.
+            if hasattr(result, "cost") and not _descendant_recorded_usage(trace.get_current_span()):
                 try:
                     cost_dict = result.cost
                     if isinstance(cost_dict, dict):

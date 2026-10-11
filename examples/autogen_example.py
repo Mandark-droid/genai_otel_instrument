@@ -11,7 +11,10 @@ into the Microsoft Agent Framework (public preview Oct 2025). This example uses 
 current AutoGen release.
 
 Requirements:
-    pip install genai-otel pyautogen
+    pip install "genai-otel-instrument[autogen]"
+
+    This example uses the legacy `import autogen` API. The extra installs pyautogen
+    below 0.10; from 0.10 on pyautogen no longer ships the `autogen` module.
 
 Environment Setup:
     export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318

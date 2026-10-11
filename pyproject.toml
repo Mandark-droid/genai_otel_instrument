@@ -144,7 +144,9 @@ llamaindex = ["llama-index>=0.9.0"]
 huggingface = ["transformers>=4.30.0", "sentence-transformers>=2.2.0"]
 sentence-transformers = ["sentence-transformers>=2.2.0"]
 crewai = ["crewai>=0.1.0"]
-autogen = ["pyautogen>=0.2.0"]
+# pyautogen 0.10 is an empty proxy for autogen-agentchat: it has no `autogen` module,
+# so the legacy API this extra exists for stops below it.
+autogen = ["pyautogen>=0.2.0,<0.10.0"]
 autogen-agentchat = ["autogen-agentchat>=0.4.0"]
 google-adk = ["google-adk>=1.17.0"]
 haystack = ["haystack-ai>=2.0.0"]
@@ -241,7 +243,7 @@ all-providers = [
     "typesafe-sdk>=0.6.0; python_version >= '3.10'",
     "strands-harness>=0.1.1; python_version >= '3.10'",
     "crewai>=0.1.0",
-    "pyautogen>=0.2.0",
+    "pyautogen>=0.2.0,<0.10.0",
     "autogen-agentchat>=0.4.0",
     "google-adk>=1.17.0",
     "haystack-ai>=2.0.0",
@@ -305,7 +307,7 @@ all = [
     "amdsmi>=7.0.0",
     "codecarbon>=2.3.0",
     "crewai>=0.1.0",
-    "pyautogen>=0.2.0",
+    "pyautogen>=0.2.0,<0.10.0",
     "autogen-agentchat>=0.4.0",
     "google-adk>=1.17.0",
     "haystack-ai>=2.0.0",
