@@ -39,6 +39,7 @@ response = client.chat.completions.create(
 
 - [Installation](getting-started/installation.md) - Detailed installation options
 - [Quick Start](getting-started/quickstart.md) - Get up and running in minutes
+- [Instrument with a Coding Agent](getting-started/coding-agents.md) - A prompt to paste into your AI coding agent
 - [Configuration](getting-started/configuration.md) - Environment variables and options
 - [LLM Providers](guides/llm-providers.md) - 26 providers with code examples
 - [Multi-Agent Frameworks](guides/multi-agent-frameworks.md) - CrewAI, LangGraph, Google ADK, Antigravity, AutoGen, and more
@@ -56,6 +57,10 @@ response = client.chat.completions.create(
 - [PII Detection](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pii_detection/), [Toxicity](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/toxicity_detection/), [Bias](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/bias_detection/), [Prompt Injection](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/prompt_injection/)
 
 Browse all examples in the [examples/ directory](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples).
+
+## Featured In
+
+- [**Context Engineering - AI ecosystem**](https://bonigarcia.dev/context-engineering/ai-ecosystem.html) - TraceVerde is listed under *Assurance & governance > Observability* in the AI ecosystem catalog that accompanies Boni García's book [*Context Engineering: Build Consistent, Accurate, Predictable AI Systems*](https://www.manning.com/books/context-engineering) (Manning).
 
 ## Community
 

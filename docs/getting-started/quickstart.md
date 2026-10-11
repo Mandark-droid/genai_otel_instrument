@@ -88,7 +88,7 @@ Open Jaeger at `http://localhost:16686`, select your service name, and click "Fi
 
 You should see:
 
-- **Span name**: `openai.chat.completions` (or your provider's operation)
+- **Span name**: `openai.chat.completion` (or your provider's operation)
 - **Attributes**: model name, token counts, cost, latency
 - **Metrics**: request rates, token usage, cost over time
 
@@ -156,7 +156,7 @@ task = Task(
 crew = Crew(agents=[researcher], tasks=[task])
 result = crew.kickoff()
 
-# Trace hierarchy: Crew -> Agent -> Task -> OpenAI calls
+# Trace hierarchy: Crew -> Task -> Agent -> OpenAI calls
 # Each level has its own span with rich attributes
 ```
 

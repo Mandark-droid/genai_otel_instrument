@@ -4,7 +4,8 @@ TraceVerde instruments 9 multi-agent and LLM frameworks with complete trace hier
 
 ## CrewAI
 
-Complete span hierarchy: Crew -> Task -> Agent -> LLM calls.
+Span hierarchy: Crew -> Task -> Agent -> LLM calls, in one trace per kickoff.
+Verified against CrewAI 1.15.27 and 1.14.4.
 
 ```bash
 pip install genai-otel-instrument[crewai]
@@ -16,40 +17,86 @@ import genai_otel
 genai_otel.instrument(
     service_name="my-crewai-app",
     enabled_instrumentors=["crewai", "openai"],
-    enable_cost_tracking=True,
 )
 
-from crewai import Crew, Agent, Task
+from crewai import LLM, Agent, Crew, Process, Task
+from crewai.tools import tool
 
-researcher = Agent(
-    role="Senior Researcher",
-    goal="Research topics thoroughly",
-    backstory="Expert researcher with 10 years experience",
-    llm="gpt-4"
+
+@tool("word_count")
+def word_count(text: str) -> str:
+    """Count the words in the given text and return the number."""
+    return str(len(text.split()))
+
+
+llm = LLM(model="gpt-4o-mini", max_tokens=80, temperature=0)
+
+counter = Agent(
+    role="Word Counter",
+    goal="Count words exactly using the word_count tool",
+    backstory="A careful clerk who never guesses a count.",
+    llm=llm,
+    tools=[word_count],
+)
+reporter = Agent(
+    role="Reporter",
+    goal="State results in one short sentence",
+    backstory="A terse reporter.",
+    llm=llm,
 )
 
-task = Task(
-    description="Research OpenTelemetry best practices",
-    expected_output="Comprehensive report",
-    agent=researcher
+count_task = Task(
+    description="Use the word_count tool on 'OpenTelemetry traces every agent step'.",
+    expected_output="The word count as a number.",
+    agent=counter,
+)
+report_task = Task(
+    description="Write one sentence stating the word count found.",
+    expected_output="One short sentence.",
+    agent=reporter,
 )
 
-crew = Crew(agents=[researcher], tasks=[task], process="sequential")
+crew = Crew(
+    agents=[counter, reporter],
+    tasks=[count_task, report_task],
+    process=Process.sequential,
+)
 result = crew.kickoff()
-# Complete traces: Crew -> Agent -> Task -> LLM calls
+# crewai.crew.execution -> crewai.task.execution -> crewai.agent.execution -> openai.chat.completion
 ```
+
+Call `genai_otel.instrument()` before importing `crewai` and before creating any `LLM`
+or `Agent`. An OpenAI client built before instrumentation is not traced, and on CrewAI
+older than 1.15.15 importing `crewai` first lets CrewAI's own telemetry take the global
+tracer provider, in which case no TraceVerde span is exported (a warning is logged).
 
 **Instrumented methods:**
 
 - `Crew.kickoff()`, `kickoff_async()`, `akickoff()`, `kickoff_for_each()` and async batch variants
-- `Task.execute_sync()`, `Task.execute_async()`
-- `Agent.execute_task()`
+- `Task.execute_sync()`, `Task.execute_async()`, `Task.aexecute_sync()`
+- `Agent.execute_task()`, `Agent.aexecute_task()`
 
 **Span types:**
 
-- `crewai.crew.execution` - crew-level attributes (process type, agent/task counts)
-- `crewai.task.execution` - task attributes (description, expected output)
+- `crewai.crew.execution` - crew-level attributes (process type, agent/task counts, output)
+- `crewai.task.execution` - task attributes (description, expected output, `gen_ai.agent.name`)
 - `crewai.agent.execution` - agent attributes (role, goal, backstory, LLM model)
+
+**What to expect:**
+
+- Tokens and cost are on the LLM spans. The crew span reports them itself only when no
+  LLM span beneath it did, and then for that kickoff alone. Batch runs that overlap in
+  time (`kickoff_for_each_async`) share their LLM's counters, so in that case each crew
+  span can include usage from the others.
+- `session.id` is the crew's id, or `inputs={"session_id": ...}` when you pass one.
+- Tool calls have no span of their own; they appear as `llm.tools` and tool-call
+  attributes on the LLM span.
+- A task with `output_pydantic` goes through the OpenAI SDK's `parse` call, which is not
+  traced yet, so it has no LLM span.
+- `kickoff_for_each` produces one outer `crewai.crew.execution` span around one per input.
+- TraceVerde sets `CREWAI_DISABLE_TELEMETRY=true` so CrewAI's built-in telemetry does not
+  run alongside it. Set the variable yourself to keep your own choice.
+  `CREWAI_TRACING_ENABLED=false` removes CrewAI's first-run prompt to share a trace.
 
 Includes automatic `ThreadPoolExecutor` context propagation for worker threads.
 
@@ -57,13 +104,77 @@ See [CrewAI example](https://github.com/Mandark-droid/genai_otel_instrument/tree
 
 ## LangGraph
 
-Stateful workflows with graph-based orchestration.
+Stateful workflows with graph-based orchestration. Verified against LangGraph 0.1.19,
+0.2.76, 0.6.11 and 1.2.14.
 
 ```bash
 pip install genai-otel-instrument[langgraph]
 ```
 
-Instruments `invoke()`, `stream()`, `ainvoke()`, `astream()` with automatic session ID propagation.
+```python
+import genai_otel
+
+genai_otel.instrument(
+    service_name="my-langgraph-app",
+    enabled_instrumentors=["langgraph", "openai"],
+)
+
+from typing import TypedDict
+
+from langchain_openai import ChatOpenAI
+from langgraph.graph import END, START, StateGraph
+
+
+class State(TypedDict, total=False):
+    question: str
+    answer: str
+
+
+llm = ChatOpenAI(model="gpt-4o-mini", max_tokens=12)
+
+
+def answer(state: State):
+    return {"answer": llm.invoke(state["question"]).content}
+
+
+builder = StateGraph(State)
+builder.add_node("answer", answer)
+builder.add_edge(START, "answer")
+builder.add_edge("answer", END)
+graph = builder.compile()
+
+result = graph.invoke(
+    {"question": "Capital of France? One word."},
+    {"configurable": {"thread_id": "user-42"}},
+)
+# langgraph.graph.invoke -> openai.chat.completion
+```
+
+**How it hooks in.** TraceVerde wraps four methods on the `langgraph.pregel.Pregel` class
+with `wrapt`: `invoke`, `ainvoke`, `stream` and `astream`. It is not a LangChain callback
+handler and registers no callbacks. Every runnable graph is a `Pregel`, so each run
+produces one span however the graph was built: a compiled `StateGraph`,
+`create_react_agent`, `langchain.agents.create_agent`, a `with_config()` copy, a
+functional-API `@entrypoint`, a subgraph (nested under its parent's span), or a graph
+compiled before `instrument()` was called.
+
+**Span types:** `langgraph.graph.invoke`, `langgraph.graph.ainvoke`,
+`langgraph.graph.stream`, `langgraph.graph.astream`.
+
+**What to expect:**
+
+- `session.id`, `langgraph.session.id` and `gen_ai.conversation.id` are the config
+  `thread_id` when you pass one, otherwise a random id per run. `langgraph.thread_id`
+  and `langgraph.recursion_limit` are recorded when present in the config.
+- Graph spans carry the graph's shape (`langgraph.node_count`, `langgraph.nodes`,
+  `langgraph.edge_count`, `langgraph.channels`) and the input and output keys.
+- Nodes and tools have no span of their own. LLM spans, tokens and cost come from the
+  provider instrumentor enabled alongside (`openai` above); graph spans carry no token
+  usage, so nothing is counted twice.
+- A stream span starts at the first chunk and ends when the stream is exhausted, closed
+  or abandoned. A stream that is never iterated produces no span.
+- Enabling `langchain` as well adds a `langchain.chat_model.*` span around each model
+  call. Usage stays on the provider span.
 
 See [LangGraph example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/langgraph_example.py).
 
@@ -113,53 +224,124 @@ See the [Antigravity example](https://github.com/Mandark-droid/genai_otel_instru
 
 ## AutoGen (Legacy)
 
-Microsoft multi-agent conversations with group chats.
+Multi-agent conversations with group chats, for the `import autogen` API. Verified
+against pyautogen 0.2.35 and 0.9, and autogen 0.14.1.
 
 ```bash
 pip install genai-otel-instrument[autogen]
 ```
 
+The extra installs `pyautogen` below 0.10. From 0.10 on, `pyautogen` is an empty proxy
+for `autogen-agentchat` and has no `autogen` module; use
+[AutoGen AgentChat](#autogen-agentchat-v04) for that API.
+
 ```python
 import genai_otel
-genai_otel.instrument(service_name="autogen-example")
+
+genai_otel.instrument(
+    service_name="autogen-example",
+    enabled_instrumentors=["autogen", "openai"],
+)
 
 import autogen
 
+llm_config = {"config_list": [{"model": "gpt-4o-mini"}], "max_tokens": 30, "cache_seed": None}
+
 assistant = autogen.AssistantAgent(
     name="assistant",
-    llm_config={"config_list": [{"model": "gpt-4", "api_key": "..."}]},
+    llm_config=llm_config,
+    system_message="Answer in at most 6 words.",
 )
 
 user_proxy = autogen.UserProxyAgent(
     name="user",
     human_input_mode="NEVER",
-    max_consecutive_auto_reply=2,
+    max_consecutive_auto_reply=1,
     code_execution_config=False,
 )
 
 user_proxy.initiate_chat(
     assistant,
     message="What is the capital of France?",
-    max_turns=2,
+    max_turns=1,
 )
-# Traces: initiate_chat -> OpenAI calls with cost tracking
+# autogen.initiate_chat -> openai.chat.completion
 ```
 
 **Instrumented methods:**
 
-- `ConversableAgent.initiate_chat()` - agent-to-agent conversations
-- `GroupChat.select_speaker()` - speaker selection in group chats
-- `GroupChatManager.run()` - group chat orchestration
+- `ConversableAgent.initiate_chat()` - agent-to-agent conversations (`autogen.initiate_chat`)
+- `GroupChat.select_speaker()` - speaker selection (`autogen.group_chat.select_speaker`)
+- `GroupChatManager.run_chat()` - group chat orchestration (`autogen.group_chat.run`)
+
+Tokens and cost are on the LLM spans. `a_initiate_chat()` is not traced yet.
 
 See [AutoGen example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/autogen_example.py).
 
 ## AutoGen AgentChat (v0.4+)
 
+Verified against autogen-agentchat 0.7.5.
+
 ```bash
-pip install genai-otel-instrument[autogen-agentchat]
+pip install genai-otel-instrument[autogen-agentchat] "autogen-ext[openai]"
 ```
 
-Instruments agent `run()`/`run_stream()` and team execution (RoundRobinGroupChat, SelectorGroupChat, Swarm). Captures participants, task content, and termination conditions.
+```python
+import asyncio
+
+import genai_otel
+
+genai_otel.instrument(
+    service_name="agentchat-example",
+    enabled_instrumentors=["autogen_agentchat", "openai"],
+)
+
+from autogen_agentchat.agents import AssistantAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+
+async def get_weather(city: str) -> str:
+    """Return the current weather for a city."""
+    return "Sunny, 21 C in {0}".format(city)
+
+
+async def main():
+    client = OpenAIChatCompletionClient(model="gpt-4o-mini", max_tokens=40)
+    agent = AssistantAgent(
+        name="weather_agent",
+        model_client=client,
+        tools=[get_weather],
+        system_message="Use the get_weather tool, then answer in under 10 words.",
+        reflect_on_tool_use=True,
+    )
+    await agent.run(task="What is the weather in Paris?")
+    await client.close()
+
+
+asyncio.run(main())
+# autogen_agentchat.agent.run -> invoke_agent weather_agent (AutoGen's own span)
+#   -> autogen_agentchat.agent.on_messages -> openai.chat.completion
+```
+
+**Span types:**
+
+- `autogen_agentchat.agent.run`, `autogen_agentchat.agent.run_stream` - agent name and
+  type, model, task
+- `autogen_agentchat.agent.on_messages` - under `run`, or for a direct call
+- `autogen_agentchat.team.run`, `autogen_agentchat.team.run_stream` - team type,
+  participants, termination condition, stop reason
+
+**What to expect:**
+
+- Tokens and cost are on the LLM spans; agent and team spans carry none.
+- AutoGen 0.7 emits its own OpenTelemetry spans through the same tracer provider, so
+  they appear in the same trace: `create_agent`, `invoke_agent` and `execute_tool`
+  (scope `autogen-core`), plus one span per runtime message (scope
+  `autogen SingleThreadedAgentRuntime`). A two-agent team run produced 32 of the
+  runtime spans; `AUTOGEN_DISABLE_RUNTIME_TRACING=true`, set before the team is
+  created, removes them.
+- If you stop reading a `run_stream()` early, call `await stream.aclose()` so its span
+  ends there.
 
 ## OpenAI Agents SDK
 
@@ -181,11 +363,72 @@ See [Bedrock Agents example](https://github.com/Mandark-droid/genai_otel_instrum
 
 ## Pydantic AI
 
-Type-safe agents with Pydantic validation and multi-provider support.
+Type-safe agents with Pydantic validation and multi-provider support. Verified against
+Pydantic AI 2.55.0.
 
 ```bash
 pip install genai-otel-instrument[pydantic-ai]
 ```
+
+```python
+import genai_otel
+
+genai_otel.instrument(
+    service_name="my-pydantic-ai-app",
+    enabled_instrumentors=["pydantic_ai", "openai"],
+)
+
+from pydantic import BaseModel
+from pydantic_ai import Agent
+
+
+class CityInfo(BaseModel):
+    city: str
+    country: str
+
+
+agent = Agent(
+    "openai:gpt-4o-mini",
+    name="city_agent",
+    instructions="Call get_country exactly once, then give the final answer.",
+    output_type=CityInfo,
+)
+
+
+@agent.tool_plain
+def get_country(city: str) -> str:
+    """Return the country a city is in."""
+    return {"paris": "France", "rome": "Italy"}.get(city.lower(), "Unknown")
+
+
+result = agent.run_sync("Which country is Paris in?")
+print(result.output)
+# pydantic_ai.agent.run_sync -> pydantic_ai.agent.run -> openai.responses (one per model request)
+```
+
+**Span types:**
+
+| Call | Spans |
+|---|---|
+| `agent.run_sync()` | `pydantic_ai.agent.run_sync` -> `pydantic_ai.agent.run` -> LLM spans |
+| `await agent.run()`, `agent.run_stream_events()` | `pydantic_ai.agent.run` -> LLM spans |
+| `agent.run_stream()`, `agent.run_stream_sync()` | `pydantic_ai.agent.run_stream`, open for the whole block |
+| `agent.iter()` | `pydantic_ai.agent.iter` -> LLM spans |
+
+**What to expect:**
+
+- Agent spans carry the agent name, model, tool names, output type, response model and
+  finish reason.
+- Tokens and cost are on the LLM spans (`openai.responses` for `openai:` models,
+  `openai.chat.completion` for `openai-chat:`). With only `pydantic_ai` enabled, the
+  agent span carries the run totals itself.
+- Tool executions have no span of their own.
+- Concurrent runs (`asyncio.gather`) are separate traces.
+- Pydantic AI's own instrumentation (`Agent.instrument_all()`) is off by default. If you
+  turn it on as well, its `invoke_agent`, `chat` and `execute_tool` spans appear in the
+  same trace and every model request is reported twice. Enable one or the other.
+- Pydantic AI prints a one-time `observability: off` banner because it does not detect
+  TraceVerde; `PYDANTIC_AI_NO_BANNER=1` hides it.
 
 See [Pydantic AI example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/pydantic_ai_example.py).
 

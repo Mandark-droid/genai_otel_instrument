@@ -22,6 +22,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/Mandark-droid/genai_otel_instrument?style=social)](https://github.com/Mandark-droid/genai_otel_instrument)
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-1.20%2B-blueviolet)](https://opentelemetry.io/)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/Mandark-droid/genai_otel_instrument/actions)
+[![Listed in Context Engineering](https://img.shields.io/badge/Listed%20in-Context%20Engineering%20AI%20ecosystem-2e7d32)](https://bonigarcia.dev/context-engineering/ai-ecosystem.html)
 
 </div>
 
@@ -44,6 +45,89 @@ response = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role"
 ```
 
 That's it. No wrappers, no decorators, no config files. Every LLM call, database query, and agent interaction is automatically traced with full cost breakdown.
+
+### Let your coding agent do it
+
+Using an AI coding agent or assistant? Paste this prompt into it, in the repository you want instrumented. It adds the two lines above in the right place, installs the right extras, configures through environment variables, and verifies the result with a real run. The same prompt is in the [docs](https://mandark-droid.github.io/genai_otel_instrument/getting-started/coding-agents/).
+
+<details>
+<summary>Copy the prompt</summary>
+
+```text
+Add OpenTelemetry tracing for LLM calls to this Python application using TraceVerde.
+
+Package on PyPI: genai-otel-instrument      Import name: genai_otel
+Docs: https://mandark-droid.github.io/genai_otel_instrument/
+
+Steps
+
+1. Find the entry point of every process this application starts: the module that
+   runs first (CLI main, ASGI/WSGI app module, worker start-up script, the first cell
+   of a notebook).
+
+2. Find which LLM SDKs and agent frameworks the code imports, for example openai,
+   anthropic, langchain, langgraph, crewai, pydantic_ai, autogen_agentchat. Install
+   the package with the matching extras and add it to the project's dependency file
+   (requirements.txt, pyproject.toml, or whatever this project uses):
+
+       pip install "genai-otel-instrument[openai,langgraph]"
+
+   Extras are named after the library: openai, anthropic, google, langchain,
+   langgraph, crewai, pydantic-ai, autogen-agentchat, llamaindex, and others listed
+   in the docs. Plain "pip install genai-otel-instrument" is enough when the SDK is
+   already a dependency of this project.
+
+3. At the very top of each entry point, add:
+
+       import genai_otel
+       genai_otel.instrument()
+
+   This must run before any LLM SDK or agent framework is imported, and before any
+   client, LLM or agent object is created. A client created earlier is not traced.
+   Call it once per process. Do not wrap, decorate or otherwise change existing LLM
+   calls: instrumentation is automatic.
+
+4. Configure through environment variables, not code. Add them wherever this project
+   keeps its configuration (.env.example, deployment manifests, the README):
+
+       OTEL_SERVICE_NAME=<a name for this service>
+       OTEL_EXPORTER_OTLP_ENDPOINT=<OTLP/HTTP endpoint, for example http://localhost:4318>
+       OTEL_EXPORTER_OTLP_HEADERS=<key1=val1,key2=val2, only if the backend needs auth>
+
+   Never hard-code endpoints, API keys or headers. Leave content capture off, which
+   is the default: GENAI_ENABLE_CONTENT_CAPTURE=true records prompts and completions
+   on spans, so only turn it on if I ask for it.
+
+5. Only if I ask for it:
+   - limit what is instrumented: GENAI_ENABLED_INSTRUMENTORS=openai,langgraph
+   - sample traces: GENAI_SAMPLING_RATE=0.5
+
+6. Verify with a real run. Run the smallest path of the application that makes an
+   LLM call, with OTEL_EXPORTER_OTLP_ENDPOINT set to an empty string for that run.
+   Spans are then printed to the console instead of exported. Check that:
+   - there is one span per LLM call, carrying gen_ai.request.model,
+     gen_ai.usage.input_tokens and gen_ai.usage.output_tokens, and
+     gen_ai.usage.cost.total when the model has a known price;
+   - if an agent framework is used, its spans are the parents of the LLM spans, in
+     the same trace.
+   Then restore the real endpoint.
+
+7. Report back: the files you changed, the install line, the environment variables to
+   set, and the span names you saw in step 6. If you could not verify something, say
+   so instead of assuming it works.
+
+Rules
+
+- Make the smallest change that works. Do not refactor unrelated code.
+- Do not add a second LLM tracing library next to this one. If one is already
+  present, or the application already sets up its own OpenTelemetry TracerProvider,
+  stop and ask me how to proceed.
+- If an agent framework ships its own tracing, leave it off unless I ask; running
+  both reports every model request twice.
+- Do not commit secrets, and do not print or log API keys.
+```
+
+</details>
 
 ## Why TraceVerde?
 
@@ -268,6 +352,10 @@ Beyond the spec, `genai_otel` is shipping **inside agent frameworks** as their O
 | Integration | Framework | Contribution | Status |
 |---|---|---|---|
 | [**hermes-otel-plugin**](https://github.com/Mandark-droid/hermes-otel-plugin) | [NousResearch Hermes](https://github.com/NousResearch/hermes-agent) | A standalone `otel` plugin (`hermes plugins install Mandark-droid/hermes-otel-plugin`) exporting Hermes turns / LLM calls / tool calls as OTel GenAI spans **and** dashboard log records, with no changes to Hermes core. When `genai-otel-instrument` is installed it additionally unlocks on-prem **GPU / energy / CO2 metrics**, **local-model cost** (parameter-size pricing for Ollama / HF / vLLM), and an inline **eval / guardrail suite** (PII, toxicity, bias, prompt-injection, restricted-topics, hallucination) scored on prompt **and** response — signals no vanilla OTel SDK or other GenAI instrumentor emits. Originally upstream [PR #48184](https://github.com/NousResearch/hermes-agent/pull/48184) — approved on code review, then republished standalone per Hermes's policy that observability backends ship as standalone plugin repos. | **Shipped** (standalone plugin, MIT) |
+
+## Featured In
+
+- [**Context Engineering - AI ecosystem**](https://bonigarcia.dev/context-engineering/ai-ecosystem.html) - TraceVerde is listed under *Assurance & governance > Observability* in the AI ecosystem catalog that accompanies Boni García's book [*Context Engineering: Build Consistent, Accurate, Predictable AI Systems*](https://www.manning.com/books/context-engineering) (Manning).
 
 ## Who Uses TraceVerde?
 

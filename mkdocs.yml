@@ -73,6 +73,7 @@ nav:
   - Getting Started:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
+    - Instrument with a Coding Agent: getting-started/coding-agents.md
     - Configuration: getting-started/configuration.md
     - Demo App: guides/demo-app.md
   - Guides:

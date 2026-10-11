@@ -39,6 +39,105 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A streamed response is still the SDK's stream.** A measured stream came back as a bare
+  generator, so `with client.chat.completions.create(stream=True) as stream:` and its
+  `async with` form raised `TypeError` in the application. LangChain's `ChatOpenAI.stream()`,
+  LangGraph's `stream_mode="messages"` and Pydantic AI's `run_stream()` all read OpenAI streams
+  that way, so each failed with the OpenAI instrumentor on. The stream handed back is now a
+  transparent proxy: still a context manager, with the SDK's `close()` and `response`, and timed
+  while it is iterated as before. This covers every provider measured through the shared stream
+  wrapper. Around it:
+  - A stream that is closed without being read, or whose consumer is cancelled while waiting
+    for a chunk, ends its span. Both left the span open and the request counted as running.
+  - With trace sampling on, a sampled-out streamed call from an async client no longer raises
+    `AttributeError` on its first chunk.
+  - A stream object that can be read both ways (LiteLLM's) is measured the way it was called.
+- **A sampled-out async call still parents its work.** With `GENAI_SAMPLING_RATE` below 1, a
+  dropped span was ended as soon as the coroutine was built, so what the coroutine did started
+  traces of its own and was sampled separately, leaving partial traces. The request count and
+  latency are now recorded when the call finishes, not when it is created.
+- **Agent budget frames no longer outlive streamed agent runs.** A frame opened for a call whose
+  result is read later (a stream, a generator) was never closed, so the enclosing agent's
+  consumption was read from the wrong frame.
+- **A traced coroutine is current where it runs, not where it was created.** The span of an
+  `async def` call was made current when the coroutine was built and released when it finished.
+  Under `asyncio.run`, `asyncio.gather` or `create_task` those are different contexts, so the
+  release failed (`Failed to detach context`), the caller was left with an ended span as its
+  current span and its later work joined that trace, and the second of two gathered calls nested
+  under the first. The caller's context is now restored at once and the span is current only
+  inside the coroutine. Agent budget frames opened for async calls are closed, and those spans
+  report their consumed budget.
+- **Async OpenAI spans keep request content off when content capture is off.** An
+  `AsyncOpenAI` Responses call recorded `gen_ai.request.instructions` whatever the switch said.
+  Only the response side was stripped; the sync client was unaffected.
+- **Request parameters a caller leaves unset are not recorded on OpenAI spans.** A framework that
+  passes the SDK's `NOT_GIVEN` / `Omit` sentinel for temperature, top-p, max tokens or the
+  penalties produced an "Invalid type" warning per attribute on every call. Pydantic AI does on
+  each request.
+- **Tracing starts on OpenTelemetry SDK 1.27 and older.** The default resource asked for the
+  `host` detector, which those SDKs do not register and reject with `StopIteration`, so
+  `instrument()` installed no tracer provider at all. The default detector list is narrowed to
+  what the installed SDK has. On those SDKs the resource has no `host.name`; a detector list you
+  set yourself is never rewritten.
+- **CrewAI** (checked against 1.15.27 and 1.14.4 with real runs):
+  - CrewAI's built-in telemetry is actually turned off. The instrumentor set
+    `CREWAI_TELEMETRY_OPT_OUT`, which CrewAI does not read, so its telemetry kept running and,
+    on releases before 1.15.15, wrote its own spans into the application's traces. It now sets
+    `CREWAI_DISABLE_TELEMETRY` before CrewAI is imported, and leaves a value you set alone.
+  - `akickoff()` traces its tasks and agents (`Task.aexecute_sync`, `Agent.aexecute_task`).
+  - `kickoff_async()` produces one crew span, not two nested ones.
+  - A task with `async_execution=True` has a span that covers the work and carries its output.
+  - The crew span's own token usage is that kickoff's, not the LLM's lifetime total, and an LLM
+    shared by several agents or by `kickoff_for_each` copies is counted once.
+  - `crewai.output.pydantic` is recorded for structured outputs, and `crewai.output.json` is the
+    JSON rather than a bound-method repr.
+  - A warning is logged when CrewAI's telemetry owns the global tracer provider (CrewAI older
+    than 1.15.15 imported before `instrument()`), because no span is exported in that case.
+- **LangGraph** (checked against 0.1.19, 0.2.76, 0.6.11 and 1.2.14 with real runs):
+  - Every graph is traced, however it was built. Only graphs returned by `StateGraph.compile()`
+    were, so `langchain.agents.create_agent`, any `with_config()` copy, `@entrypoint` graphs and
+    graphs compiled before `instrument()` had no span, and their LLM calls were orphan traces.
+  - `graph.with_config()` no longer raises `TypeError` on an instrumented graph (LangGraph 0.2),
+    and LangGraph 0.1 produces spans at all.
+  - One span per `invoke()` / `ainvoke()`, not a second `langgraph.graph.stream` span nested
+    inside it with a different `session.id`.
+  - A config passed positionally, `graph.invoke(input, config)`, is read: `session.id` is its
+    `thread_id`, and `langgraph.thread_id` and `langgraph.recursion_limit` are recorded.
+  - A stream span starts at the first chunk, is current only while the graph is working, and
+    ends when the stream is exhausted, closed or abandoned. It is parented where the stream was
+    requested.
+  - `uninstrument()` followed by `instrument()` keeps LangGraph traced.
+  - A `langgraph` namespace left behind by `langgraph-checkpoint` or `langgraph-prebuilt` alone
+    is not treated as LangGraph, which used to log an error at every start.
+- **Pydantic AI** (checked against 2.55.0 with real runs):
+  - Unnamed agents are no longer renamed `instance`. Pydantic AI infers a name from its
+    caller's local variables, and the caller was the instrumentation wrapper.
+  - `run_sync()` no longer logs `Failed to detach context`, and concurrent runs keep their own
+    traces.
+  - The `run_stream()` span stays open for the whole `async with` block and reports its errors;
+    it used to end, empty, before the block was entered.
+  - `agent.iter()` is traced, as `pydantic_ai.agent.iter`.
+  - Tool names, output type, output, token usage, response model and finish reason are read
+    from the current API. Each had been renamed, so none was recorded.
+  - On Pydantic AI before 2.0, `pydantic_ai.result.timestamp` is the timestamp. It was the text
+    of a bound method, which embeds the whole result it belongs to. `run_stream_sync()` there
+    has no agent span of its own, because it never leaves its `run_stream()` block.
+- **AutoGen AgentChat** (checked against 0.7.5 with real runs):
+  - `agent.run()`, `agent.run_stream()` and `agent.on_messages()` produce spans. The wrappers
+    sat on a protocol class whose methods every real agent overrides, so no agent span was ever
+    emitted.
+  - `team.run()` produces one team span, not a duplicate `team.run_stream` nested inside it.
+  - Concurrent team runs are separate traces, and closing a stream early closes AutoGen's own
+    generator with it.
+  - `gen_ai.request.model` is recorded on agent spans.
+- **AutoGen (legacy)** (checked against pyautogen 0.2.35 and 0.9, and autogen 0.14.1):
+  - The `autogen` extra installs a package that has the `autogen` module. `pyautogen` 0.10 is
+    an empty proxy for `autogen-agentchat`, so the extra installed nothing the instrumentor
+    could trace while it logged that instrumentation was enabled. The extra now stops below
+    0.10, and a package without the legacy API is skipped.
+  - `autogen.group_chat.run` covers the group chat (`GroupChatManager.run_chat`).
+  - Cost is no longer written on `autogen.initiate_chat` as well as on the LLM span beneath it.
+  - `gen_ai.request.model` is recorded when the agent's `llm_config` is an `LLMConfig` object.
 - **A Sarvam transcription of a file object is priced.** The audio length was read after the SDK
   had uploaded the file, which leaves a file object at its end, so the duration came back empty
   and the call carried no cost. It is read before the call now. Raw bytes and `(name, bytes)`
@@ -68,6 +167,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   1,000x low. Each entry keeps its own stated rate.
 - Sarvam prices were checked on sarvam.ai/api-pricing on 2026-10-08 and converted at INR 95 per
   USD. The superseded per-character STT and TTS rows are removed.
+
+### Documentation
+
+- **A prompt to paste into a coding agent.** The README and a new docs page, *Instrument with a
+  Coding Agent*, carry one self-contained prompt that has an AI coding agent add TraceVerde to an
+  application: where the two lines go, which extras to install, configuration through
+  environment variables, and a console run that proves spans are produced.
+- **The CrewAI, LangGraph, AutoGen and Pydantic AI guides are rewritten from real runs.** Each
+  now has a snippet that was run against the framework version it names, the span names it
+  produces, and what is and is not traced. The LangGraph guide states how the integration hooks
+  in (it wraps `Pregel`; it is not a callback handler).
+- **Examples follow the current APIs.** The Pydantic AI example is rewritten for Pydantic AI 2
+  (`output_type`, `result.output`), which the old one did not run on. The CrewAI, AutoGen and
+  LangGraph examples no longer name a telemetry variable CrewAI does not read, an install line
+  that no longer provides `autogen`, or attributes that are never emitted.
+- **"Featured In" section on the README and the docs home page.** Links the AI ecosystem catalog
+  that accompanies Boni García's book *Context Engineering* (Manning), where TraceVerde is listed
+  under Observability.
 
 ## [1.34.0] - 2026-10-04
 
