@@ -169,7 +169,7 @@ def _register(
 
 def build_composite(schema_dir: str = DEFAULT_SCHEMA_DIR) -> FastMCP:
     """Build the parent composite server with all domains mounted under a namespace."""
-    parent: FastMCP = FastMCP(name="swiggy-composite")
+    parent: FastMCP = FastMCP(name="commerce-composite")
     names: List[str] = sorted(n for n in os.listdir(schema_dir) if n.endswith(".json"))
     for name in names:
         schema = load_schema(os.path.join(schema_dir, name))

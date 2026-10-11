@@ -4,7 +4,7 @@ Tool metadata - journey stage, behaviour, idempotency, capabilities - is looked
 up from a supplied schema map rather than hardcoded, so a different tool surface
 only needs different JSON.
 
-Schema shape (as produced by the Swiggy schema sync)::
+Schema shape::
 
     {
       "server": "food",
@@ -16,7 +16,7 @@ Schema shape (as produced by the Swiggy schema sync)::
           "details": {
             "**Name**": "apply_food_coupon",
             "**MCP Server**": "[Food](/docs/reference/food.md)",
-            "**Endpoint**": "POST mcp.swiggy.com/food",
+            "**Endpoint**": "POST mcp.example.com/food",
             "**Stage**": "Cart",
             "**Behaviour**": "mutating"
           }

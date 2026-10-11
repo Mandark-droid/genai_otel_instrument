@@ -21,7 +21,7 @@ Typical use::
         mcp_session,
     )
 
-    registry = MCPToolRegistry.from_directory("docs/demos/swiggy-mcp-schemas")
+    registry = MCPToolRegistry.from_directory("path/to/mcp-schemas")
     registry.mark_placement(["book_table"])          # stage Reserve, but a placement
 
     instrumentor = MCPClientInstrumentor(registry=registry)

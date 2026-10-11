@@ -1,6 +1,6 @@
 """Shared fixtures for MCP semantic-convention tests.
 
-The tool surface used here mirrors the real three-server Swiggy schema map:
+The tool surface used here is a three-server commerce schema map:
 14 food + 8 dineout + 13 instamart = 35 tools, with the properties that matter
 for the tests - duplicate tool names across servers (``get_addresses``,
 ``report_error``), a tool whose name would be mangled by a naive prefix split
