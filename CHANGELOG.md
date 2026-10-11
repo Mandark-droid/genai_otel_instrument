@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `OTEL_RESOURCE_ATTRIBUTES` as before.
   - `host.name`, `host.arch`, `os.*` and `service.instance.id` are unchanged, so traffic is still
     separated by machine and instance.
+- **Agent framework runs that had no span now have one, with its content previews.** The CrewAI,
+  LangGraph, Pydantic AI and AutoGen fixes below make spans appear for runs that were silently
+  untraced. As in earlier releases, framework spans carry short previews of the prompt, input and
+  output (`crewai.output`, `langgraph.input.*`, `pydantic_ai.user_prompt`,
+  `autogen_agentchat.task` and similar; 200 characters by default, `GENAI_CONTENT_MAX_LENGTH`)
+  whether or not content capture is on, so the new spans carry them too. The two attributes this
+  release adds for the model's answer, `pydantic_ai.result.data` on current Pydantic AI and
+  `crewai.output.pydantic`, are recorded only with content capture on.
 
 ### Added
 
