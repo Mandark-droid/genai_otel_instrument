@@ -250,7 +250,7 @@ reason the GenAI token attributes are dual-emitted, and removed at 2.0:
 | `gen_ai.server.time_to_first_token` | Histogram | seconds | TTFT, recorded on streamed calls only |
 | `gen_ai.server.time_per_output_token` | Histogram | seconds | TPOT, recorded when the output-token count is known |
 | `gen_ai.server.ttft` | Histogram | seconds | Superseded spelling of TTFT |
-| `gen_ai.server.tbt` | Histogram | seconds | Time between consecutive streamed chunks |
+| `gen_ai.server.tbt` | Histogram | seconds | Time between streamed chunks: one sample per stream, its mean gap. With `GENAI_METRICS_PROFILE=full`, one sample per gap |
 
 ### GPU Metrics
 
@@ -259,6 +259,23 @@ See [GPU Metrics Guide](../guides/gpu-metrics.md) for the complete list.
 ### Evaluation Metrics
 
 See [Evaluation Guide](../guides/evaluation.md) for detector-specific metrics.
+
+### Evaluation Runtime Attributes
+
+Written on a span by the evaluation runtime, whichever detectors are enabled.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `evaluation.completed` | boolean | The detectors ran for this span |
+| `evaluation.skipped` | string | Why they did not: `overloaded` (the queue was full) or `shutdown` (the process was exiting) |
+| `evaluation.truncated` | boolean | Detectors read only part of the prompt or response |
+| `evaluation.prompt.length` | int | Characters in the prompt, when it was cut |
+| `evaluation.prompt.analyzed_length` | int | Characters of it the detectors read |
+| `evaluation.response.length` | int | Characters in the response, when it was cut |
+| `evaluation.response.analyzed_length` | int | Characters of it the detectors read |
+| `evaluation.pii.prompt.pattern_analyzed_length` | int | Characters the PII patterns covered |
+| `evaluation.pii.prompt.model_analyzed_length` | int | Characters the PII entity model read |
+| `evaluation.<detector>.prompt.analyzed_length` | int | Characters read by `prompt_injection`, `restricted_topics` or `bias` when it has a block policy: the whole prompt |
 
 ### Multimodal Content-Part Attributes (v1.0.0)
 

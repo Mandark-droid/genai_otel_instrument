@@ -86,6 +86,12 @@ class HyperbolicInstrumentor(BaseInstrumentor):
                     if self.request_counter:
                         self.request_counter.add(1, {"model": model, "provider": "hyperbolic"})
 
+                    # Block policies apply here as they do through the shared
+                    # span wrapper. This path builds its own span and ran none,
+                    # so a request the policy should have stopped was sent anyway.
+                    request_kwargs = request_data if isinstance(request_data, dict) else {}
+                    self._apply_block_policies(span, request_kwargs)
+
                     try:
                         # Make the actual API call
                         response = wrapped(*args, **kwargs)
@@ -112,6 +118,8 @@ class HyperbolicInstrumentor(BaseInstrumentor):
                         if response.status_code == 200:
                             response_data = response.json()
                             self._extract_and_record_response(span, response_data)
+                            # Detectors, before the span ends.
+                            self._apply_detectors(span, args, request_kwargs, response_data)
                         else:
                             span.set_attribute("error", True)
                             span.set_attribute("http.status_code", response.status_code)

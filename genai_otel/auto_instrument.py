@@ -22,7 +22,7 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
-from .config import OTelConfig
+from .config import EVALUATION_MODE_INLINE, OTelConfig
 from .cost_calculator import CostCalculator
 from .cost_enrichment_processor import CostEnrichmentSpanProcessor
 from .cost_enriching_exporter import CostEnrichingSpanExporter
@@ -310,6 +310,119 @@ def _setup_meter_provider(resource, metric_reader):
     return meter_provider
 
 
+def _evaluation_configs(config: OTelConfig) -> dict:
+    """The detector configurations for the evaluation span processor, by keyword.
+
+    One per enabled detector, built from ``config`` alone, so that what was
+    passed to ``instrument()`` is honoured and not only what the environment says.
+    """
+    cache_size = config.evaluation_cache_size
+    configs = {}
+    if config.enable_pii_detection:
+        configs["pii_config"] = PIIConfig(
+            enabled=True,
+            mode=PIIMode(config.pii_mode),
+            threshold=config.pii_threshold,
+            gdpr_mode=config.pii_gdpr_mode,
+            hipaa_mode=config.pii_hipaa_mode,
+            pci_dss_mode=config.pii_pci_dss_mode,
+            custom_patterns=config.pii_custom_patterns,
+            # Plumb hardening settings so programmatic OTelConfig overrides
+            # (not just env vars) are honored.
+            air_gapped=config.air_gapped,
+            content_max_length=config.content_max_length,
+            cache_size=cache_size,
+        )
+    if config.enable_toxicity_detection:
+        configs["toxicity_config"] = ToxicityConfig(
+            enabled=True,
+            threshold=config.toxicity_threshold,
+            use_perspective_api=config.toxicity_use_perspective_api,
+            perspective_api_key=config.toxicity_perspective_api_key,
+            block_on_detection=config.toxicity_block_on_detection,
+            # Plumb third-party egress / air-gap controls from OTelConfig so
+            # programmatic overrides (not just env vars) are honored.
+            allow_external_egress=config.allow_external_egress,
+            air_gapped=config.air_gapped,
+            quantize=config.toxicity_quantize,
+            torch_threads=config.toxicity_torch_threads,
+            cache_size=cache_size,
+        )
+    if config.enable_bias_detection:
+        configs["bias_config"] = BiasConfig(
+            enabled=True,
+            threshold=config.bias_threshold,
+            block_on_detection=config.bias_block_on_detection,
+            cache_size=cache_size,
+        )
+    if config.enable_prompt_injection_detection:
+        configs["prompt_injection_config"] = PromptInjectionConfig(
+            enabled=True,
+            threshold=config.prompt_injection_threshold,
+            block_on_detection=config.prompt_injection_block_on_detection,
+            cache_size=cache_size,
+        )
+    if config.enable_restricted_topics:
+        configs["restricted_topics_config"] = RestrictedTopicsConfig(
+            enabled=True,
+            threshold=config.restricted_topics_threshold,
+            block_on_detection=config.restricted_topics_block_on_detection,
+            cache_size=cache_size,
+        )
+    if config.enable_hallucination_detection:
+        configs["hallucination_config"] = HallucinationConfig(
+            enabled=True,
+            threshold=config.hallucination_threshold,
+            cache_size=cache_size,
+        )
+    return configs
+
+
+def _any_detector_enabled(config: OTelConfig) -> bool:
+    return any(
+        [
+            config.enable_pii_detection,
+            config.enable_toxicity_detection,
+            config.enable_bias_detection,
+            config.enable_prompt_injection_detection,
+            config.enable_restricted_topics,
+            config.enable_hallucination_detection,
+        ]
+    )
+
+
+def _evaluate_inline_under_another_provider(config: OTelConfig) -> None:
+    """Run the detectors inline when the tracer provider in use is not this library's.
+
+    OpenTelemetry keeps the first tracer provider that is set. One that the
+    application installed before ``instrument()`` therefore stays in use, and
+    the one created here never sees a span.
+
+    In the background mode a span is ended by a worker thread once its
+    detectors are done, some time after the call returned. It is exported only
+    if whatever flushes or shuts the provider down waits for it first. This
+    library sees to that for a provider it owns: its span processor is on it
+    and its exit hook runs before the provider's. The application's own
+    ``force_flush()`` and ``shutdown()`` know nothing of the spans still with
+    their detectors, and those spans were lost. Inline, a span has ended by the
+    time its call returns, as in every release before the background mode.
+
+    Decided once, here, so that every call does the same thing.
+    """
+    if config.evaluation_mode == EVALUATION_MODE_INLINE or not _any_detector_enabled(config):
+        return
+    config.evaluation_mode = EVALUATION_MODE_INLINE
+    logger.warning(
+        "A tracer provider was already installed when genai_otel.instrument() was called, "
+        "so the evaluation detectors will run inline, on the thread that makes each call "
+        "(as with GENAI_EVALUATION_MODE=inline). In the background mode a span is exported "
+        "by a worker thread when its detectors are done, and a provider this library did "
+        "not create does not wait for those spans when it is flushed or shut down. To run "
+        "the detectors in the background, let genai_otel.instrument() create the tracer "
+        "provider: call it before anything else sets one."
+    )
+
+
 def setup_auto_instrumentation(config: OTelConfig):
     """
     Set up OpenTelemetry with auto-instrumentation for LLM frameworks and MCP tools.
@@ -359,6 +472,19 @@ def setup_auto_instrumentation(config: OTelConfig):
     tracer_provider = TracerProvider(resource=resource, sampler=sampler)
     _active_tracer_provider = tracer_provider
     trace.set_tracer_provider(tracer_provider)
+    if trace.get_tracer_provider() is not tracer_provider:
+        _evaluate_inline_under_another_provider(config)
+
+    # Spans whose detectors run after the call are ended by a worker thread. At
+    # exit they have to end before this provider shuts down, or they are
+    # dropped. Exit hooks run last-registered first and the provider registered
+    # its own a moment ago, so this one is registered now.
+    try:
+        from .instrumentors import base as _base
+
+        _base.register_evaluation_exit_hook()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Failed to register the evaluation exit hook: %s", e, exc_info=True)
     from opentelemetry.propagate import set_global_textmap
     from opentelemetry.trace.propagation.tracecontext import (
         TraceContextTextMapPropagator,
@@ -434,96 +560,13 @@ def setup_auto_instrumentation(config: OTelConfig):
     # Add evaluation and safety span processor (v0.2.0)
     # Store the evaluation processor so we can wrap it in the exporter chain
     evaluation_processor = None
-    if any(
-        [
-            config.enable_pii_detection,
-            config.enable_toxicity_detection,
-            config.enable_bias_detection,
-            config.enable_prompt_injection_detection,
-            config.enable_restricted_topics,
-            config.enable_hallucination_detection,
-        ]
-    ):
+    if _any_detector_enabled(config):
         try:
-            # Build PII config from OTelConfig
-            pii_config = None
-            if config.enable_pii_detection:
-                pii_config = PIIConfig(
-                    enabled=True,
-                    mode=PIIMode(config.pii_mode),
-                    threshold=config.pii_threshold,
-                    gdpr_mode=config.pii_gdpr_mode,
-                    hipaa_mode=config.pii_hipaa_mode,
-                    pci_dss_mode=config.pii_pci_dss_mode,
-                    custom_patterns=config.pii_custom_patterns,
-                    # Plumb hardening settings so programmatic OTelConfig overrides
-                    # (not just env vars) are honored.
-                    air_gapped=config.air_gapped,
-                    content_max_length=config.content_max_length,
-                )
-
-            # Build Toxicity config
-            toxicity_config = None
-            if config.enable_toxicity_detection:
-                toxicity_config = ToxicityConfig(
-                    enabled=True,
-                    threshold=config.toxicity_threshold,
-                    use_perspective_api=config.toxicity_use_perspective_api,
-                    perspective_api_key=config.toxicity_perspective_api_key,
-                    block_on_detection=config.toxicity_block_on_detection,
-                    # Plumb third-party egress / air-gap controls from OTelConfig so
-                    # programmatic overrides (not just env vars) are honored.
-                    allow_external_egress=config.allow_external_egress,
-                    air_gapped=config.air_gapped,
-                )
-
-            # Build Bias config
-            bias_config = None
-            if config.enable_bias_detection:
-                bias_config = BiasConfig(
-                    enabled=True,
-                    threshold=config.bias_threshold,
-                    block_on_detection=config.bias_block_on_detection,
-                )
-
-            # Build Prompt Injection config
-            prompt_injection_config = None
-            if config.enable_prompt_injection_detection:
-                prompt_injection_config = PromptInjectionConfig(
-                    enabled=True,
-                    threshold=config.prompt_injection_threshold,
-                    block_on_detection=config.prompt_injection_block_on_detection,
-                )
-
-            # Build Restricted Topics config
-            restricted_topics_config = None
-            if config.enable_restricted_topics:
-                restricted_topics_config = RestrictedTopicsConfig(
-                    enabled=True,
-                    threshold=config.restricted_topics_threshold,
-                    block_on_detection=config.restricted_topics_block_on_detection,
-                )
-
-            # Build Hallucination config
-            hallucination_config = None
-            if config.enable_hallucination_detection:
-                hallucination_config = HallucinationConfig(
-                    enabled=True,
-                    threshold=config.hallucination_threshold,
-                )
-
             # Create and add evaluation processor (lazy import to avoid loading
             # heavy ML dependencies like spacy/torch at package import time)
             from .evaluation.span_processor import EvaluationSpanProcessor
 
-            evaluation_processor = EvaluationSpanProcessor(
-                pii_config=pii_config,
-                toxicity_config=toxicity_config,
-                bias_config=bias_config,
-                prompt_injection_config=prompt_injection_config,
-                restricted_topics_config=restricted_topics_config,
-                hallucination_config=hallucination_config,
-            )
+            evaluation_processor = EvaluationSpanProcessor(**_evaluation_configs(config))
             tracer_provider.add_span_processor(evaluation_processor)
             logger.info("Evaluation and safety span processor added")
         except Exception as e:
@@ -804,7 +847,26 @@ def flush_telemetry(timeout_seconds: float = 5.0) -> bool:
 
     Exposed publicly so an application that already owns its shutdown path can
     drain telemetry itself instead of enabling the SIGTERM handler.
+
+    Spans still waiting for their evaluation detectors are waited for first, for
+    up to the same timeout: they are not exported until the detectors are done.
+    That is the spans of calls that have returned by now. Calls that other
+    threads make while this waits are not waited for.
     """
+    ok = True
+    try:
+        from .instrumentors import base as _base
+
+        if _base.wait_for_pending_evaluations(timeout_seconds) is False:
+            ok = False
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Waiting for pending evaluations failed: %s", e)
+        ok = False
+    return _flush_providers(timeout_seconds) and ok
+
+
+def _flush_providers(timeout_seconds: float) -> bool:
+    """Force-flush the active providers as they are. True if everything flushed."""
     timeout_ms = max(1, int(timeout_seconds * 1000))
     ok = True
     for provider in (_active_tracer_provider, _active_meter_provider):
@@ -861,8 +923,33 @@ def _install_sigterm_flush_handler(config: OTelConfig) -> bool:
         return False
 
     def _on_sigterm(signum, frame):
+        finished = False
         try:
-            flushed = flush_telemetry(config.sigterm_flush_timeout)
+            # No exit hook runs for a process killed by a signal. Spans still
+            # waiting for their detectors are given the same grace period and
+            # then exported unevaluated, so that the flush below has them.
+            #
+            # Not on this thread. A handler runs on the main thread, between
+            # two of its instructions; if it was handing a span to the
+            # evaluation queue just then it holds the queue's lock, and
+            # finishing here would be the thread waiting for itself.
+            from .instrumentors import base as _base
+
+            finished = _base.finish_pending_evaluations_in_signal_handler(
+                config.sigterm_flush_timeout
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Finishing pending evaluations at SIGTERM failed: %s", e)
+
+        try:
+            if finished:
+                flushed = flush_telemetry(config.sigterm_flush_timeout)
+            else:
+                # The detectors needed longer than there was, or the queue
+                # could not be got to. Waiting on it again would not help:
+                # what has ended is exported as it is.
+                _flush_providers(config.sigterm_flush_timeout)
+                flushed = False
             logger.info(
                 "SIGTERM received, telemetry flush %s", "complete" if flushed else "partial"
             )
@@ -931,6 +1018,16 @@ def uninstrument():
         except Exception as e:
             logger.debug("Error stopping GPU collector: %s", e)
         _active_gpu_collector = None
+
+    # Spans still waiting for their evaluation detectors end on a worker
+    # thread. Let them, for the configured grace period, and export the rest
+    # unevaluated: a span that ends after its provider has shut down is dropped.
+    try:
+        from .instrumentors import base as _base
+
+        _base.finish_pending_evaluations()
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Error finishing pending evaluations: %s", e)
 
     # Shut down TracerProvider (flushes pending spans)
     if _active_tracer_provider is not None:

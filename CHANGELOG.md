@@ -6,6 +6,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Settings for how the evaluation detectors run.** Each is an environment variable and an
+  `instrument()` argument of the same name in lower case.
+  - `GENAI_EVALUATION_MODE` (`background`): where the detectors that annotate a span run.
+  - `GENAI_EVALUATION_MAX_CHARS` (`1500`): how much text they analyse. `0` is no limit.
+  - `GENAI_TOXICITY_MAX_CHARS` (`500`): the same for the local toxicity model. `0` follows the
+    general limit.
+  - `GENAI_EVALUATION_QUEUE_SIZE` (`1000`), `GENAI_EVALUATION_SHUTDOWN_TIMEOUT` (`5.0`) and
+    `GENAI_EVALUATION_CACHE_SIZE` (`256`).
+  - `GENAI_TOXICITY_QUANTIZE` (`false`): run the local toxicity model with 8-bit weights. It is
+    faster, and scores shift enough to change some verdicts, so it is off by default.
+  - `GENAI_TOXICITY_TORCH_THREADS` (unset): torch's thread count. It is process-wide.
+- **Span attributes that say what the detectors read.** `evaluation.truncated`,
+  `evaluation.prompt.length`, `evaluation.prompt.analyzed_length`, the same pair for
+  `response`, `evaluation.pii.prompt.model_analyzed_length`,
+  `evaluation.pii.prompt.pattern_analyzed_length`, `evaluation.<detector>.prompt.analyzed_length`
+  and `evaluation.skipped` (`overloaded` or `shutdown`).
+
+### Changed
+
+- **Detectors that annotate a span run after the call has returned.** They ran on the calling
+  thread, so every call waited for them. Now the span is handed to a worker thread, which runs
+  the detectors, writes the `evaluation.*` attributes and ends the span as of the moment the
+  call returned: its duration is the call's. A block policy is still checked before the request
+  is sent.
+  - `evaluation.*` attributes are on the span when it is exported, not when the call returns.
+    `genai_otel.flush_telemetry()` and the provider's `force_flush()` wait for them.
+  - `GENAI_EVALUATION_MODE=inline` restores the previous behaviour. Mistral, Hyperbolic,
+    HuggingFace pipelines and Pydantic AI always evaluate inline, and so does every call when the
+    application installed its own tracer provider before `instrument()`, with one warning.
+  - At most `GENAI_EVALUATION_QUEUE_SIZE` spans wait. Past that a span is exported at once,
+    marked `evaluation.skipped="overloaded"`. Tracing is never held back by detectors.
+  - At exit and on `uninstrument()` pending evaluations get `GENAI_EVALUATION_SHUTDOWN_TIMEOUT`
+    seconds; what is left is exported marked `evaluation.skipped="shutdown"`.
+- **Detectors analyse a limited part of long text**, and the span says so. They read the last
+  `GENAI_EVALUATION_MAX_CHARS` characters of a prompt, the newest content of a conversation, and
+  the first of a response. The local toxicity model reads the last `GENAI_TOXICITY_MAX_CHARS`.
+  What stays unlimited:
+  - PII patterns (card numbers, e-mail addresses, national identifiers, custom patterns) cover
+    the whole prompt. Names and locations, which need the entity model, are looked for in the
+    analysed part only.
+  - A block policy on prompt injection, restricted topics or bias reads the whole prompt, so
+    padding cannot hide text from it.
+  - PII in `redact` mode reads everything: a redacted copy is only built from text that was
+    analysed.
+  - Under `GENAI_PROFILE=strict` (`bfsi`, `bank`) both limits default to `0`, no limit, unless
+    set explicitly.
+  With a block policy on PII or toxicity and the default limits, text outside the analysed part
+  is not checked for names, locations or toxicity. Set both limits to `0` where every character
+  must be checked.
+- **With no limit, toxicity is scored over the whole text.** The local model reads a fixed
+  window, and given a longer text it read only the start, the oldest part of a conversation. A
+  longer text is now scored in pieces and the highest score per category is reported.
+- **With a block policy a prompt is analysed once per call**, not before the request and again
+  after it. Each detector keeps its recent results, keyed by a digest of the text.
+- **`gen_ai.server.tbt` records one sample per stream**, the mean time between chunks, instead of
+  one per chunk. `GENAI_METRICS_PROFILE=full` keeps a sample per chunk. Span attributes are
+  unchanged.
+- **PII detection no longer runs spaCy's dependency parser.** Nothing used its output; findings
+  are unchanged.
+
+### Fixed
+
+- **Evaluation detectors and block policies apply on the generation paths that skipped them.** They were run
+  only by the shared span wrapper. A path that builds its own span carried no `evaluation.*`
+  attributes, and a block policy (`GENAI_PII_MODE=block`, `block_on_detection`) let the request
+  through. Now covered:
+  - `AsyncOpenAI`, chat completions and responses.
+  - The OpenAI Responses API on both clients. Its prompt is `input` / `instructions`, which the
+    detectors did not read, so those calls were neither evaluated nor blocked.
+  - Azure OpenAI, Groq, Mistral (`chat.complete` and `chat.stream`), Hyperbolic, and the opt-in
+    LiteLLM latency wrapper (sync and async).
+  - AWS Bedrock `invoke_model` and `invoke_model_with_response_stream`. Their prompt sits in a
+    JSON body whose shape depends on the model family, which the detectors did not read, so
+    these calls were neither evaluated nor blocked. Claude, Nova, Titan Text, Llama, Mistral and
+    Cohere bodies are read now. `converse` and `converse_stream` include the `system` prompt,
+    which was skipped, and checks on the answer read it from the result, so they no longer
+    depend on content capture being on.
+  - Streamed requests that are checked before they are sent: Anthropic `messages.stream()`,
+    Bedrock `converse_stream`, llama.cpp streaming and vLLM async generation.
+
+  A blocked request raises `PolicyViolationError` before anything is sent, its span ends with
+  error status and `evaluation.blocked`, and whether it is blocked does not depend on trace
+  sampling. On async clients the detectors run on a worker thread, so a detector working through
+  a long prompt does not hold the event loop. With no detector configured these paths do no extra
+  work. `input` on an embeddings call is still not treated as a prompt.
+
+  Not covered yet: a prompt passed positionally (LiteLLM, llama.cpp), and providers whose
+  prompt is not `messages`, `prompt` or the Responses `input`: Google Gemini and Vertex AI
+  (`contents`), Cohere chat (`message`) and Replicate (`input`). A block policy does not stop
+  those requests.
+- **Enabling only pattern-based detectors no longer loads torch.** The toxicity module
+  imported it whether or not toxicity detection was on.
+- **The evaluation code no longer writes prompt text to the log.** The PII and bias passes
+  logged the first characters of every prompt at INFO.
+- **A call whose span is sampled out no longer raises** in the Groq, Azure OpenAI, Mistral
+  and LiteLLM wrappers. The provider's answer is returned and the call is still counted.
+- **A sampled-out `AsyncOpenAI` call no longer raises.** With `GENAI_SAMPLING_RATE` below 1, a
+  call whose span the sampler dropped raised `AttributeError: 'NonRecordingSpan' object has no
+  attribute 'name'` out of the awaited call, after the provider had answered. The async client
+  now has the same fast path the sync client has: the call is made, counted, and still subject
+  to block policies.
+
 ### Documentation
 
 - **A Benchmarks section on the docs site.** It gives the overhead of a real OpenAI SDK call

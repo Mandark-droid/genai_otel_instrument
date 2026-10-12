@@ -8,15 +8,21 @@ and handling configuration and cost calculation.
 """
 
 import ast
+import asyncio
+import atexit
+import collections
 import contextvars
+import functools
 import inspect
 import json
 import logging
+import os
 import re
 import threading
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple
 from urllib.parse import urlparse
 
 import wrapt
@@ -32,7 +38,14 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Status, StatusCode
 
 from .. import agent_budget
-from ..config import OTelConfig
+from ..config import (
+    DEFAULT_EVALUATION_MAX_CHARS,
+    DEFAULT_EVALUATION_QUEUE_SIZE,
+    DEFAULT_EVALUATION_SHUTDOWN_TIMEOUT,
+    DEFAULT_TOXICITY_MAX_CHARS,
+    EVALUATION_MODE_INLINE,
+    OTelConfig,
+)
 from ..cost_calculator import CostCalculator
 from ..exceptions import PolicyViolationError
 from ..semconv import SemanticConvention as SC
@@ -153,6 +166,600 @@ def content_capture_on(config: Optional["OTelConfig"]) -> bool:
     :func:`strip_content_attributes`.
     """
     return config is None or bool(getattr(config, "enable_content_capture", False))
+
+
+# Worker threads for detectors run on behalf of async callers. A pool of its own
+# rather than the event loop's default executor: applications use that one, and so
+# does name resolution, and a queue of detector runs must not hold them up.
+_EVALUATION_EXECUTOR: Optional[ThreadPoolExecutor] = None
+_EVALUATION_EXECUTOR_LOCK = threading.Lock()
+_EVALUATION_WORKERS = 4
+
+
+def _evaluation_executor() -> ThreadPoolExecutor:
+    """The detector worker pool, created the first time a detector needs it."""
+    global _EVALUATION_EXECUTOR
+    if _EVALUATION_EXECUTOR is None:
+        with _EVALUATION_EXECUTOR_LOCK:
+            if _EVALUATION_EXECUTOR is None:
+                _EVALUATION_EXECUTOR = ThreadPoolExecutor(
+                    max_workers=min(_EVALUATION_WORKERS, os.cpu_count() or 1),
+                    thread_name_prefix="genai-otel-eval",
+                )
+    return _EVALUATION_EXECUTOR
+
+
+async def _off_the_event_loop(function, *args):
+    """Run ``function`` on a detector worker thread and wait for it.
+
+    A detector is CPU work: tens to hundreds of milliseconds on a long prompt.
+    Run inside a coroutine it would stall every other task on the loop for that
+    long. The caller's context goes with it, so the span stays current there.
+    """
+    loop = asyncio.get_running_loop()
+    context = contextvars.copy_context()
+    return await loop.run_in_executor(
+        _evaluation_executor(), functools.partial(context.run, function, *args)
+    )
+
+
+# ---------------------------------------------------------------------------
+# Detectors after the call, off the caller's thread.
+#
+# The detectors that annotate a span do not change what the caller gets back,
+# so the caller has no reason to wait for them. A wrapper that has finished a
+# call hands the still-open span to the queue below and returns. A worker runs
+# the detectors, writes their attributes and ends the span, with the end time
+# taken when the call returned: the span measures the call, and every span
+# processor and exporter sees it complete, as when the detectors ran inline.
+#
+# Threads of its own rather than the executor above. An executor finishes
+# everything queued on it before the interpreter runs a single exit hook, with
+# no way to say "enough", and refuses new work once the main thread has
+# returned. Here the wait at exit is bounded and whatever is left is exported
+# unevaluated instead of being lost.
+# ---------------------------------------------------------------------------
+
+# Seconds between two "detectors are not keeping up" log lines.
+_OVERLOAD_LOG_INTERVAL = 60.0
+
+# Threads that run detectors in the background. Few, on purpose. The Python
+# parts of a detector hold the interpreter lock, so each thread busy with one is
+# another thread the application's own threads have to take turns with, and the
+# pattern-based detectors, which are Python throughout, gain nothing from more.
+_BACKGROUND_EVALUATION_WORKERS = 2
+
+
+def _background_worker_count() -> int:
+    """How many threads may run detectors in the background at once."""
+    return min(_BACKGROUND_EVALUATION_WORKERS, os.cpu_count() or 1)
+
+
+class _SpanUnderEvaluation:
+    """A span whose call has returned and whose detectors have not finished.
+
+    The detector pass writes its attributes through this object rather than
+    straight to the span. That is what lets the span be ended from elsewhere,
+    at shutdown, while a detector is still inside it: the pass goes quiet
+    instead of writing to a span that has already been exported.
+
+    ``prompt`` and ``response`` are what the detectors will read and no more;
+    the lengths are those of the texts they were taken from. See
+    :meth:`BaseInstrumentor._texts_to_keep`.
+    """
+
+    __slots__ = (
+        "instrumentor",
+        "span",
+        "prompt",
+        "response",
+        "prompt_length",
+        "response_length",
+        "end_time",
+        "sequence",
+        "_lock",
+        "_ended",
+    )
+
+    def __init__(
+        self,
+        instrumentor,
+        span,
+        prompt,
+        response,
+        end_time: int,
+        prompt_length: Optional[int] = None,
+        response_length: Optional[int] = None,
+    ):
+        self.instrumentor = instrumentor
+        self.span = span
+        self.prompt = prompt
+        self.response = response
+        self.prompt_length = prompt_length
+        self.response_length = response_length
+        self.end_time = end_time
+        # Its place in the order spans were queued in; set by the queue.
+        self.sequence = 0
+        self._lock = threading.Lock()
+        self._ended = False
+
+    def set_attribute(self, key: str, value: Any) -> None:
+        with self._lock:
+            if not self._ended:
+                self.span.set_attribute(key, value)
+
+    def end(self, skipped: Optional[str] = None) -> bool:
+        """End the span as of the moment its call returned.
+
+        ``skipped`` says why it ends unevaluated. Returns False when the span
+        had been ended already, so that it is exported exactly once whoever
+        gets here first.
+        """
+        with self._lock:
+            if self._ended:
+                return False
+            self._ended = True
+        try:
+            if skipped:
+                self.span.set_attribute("evaluation.skipped", skipped)
+        finally:
+            self.span.end(end_time=self.end_time)
+        return True
+
+    def evaluate(self) -> None:
+        """Run the detectors, then end the span. Never raises."""
+        token = None
+        try:
+            # Current here as it is when detectors run inline, so that anything
+            # a detector logs or traces is attributed to this call.
+            token = otel_context.attach(trace.set_span_in_context(self.span))
+            self.instrumentor._evaluate_texts(
+                self, self.prompt, self.response, self.prompt_length, self.response_length
+            )
+        except Exception as e:  # noqa: BLE001 - the span must end whatever a detector does
+            logger.warning(
+                "Failed to run evaluation checks for span '%s': %s",
+                getattr(self.span, "name", "?"),
+                e,
+            )
+        finally:
+            try:
+                if token is not None:
+                    otel_context.detach(token)
+            finally:
+                self.end()
+
+
+class _SpanForDetectors:
+    """A span as the detectors see it while an async caller waits for them.
+
+    The caller awaits a worker thread. Cancelled, the caller stops waiting and
+    the thread does not stop working: what it went on to write landed on a span
+    the caller had ended by then. Told to :meth:`stop`, the detectors' writes go
+    nowhere instead.
+    """
+
+    __slots__ = ("_span", "_lock", "_stopped")
+
+    def __init__(self, span):
+        self._span = span
+        self._lock = threading.Lock()
+        self._stopped = False
+
+    @property
+    def attributes(self):
+        return self._span.attributes
+
+    @property
+    def name(self):
+        return getattr(self._span, "name", "?")
+
+    def is_recording(self) -> bool:
+        return self._span.is_recording()
+
+    def set_attribute(self, key: str, value: Any) -> None:
+        with self._lock:
+            if not self._stopped:
+                self._span.set_attribute(key, value)
+
+    def stop(self) -> None:
+        with self._lock:
+            self._stopped = True
+
+
+# Shortest time a detector that is in the middle of a text is given to finish it
+# when the queue is being emptied, however short the configured timeout. At
+# interpreter exit a thread left inside a detector's native code is not
+# interrupted: the exit hook of the library it is in aborts the process. One
+# pass over one text is bounded by the limit on analysed text and takes a small
+# fraction of this on any machine, so the floor costs nothing when all is well
+# and is the difference between an exit and a crash when a pass is under way.
+_IN_FLIGHT_GRACE = 2.0
+
+# How long a signal handler waits to see whether the queue can be reached at
+# all before concluding that the thread it interrupted is the one holding it.
+_QUEUE_REACHABLE_WITHIN = 0.25
+
+# The part of a signal handler's timeout that each of its two waits for the
+# detectors gets. A little under half, so that both are over before the
+# handler stops waiting for them.
+_SIGNAL_SHARE = 0.45
+
+
+def _waitable(seconds: Any) -> float:
+    """``seconds`` as a wait a thread can be asked for: 0 up to the platform's limit.
+
+    A wait of infinity raises instead of waiting, and one that is not a number
+    or is negative has no meaning; both used to leave spans that were never
+    ended. Not-a-number and negative become 0.
+    """
+    try:
+        seconds = float(seconds)
+    except (TypeError, ValueError):
+        return 0.0
+    if not seconds > 0:  # also true of not-a-number
+        return 0.0
+    return min(seconds, threading.TIMEOUT_MAX)
+
+
+class _EvaluationQueue:
+    """Spans waiting for their detectors, and the threads that run them."""
+
+    def __init__(self):
+        self._reset()
+
+    def _reset(self) -> None:
+        self._lock = threading.Lock()
+        self._work = threading.Condition(self._lock)
+        self._idle = threading.Condition(self._lock)
+        self._waiting: Deque[_SpanUnderEvaluation] = collections.deque()
+        self._running: Set[_SpanUnderEvaluation] = set()
+        # Spans ended from under a detector that did not come back. Nothing
+        # waits for them any more, and their threads are not counted as workers.
+        self._abandoned: Set[_SpanUnderEvaluation] = set()
+        self._workers = 0
+        self._free_workers = 0
+        self._overloaded = 0
+        self._overload_logged_at: Optional[float] = None
+        self._exit_hook_registered = False
+        # How many spans have been queued so far. Each takes the count as its
+        # sequence number, which is how a wait can be for "everything queued up
+        # to now" on a queue that never stops being added to.
+        self.submitted = 0
+        self.shutdown_timeout = DEFAULT_EVALUATION_SHUTDOWN_TIMEOUT
+
+    def has_room(self, limit: int) -> bool:
+        """Whether another span may be queued. A hint: :meth:`submit` decides.
+
+        ``limit`` spans may wait on top of the ones the workers can be running.
+        Counted that way, a span queued a moment before a free worker picks it
+        up does not take a place in the line.
+        """
+        return len(self._waiting) + len(self._running) < limit + _background_worker_count()
+
+    def submit(self, pending: _SpanUnderEvaluation, limit: int) -> bool:
+        """Queue a span. False when the line is full; never blocks."""
+        with self._lock:
+            if not self.has_room(limit):
+                return False
+            if not self._exit_hook_registered:
+                self._exit_hook_registered = True
+                register_evaluation_exit_hook()
+            self.submitted += 1
+            pending.sequence = self.submitted
+            self._waiting.append(pending)
+            if self._free_workers:
+                # Taken off the count here, not by the worker when it wakes: a
+                # second span queued before it does must not count on it too.
+                self._free_workers -= 1
+                self._work.notify()
+            elif self._workers < _background_worker_count():
+                try:
+                    self._start_worker()
+                except RuntimeError:  # the process cannot start another thread
+                    if not self._workers:
+                        self._waiting.remove(pending)
+                        return False
+        return True
+
+    def _start_worker(self) -> None:
+        thread = threading.Thread(
+            target=self._work_loop,
+            name="genai-otel-evaluation-%d" % self._workers,
+            # A worker must never keep the process alive. What it has not done
+            # by exit is dealt with by the exit hook.
+            daemon=True,
+        )
+        thread.start()
+        self._workers += 1
+
+    def _work_loop(self) -> None:
+        while True:
+            with self._lock:
+                while not self._waiting:
+                    self._free_workers += 1
+                    self._work.wait()
+                pending = self._waiting.popleft()
+                self._running.add(pending)
+            try:
+                pending.evaluate()
+            except BaseException as e:  # noqa: BLE001 - a worker that dies takes the queue with it
+                logger.debug("Evaluation worker error: %s", e)
+            finally:
+                with self._lock:
+                    self._running.discard(pending)
+                    written_off = pending in self._abandoned
+                    self._abandoned.discard(pending)
+                    # Whoever is waiting decides whether this was what it was
+                    # waiting for: a flush waits for some spans, not for all.
+                    self._idle.notify_all()
+            if written_off:
+                # This thread was given up on while its detector was stuck, and
+                # another has taken its place.
+                return
+
+    def _acquire(self, deadline: Optional[float]) -> bool:
+        """Take the lock, by ``deadline`` at the latest. False if it could not be had."""
+        if deadline is None:
+            return self._lock.acquire()
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return self._lock.acquire(False)
+        return self._lock.acquire(timeout=remaining)
+
+    def _pending(self, upto: Optional[int]) -> bool:
+        """Whether a span is waiting or running. With ``upto``, one queued no later than that."""
+        if upto is None:
+            return bool(self._waiting or self._running)
+        # Spans wait in the order they were queued in.
+        if self._waiting and self._waiting[0].sequence <= upto:
+            return True
+        return any(pending.sequence <= upto for pending in self._running)
+
+    def drain(self, timeout: Optional[float] = None, upto: Optional[int] = None) -> bool:
+        """Wait until nothing is waiting or running. False if ``timeout`` ran out first.
+
+        With ``upto``, a sequence number, only spans queued up to then are
+        waited for. Spans a stuck detector was holding when :meth:`finish` gave
+        up on them are not waited for at all.
+
+        The timeout covers getting to the queue as well as waiting on it, so a
+        caller that cannot get to it (a signal handler that interrupted a thread
+        which was inside it) comes back too.
+        """
+        deadline = None if timeout is None else time.monotonic() + _waitable(timeout)
+        if not self._acquire(deadline):
+            return False
+        try:
+            while self._pending(upto):
+                if deadline is None:
+                    self._idle.wait()
+                    continue
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False
+                self._idle.wait(remaining)
+        finally:
+            self._lock.release()
+        return True
+
+    def finish(self, timeout: float, in_flight_timeout: Optional[float] = None) -> int:
+        """Give the detectors ``timeout`` seconds, then end what is left unevaluated.
+
+        Spans no detector has started on are ended when the time is up. A span a
+        detector is in the middle of is waited for, for up to ``in_flight_timeout``
+        more, and ended unevaluated only then. By default that is as long again
+        and never less than a floor: see ``_IN_FLIGHT_GRACE``.
+
+        The second wait is not a courtesy. At interpreter exit this runs before
+        the exit hooks of the libraries the detectors are built on, and some of
+        those tear their native state down there. A detector still inside one
+        at that point does not get an exception: the process is aborted. One
+        pass over one text is bounded, so letting it complete is cheap next to
+        that.
+
+        A detector that has not come back by then is given up on. Its span is
+        ended from under it, nothing waits for it again, and its thread no
+        longer counts as a worker, so that a detector which never returns costs
+        one wait and not one at every later flush and shutdown.
+
+        Returns how many spans were ended without their detectors having finished.
+        """
+        timeout = _waitable(timeout)
+        if in_flight_timeout is None:
+            in_flight_timeout = max(timeout, _IN_FLIGHT_GRACE)
+        drained = self.drain(timeout)
+        left: List[_SpanUnderEvaluation] = []
+        with self._lock:
+            if not drained:
+                left = list(self._waiting)
+                self._waiting.clear()
+            unreported, self._overloaded = self._overloaded, 0
+        ended = sum(1 for pending in left if pending.end(skipped="shutdown"))
+        if not drained and not self.drain(in_flight_timeout):
+            with self._lock:
+                stuck = list(self._running)
+                self._running.difference_update(stuck)
+                self._abandoned.update(stuck)
+                self._workers -= len(stuck)
+                self._idle.notify_all()
+            # Ended here all the same, from under the detector; see
+            # _SpanUnderEvaluation.
+            ended += sum(1 for pending in stuck if pending.end(skipped="shutdown"))
+        if unreported:
+            self._log_overload(unreported)
+        if ended:
+            logger.warning(
+                "%d span(s) were exported without evaluation, marked "
+                'evaluation.skipped="shutdown": the detectors had not got to them '
+                "%.1f s after shutdown began (GENAI_EVALUATION_SHUTDOWN_TIMEOUT).",
+                ended,
+                timeout,
+            )
+        return ended
+
+    def note_overload(self) -> None:
+        """Count a span that could not wait. Logs at intervals, never once per span."""
+        now = time.monotonic()
+        with self._lock:
+            self._overloaded += 1
+            last = self._overload_logged_at
+            if last is not None and now - last < _OVERLOAD_LOG_INTERVAL:
+                return
+            count, self._overloaded = self._overloaded, 0
+            self._overload_logged_at = now
+        self._log_overload(count)
+
+    @staticmethod
+    def _log_overload(count: int) -> None:
+        logger.warning(
+            "Evaluation detectors are not keeping up with the request rate: %d span(s) "
+            'were exported without evaluation, marked evaluation.skipped="overloaded". '
+            "Tracing is not affected. Raise GENAI_EVALUATION_QUEUE_SIZE, lower "
+            "GENAI_EVALUATION_MAX_CHARS or enable fewer detectors.",
+            count,
+        )
+
+
+_EVALUATION_QUEUE = _EvaluationQueue()
+
+
+def _after_fork_in_child() -> None:
+    """Start the child of a fork with a queue and a detector pool of its own.
+
+    The child inherits both and none of their threads, and possibly a lock that
+    some other thread held at the moment of the fork. Work handed to the
+    inherited pool is never picked up: an async caller with a block policy
+    waited on it for ever.
+    """
+    global _EVALUATION_EXECUTOR, _EVALUATION_EXECUTOR_LOCK
+    _EVALUATION_QUEUE._reset()
+    _EVALUATION_EXECUTOR = None
+    _EVALUATION_EXECUTOR_LOCK = threading.Lock()
+
+
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_after_fork_in_child)
+
+
+def drain_evaluations(timeout: Optional[float] = None) -> bool:
+    """Wait until no span is waiting for its detectors or in the middle of them.
+
+    For code that reads a span's ``evaluation.*`` attributes straight after a
+    call: in the default evaluation mode the detectors run after the call has
+    returned, and the span is exported when they are done. Returns False if
+    ``timeout`` (seconds) ran out first.
+
+    On a service that keeps making calls there is always another span, and this
+    comes back only when ``timeout`` runs out. To flush, use
+    :func:`wait_for_pending_evaluations`.
+    """
+    return _EVALUATION_QUEUE.drain(timeout)
+
+
+def wait_for_pending_evaluations(timeout: Optional[float] = None) -> bool:
+    """Wait for the spans that are with their detectors now, not for later ones.
+
+    What a flush needs: the spans of calls that have already returned are
+    exported when their detectors are done, and calls made by other threads
+    while this waits are none of its business. Returns False if ``timeout``
+    (seconds) ran out first.
+    """
+    queue = _EVALUATION_QUEUE
+    return queue.drain(timeout, upto=queue.submitted)
+
+
+def finish_pending_evaluations(
+    timeout: Optional[float] = None, in_flight_timeout: Optional[float] = None
+) -> int:
+    """Wait for the detectors, then export whatever they have not got to.
+
+    Spans no detector has started on after ``timeout`` seconds (by default the
+    configured shutdown timeout) are ended without evaluation and marked
+    ``evaluation.skipped="shutdown"``. A detector that is in the middle of a
+    span gets ``in_flight_timeout`` more to finish it: by default as long
+    again, and never less than two seconds. Call this before a tracer provider
+    is shut down: a span that ends afterwards is dropped. Returns how many
+    spans were ended unevaluated.
+    """
+    if timeout is None:
+        timeout = _EVALUATION_QUEUE.shutdown_timeout
+    return _EVALUATION_QUEUE.finish(timeout, in_flight_timeout)
+
+
+def finish_pending_evaluations_in_signal_handler(timeout: float) -> bool:
+    """:func:`finish_pending_evaluations` for a signal handler. True if it finished.
+
+    A signal handler runs on the main thread, between two of its instructions.
+    If that thread was handing a span to the queue it holds the queue's lock,
+    and finishing on the same thread would wait for that lock for ever. So the
+    work is done on a helper thread and waited for, for ``timeout`` seconds at
+    most. A helper that cannot even get to the queue is waiting for the thread
+    this handler interrupted, which goes on only when the handler returns; the
+    handler then stops waiting at once and the helper finishes afterwards.
+
+    The detectors get a little under half of ``timeout`` to work through what
+    is waiting, and one that is in the middle of a text as much again. Both
+    waits then fit inside ``timeout``, so that the span of a detector which
+    does not come back has been ended, and can be exported, when the handler
+    goes on to flush.
+    """
+    reached = threading.Event()
+    timeout = _waitable(timeout)
+    share = timeout * _SIGNAL_SHARE
+
+    def finish() -> None:
+        try:
+            queue = _EVALUATION_QUEUE
+            with queue._lock:
+                pass
+            reached.set()
+            finish_pending_evaluations(share, share)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Finishing pending evaluations failed: %s", e)
+
+    helper = threading.Thread(target=finish, name="genai-otel-evaluation-finish", daemon=True)
+    helper.start()
+    if not reached.wait(min(timeout, _QUEUE_REACHABLE_WITHIN)):
+        return False
+    helper.join(timeout)
+    return not helper.is_alive()
+
+
+def _flush_tracer_provider() -> None:
+    """Have the tracer provider in use export what it holds, if it can."""
+    flush = getattr(trace.get_tracer_provider(), "force_flush", None)
+    if callable(flush):
+        flush()
+
+
+def _finish_evaluations_at_exit() -> None:
+    if not _EVALUATION_QUEUE.submitted:
+        # Nothing was ever handed to a worker: exit as if this hook were not here.
+        return
+    try:
+        finish_pending_evaluations()
+    except Exception as e:  # noqa: BLE001 - nothing may stop the interpreter from exiting
+        logger.debug("Could not finish pending evaluations at exit: %s", e)
+    try:
+        # Exported now, not when the provider's own exit hook runs. The hooks in
+        # between belong to the libraries the detectors are built on, and one
+        # of them aborts the process if a detector that was given up on above
+        # is still inside it. What has ended by now must not depend on that.
+        _flush_tracer_provider()
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Could not flush the tracer provider at exit: %s", e)
+
+
+def register_evaluation_exit_hook() -> None:
+    """Make pending evaluations finish before tracer providers shut down at exit.
+
+    Exit hooks run last-registered first, and a tracer provider registers its
+    shutdown when it is created. Registering again, after a provider has been
+    created, moves this hook in front of that provider's.
+    """
+    atexit.unregister(_finish_evaluations_at_exit)
+    atexit.register(_finish_evaluations_at_exit)
 
 
 _CUSTOM_COST_CALCULATORS: Dict[str, "CostCalculator"] = {}
@@ -315,6 +922,10 @@ class _StreamTiming:
         "usage",
         "emit_measurements",
         "started",
+        "tbt_sum",
+        "tbt_count",
+        "tbt_per_chunk",
+        "usage_in_events",
     )
 
     def __init__(self, start_time: float, emit_measurements: bool = True):
@@ -334,12 +945,29 @@ class _StreamTiming:
         # True once the measuring generator has begun to run. A stream closed
         # before that has no pending yield for its span to be finalized at.
         self.started = False
+        # Time between chunks, added up as the stream is read and recorded as
+        # one sample, the mean, when it ends. A metric sample is far more work
+        # than an addition, and it used to be made for every chunk.
+        self.tbt_sum = 0.0
+        self.tbt_count = 0
+        # Whether a sample is recorded for every chunk after all (the "full"
+        # metrics profile). None until the second chunk asks.
+        self.tbt_per_chunk: Optional[bool] = None
+        # Whether the provider reports usage on events of their own, which its
+        # accumulator then has to watch for. None until it has looked at the
+        # first chunk: a stream does not change kind part-way through.
+        self.usage_in_events: Optional[bool] = None
 
 
 def _is_sampled_out(span) -> bool:
     """True for a span the sampler dropped. Anything that cannot say is treated as live."""
     is_recording = getattr(span, "is_recording", None)
     return callable(is_recording) and is_recording() is False
+
+
+def _span_name(span) -> str:
+    """The name of ``span`` for a metric label. A span the sampler dropped has none."""
+    return getattr(span, "name", None) or "unknown"
 
 
 class _MeasuredStream(wrapt.ObjectProxy):
@@ -706,6 +1334,11 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     # so non-blocking deployments pay zero extra cost.
     _blocking_active = False
     _blocking_policies = frozenset()
+    # Detectors that only match patterns. A block decision of theirs reads the
+    # whole prompt whatever the limit on analysed text: they are cheap, and a
+    # limit would let whoever writes the prompt hide text from the policy by
+    # padding it.
+    _WHOLE_PROMPT_BLOCK_POLICIES = frozenset({"prompt_injection", "restricted_topics", "bias"})
 
     def __init__(self):
         """Initializes the instrumentor with OpenTelemetry tracers, meters, and common metrics."""
@@ -1293,7 +1926,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     deferred = False
                     try:
                         if BaseInstrumentor._blocking_active:
-                            self._enforce_precall_policy(span, kwargs)
+                            self._enforce_precall_policy(
+                                span, kwargs, initial_attributes.get("gen_ai.operation.name")
+                            )
                         invoked = True
                         result = wrapped(*args, **kwargs)
                         if inspect.iscoroutine(result):
@@ -1362,7 +1997,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     # detector is configured). Raises PolicyViolationError to
                     # prevent the LLM call entirely when a policy triggers.
                     if BaseInstrumentor._blocking_active:
-                        self._enforce_precall_policy(span, kwargs)
+                        self._enforce_precall_policy(
+                            span, kwargs, initial_attributes.get("gen_ai.operation.name")
+                        )
                     # Call the original function
                     invoked = True
                     result = wrapped(*args, **kwargs)
@@ -1388,6 +2025,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
 
                         async def _async_traced():
                             handed_to_stream = False
+                            evaluate_later = False
+                            actual_result = None
                             # Built here rather than reused from the call, so what
                             # the caller put in its context before awaiting is seen.
                             run_token = otel_context.attach(
@@ -1434,14 +2073,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                         e,
                                     )
 
-                                try:
-                                    self._run_evaluation_checks(span, args, kwargs, actual_result)
-                                except Exception as e:
-                                    logger.warning(
-                                        "Failed to run evaluation checks for span '%s': %s",
-                                        span_name,
-                                        e,
-                                    )
+                                # Detectors: here, or on a worker thread that is
+                                # handed the span once this coroutine is done
+                                # with it (see the `finally` below).
+                                evaluate_later = self._evaluate_or_defer(
+                                    span, args, kwargs, actual_result
+                                )
 
                                 span.set_status(Status(StatusCode.OK))
                                 return actual_result
@@ -1469,7 +2106,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 # When the stream wrapper took over it owns the
                                 # span's end and the running-requests decrement.
                                 if not handed_to_stream:
-                                    span.end()
+                                    if evaluate_later:
+                                        self._end_span_after_evaluation(
+                                            span, args, kwargs, actual_result
+                                        )
+                                    else:
+                                        span.end()
                                     server_metrics = get_server_metrics()
                                     if server_metrics:
                                         server_metrics.decrement_requests_running()
@@ -1581,19 +2223,20 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     except Exception as e:
                         logger.warning("Failed to record metrics for span '%s': %s", span_name, e)
 
-                    # Run evaluation checks BEFORE ending the span
-                    try:
-                        self._run_evaluation_checks(span, args, kwargs, result)
-                    except Exception as e:
-                        logger.warning(
-                            "Failed to run evaluation checks for span '%s': %s", span_name, e
-                        )
+                    # Run evaluation checks BEFORE ending the span: here, or on
+                    # a worker thread that is handed the span below and ends it.
+                    evaluate_later = self._evaluate_or_defer(span, args, kwargs, result)
 
                     self._finish_agent_budget(span)
 
                     # Set span status to OK on successful execution
                     span.set_status(Status(StatusCode.OK))
-                    span.end()
+                    if evaluate_later:
+                        # Last, after everything this thread writes on the span:
+                        # the worker may end it at any moment from here on.
+                        self._end_span_after_evaluation(span, args, kwargs, result)
+                    else:
+                        span.end()
 
                     # Detach context after span is ended
                     otel_context.detach(token)
@@ -1895,7 +2538,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         # A NonRecordingSpan (sampled out, or an API-default tracer used by a
         # custom async/sync wrapper) exposes neither .name nor .attributes; read
         # them defensively so this method never raises on such spans.
-        _sname = getattr(span, "name", None) or "unknown"
+        _name = getattr(span, "name", None)
+        _sname = _name or "unknown"
         _sattrs = getattr(span, "attributes", None) or {}
 
         # Record latency
@@ -1905,6 +2549,14 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 self.latency_histogram.record(duration, {"operation": _sname})
         except Exception as e:
             logger.warning("Failed to record latency for span '%s': %s", _sname, e)
+
+        if _name is None and _is_sampled_out(span):
+            # Everything below is written to the span or derived from what is
+            # on it, and a span the sampler dropped keeps nothing. Wrappers
+            # that build their own span call this without looking, and it used
+            # to raise out of a call the provider had already answered. A span
+            # with a name is a recording one, so only a nameless span is asked.
+            return
 
         # Extract and set response attributes if available
         try:
@@ -1922,7 +2574,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         else:
                             span.set_attribute(key, str(value))
         except Exception as e:
-            logger.warning("Failed to extract response attributes for span '%s': %s", span.name, e)
+            logger.warning("Failed to extract response attributes for span '%s': %s", _sname, e)
 
         # Add content events if content capture is enabled
         try:
@@ -1940,7 +2592,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             ):
                 self._add_generic_embedding_content(span, result, request_kwargs or {})
         except Exception as e:
-            logger.warning("Failed to add content events for span '%s': %s", span.name, e)
+            logger.warning("Failed to add content events for span '%s': %s", _sname, e)
 
         # Multimodal content-part attributes (gated on MEDIA_PROVIDER + capture mode).
         # Additive: when MEDIA_PROVIDER is None or capture_mode == "off", this is a no-op.
@@ -1952,7 +2604,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             ):
                 self._emit_media_attributes(span, request_kwargs or {}, result)
         except Exception as e:
-            logger.warning("Failed to emit media attributes for span '%s': %s", span.name, e)
+            logger.warning("Failed to emit media attributes for span '%s': %s", _sname, e)
 
         # Extract and record token usage and cost. If the provider response
         # lacks usage data (common for Ollama multimodal and several HF
@@ -2003,13 +2655,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     # Record counter metric if available
                     if self.token_counter:
                         self.token_counter.add(
-                            prompt_tokens, {"token_type": "prompt", "operation": span.name}
+                            prompt_tokens, {"token_type": "prompt", "operation": _sname}
                         )
                     # Record histogram for distribution analysis (opt-in)
                     if _rec_token_hist and self.prompt_tokens_histogram:
                         model = _sattrs.get("gen_ai.request.model", "unknown")
                         self.prompt_tokens_histogram.record(
-                            int(prompt_tokens), {"model": str(model), "operation": span.name}
+                            int(prompt_tokens), {"model": str(model), "operation": _sname}
                         )
 
                 # Record completion tokens
@@ -2017,13 +2669,13 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     # Record counter metric if available
                     if self.token_counter:
                         self.token_counter.add(
-                            completion_tokens, {"token_type": "completion", "operation": span.name}
+                            completion_tokens, {"token_type": "completion", "operation": _sname}
                         )
                     # Record histogram for distribution analysis (opt-in)
                     if _rec_token_hist and self.completion_tokens_histogram:
                         model = _sattrs.get("gen_ai.request.model", "unknown")
                         self.completion_tokens_histogram.record(
-                            int(completion_tokens), {"model": str(model), "operation": span.name}
+                            int(completion_tokens), {"model": str(model), "operation": _sname}
                         )
 
                 # Record total tokens
@@ -2177,12 +2829,10 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                     self.cost_counter.add(cost, {"model": str(model)})
                                 span.set_attribute("gen_ai.usage.cost.total", cost)
                     except Exception as e:
-                        logger.warning("Failed to calculate cost for span '%s': %s", span.name, e)
+                        logger.warning("Failed to calculate cost for span '%s': %s", _sname, e)
 
         except Exception as e:
-            logger.warning(
-                "Failed to extract or record usage metrics for span '%s': %s", span.name, e
-            )
+            logger.warning("Failed to extract or record usage metrics for span '%s': %s", _sname, e)
 
         # Extract and record finish reason if available (for request outcome tracking)
         try:
@@ -2232,16 +2882,55 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                     1, {"finish_reason": finish_reason, "model": str(model)}
                                 )
         except Exception as e:
-            logger.debug(
-                "Failed to extract or record finish reason for span '%s': %s", span.name, e
-            )
+            logger.debug("Failed to extract or record finish reason for span '%s': %s", _sname, e)
 
     @staticmethod
-    def _extract_prompt_for_eval(kwargs) -> Optional[str]:
+    def _responses_prompt_text(kwargs) -> Optional[str]:
+        """The prompt of an OpenAI Responses call: ``instructions`` plus ``input``.
+
+        ``input`` is a string, or a list of items whose ``content`` is a string
+        or a list of parts such as ``{"type": "input_text", "text": ...}``.
+        """
+        parts: List[str] = []
+        instructions = kwargs.get("instructions")
+        if isinstance(instructions, str):
+            parts.append(instructions)
+        raw_input = kwargs.get("input")
+        if isinstance(raw_input, str):
+            parts.append(raw_input)
+        elif isinstance(raw_input, list):
+            for item in raw_input:
+                content = (
+                    item.get("content")
+                    if isinstance(item, dict)
+                    else getattr(item, "content", None)
+                )
+                if isinstance(content, str):
+                    parts.append(content)
+                elif isinstance(content, list):
+                    for part in content:
+                        text = (
+                            part.get("text")
+                            if isinstance(part, dict)
+                            else getattr(part, "text", None)
+                        )
+                        if isinstance(text, str):
+                            parts.append(text)
+        joined = "\n".join(p for p in parts if p)
+        return joined or None
+
+    @staticmethod
+    def _extract_prompt_for_eval(kwargs, operation: Optional[str] = None) -> Optional[str]:
         """Best-effort prompt text extraction for pre-call policy evaluation.
 
         Reads the full ``messages`` list (so USER content is evaluated, not just
         a system/first message) and falls back to a plain ``prompt`` kwarg.
+
+        ``operation`` is the call's ``gen_ai.operation.name`` when the caller
+        knows it. A chat call that carries its prompt as ``input`` /
+        ``instructions`` (the OpenAI Responses API) is read only when it is
+        ``"chat"``: an embeddings call passes ``input`` too, and that is a
+        document being indexed, not a prompt.
         """
         msgs = kwargs.get("messages")
         if msgs and isinstance(msgs, list):
@@ -2258,9 +2947,67 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         prompt = kwargs.get("prompt")
         if isinstance(prompt, str):
             return prompt
+        if operation == "chat":
+            return BaseInstrumentor._responses_prompt_text(kwargs)
         return None
 
-    def _enforce_precall_policy(self, span, kwargs) -> None:
+    def _extract_response_for_eval(self, result) -> Optional[str]:
+        """The model's answer, for the detectors that check a response.
+
+        Read from the result itself rather than from span attributes, so it does
+        not depend on content capture being on. Chat Completions shape and the
+        OpenAI Responses API here; providers with another shape override this.
+        """
+        choices = getattr(result, "choices", None)
+        if choices:
+            first = choices[0]
+            if hasattr(first, "message"):
+                return first.message.content
+            if hasattr(first, "text"):
+                return first.text
+        output_text = getattr(result, "output_text", None)
+        if isinstance(output_text, str) and output_text:
+            return output_text
+        return None
+
+    def _apply_block_policies(self, span, kwargs, operation: Optional[str] = None) -> None:
+        """Pre-call block policies, for a wrapper that builds its own span.
+
+        Raises ``PolicyViolationError``; the caller must let it reach the
+        application and must not make the provider call. Costs one attribute
+        read when no block policy is configured.
+        """
+        if BaseInstrumentor._blocking_active:
+            self._enforce_precall_policy(span, kwargs, operation)
+
+    def _block_or_end(self, span, kwargs, operation: Optional[str] = None) -> None:
+        """Block policies for a span with no error handler around it yet.
+
+        A blocked request ends ``span`` as an error before the exception leaves,
+        so the caller's wrapper does not have to. For paths that open the span
+        and hand it to a stream.
+        """
+        try:
+            self._apply_block_policies(span, kwargs, operation)
+        except PolicyViolationError as e:
+            try:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                span.end()
+            except Exception:  # noqa: BLE001 - the block must reach the caller regardless
+                pass
+            raise
+
+    def _apply_detectors(self, span, args, kwargs, result) -> None:
+        """Post-call detectors, for a wrapper that builds its own span. Never raises."""
+        try:
+            self._run_evaluation_checks(span, args, kwargs, result)
+        except Exception as e:
+            logger.warning(
+                "Failed to run evaluation checks for span '%s': %s", getattr(span, "name", "?"), e
+            )
+
+    def _enforce_precall_policy(self, span, kwargs, operation: Optional[str] = None) -> None:
         """Evaluate the prompt against block-mode detectors BEFORE the LLM call.
 
         Runs only the policies the operator configured with block_on_detection /
@@ -2272,9 +3019,16 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         policies = BaseInstrumentor._blocking_policies
         if not policies:
             return
-        prompt = self._extract_prompt_for_eval(kwargs)
+        prompt = self._extract_prompt_for_eval(kwargs, operation)
         if not prompt:
             return
+
+        # Each detector is shown what the post-call pass will show it, so that
+        # pass can take the answer from the detector's cache. A request
+        # decided on part of its prompt says so, blocked or not.
+        limit = self._evaluation_max_chars()
+        window = self._prompt_window(prompt, limit)
+        cut = False
 
         # (policy name, detector, truthy result attribute)
         checks = (
@@ -2293,7 +3047,19 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             if name not in policies or detector is None:
                 continue
             try:
-                result = detector.detect(prompt)
+                if name == "pii":
+                    cut = cut or (window is not prompt and not self._pii_reads_everything())
+                    result = self._detect_pii(span, detector, prompt, window, limit)
+                elif name == "toxicity":
+                    # The part the later pass will read too, so that pass
+                    # takes this answer from the detector's cache.
+                    text = self._toxicity_text(span, window, limit, len(prompt))
+                    cut = cut or (window is not prompt and self._toxicity_reads_the_window(limit))
+                    result = detector.detect(text)
+                else:
+                    text = self._policy_text(span, name, prompt, window)
+                    cut = cut or text is not prompt
+                    result = detector.detect(text)
             except Exception as e:  # noqa: BLE001 - a detector fault must not block the call
                 logger.warning("Pre-call %s policy check failed: %s", name, e)
                 continue
@@ -2303,6 +3069,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 except Exception:  # noqa: BLE001
                     pass
                 triggered.append(name)
+
+        if cut:
+            self._mark_truncated(span, "prompt", len(prompt), len(window))
 
         if triggered:
             try:
@@ -2315,6 +3084,339 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 policy=triggered[0],
                 details={"reasons": triggered},
             )
+
+    @staticmethod
+    def _evaluation_active() -> bool:
+        """Whether any detector is configured."""
+        return bool(
+            BaseInstrumentor._pii_detector
+            or BaseInstrumentor._toxicity_detector
+            or BaseInstrumentor._bias_detector
+            or BaseInstrumentor._prompt_injection_detector
+            or BaseInstrumentor._restricted_topics_detector
+            or BaseInstrumentor._hallucination_detector
+        )
+
+    def _evaluation_in_background(self) -> bool:
+        """Whether detectors run on a worker thread once a call has returned.
+
+        That is the default. Without a config (direct use, unit tests) the
+        default applies.
+        """
+        return getattr(self.config, "evaluation_mode", None) != EVALUATION_MODE_INLINE
+
+    def _evaluate_or_defer(self, span, args, kwargs, result) -> bool:
+        """Run the post-call detectors on ``span`` now, unless a worker thread is to.
+
+        Returns True when they are left to a worker. The caller then writes
+        whatever else it has to say on the span and, instead of ending it,
+        hands it over with :meth:`_end_span_after_evaluation`.
+
+        With no detector configured this is the six attribute reads the call
+        has always cost, and nothing is handed anywhere. Never raises.
+        """
+        if not (
+            BaseInstrumentor._pii_detector
+            or BaseInstrumentor._toxicity_detector
+            or BaseInstrumentor._bias_detector
+            or BaseInstrumentor._prompt_injection_detector
+            or BaseInstrumentor._restricted_topics_detector
+            or BaseInstrumentor._hallucination_detector
+        ):
+            return False
+        if _is_sampled_out(span):
+            # Nothing a detector found could be written anywhere.
+            return False
+        if getattr(self.config, "evaluation_mode", None) != EVALUATION_MODE_INLINE:
+            return True
+        try:
+            self._run_evaluation_checks(span, args, kwargs, result)
+        except Exception as e:
+            logger.warning(
+                "Failed to run evaluation checks for span '%s': %s", getattr(span, "name", "?"), e
+            )
+        return False
+
+    def _evaluation_setting(self, name: str, default: Any, kind: Any) -> Any:
+        """An evaluation setting from the config, or its default when there is none.
+
+        ``kind`` is the type, or tuple of types, a usable value has. Without a
+        config (direct use, unit tests), or with one that predates the setting,
+        the default applies.
+        """
+        value = getattr(self.config, name, None)
+        if isinstance(value, bool) or not isinstance(value, kind):
+            return default
+        return value
+
+    def _evaluation_max_chars(self) -> int:
+        """Characters of a prompt or response the detectors read. 0 = all of it."""
+        return max(
+            0, self._evaluation_setting("evaluation_max_chars", DEFAULT_EVALUATION_MAX_CHARS, int)
+        )
+
+    def _toxicity_max_chars(self, limit: int) -> int:
+        """Characters of a prompt the toxicity detector reads. 0 = all of it.
+
+        The local toxicity model is the slowest detector by far, so it has a
+        limit of its own. That limit applies when it is the smaller of the two:
+        ``limit`` is the one every detector is under, and no limit there (0)
+        leaves the toxicity limit as it is. No toxicity limit (0) leaves the
+        general one.
+        """
+        own = max(
+            0, self._evaluation_setting("toxicity_max_chars", DEFAULT_TOXICITY_MAX_CHARS, int)
+        )
+        if own and limit:
+            return min(own, limit)
+        return own or limit
+
+    def _toxicity_reads_the_window(self, limit: int) -> bool:
+        """Whether toxicity reads what the other detectors read, not less."""
+        return self._toxicity_max_chars(limit) == limit
+
+    def _toxicity_text(self, span, window, limit: int, prompt_length: Optional[int]):
+        """The part of a prompt the toxicity detector reads: the end of ``window``.
+
+        ``window`` is the part every detector may read. The span says so
+        whenever what toxicity read is less than the whole prompt, which can be
+        the case when nothing else was cut: a prompt longer than the toxicity
+        limit and shorter than the general one.
+        """
+        text = self._prompt_window(window, self._toxicity_max_chars(limit))
+        if isinstance(text, str) and prompt_length is not None and len(text) < prompt_length:
+            try:
+                span.set_attribute("evaluation.truncated", True)
+                span.set_attribute("evaluation.prompt.length", prompt_length)
+                span.set_attribute("evaluation.toxicity.prompt.analyzed_length", len(text))
+            except Exception:  # noqa: BLE001
+                pass
+        return text
+
+    @staticmethod
+    def _only_toxicity_reads_prompts() -> bool:
+        """Whether the toxicity detector is the only one configured that reads a prompt."""
+        return bool(BaseInstrumentor._toxicity_detector) and not (
+            BaseInstrumentor._pii_detector
+            or BaseInstrumentor._bias_detector
+            or BaseInstrumentor._prompt_injection_detector
+            or BaseInstrumentor._restricted_topics_detector
+            # Reads the response, with the prompt as its context.
+            or BaseInstrumentor._hallucination_detector
+        )
+
+    @staticmethod
+    def _prompt_window(text, limit: int):
+        """The part of a prompt the detectors read: its end, the newest turns."""
+        if limit and isinstance(text, str) and len(text) > limit:
+            return text[-limit:]
+        return text
+
+    @staticmethod
+    def _response_window(text, limit: int):
+        """The part of a response the detectors read: its start."""
+        if limit and isinstance(text, str) and len(text) > limit:
+            return text[:limit]
+        return text
+
+    @staticmethod
+    def _mark_truncated(span, side: str, length: int, analyzed_length: int) -> None:
+        """Say on the span that the detectors read only part of ``side``."""
+        try:
+            span.set_attribute("evaluation.truncated", True)
+            span.set_attribute("evaluation.%s.length" % side, length)
+            span.set_attribute("evaluation.%s.analyzed_length" % side, analyzed_length)
+        except Exception:  # noqa: BLE001
+            pass
+
+    @staticmethod
+    def _reads_whole_prompt(name: str) -> bool:
+        """Whether detector ``name`` is exempt from the limit on analysed text."""
+        return (
+            name in BaseInstrumentor._WHOLE_PROMPT_BLOCK_POLICIES
+            and name in BaseInstrumentor._blocking_policies
+        )
+
+    @staticmethod
+    def _pii_reads_everything() -> bool:
+        """Whether the PII detector reads a whole text whatever the limit.
+
+        In redact mode it does: see ``PIIDetector.reads_whole_text``. Nothing
+        was cut for it then, and a span must not say that something was.
+        """
+        return getattr(BaseInstrumentor._pii_detector, "reads_whole_text", False) is True
+
+    @staticmethod
+    def _whole_prompt_wanted() -> bool:
+        """Whether a configured detector reads more of a prompt than its last part."""
+        pii = BaseInstrumentor._pii_detector
+        if pii is not None and (
+            getattr(pii, "accepts_model_chars", False) is True
+            or getattr(pii, "reads_whole_text", False) is True
+        ):
+            return True
+        return bool(
+            (BaseInstrumentor._bias_detector and BaseInstrumentor._reads_whole_prompt("bias"))
+            or (
+                BaseInstrumentor._prompt_injection_detector
+                and BaseInstrumentor._reads_whole_prompt("prompt_injection")
+            )
+            or (
+                BaseInstrumentor._restricted_topics_detector
+                and BaseInstrumentor._reads_whole_prompt("restricted_topics")
+            )
+        )
+
+    def _texts_to_keep(self, prompt, response) -> Tuple[Any, Any]:
+        """What of a call's texts the configured detectors are going to read.
+
+        A span waits in the queue with its texts. Kept whole, a full queue of
+        long prompts and responses is memory held for text that nothing will
+        look at: the detectors read the end of a prompt and the start of a
+        response. So that is what is kept: the largest part of the prompt that
+        any configured detector reads, which is all of it only when one of
+        them reads all of it, and the response only when one reads responses
+        at all.
+        """
+        limit = self._evaluation_max_chars()
+        if not self._whole_prompt_wanted():
+            if self._only_toxicity_reads_prompts():
+                prompt = self._prompt_window(prompt, self._toxicity_max_chars(limit))
+            else:
+                prompt = self._prompt_window(prompt, limit)
+        if BaseInstrumentor._hallucination_detector:
+            response = self._response_window(response, limit)
+        else:
+            response = None
+        return prompt, response
+
+    @staticmethod
+    def _policy_text(span, name: str, prompt: str, window: str) -> str:
+        """The part of ``prompt`` that detector ``name`` reads.
+
+        ``window``, unless the detector is exempt from the limit; the span
+        then says that this detector read everything.
+        """
+        if window is prompt or not BaseInstrumentor._reads_whole_prompt(name):
+            return window
+        try:
+            span.set_attribute("evaluation.%s.prompt.analyzed_length" % name, len(prompt))
+        except Exception:  # noqa: BLE001
+            pass
+        return prompt
+
+    @staticmethod
+    def _detect_pii(span, detector, prompt: str, window: str, limit: int):
+        """Look for PII in a prompt, of which ``window`` is the part detectors read.
+
+        A detector that can limit its own model is given the whole prompt and
+        the limit instead: its patterns then cover the part its model does not
+        read, so a card number or an address early in a long prompt is found.
+        One that reads everything whatever the limit (redact mode) is given the
+        whole prompt and no limit.
+        """
+        if window is prompt:
+            return detector.detect(window)
+        if getattr(detector, "reads_whole_text", False) is True:
+            return detector.detect(prompt)
+        if getattr(detector, "accepts_model_chars", False) is not True:
+            return detector.detect(window)
+        result = detector.detect(prompt, model_chars=limit)
+        model_length = getattr(result, "model_analyzed_length", None)
+        if isinstance(model_length, int) and not isinstance(model_length, bool):
+            try:
+                span.set_attribute("evaluation.pii.prompt.model_analyzed_length", model_length)
+                span.set_attribute("evaluation.pii.prompt.pattern_analyzed_length", len(prompt))
+            except Exception:  # noqa: BLE001
+                pass
+        return result
+
+    def _end_span_after_evaluation(self, span, args, kwargs, result) -> None:
+        """Hand ``span`` to the worker threads, which run the detectors and end it.
+
+        For a wrapper that was told to by :meth:`_evaluate_or_defer` and has
+        written everything else it has to say on the span. The span is no
+        longer the caller's when this returns: it has ended, or will without
+        the caller. Either way it ends as of now, so that it measures the call
+        and not the detectors. Never raises and never waits.
+        """
+        end_time = time.time_ns()
+        if _is_sampled_out(span):
+            # A span the sampler dropped has nothing to annotate and nowhere to
+            # read the request from.
+            span.end(end_time=end_time)
+            return
+        try:
+            limit = max(
+                1,
+                self._evaluation_setting(
+                    "evaluation_queue_size", DEFAULT_EVALUATION_QUEUE_SIZE, int
+                ),
+            )
+            if _EVALUATION_QUEUE.has_room(limit):
+                # Read here, on the caller's thread. A caller is free to add
+                # the answer and its next question to the same message list as
+                # soon as the call returns; the detectors must see the request
+                # that was sent.
+                prompt, response = self._evaluation_texts(span, kwargs, result)
+                kept_prompt, kept_response = self._texts_to_keep(prompt, response)
+                _EVALUATION_QUEUE.shutdown_timeout = self._evaluation_setting(
+                    "evaluation_shutdown_timeout",
+                    DEFAULT_EVALUATION_SHUTDOWN_TIMEOUT,
+                    (int, float),
+                )
+                pending = _SpanUnderEvaluation(
+                    self,
+                    span,
+                    kept_prompt,
+                    kept_response,
+                    end_time,
+                    len(prompt) if isinstance(prompt, str) else None,
+                    len(response) if isinstance(response, str) else None,
+                )
+                if _EVALUATION_QUEUE.submit(pending, limit):
+                    return
+            # The detectors are behind. The span is exported now, unevaluated
+            # and saying so: tracing does not wait for them.
+            span.set_attribute("evaluation.skipped", "overloaded")
+            _EVALUATION_QUEUE.note_overload()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "Failed to queue evaluation for span '%s': %s", getattr(span, "name", "?"), e
+            )
+        span.end(end_time=end_time)
+
+    async def _enforce_precall_policy_async(
+        self, span, kwargs, operation: Optional[str] = None
+    ) -> None:
+        """:meth:`_enforce_precall_policy` for an async caller, off the event loop.
+
+        Raises ``PolicyViolationError`` exactly as the sync form does. Costs
+        nothing when no block policy is configured.
+        """
+        if not BaseInstrumentor._blocking_policies:
+            return
+        await _off_the_event_loop(self._enforce_precall_policy, span, kwargs, operation)
+
+    async def _run_evaluation_checks_async(self, span, args, kwargs, result) -> None:
+        """:meth:`_run_evaluation_checks` for an async caller, off the event loop.
+
+        Costs nothing when no detector is configured.
+
+        A caller that is cancelled while it waits gets ``CancelledError`` as
+        usual, and the detectors, which a worker thread is still running, stop
+        writing to the span: the caller is about to end it or hand it on. A
+        caller that still wants the span evaluated hands it to
+        :meth:`_end_span_after_evaluation` then.
+        """
+        if not self._evaluation_active() or _is_sampled_out(span):
+            return
+        watched = _SpanForDetectors(span)
+        try:
+            await _off_the_event_loop(self._run_evaluation_checks, watched, args, kwargs, result)
+        except asyncio.CancelledError:
+            watched.stop()
+            raise
 
     def _run_evaluation_checks(self, span, args, kwargs, result):
         """Run all evaluation checks (PII, toxicity, bias, prompt injection, etc.) before ending the span.
@@ -2338,86 +3440,147 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             and not BaseInstrumentor._hallucination_detector
         ):
             return  # No detectors configured
+        if _is_sampled_out(span):
+            return  # Nothing a detector found could be written anywhere
 
         try:
-            # Extract prompt and response from span attributes
-            attrs = dict(span.attributes)
+            prompt, response = self._evaluation_texts(span, kwargs, result)
+            self._evaluate_texts(span, prompt, response)
+        except Exception as e:
+            logger.warning(f"Evaluation checks failed: {e}", exc_info=True)
 
-            # Extract prompt from dict-string format
-            prompt = None
-            # Prefer the FULL message list so PII/toxicity/bias in USER messages
-            # (not only the system/first message) is evaluated.
-            _msgs = kwargs.get("messages")
-            if _msgs and isinstance(_msgs, list):
-                _parts = []
-                for _m in _msgs:
-                    _c = _m.get("content") if isinstance(_m, dict) else getattr(_m, "content", None)
-                    if isinstance(_c, str):
-                        _parts.append(_c)
-                    elif isinstance(_c, list):
-                        _parts.extend(blk.get("text", "") for blk in _c if isinstance(blk, dict))
-                if _parts:
-                    prompt = chr(10).join(p for p in _parts if p)
-            if prompt is None and "gen_ai.request.first_message" in attrs:
-                value = attrs["gen_ai.request.first_message"]
-                logger.debug(f"Found gen_ai.request.first_message: {value[:100]}")
-                if isinstance(value, str):
-                    # Try json.loads first (preferred format)
+    def _evaluation_texts(self, span, kwargs, result) -> Tuple[Optional[str], Optional[str]]:
+        """The prompt and the response of a finished call, for the detectors.
+
+        Read on the thread that made the call, before the span is handed to a
+        worker: the request's message list belongs to the caller, who may
+        change it as soon as the call has returned.
+
+        Nothing of either text is logged, at any level: a log is not where a
+        prompt belongs, whatever the content-capture setting says.
+        """
+        # Extract prompt and response from span attributes
+        attrs = dict(getattr(span, "attributes", None) or {})
+
+        # The prompt, read the same way the pre-call policy reads it: the FULL
+        # message list, so PII/toxicity/bias in USER messages (not only the
+        # system/first message) is evaluated. Providers that carry the prompt
+        # differently override _extract_prompt_for_eval.
+        prompt = None
+        try:
+            prompt = self._extract_prompt_for_eval(kwargs, attrs.get("gen_ai.operation.name"))
+        except Exception as e:  # noqa: BLE001 - fall back to the span attribute
+            logger.debug("Failed to extract prompt for evaluation: %s", type(e).__name__)
+        if prompt is None and "gen_ai.request.first_message" in attrs:
+            value = attrs["gen_ai.request.first_message"]
+            if isinstance(value, str):
+                # Try json.loads first (preferred format)
+                try:
+                    parsed = json.loads(value)
+                    if isinstance(parsed, dict) and "content" in parsed:
+                        prompt = parsed["content"]
+                except (json.JSONDecodeError, ValueError):
+                    # Fallback: try ast.literal_eval for legacy Python dict strings
                     try:
-                        parsed = json.loads(value)
+                        parsed = ast.literal_eval(value)
                         if isinstance(parsed, dict) and "content" in parsed:
                             prompt = parsed["content"]
-                            logger.info(
-                                f"Extracted prompt from dict for evaluation: {prompt[:100]}..."
-                            )
-                    except (json.JSONDecodeError, ValueError):
-                        # Fallback: try ast.literal_eval for legacy Python dict strings
-                        try:
-                            parsed = ast.literal_eval(value)
-                            if isinstance(parsed, dict) and "content" in parsed:
-                                prompt = parsed["content"]
-                                logger.info(
-                                    f"Extracted prompt from dict for evaluation: {prompt[:100]}..."
-                                )
-                        except (ValueError, SyntaxError):
-                            pass
-                    if prompt is None:
-                        # Truncated string - extract content with regex fallback
-                        match = re.search(r'"content":\s*"(.*)', value)
-                        if not match:
-                            match = re.search(r"'content':\s*'(.*)", value)
-                        if match:
-                            prompt = match.group(1).rstrip("'\"}")
-                            logger.info(
-                                "Extracted prompt from truncated dict via regex: %s...",
-                                prompt[:100],
-                            )
-                        else:
-                            # Last resort: use the raw value as prompt
-                            prompt = value
-                            logger.debug("Using raw first_message as prompt: %s...", prompt[:100])
+                    except (ValueError, SyntaxError):
+                        pass
+                if prompt is None:
+                    # Truncated string - extract content with regex fallback
+                    match = re.search(r'"content":\s*"(.*)', value)
+                    if not match:
+                        match = re.search(r"'content':\s*'(.*)", value)
+                    if match:
+                        prompt = match.group(1).rstrip("'\"}")
+                    else:
+                        # Last resort: use the raw value as prompt
+                        prompt = value
+                logger.debug(
+                    "Prompt for evaluation read from gen_ai.request.first_message: %s characters",
+                    len(prompt) if isinstance(prompt, str) else "no",
+                )
 
-            # Extract response - try to get from result object
-            response = None
-            try:
-                if hasattr(result, "choices") and result.choices:
-                    if hasattr(result.choices[0], "message"):
-                        response = result.choices[0].message.content
-                    elif hasattr(result.choices[0], "text"):
-                        response = result.choices[0].text
-            except Exception:
-                pass
-            if response is None:
-                # Structured decision SDKs (for example TypeSafe) do not expose
-                # chat-style choices. Their instrumentors may preserve a JSON
-                # response on the span when content capture is enabled.
-                response = attrs.get("gen_ai.response") or attrs.get("output.value")
+        # Extract response - try to get from result object
+        response = None
+        try:
+            response = self._extract_response_for_eval(result)
+        except Exception as e:  # noqa: BLE001 - fall back to the span attribute
+            logger.debug("Failed to extract response for evaluation: %s", type(e).__name__)
+        if response is None:
+            # Structured decision SDKs (for example TypeSafe) do not expose
+            # chat-style choices. Their instrumentors may preserve a JSON
+            # response on the span when content capture is enabled.
+            response = attrs.get("gen_ai.response") or attrs.get("output.value")
+
+        return prompt, response
+
+    def _evaluate_texts(
+        self,
+        span,
+        prompt,
+        response,
+        prompt_length: Optional[int] = None,
+        response_length: Optional[int] = None,
+    ) -> None:
+        """Run the configured detectors on a call's texts and annotate ``span``.
+
+        ``span`` only has to take ``set_attribute``: on a worker thread it is
+        the span as held by the evaluation queue, not the span itself.
+
+        ``prompt`` and ``response`` may be the parts of longer texts that the
+        evaluation queue kept (see :meth:`_texts_to_keep`); the lengths are then
+        those of the texts they came from, so that the span says how much was
+        read of how much.
+        """
+        try:
+            # Past the limit the detectors read the end of the prompt and the
+            # start of the response. The span says so whenever that cut
+            # something a detector was going to read.
+            limit = self._evaluation_max_chars()
+            # All of the prompt that there is to read here.
+            whole_prompt = prompt
+            prompt = self._prompt_window(prompt, limit)
+            if prompt_length is None and isinstance(whole_prompt, str):
+                prompt_length = len(whole_prompt)
+            prompt_cut = (
+                isinstance(prompt, str)
+                and prompt_length is not None
+                and len(prompt) < prompt_length
+            )
+            reads_response = bool(BaseInstrumentor._hallucination_detector and response)
+            whole = self._reads_whole_prompt
+            if prompt_cut and (
+                reads_response
+                or (BaseInstrumentor._pii_detector and not self._pii_reads_everything())
+                # Toxicity says what it read under its own name; it counts
+                # here only when that is this same part and not less.
+                or (BaseInstrumentor._toxicity_detector and self._toxicity_reads_the_window(limit))
+                or (BaseInstrumentor._bias_detector and not whole("bias"))
+                or (BaseInstrumentor._prompt_injection_detector and not whole("prompt_injection"))
+                or (BaseInstrumentor._restricted_topics_detector and not whole("restricted_topics"))
+            ):
+                self._mark_truncated(span, "prompt", prompt_length, len(prompt))
+            if reads_response:
+                whole_response = response
+                response = self._response_window(response, limit)
+                if response_length is None and isinstance(whole_response, str):
+                    response_length = len(whole_response)
+                if (
+                    isinstance(response, str)
+                    and response_length is not None
+                    and len(response) < response_length
+                ):
+                    self._mark_truncated(span, "response", response_length, len(response))
 
             # Run PII detection
             if BaseInstrumentor._pii_detector and prompt:
                 try:
-                    logger.info(f"Running PII detection on prompt: {prompt[:50]}...")
-                    pii_result = BaseInstrumentor._pii_detector.detect(prompt)
+                    logger.info("Running PII detection on a prompt of %d characters", len(prompt))
+                    pii_result = self._detect_pii(
+                        span, BaseInstrumentor._pii_detector, whole_prompt, prompt, limit
+                    )
                     logger.info(
                         f"PII detection result: has_pii={pii_result.has_pii}, entities={list(pii_result.entity_counts.keys()) if pii_result.has_pii else []}"
                     )
@@ -2452,7 +3615,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             # Run toxicity detection
             if BaseInstrumentor._toxicity_detector and prompt:
                 try:
-                    toxicity_result = BaseInstrumentor._toxicity_detector.detect(prompt)
+                    toxicity_result = BaseInstrumentor._toxicity_detector.detect(
+                        self._toxicity_text(span, prompt, limit, prompt_length)
+                    )
                     if toxicity_result.is_toxic:
                         span.set_attribute("evaluation.toxicity.prompt.detected", True)
                         span.set_attribute(
@@ -2476,8 +3641,10 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             # Run bias detection
             if BaseInstrumentor._bias_detector and prompt:
                 try:
-                    logger.info(f"Running bias detection on prompt: {prompt[:50]}...")
-                    bias_result = BaseInstrumentor._bias_detector.detect(prompt)
+                    logger.info("Running bias detection on a prompt of %d characters", len(prompt))
+                    bias_result = BaseInstrumentor._bias_detector.detect(
+                        self._policy_text(span, "bias", whole_prompt, prompt)
+                    )
                     logger.info(
                         f"Bias detection result: has_bias={bias_result.has_bias}, max_score={bias_result.max_score}, detected_biases={bias_result.detected_biases}"
                     )
@@ -2513,7 +3680,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             # Run prompt injection detection
             if BaseInstrumentor._prompt_injection_detector and prompt:
                 try:
-                    injection_result = BaseInstrumentor._prompt_injection_detector.detect(prompt)
+                    injection_result = BaseInstrumentor._prompt_injection_detector.detect(
+                        self._policy_text(span, "prompt_injection", whole_prompt, prompt)
+                    )
                     if injection_result.is_injection:
                         span.set_attribute("evaluation.prompt_injection.detected", True)
                         span.set_attribute(
@@ -2538,7 +3707,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             # Run restricted topics detection
             if BaseInstrumentor._restricted_topics_detector and prompt:
                 try:
-                    topics_result = BaseInstrumentor._restricted_topics_detector.detect(prompt)
+                    topics_result = BaseInstrumentor._restricted_topics_detector.detect(
+                        self._policy_text(span, "restricted_topics", whole_prompt, prompt)
+                    )
                     if topics_result.has_restricted_topic:
                         span.set_attribute("evaluation.restricted_topics.prompt.detected", True)
                         span.set_attribute(
@@ -2667,7 +3838,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             self._finalize_stream(span, timing, model)
             raise
         except Exception as e:
-            self._fail_stream(span, e)
+            self._fail_measured_stream(span, timing, model, e)
             raise
         except BaseException:
             # KeyboardInterrupt and the like are not errors of the stream, but
@@ -2722,7 +3893,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             self._finalize_stream(span, timing, model)
             raise
         except Exception as e:
-            self._fail_stream(span, e)
+            self._fail_measured_stream(span, timing, model, e)
             raise
         except BaseException:
             # A consumer cancelled while waiting for a chunk (client disconnect,
@@ -2743,8 +3914,12 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 self._record_time_to_first_token(span, timing.ttft, model)
         elif timing.emit_measurements:
             tbt = current_time - timing.last_chunk_time
-            if self.tbt_histogram:
-                self.tbt_histogram.record(tbt, {"model": model, "operation": span.name})
+            timing.tbt_sum += tbt
+            timing.tbt_count += 1
+            if timing.tbt_per_chunk is None:
+                timing.tbt_per_chunk = self._metrics_profile_full()
+            if timing.tbt_per_chunk and self.tbt_histogram:
+                self.tbt_histogram.record(tbt, {"model": model, "operation": _span_name(span)})
 
         timing.last_chunk_time = current_time
         timing.last_chunk = chunk  # Keep track of last chunk for usage extraction
@@ -2756,6 +3931,25 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             self._accumulate_stream_usage(timing, chunk)
         except Exception as e:  # noqa: BLE001 - measurement must not break the stream
             logger.debug("Failed to accumulate streamed usage: %s", e)
+
+    def _metrics_profile_full(self) -> bool:
+        """Whether the ``full`` metrics profile is on (see ``OTelConfig.metrics_profile``)."""
+        cfg = self.config
+        return bool(cfg) and getattr(cfg, "metrics_profile", "standard") == "full"
+
+    def _record_mean_time_between_tokens(self, span, timing: "_StreamTiming", model: str) -> None:
+        """Record a finished stream's mean time between chunks, as one sample.
+
+        Nothing to record for a stream that sampled every chunk as it went, for
+        one whose measurements belong to an inner span, or for one that never
+        got a second chunk.
+        """
+        if not timing.emit_measurements or timing.tbt_per_chunk or not timing.tbt_count:
+            return
+        if self.tbt_histogram:
+            self.tbt_histogram.record(
+                timing.tbt_sum / timing.tbt_count, {"model": model, "operation": _span_name(span)}
+            )
 
     def _accumulate_stream_usage(self, timing: "_StreamTiming", chunk) -> None:
         """Fold usage reported part-way through a stream. Default: do nothing.
@@ -2911,7 +4105,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         """
         span.set_attribute(SC.GEN_AI_SERVER_TIME_TO_FIRST_TOKEN, ttft)
         span.set_attribute(SC.GEN_AI_SERVER_TTFT, ttft)
-        metric_attrs = {"model": model, "operation": span.name}
+        metric_attrs = {"model": model, "operation": _span_name(span)}
         if self.ttft_histogram:
             self.ttft_histogram.record(ttft, metric_attrs)
         if self.time_to_first_token_histogram:
@@ -2946,8 +4140,23 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         span.set_attribute(SC.GEN_AI_SERVER_TIME_PER_OUTPUT_TOKEN, tpot)
         if self.time_per_output_token_histogram:
             self.time_per_output_token_histogram.record(
-                tpot, {"model": model, "operation": span.name}
+                tpot, {"model": model, "operation": _span_name(span)}
             )
+
+    def _fail_measured_stream(
+        self, span, timing: "_StreamTiming", model: str, error: Exception
+    ) -> None:
+        """Close the span of a stream that raised, keeping what was measured of it.
+
+        The chunks that did arrive were timed. Their time between chunks used to
+        reach the histogram as they came; it must not be lost now that it is
+        recorded at the end.
+        """
+        try:
+            self._record_mean_time_between_tokens(span, timing, model)
+        except Exception as e:  # noqa: BLE001 - the stream's own error is the one to report
+            logger.debug("Failed to record time between tokens: %s", e)
+        self._fail_stream(span, error)
 
     def _fail_stream(self, span, error: Exception) -> None:
         """Close a span whose stream raised part-way through iteration."""
@@ -2964,7 +4173,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             logger.debug("Decremented running requests (streaming error)")
 
         if self.error_counter:
-            self.error_counter.add(1, {"operation": span.name, "error_type": type(error).__name__})
+            self.error_counter.add(
+                1, {"operation": _span_name(span), "error_type": type(error).__name__}
+            )
         logger.warning("Error in streaming wrapper: %s", error)
 
     def _finalize_stream(self, span, timing: "_StreamTiming", model: str) -> None:
@@ -2988,7 +4199,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             return
 
         if self.latency_histogram:
-            self.latency_histogram.record(duration, {"operation": span.name})
+            self.latency_histogram.record(duration, {"operation": _span_name(span)})
+        self._record_mean_time_between_tokens(span, timing, model)
         span.set_attribute("gen_ai.streaming.token_count", timing.chunk_count)
 
         # Output-token count for TPOT. Stays None unless the provider actually
@@ -3030,24 +4242,26 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     if isinstance(prompt_tokens, (int, float)) and prompt_tokens > 0:
                         if self.token_counter:
                             self.token_counter.add(
-                                prompt_tokens, {"token_type": "prompt", "operation": span.name}
+                                prompt_tokens,
+                                {"token_type": "prompt", "operation": _span_name(span)},
                             )
                         # Record histogram for distribution analysis
                         if self.prompt_tokens_histogram:
                             self.prompt_tokens_histogram.record(
-                                int(prompt_tokens), {"model": model, "operation": span.name}
+                                int(prompt_tokens), {"model": model, "operation": _span_name(span)}
                             )
 
                     if isinstance(completion_tokens, (int, float)) and completion_tokens > 0:
                         if self.token_counter:
                             self.token_counter.add(
                                 completion_tokens,
-                                {"token_type": "completion", "operation": span.name},
+                                {"token_type": "completion", "operation": _span_name(span)},
                             )
                         # Record histogram for distribution analysis
                         if self.completion_tokens_histogram:
                             self.completion_tokens_histogram.record(
-                                int(completion_tokens), {"model": model, "operation": span.name}
+                                int(completion_tokens),
+                                {"model": model, "operation": _span_name(span)},
                             )
 
                     if isinstance(total_tokens, (int, float)) and total_tokens > 0:
@@ -3057,7 +4271,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     if self.config and self.config.enable_cost_tracking:
                         try:
                             # Get call_type from span attributes or default to "chat"
-                            call_type = span.attributes.get("gen_ai.request.type", "chat")
+                            call_type = (getattr(span, "attributes", None) or {}).get(
+                                "gen_ai.request.type", "chat"
+                            )
 
                             # Use granular cost calculation for chat requests
                             if call_type == "chat":

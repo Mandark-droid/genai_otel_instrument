@@ -127,6 +127,142 @@ def _content_capture_from_env() -> bool:
     return os.getenv("GENAI_ENABLE_CONTENT_CAPTURE", "false").strip().lower() == "true"
 
 
+# Where the evaluation detectors run after a call that is not blocked.
+#   "background": on a worker thread; the caller gets its response at once and
+#                 the span is ended by the worker when the detectors are done.
+#   "inline":     on the caller's thread, before the call returns.
+EVALUATION_MODE_BACKGROUND = "background"
+EVALUATION_MODE_INLINE = "inline"
+EVALUATION_MODES = (EVALUATION_MODE_BACKGROUND, EVALUATION_MODE_INLINE)
+
+DEFAULT_EVALUATION_QUEUE_SIZE = 1000
+DEFAULT_EVALUATION_MAX_CHARS = 1500
+# The local toxicity model is the slowest detector by far, so it reads less.
+DEFAULT_TOXICITY_MAX_CHARS = 500
+# Deployment profiles under which nothing is left unread by default.
+HARDENED_PROFILES = ("strict", "bfsi", "bank")
+DEFAULT_EVALUATION_SHUTDOWN_TIMEOUT = 5.0
+# Longest shutdown wait accepted. Longer than any wait worth configuring, and
+# well inside what a thread can be asked to wait for on every platform.
+MAX_EVALUATION_SHUTDOWN_TIMEOUT = 3600.0
+DEFAULT_EVALUATION_CACHE_SIZE = 256
+
+
+def _evaluation_mode(value: Any) -> str:
+    """Normalise an evaluation mode; an unknown one warns and becomes the default."""
+    mode = str(value if value is not None else "").strip().lower()
+    if mode in EVALUATION_MODES:
+        return mode
+    if mode:
+        logger.warning(
+            "%s is not a valid option for `GENAI_EVALUATION_MODE`. Must be one of %s. "
+            "Defaulting to %s.",
+            mode,
+            ", ".join(EVALUATION_MODES),
+            EVALUATION_MODE_BACKGROUND,
+        )
+    return EVALUATION_MODE_BACKGROUND
+
+
+def _number_from_env(name: str, default: Any, cast: Callable[[str], Any] = int) -> Any:
+    """Read a numeric setting; a value that is not a number warns and becomes the default."""
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        return cast(raw.strip())
+    except ValueError:
+        logger.warning("Invalid value '%s' in %s. Using default of %s.", raw, name, default)
+        return default
+
+
+def _characters_from_env(name: str) -> Optional[int]:
+    """A limit on analysed text from the environment. None when none is set there.
+
+    "Not set" is kept apart from the default on purpose. Under a hardened
+    profile the default is different, and a limit the operator did set has to
+    win over it, also when it happens to equal the ordinary default. A value
+    that is not a number warns and counts as not set.
+    """
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return None
+    try:
+        return int(raw.strip())
+    except ValueError:
+        logger.warning("Invalid value '%s' in %s. Using the default.", raw, name)
+        return None
+
+
+def _characters(value: Any, default: int) -> int:
+    """A limit on analysed text: ``default`` when not set, never negative."""
+    if value is None:
+        return default
+    return max(0, int(value))
+
+
+def _evaluation_shutdown_timeout(value: Any) -> float:
+    """Seconds to wait for detectors at shutdown, made safe to wait for.
+
+    Infinity, not-a-number and a negative number are not waits: a thread asked
+    to wait that long raises instead, and the spans it was waiting for are never
+    ended. They warn and become the default. A wait longer than the cap warns
+    and becomes the cap.
+    """
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError):
+        seconds = float("nan")
+    # Written so that not-a-number, which compares False with everything, fails it.
+    if not 0.0 <= seconds < float("inf"):
+        logger.warning(
+            "Invalid value '%s' in GENAI_EVALUATION_SHUTDOWN_TIMEOUT: it must be a number "
+            "of seconds, zero or more. Using default of %s.",
+            value,
+            DEFAULT_EVALUATION_SHUTDOWN_TIMEOUT,
+        )
+        return DEFAULT_EVALUATION_SHUTDOWN_TIMEOUT
+    if seconds > MAX_EVALUATION_SHUTDOWN_TIMEOUT:
+        logger.warning(
+            "GENAI_EVALUATION_SHUTDOWN_TIMEOUT of %s seconds is more than the %s allowed. "
+            "Using %s.",
+            value,
+            MAX_EVALUATION_SHUTDOWN_TIMEOUT,
+            MAX_EVALUATION_SHUTDOWN_TIMEOUT,
+        )
+        return MAX_EVALUATION_SHUTDOWN_TIMEOUT
+    return seconds
+
+
+def _evaluation_cache_size(value: Any) -> int:
+    """Results each detector remembers. Not a count: the default. Negative: none."""
+    if isinstance(value, bool):
+        return DEFAULT_EVALUATION_CACHE_SIZE
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        logger.warning(
+            "Invalid value '%s' in GENAI_EVALUATION_CACHE_SIZE. Using default of %s.",
+            value,
+            DEFAULT_EVALUATION_CACHE_SIZE,
+        )
+        return DEFAULT_EVALUATION_CACHE_SIZE
+
+
+def _positive_count(value: Any) -> Optional[int]:
+    """A count of one or more, or None for anything else (unset, zero, not a whole number)."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        try:
+            value = int(value.strip())
+        except ValueError:
+            return None
+    if not isinstance(value, int) or value <= 0:
+        return None
+    return value
+
+
 def _get_enabled_instrumentors() -> List[str]:
     """
     Gets the list of enabled instrumentors from the environment variable.
@@ -465,6 +601,60 @@ class OTelConfig:
         default_factory=lambda: float(os.getenv("GENAI_HALLUCINATION_THRESHOLD", "0.6"))
     )
 
+    # Where the detectors run once a call has returned: "background" (a worker
+    # thread ends the span when they are done) or "inline" (the caller waits).
+    # A block policy is always checked inline, before the request is sent.
+    evaluation_mode: str = field(
+        default_factory=lambda: os.getenv("GENAI_EVALUATION_MODE", EVALUATION_MODE_BACKGROUND)
+    )
+    # Spans that may wait for the detectors at once. Past this a span is ended
+    # without evaluation and marked evaluation.skipped="overloaded": tracing is
+    # never held back because detectors are slow.
+    evaluation_queue_size: int = field(
+        default_factory=lambda: _number_from_env(
+            "GENAI_EVALUATION_QUEUE_SIZE", DEFAULT_EVALUATION_QUEUE_SIZE
+        )
+    )
+    # Characters of a prompt (its end) and of a response (its start) that the
+    # detectors analyse. 0 = no limit. A span whose text was cut says so.
+    # None = not set, here or in the environment: __post_init__ then fills in
+    # the default, which under a hardened profile is no limit.
+    evaluation_max_chars: Optional[int] = field(
+        default_factory=lambda: _characters_from_env("GENAI_EVALUATION_MAX_CHARS")
+    )
+    # Characters at the end of a prompt that the toxicity detector analyses,
+    # when that is fewer than the limit above. 0 = no limit of its own: the
+    # limit above applies. None = not set, as above.
+    toxicity_max_chars: Optional[int] = field(
+        default_factory=lambda: _characters_from_env("GENAI_TOXICITY_MAX_CHARS")
+    )
+    # Seconds given to detectors still running when the process exits or
+    # uninstrument() is called. What is left after that is exported without
+    # evaluation, marked evaluation.skipped="shutdown".
+    evaluation_shutdown_timeout: float = field(
+        default_factory=lambda: _number_from_env(
+            "GENAI_EVALUATION_SHUTDOWN_TIMEOUT", DEFAULT_EVALUATION_SHUTDOWN_TIMEOUT, float
+        )
+    )
+    # Results each detector remembers, keyed by a digest of the analysed text,
+    # so that text it has already analysed is not analysed again. 0 = none.
+    evaluation_cache_size: int = field(
+        default_factory=lambda: _number_from_env(
+            "GENAI_EVALUATION_CACHE_SIZE", DEFAULT_EVALUATION_CACHE_SIZE
+        )
+    )
+    # Run the local toxicity model with 8-bit weights. Faster, but scores move
+    # and some verdicts change with them, so it is the operator's choice.
+    toxicity_quantize: bool = field(
+        default_factory=lambda: os.getenv("GENAI_TOXICITY_QUANTIZE", "false").strip().lower()
+        == "true"
+    )
+    # Threads torch may use for the toxicity model. Unset by default: the count
+    # is process-wide and belongs to the application.
+    toxicity_torch_threads: Optional[int] = field(
+        default_factory=lambda: _positive_count(os.getenv("GENAI_TOXICITY_TORCH_THREADS"))
+    )
+
     # Multimodal Observability (v1.0.0)
     # Capture mode controls whether multimodal content (images, audio, documents)
     # is captured at all. Defaults to "off" for safety / BFSI compliance.
@@ -523,7 +713,29 @@ class OTelConfig:
         variables are respected; the profile only fills in what the operator did
         not pin.
         """
-        if self.profile in ("strict", "bfsi", "bank"):
+        # Evaluation settings arrive from the environment or as keyword
+        # arguments; either way they are used on every call, so they are made
+        # safe to read once, here.
+        hardened = self.profile in HARDENED_PROFILES
+        self.evaluation_mode = _evaluation_mode(self.evaluation_mode)
+        self.evaluation_queue_size = max(1, int(self.evaluation_queue_size))
+        # Under a hardened profile every detector reads everything unless the
+        # operator set a limit. One that was set stays, whatever its value:
+        # that is what "not set" is told apart from the default for.
+        self.evaluation_max_chars = _characters(
+            self.evaluation_max_chars, 0 if hardened else DEFAULT_EVALUATION_MAX_CHARS
+        )
+        self.toxicity_max_chars = _characters(
+            self.toxicity_max_chars, 0 if hardened else DEFAULT_TOXICITY_MAX_CHARS
+        )
+        self.evaluation_shutdown_timeout = _evaluation_shutdown_timeout(
+            self.evaluation_shutdown_timeout
+        )
+        self.evaluation_cache_size = _evaluation_cache_size(self.evaluation_cache_size)
+        self.toxicity_quantize = bool(self.toxicity_quantize)
+        self.toxicity_torch_threads = _positive_count(self.toxicity_torch_threads)
+
+        if hardened:
             # Hard overrides: no third-party egress, no runtime downloads.
             self.allow_external_egress = False
             self.air_gapped = True

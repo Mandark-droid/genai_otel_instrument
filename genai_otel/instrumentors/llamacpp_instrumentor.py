@@ -166,6 +166,8 @@ class LlamaCppInstrumentor(BaseInstrumentor):
             except Exception:  # pragma: no cover - defensive
                 attrs = {"gen_ai.system": PROVIDER, SC.GEN_AI_REQUEST_STREAM: True}
             span = instrumentor.tracer.start_span(span_name, attributes=attrs)
+            # A streamed request is checked before it runs, like any other.
+            instrumentor._block_or_end(span, kwargs)
 
             def traced_stream():
                 chunks = []

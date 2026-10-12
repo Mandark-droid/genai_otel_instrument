@@ -7,10 +7,11 @@ in prompts and responses.
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Set
 
-from .config import BiasConfig
+from .config import DEFAULT_CACHE_SIZE, BiasConfig
+from .result_cache import ResultCache
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +158,7 @@ class BiasDetector:
             config: Bias detection configuration
         """
         self.config = config
+        self._cache = ResultCache(getattr(config, "cache_size", DEFAULT_CACHE_SIZE))
         self._fairlearn_available = False
         self._check_availability()
 
@@ -197,6 +199,11 @@ class BiasDetector:
             return BiasDetectionResult(has_bias=False, original_text=text)
 
         try:
+            key = self._cache_key(text)
+            cached = self._cache.get(key)
+            if cached is not None:
+                return replace(cached, original_text=text)
+
             # Perform pattern-based detection
             bias_scores = {}
             patterns_matched = {}
@@ -220,7 +227,7 @@ class BiasDetector:
             has_bias = len(detected_biases) > 0
             max_score = max(bias_scores.values(), default=0.0)
 
-            return BiasDetectionResult(
+            result = BiasDetectionResult(
                 has_bias=has_bias,
                 bias_scores=bias_scores,
                 max_score=max_score,
@@ -228,10 +235,23 @@ class BiasDetector:
                 patterns_matched=patterns_matched,
                 original_text=text,
             )
+            # Stored without the text: the entry outlives the request it came from.
+            self._cache.put(key, replace(result, original_text=None))
+            return result
 
         except Exception as e:
+            # Not remembered: the detector must be asked again once it can answer.
             logger.error("Error detecting bias: %s", e, exc_info=True)
             return BiasDetectionResult(has_bias=False, original_text=text)
+
+    def _cache_key(self, text: str):
+        """Key for a result: the text and every setting the result depends on."""
+        if not self._cache.enabled:
+            return None
+        try:
+            return self._cache.key(text, self.config.threshold, frozenset(self.config.bias_types))
+        except TypeError:
+            return None
 
     def _check_bias_type(self, text: str, bias_type: str) -> tuple[float, List[str]]:
         """Check for a specific type of bias.

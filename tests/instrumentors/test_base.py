@@ -1734,9 +1734,14 @@ def test_sync_wrapper_still_works(instrumentor):
 
 
 @pytest.mark.asyncio
-async def test_async_wrapper_runs_evaluation_checks(instrumentor):
+async def test_async_wrapper_runs_evaluation_checks(instrumentor, monkeypatch):
     """Test that async wrapper runs evaluation checks on the actual result."""
     inst, mock_span = instrumentor
+    # The checks are run for a configured detector. They run before the awaited
+    # call returns in inline mode; in the default mode a worker thread is handed
+    # the span instead (see test_background_evaluation.py).
+    monkeypatch.setattr(BaseInstrumentor, "_pii_detector", MagicMock())
+    inst.config = OTelConfig(evaluation_mode="inline")
 
     async def async_func(*args, **kwargs):
         return {"usage": None}

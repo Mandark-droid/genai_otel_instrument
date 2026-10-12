@@ -21,6 +21,31 @@ def _is_hardening_profile() -> bool:
     return os.getenv("GENAI_PROFILE", "").lower() in ("strict", "bfsi", "bank")
 
 
+DEFAULT_CACHE_SIZE = 256
+
+
+def _cache_size_from_env() -> int:
+    """Results each detector remembers, from ``GENAI_EVALUATION_CACHE_SIZE``. 0 = none.
+
+    A detector asked about text it has already analysed answers from memory: the
+    post-call pass reuses what a pre-call block check computed, and a request
+    repeated word for word is analysed once.
+    """
+    try:
+        return max(0, int(os.getenv("GENAI_EVALUATION_CACHE_SIZE", str(DEFAULT_CACHE_SIZE))))
+    except ValueError:
+        return DEFAULT_CACHE_SIZE
+
+
+def _positive_int_from_env(name: str) -> Optional[int]:
+    """A count from the environment, or None when it is unset or not a positive number."""
+    try:
+        value = int(os.getenv(name, ""))
+    except ValueError:
+        return None
+    return value if value > 0 else None
+
+
 class PIIMode(str, Enum):
     """PII detection mode."""
 
@@ -108,6 +133,9 @@ class PIIConfig:
     content_max_length: int = field(
         default_factory=lambda: int(os.getenv("GENAI_CONTENT_MAX_LENGTH", "200"))
     )
+    # Detection results kept in memory, keyed by a digest of the analysed text.
+    # 0 turns the cache off. From GENAI_EVALUATION_CACHE_SIZE.
+    cache_size: int = field(default_factory=_cache_size_from_env)
 
     def __post_init__(self):
         """Validate configuration and apply compliance modes."""
@@ -190,6 +218,19 @@ class ToxicityConfig:
         default_factory=lambda: _env_bool("GENAI_ALLOW_EXTERNAL_EGRESS", "true")
     )
     air_gapped: bool = field(default_factory=lambda: _env_bool("GENAI_AIR_GAPPED", "false"))
+    # Run the local model with 8-bit weights. Faster, but scores move and some
+    # verdicts change with them, so it is the operator's choice. From
+    # GENAI_TOXICITY_QUANTIZE.
+    quantize: bool = field(default_factory=lambda: _env_bool("GENAI_TOXICITY_QUANTIZE", "false"))
+    # Threads torch may use, applied with torch.set_num_threads when set. Unset
+    # by default: the count is process-wide and belongs to the application.
+    # From GENAI_TOXICITY_TORCH_THREADS.
+    torch_threads: Optional[int] = field(
+        default_factory=lambda: _positive_int_from_env("GENAI_TOXICITY_TORCH_THREADS")
+    )
+    # Detection results kept in memory, keyed by a digest of the analysed text.
+    # 0 turns the cache off. From GENAI_EVALUATION_CACHE_SIZE.
+    cache_size: int = field(default_factory=_cache_size_from_env)
 
     def __post_init__(self):
         """Validate configuration and apply the deployment hardening profile."""
@@ -244,6 +285,9 @@ class BiasConfig:
     check_prompts: bool = True
     check_responses: bool = True
     block_on_detection: bool = False
+    # Detection results kept in memory, keyed by a digest of the analysed text.
+    # 0 turns the cache off. From GENAI_EVALUATION_CACHE_SIZE.
+    cache_size: int = field(default_factory=_cache_size_from_env)
 
     def __post_init__(self):
         """Validate configuration."""
@@ -274,6 +318,9 @@ class PromptInjectionConfig:
     patterns: Optional[List[str]] = None
     block_on_detection: bool = False
     log_attempts: bool = True
+    # Detection results kept in memory, keyed by a digest of the analysed text.
+    # 0 turns the cache off. From GENAI_EVALUATION_CACHE_SIZE.
+    cache_size: int = field(default_factory=_cache_size_from_env)
 
     def __post_init__(self):
         """Validate configuration."""
@@ -298,6 +345,9 @@ class RestrictedTopicsConfig:
     restricted_topics: Optional[List[str]] = None
     threshold: float = 0.5
     block_on_detection: bool = False
+    # Detection results kept in memory, keyed by a digest of the analysed text.
+    # 0 turns the cache off. From GENAI_EVALUATION_CACHE_SIZE.
+    cache_size: int = field(default_factory=_cache_size_from_env)
 
     def __post_init__(self):
         """Validate configuration."""
@@ -320,6 +370,9 @@ class HallucinationConfig:
     threshold: float = 0.7
     check_citations: bool = True
     check_hedging: bool = True
+    # Detection results kept in memory, keyed by a digest of the analysed text.
+    # 0 turns the cache off. From GENAI_EVALUATION_CACHE_SIZE.
+    cache_size: int = field(default_factory=_cache_size_from_env)
 
     def __post_init__(self):
         """Validate configuration."""

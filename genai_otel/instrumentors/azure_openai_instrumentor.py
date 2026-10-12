@@ -69,6 +69,8 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
                 token = otel_context.attach(trace.set_span_in_context(span))
                 start_time = time.time()
                 handed_to_stream = False
+                evaluate_later = False
+                result = None
                 try:
                     model = kwargs.get("model", "unknown")
 
@@ -100,6 +102,11 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
                     if self.request_counter:
                         self.request_counter.add(1, {"model": model, "provider": "azure_openai"})
 
+                    # Block policies apply here as they do through the shared
+                    # span wrapper. This path builds its own span and ran none,
+                    # so a request the policy should have stopped was sent anyway.
+                    self._apply_block_policies(span, kwargs)
+
                     result = original_complete(instance, *args, **kwargs)
 
                     handled, value = self._install_stream_measurement(
@@ -116,6 +123,10 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
                     for key, value in response_attrs.items():
                         span.set_attribute(key, value)
 
+                    # Detectors, before the span ends: here, or on a worker
+                    # thread that is handed the span in `finally` and ends it.
+                    evaluate_later = self._evaluate_or_defer(span, args, kwargs, result)
+
                     return result
                 except Exception as e:
                     span.set_status(Status(StatusCode.ERROR, str(e)))
@@ -123,8 +134,11 @@ class AzureOpenAIInstrumentor(BaseInstrumentor):
                     raise
                 finally:
                     otel_context.detach(token)
-                    # The stream wrapper owns the span's end once it takes over.
-                    if not handed_to_stream:
+                    # The stream wrapper owns the span's end once it takes over,
+                    # and so does the worker that runs the detectors.
+                    if evaluate_later:
+                        self._end_span_after_evaluation(span, args, kwargs, result)
+                    elif not handed_to_stream:
                         span.end()
 
             OpenAIClient.complete = wrapped_complete

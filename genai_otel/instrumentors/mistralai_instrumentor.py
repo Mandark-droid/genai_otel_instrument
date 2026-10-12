@@ -13,6 +13,8 @@ import logging
 import time
 from typing import Any, Dict, Optional
 
+from opentelemetry.trace import Status, StatusCode
+
 from ..config import OTelConfig
 from .base import BaseInstrumentor
 
@@ -105,10 +107,18 @@ class MistralAIInstrumentor(BaseInstrumentor):
             # Execute the call
             start_time = time.time()
             try:
+                # Block policies apply here as they do through the shared span
+                # wrapper. This path builds its own span and ran none, so a
+                # request the policy should have stopped was sent anyway.
+                self._apply_block_policies(span, kwargs)
+
                 response = wrapped(*args, **kwargs)
 
                 # Record metrics from response
                 self._record_result_metrics(span, response, start_time, kwargs)
+
+                # Detectors, before the span ends.
+                self._apply_detectors(span, args, kwargs, response)
 
                 return response
 
@@ -141,6 +151,9 @@ class MistralAIInstrumentor(BaseInstrumentor):
 
         # Execute and get the stream
         try:
+            # A streamed request is checked before it is sent, like any other.
+            self._apply_block_policies(span, kwargs)
+
             stream = wrapped(*args, **kwargs)
 
             # Wrap the stream with our tracking wrapper
@@ -149,6 +162,7 @@ class MistralAIInstrumentor(BaseInstrumentor):
         except Exception as e:
             if self.error_counter:
                 self.error_counter.add(1, {"operation": span_name, "error.type": type(e).__name__})
+            span.set_status(Status(StatusCode.ERROR, str(e)))
             span.record_exception(e)
             span.end()
             raise

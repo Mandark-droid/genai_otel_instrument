@@ -6,10 +6,11 @@ approaches to identify attempts to manipulate or bypass LLM instructions.
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional
 
-from .config import PromptInjectionConfig
+from .config import DEFAULT_CACHE_SIZE, PromptInjectionConfig
+from .result_cache import ResultCache
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +86,15 @@ class PromptInjectionDetector:
         },
         "context_switching": {
             "patterns": [
-                r"---+\s*(?:end|stop|ignore)",
-                r"```+\s*(?:end|stop)",
+                # A rule or a fence is read from where it starts and from
+                # nowhere else in it: "(?<!----)" passes the first three
+                # characters of one and no other three. Read again from each of
+                # its characters, a long table rule took time in proportion to
+                # the square of its length. The check stands after the three
+                # characters, not before them, so that the search can still
+                # jump from one "---" to the next.
+                r"---(?<!----)-*\s*(?:end|stop|ignore)",
+                r"```(?<!````)`*\s*(?:end|stop)",
                 r"</(?:system|instruction|prompt)>",
                 r"\[(?:END|STOP|IGNORE)\s+(?:SYSTEM|INSTRUCTION|PROMPT)\]",
                 r"<\|(?:end|stop)(?:of)?(?:system|instruction|prompt)\|>",
@@ -117,6 +125,7 @@ class PromptInjectionDetector:
             config: Prompt injection detection configuration
         """
         self.config = config
+        self._cache = ResultCache(getattr(config, "cache_size", DEFAULT_CACHE_SIZE))
 
     def is_available(self) -> bool:
         """Check if prompt injection detector is available.
@@ -139,6 +148,11 @@ class PromptInjectionDetector:
             return PromptInjectionResult(is_injection=False, original_text=text)
 
         try:
+            key = self._cache_key(text)
+            cached = self._cache.get(key)
+            if cached is not None:
+                return replace(cached, original_text=text)
+
             # Perform pattern-based detection
             injection_scores = {}
             patterns_matched = {}
@@ -162,7 +176,7 @@ class PromptInjectionDetector:
             is_injection = len(injection_types) > 0
             blocked = self.config.block_on_detection and is_injection
 
-            return PromptInjectionResult(
+            result = PromptInjectionResult(
                 is_injection=is_injection,
                 injection_score=injection_score,
                 injection_types=injection_types,
@@ -170,10 +184,25 @@ class PromptInjectionDetector:
                 original_text=text,
                 blocked=blocked,
             )
+            # Stored without the text: the entry outlives the request it came from.
+            self._cache.put(key, replace(result, original_text=None))
+            return result
 
         except Exception as e:
+            # Not remembered: the detector must be asked again once it can answer.
             logger.error("Error detecting prompt injection: %s", e, exc_info=True)
             return PromptInjectionResult(is_injection=False, original_text=text)
+
+    def _cache_key(self, text: str):
+        """Key for a result: the text and every setting the result depends on."""
+        if not self._cache.enabled:
+            return None
+        try:
+            return self._cache.key(
+                text, self.config.threshold, bool(self.config.block_on_detection)
+            )
+        except TypeError:
+            return None
 
     def _check_injection_type(self, text: str, injection_type: str) -> tuple[float, List[str]]:
         """Check for a specific type of prompt injection.

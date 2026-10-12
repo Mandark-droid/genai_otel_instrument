@@ -373,6 +373,9 @@ All evaluation features are opt-in and disabled by default. See the [Evaluation 
 | `GENAI_TOXICITY_USE_PERSPECTIVE_API` | `false` | Use Google Perspective API (cloud) instead of Detoxify (local) |
 | `GENAI_TOXICITY_PERSPECTIVE_API_KEY` | | Perspective API key (required if using Perspective) |
 | `GENAI_TOXICITY_BLOCK_ON_DETECTION` | `false` | Block requests with toxic content |
+| `GENAI_TOXICITY_QUANTIZE` | `false` | Run the local model with 8-bit weights. Faster, but scores shift and verdicts near the threshold can change: test it on your own data |
+| `GENAI_TOXICITY_TORCH_THREADS` | | Threads torch may use for the local model. Process-wide: it applies to every torch model in the process |
+| `GENAI_TOXICITY_MAX_CHARS` | `500` | Characters the local toxicity model analyses: the end of the prompt. `0` follows `GENAI_EVALUATION_MAX_CHARS`. With no limit the whole text is scored in pieces |
 
 ### Bias Detection
 
@@ -405,6 +408,18 @@ All evaluation features are opt-in and disabled by default. See the [Evaluation 
 | `GENAI_ENABLE_HALLUCINATION_DETECTION` | `false` | Enable hallucination detection |
 | `GENAI_HALLUCINATION_THRESHOLD` | `0.6` | Detection threshold (0.0-1.0) |
 
+### Detector Runtime
+
+These apply to every enabled detector. The [Evaluation guide](../guides/evaluation.md#where-detectors-run) explains each.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GENAI_EVALUATION_MODE` | `background` | `background`: detectors run on a worker thread after the call has returned. `inline`: the call waits for them. A block policy is always checked before the request is sent |
+| `GENAI_EVALUATION_MAX_CHARS` | `1500` | Characters the detectors analyse: the end of a prompt and the start of a response. `0` = no limit. A span whose text was cut carries `evaluation.truncated`. A block policy on prompt injection, restricted topics or bias reads the whole prompt regardless |
+| `GENAI_EVALUATION_QUEUE_SIZE` | `1000` | Spans that may wait for detectors. Past this a span is exported unevaluated, marked `evaluation.skipped="overloaded"` |
+| `GENAI_EVALUATION_SHUTDOWN_TIMEOUT` | `5.0` | Seconds given to pending evaluations at exit and on `uninstrument()`. What is left is exported unevaluated, marked `evaluation.skipped="shutdown"` |
+| `GENAI_EVALUATION_CACHE_SIZE` | `256` | Results each detector remembers, keyed by a digest of the analysed text. `0` disables |
+
 ## Security Hardening (BFSI / on-prem)
 
 For regulated on-prem deployments, `GENAI_PROFILE=strict` (aliases `bfsi`, `bank`)
@@ -421,6 +436,11 @@ Under `GENAI_PROFILE=strict` the profile sets `GENAI_ALLOW_EXTERNAL_EGRESS=false
 `GENAI_AIR_GAPPED=true`, `GENAI_CO2_OFFLINE_MODE=true` and
 `GENAI_TOXICITY_USE_PERSPECTIVE_API=false`, and enables content capture for audit
 unless you pin `GENAI_ENABLE_CONTENT_CAPTURE` yourself.
+
+The profile also lifts the limits on analysed text: `GENAI_EVALUATION_MAX_CHARS` and
+`GENAI_TOXICITY_MAX_CHARS` default to `0` under it, so the PII entity model reads the
+whole prompt and toxicity is scored over the whole text. Detection time then grows with
+the length of the prompt. A limit you set yourself is kept.
 
 Blocking evaluation (`GENAI_PII_MODE=block`, `*_BLOCK_ON_DETECTION=true`) now
 intercepts the request **before** the LLM call and raises

@@ -1,7 +1,12 @@
 import json
 from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+import pytest
 
 from genai_otel.config import OTelConfig
+from genai_otel.exceptions import PolicyViolationError
+from genai_otel.instrumentors.base import BaseInstrumentor
 from genai_otel.instrumentors.typesafe_instrumentor import TypeSafeInstrumentor
 
 
@@ -74,3 +79,34 @@ def test_prompt_for_evaluation_uses_state_and_questions():
 
     assert "alice@example.com" in prompt
     assert "pii" in prompt
+
+
+def test_prompt_for_evaluation_accepts_the_operation_the_wrapper_passes():
+    prompt = _instrumentor()._extract_prompt_for_eval(
+        {"state": {"email": "alice@example.com"}, "questions": {"pii": "detect"}},
+        "typesafe.system_one",
+    )
+
+    assert "alice@example.com" in prompt
+
+
+def test_block_policy_stops_a_typesafe_request():
+    """The pre-call check reads the prompt the way the shared wrapper asks for it."""
+    seen = []
+
+    def detect(text):
+        seen.append(text)
+        return SimpleNamespace(has_pii=True, entity_counts={"EMAIL_ADDRESS": 1}, score=0.9)
+
+    BaseInstrumentor._pii_detector = SimpleNamespace(detect=detect)
+    BaseInstrumentor._blocking_policies = frozenset({"pii"})
+    BaseInstrumentor._blocking_active = True
+
+    with pytest.raises(PolicyViolationError):
+        _instrumentor()._enforce_precall_policy(
+            MagicMock(),
+            {"state": {"email": "alice@example.com"}, "questions": {"pii": "detect"}},
+            "typesafe.system_one",
+        )
+
+    assert len(seen) == 1 and "alice@example.com" in seen[0]

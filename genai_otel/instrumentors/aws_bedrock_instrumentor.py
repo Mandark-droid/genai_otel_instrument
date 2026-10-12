@@ -1,7 +1,7 @@
 import io
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from ..config import OTelConfig
 from .base import BaseInstrumentor
@@ -38,6 +38,112 @@ def _converse_blocks_text(blocks: Any) -> str:
                     parts.append(text)
         return "".join(parts)
     return ""
+
+
+def _blocks_text(blocks: Any) -> str:
+    """Text of a content value from any Bedrock body: a string, or a list of blocks.
+
+    Blocks are ``{"text": ...}`` (Converse, Nova) or ``{"type": "text", "text": ...}``
+    (Claude). Joined with newlines so separate blocks stay separate for a detector.
+    """
+    if isinstance(blocks, str):
+        return blocks
+    if isinstance(blocks, (list, tuple)):
+        parts = []
+        for block in blocks:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and isinstance(block.get("text"), str):
+                parts.append(block["text"])
+        return "\n".join(p for p in parts if p)
+    return ""
+
+
+def _messages_text(messages: Any) -> List[str]:
+    """Text of each message in a ``messages`` list, whatever its content shape."""
+    parts: List[str] = []
+    if isinstance(messages, (list, tuple)):
+        for message in messages:
+            if isinstance(message, dict):
+                # Cohere chat history spells it `message`; everyone else `content`.
+                content = message.get("content", message.get("message"))
+                text = _blocks_text(content)
+                if text:
+                    parts.append(text)
+    return parts
+
+
+def _body_dict(body: Any) -> Optional[Dict[str, Any]]:
+    """An invoke_model request body as a dict, or None when it is not a JSON object."""
+    if isinstance(body, dict):
+        return body
+    if isinstance(body, (bytes, bytearray)):
+        try:
+            body = bytes(body).decode("utf-8")
+        except UnicodeDecodeError:
+            return None
+    if isinstance(body, str):
+        try:
+            parsed = json.loads(body)
+        except ValueError:
+            return None
+        return parsed if isinstance(parsed, dict) else None
+    return None
+
+
+def _request_body_prompt(body: Dict[str, Any]) -> List[str]:
+    """The prompt text of an invoke_model request body, across model families.
+
+    Claude and Nova send ``system`` and ``messages``; Llama, Mistral and others a
+    ``prompt``; Titan Text an ``inputText``; Cohere Command R a ``message`` with an
+    optional ``preamble`` and ``chat_history``.
+    """
+    parts: List[str] = []
+    for key in ("system", "preamble"):
+        text = _blocks_text(body.get(key))
+        if text:
+            parts.append(text)
+    parts.extend(_messages_text(body.get("chat_history")))
+    parts.extend(_messages_text(body.get("messages")))
+    for key in ("prompt", "inputText", "message"):
+        value = body.get(key)
+        if isinstance(value, str) and value:
+            parts.append(value)
+    return parts
+
+
+def _response_body_text(body: Dict[str, Any]) -> Optional[str]:
+    """The answer in an invoke_model response body, across model families."""
+    content = body.get("content")  # Claude: a list of content blocks
+    if isinstance(content, (list, tuple)):
+        text = "".join(
+            block["text"]
+            for block in content
+            if isinstance(block, dict) and isinstance(block.get("text"), str)
+        )
+        if text:
+            return text
+    elif isinstance(content, str) and content:
+        return content
+
+    output = body.get("output")  # Nova
+    if isinstance(output, dict):
+        text = _converse_blocks_text((output.get("message") or {}).get("content"))
+        if text:
+            return text
+
+    for key in ("completion", "generation", "outputText", "text"):  # Llama, Titan, Cohere
+        value = body.get(key)
+        if isinstance(value, str) and value:
+            return value
+
+    for key, field in (("results", "outputText"), ("outputs", "text"), ("generations", "text")):
+        items = body.get(key)  # Titan, Mistral, Cohere Command
+        if isinstance(items, (list, tuple)) and items and isinstance(items[0], dict):
+            value = items[0].get(field)
+            if isinstance(value, str) and value:
+                return value
+    return None
 
 
 class _ReplayBody:
@@ -415,6 +521,8 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
             model = kwargs.get("modelId", "unknown")
 
             try:
+                # A streamed request is checked before it is sent, like any other.
+                instrumentor._apply_block_policies(span, kwargs)
                 result = original(*args, **kwargs)
             except Exception as e:
                 span.record_exception(e)
@@ -526,6 +634,65 @@ class AWSBedrockInstrumentor(BaseInstrumentor):
                 except Exception as e:  # noqa: BLE001
                     logger.debug("Error extracting usage from Bedrock response: %s", e)
         return None
+
+    @staticmethod
+    def _extract_prompt_for_eval(kwargs, operation: Optional[str] = None) -> Optional[str]:
+        """The prompt of a Bedrock call, for detectors and block policies.
+
+        ``converse`` / ``converse_stream`` pass ``system`` and ``messages`` as
+        content blocks. ``invoke_model`` and its streaming form carry the prompt
+        inside a JSON ``body`` whose shape depends on the model family; left
+        unread, those calls were neither evaluated nor blocked. An embeddings
+        body is a document being indexed, not a prompt, and is skipped.
+        """
+        parts: List[str] = []
+        system = _blocks_text(kwargs.get("system"))
+        if system:
+            parts.append(system)
+        parts.extend(_messages_text(kwargs.get("messages")))
+
+        if not parts and operation != "embeddings":
+            body = _body_dict(kwargs.get("body"))
+            if body is not None and not AWSBedrockInstrumentor._is_embedding_body(
+                kwargs.get("modelId"), body
+            ):
+                parts.extend(_request_body_prompt(body))
+
+        joined = "\n".join(p for p in parts if p)
+        return joined or None
+
+    @staticmethod
+    def _is_embedding_body(model_id: Any, body: Dict[str, Any]) -> bool:
+        """Whether an invoke_model body is an embeddings request.
+
+        The same rule the span attributes use: the model family decides for a
+        bare ``inputText``, which Titan Text and Titan Embed both send.
+        """
+        model_id_lower = str(model_id or "").lower()
+        return (
+            "embed" in model_id_lower
+            or any(key in body for key in ("texts", "inputs"))
+            or (
+                "inputText" in body
+                and "titan-text" not in model_id_lower
+                and "textGenerationConfig" not in body
+                and "messages" not in body
+            )
+        )
+
+    def _extract_response_for_eval(self, result) -> Optional[str]:
+        """The answer of a Bedrock call: Converse output blocks, or the JSON body."""
+        if not hasattr(result, "get"):
+            return None
+        output = result.get("output")
+        if isinstance(output, dict):
+            text = _converse_blocks_text((output.get("message") or {}).get("content"))
+            return text or None
+        body_bytes = _body_bytes(result.get("body"))
+        if not body_bytes:
+            return None
+        body = _body_dict(body_bytes)
+        return _response_body_text(body) if body is not None else None
 
     def _extract_response_attributes(self, result) -> Dict[str, Any]:
         """Extract response attributes from AWS Bedrock response for evaluation support.

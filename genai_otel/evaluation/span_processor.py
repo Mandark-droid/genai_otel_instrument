@@ -1269,15 +1269,40 @@ class EvaluationSpanProcessor(SpanProcessor):
         Called when the tracer provider is shut down.
         """
         logger.info("EvaluationSpanProcessor shutting down")
+        # Spans whose detectors run after the call are ended by a worker thread.
+        # This processor is registered ahead of the exporting one, so a span
+        # ended here is still exported. Once the provider has finished shutting
+        # down, a span that ends is dropped.
+        try:
+            from genai_otel.instrumentors.base import finish_pending_evaluations
+
+            finish_pending_evaluations()
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Could not finish pending evaluations: %s", e)
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:
-        """Force flush any buffered spans.
+        """Wait for spans whose detectors are still running, so a flush exports them.
+
+        This processor buffers nothing itself, but in the default evaluation
+        mode a span is only exported once its detectors are done. Half of the
+        timeout at most is spent waiting for that: the processors after this
+        one need the rest to export.
+
+        Only the spans that are with their detectors when this is called are
+        waited for. A service that keeps making calls always has another one,
+        and a flush at the end of one request is not about the next.
 
         Args:
             timeout_millis: Timeout in milliseconds
 
         Returns:
-            bool: True if successful
+            bool: Always True. A slow detector must not make the provider skip
+            the exporter's flush; its span is exported when it is done.
         """
-        # No buffering in this processor
+        try:
+            from genai_otel.instrumentors.base import wait_for_pending_evaluations
+
+            wait_for_pending_evaluations(max(0.0, (timeout_millis or 0) / 2000.0))
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Could not wait for pending evaluations: %s", e)
         return True

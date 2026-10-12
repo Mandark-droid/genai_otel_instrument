@@ -221,6 +221,51 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 extract_attributes=self._extract_responses_attributes,
             )(original_responses_create)
 
+    async def _call_sampled_out(self, span, span_name, extract_attributes, func, args, kwargs):
+        """Make an async call whose span the sampler dropped.
+
+        A sampled-out span has no name and no attributes. The recording path went
+        on to write metrics against it and raised ``AttributeError`` out of the
+        awaited call, after the provider had answered. Here the span is only made
+        current, so what the call does inherits the sampling decision. The request
+        is still subject to block policies and still counted: neither may depend
+        on trace sampling.
+        """
+        import time
+
+        from opentelemetry import context as otel_context
+        from opentelemetry import trace
+
+        token = otel_context.attach(trace.set_span_in_context(span))
+        start_time = time.time()
+        try:
+            if BaseInstrumentor._blocking_active:
+                operation = None
+                if extract_attributes:
+                    try:
+                        operation = extract_attributes(None, args, kwargs).get(
+                            "gen_ai.operation.name"
+                        )
+                    except Exception as e:  # noqa: BLE001
+                        logger.debug("Failed to extract attributes for '%s': %s", span_name, e)
+                await self._enforce_precall_policy_async(span, kwargs, operation)
+
+            result = await func(*args, **kwargs)
+
+            try:
+                if self.request_counter:
+                    self.request_counter.add(1, {"operation": span_name})
+                if self.latency_histogram:
+                    self.latency_histogram.record(
+                        time.time() - start_time, {"operation": span_name}
+                    )
+            except Exception:  # pragma: no cover - metrics must never break the call
+                pass
+            return result
+        finally:
+            otel_context.detach(token)
+            span.end()
+
     def _create_async_span_wrapper(self, span_name, extract_attributes=None):
         """Create an async wrapper that adds OpenTelemetry spans around async calls.
 
@@ -248,8 +293,15 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 # streamed call outlives this coroutine, and the context
                 # manager would close the span at the `await` below.
                 span = tracer.start_span(span_name, kind=SpanKind.CLIENT)
+                if not span.is_recording():
+                    return await instrumentor._call_sampled_out(
+                        span, span_name, extract_attributes, func, args, kwargs
+                    )
                 token = otel_context.attach(trace.set_span_in_context(span))
                 handed_to_stream = False
+                evaluate_later = False
+                result = None
+                operation = None
                 try:
                     if extract_attributes:
                         # The request side carries content too (the Responses
@@ -261,9 +313,18 @@ class OpenAIInstrumentor(BaseInstrumentor):
                         )
                         for key, value in attrs.items():
                             span.set_attribute(key, value)
+                        operation = attrs.get("gen_ai.operation.name")
 
                     start_time = time.time()
                     try:
+                        # Block policies apply to the async client as they do to
+                        # the sync one. This wrapper used to skip them, so a
+                        # request the policy should have stopped went through.
+                        if BaseInstrumentor._blocking_active:
+                            await instrumentor._enforce_precall_policy_async(
+                                span, kwargs, operation
+                            )
+
                         result = await func(*args, **kwargs)
 
                         # Awaiting a streamed call yields the iterator, not the
@@ -297,6 +358,33 @@ class OpenAIInstrumentor(BaseInstrumentor):
                         # Record metrics
                         instrumentor._record_result_metrics(span, result, start_time, kwargs)
 
+                        # Detectors, before the span ends. They were never run on
+                        # this path, so AsyncOpenAI spans carried no evaluation.
+                        # In the default mode a worker thread is handed the span
+                        # once this coroutine is done with it (see `finally`),
+                        # and the caller does not wait.
+                        if instrumentor._evaluation_active():
+                            if instrumentor._evaluation_in_background():
+                                evaluate_later = True
+                            else:
+                                try:
+                                    await instrumentor._run_evaluation_checks_async(
+                                        span, args, kwargs, result
+                                    )
+                                except asyncio.CancelledError:
+                                    # The caller has stopped waiting; the
+                                    # detectors' findings are still wanted. The
+                                    # span goes to the evaluation queue, which
+                                    # ends it when they are done.
+                                    evaluate_later = True
+                                    raise
+                                except Exception as e:
+                                    logger.warning(
+                                        "Failed to run evaluation checks for span '%s': %s",
+                                        span_name,
+                                        e,
+                                    )
+
                         # Content events only with content capture on. This async path
                         # called them unconditionally, so every AsyncOpenAI application
                         # put prompts and completions on its spans whatever it was told.
@@ -311,8 +399,11 @@ class OpenAIInstrumentor(BaseInstrumentor):
                         raise
                 finally:
                     otel_context.detach(token)
-                    # The stream wrapper owns the span's end once it takes over.
-                    if not handed_to_stream:
+                    # The stream wrapper owns the span's end once it takes over,
+                    # and so does the worker that runs the detectors.
+                    if evaluate_later:
+                        instrumentor._end_span_after_evaluation(span, args, kwargs, result)
+                    elif not handed_to_stream:
                         span.end()
 
             return async_wrapper
@@ -543,8 +634,16 @@ class OpenAIInstrumentor(BaseInstrumentor):
         chunk, so a streamed Responses call recorded no tokens and was never priced.
         Chat Completions streams carry ``usage`` on the final chunk and are left to the
         finalizer, as before.
+
+        Which of the two this stream is gets decided on its first chunk. Every
+        Responses event has a ``type``; a chat chunk has none, and asking one of
+        the SDK's models for an attribute it lacks, on every chunk, was a
+        noticeable part of what reading a stream cost.
         """
-        if getattr(chunk, "type", None) not in self._RESPONSES_TERMINAL_EVENTS:
+        is_responses = timing.usage_in_events
+        if is_responses is None:
+            is_responses = timing.usage_in_events = isinstance(getattr(chunk, "type", None), str)
+        if not is_responses or chunk.type not in self._RESPONSES_TERMINAL_EVENTS:
             return
         response = getattr(chunk, "response", None)
         usage = self._extract_usage(response) if response is not None else None

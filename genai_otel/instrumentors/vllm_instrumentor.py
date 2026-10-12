@@ -188,6 +188,10 @@ class VLLMInstrumentor(BaseInstrumentor):
                 attrs = {"gen_ai.system": PROVIDER}
             span = instrumentor.tracer.start_span("vllm.generate", attributes=attrs)
             start_time = time.time()
+            # Checked before the generator is iterated, which is when the engine
+            # starts work. The prompt is the first positional argument.
+            prompt = kwargs.get("prompt", args[0] if args else None)
+            instrumentor._block_or_end(span, {"prompt": prompt})
 
             async def traced():
                 final = None

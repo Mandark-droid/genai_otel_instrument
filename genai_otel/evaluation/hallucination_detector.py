@@ -4,14 +4,34 @@ This module provides hallucination detection capabilities to identify potentiall
 false or unsupported claims in LLM responses.
 """
 
+import bisect
 import logging
 import re
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field, replace
+from typing import Any, Dict, List, Optional, Tuple
 
-from .config import HallucinationConfig
+from .config import DEFAULT_CACHE_SIZE, HallucinationConfig
+from .result_cache import ResultCache
 
 logger = logging.getLogger(__name__)
+
+_SENTENCE_END = re.compile(r"[.!?]")
+_WORD_CHARACTER = re.compile(r"\w")
+
+# A subject, a verb and a number: "revenue was 45.7 million".
+_NUMBER = r"(\d+(?:,\d{3})*(?:\.\d+)?(?:\s*(?:million|billion|thousand))?)"
+_SUBJECT_AND_VERB = r"(\w+)\s+(?:is|are|was|were|reached?)\s+"
+# The same with an adverb allowed before the number: "was about 45.7 million".
+# The space after the adverb belongs to the adverb. Written as
+# "\s+(?:adverb)?\s*", a run of blank space could be split between the two in
+# as many ways as it has characters, and every one of them was tried.
+_ADVERB = r"(?:(?:exactly|approximately|about)\s*)?"
+# Each expression twice: as it is, and held to the start of a word. See
+# HallucinationDetector._find_pairs for why.
+_SUBJECT_NUMBER = re.compile(_SUBJECT_AND_VERB + _NUMBER)
+_SUBJECT_NUMBER_AT_WORD = re.compile(r"(?<!\w)" + _SUBJECT_AND_VERB + _NUMBER)
+_SUBJECT_NUMBER_IN_CONTEXT = re.compile(_SUBJECT_AND_VERB + _ADVERB + _NUMBER)
+_SUBJECT_NUMBER_IN_CONTEXT_AT_WORD = re.compile(r"(?<!\w)" + _SUBJECT_AND_VERB + _ADVERB + _NUMBER)
 
 
 @dataclass
@@ -62,7 +82,13 @@ class HallucinationDetector:
             r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b",
         ],
         "specific_numbers": [
-            r"\$?\d+(?:,\d{3})*(?:\.\d+)?\s*(?:million|billion|trillion|thousand)\b",  # $45.7 billion, 328 million
+            # $45.7 billion, 328 million. A number is read from where it starts:
+            # not from inside a run of digits, "(?<!\d)", and not from a group
+            # of three that the number before the comma leads into,
+            # "(?!(?<=\d,)\d{3}(?!\d))". Either would be read again as part of
+            # the number it belongs to, so a long number, or a long list of
+            # them, took time in proportion to the square of its length.
+            r"\$?(?<!\d)(?!(?<=\d,)\d{3}(?!\d))\d+(?:,\d{3})*(?:\.\d+)?\s*(?:million|billion|trillion|thousand)\b",
             r"\b(?:exactly|precisely|approximately)\s+\d+(?:,\d{3})*(?:\.\d+)?\b",
             r"\b\d{1,3}(?:,\d{3})+\b",  # 1,234 employees
             r"\b\d+(?:\.\d+)?%",  # 99.9% satisfaction
@@ -132,6 +158,7 @@ class HallucinationDetector:
             config: Hallucination detection configuration
         """
         self.config = config
+        self._cache = ResultCache(getattr(config, "cache_size", DEFAULT_CACHE_SIZE))
 
     def is_available(self) -> bool:
         """Check if hallucination detector is available.
@@ -157,6 +184,11 @@ class HallucinationDetector:
             )
 
         try:
+            key = self._cache_key(text, context)
+            cached = self._cache.get(key)
+            if cached is not None:
+                return replace(cached, original_text=text, context_text=context)
+
             indicators = []
             unsupported_claims = []
 
@@ -177,7 +209,7 @@ class HallucinationDetector:
             # Identify indicators
             if factual_claims_count > 0 and citation_count == 0:
                 indicators.append("specific_claims_without_citations")
-                unsupported_claims.extend(self._extract_factual_claims(text)[:3])
+                unsupported_claims.extend(self._extract_factual_claims(text, limit=3))
 
             if hedge_count > 3:
                 indicators.append("high_uncertainty_language")
@@ -199,7 +231,7 @@ class HallucinationDetector:
 
             has_hallucination = hallucination_score >= self.config.threshold
 
-            return HallucinationResult(
+            result = HallucinationResult(
                 has_hallucination=has_hallucination,
                 hallucination_score=hallucination_score,
                 hallucination_indicators=indicators,
@@ -210,12 +242,34 @@ class HallucinationDetector:
                 original_text=text,
                 context_text=context,
             )
+            # Stored without the texts: the entry outlives the request it came from.
+            self._cache.put(key, replace(result, original_text=None, context_text=None))
+            return result
 
         except Exception as e:
+            # Not remembered: the detector must be asked again once it can answer.
             logger.error("Error detecting hallucinations: %s", e, exc_info=True)
             return HallucinationResult(
                 has_hallucination=False, original_text=text, context_text=context
             )
+
+    def _cache_key(self, text: str, context: Optional[str]):
+        """Key for a result: both texts and every setting the result depends on."""
+        if not self._cache.enabled:
+            return None
+        context_key = self._cache.key(context) if context else ()
+        if context_key is None:
+            return None
+        try:
+            return self._cache.key(
+                text,
+                context_key,
+                self.config.threshold,
+                bool(self.config.check_citations),
+                bool(self.config.check_hedging),
+            )
+        except TypeError:
+            return None
 
     def _count_factual_claims(self, text: str) -> int:
         """Count factual claims in text.
@@ -233,26 +287,94 @@ class HallucinationDetector:
                 count += len(matches)
         return count
 
-    def _extract_factual_claims(self, text: str) -> List[str]:
+    def _extract_factual_claims(self, text: str, limit: Optional[int] = None) -> List[str]:
         """Extract factual claims from text.
+
+        Each claim is reported as the first sentence of the text that contains
+        its wording.
 
         Args:
             text: Text to analyze
+            limit: Stop once this many claims have been found. None for all.
 
         Returns:
             List[str]: List of factual claims found
         """
-        claims = []
+        claims: List[str] = []
+        ends = [match.start() for match in _SENTENCE_END.finditer(text)]
+        if not ends:
+            # No sentence ends anywhere, so there is none to report a claim as.
+            return claims
+        # One search per wording, not one per place it occurs: a figure quoted
+        # in every paragraph is looked up once.
+        sentences: Dict[str, Optional[str]] = {}
+        lowered = text.lower() if text.isascii() else None
         for claim_type, patterns in self.FACTUAL_CLAIM_PATTERNS.items():
             for pattern in patterns:
-                matches = re.finditer(pattern, text, re.IGNORECASE)
-                for match in matches:
-                    # Get sentence containing the match
-                    sentence_pattern = r"[^.!?]*" + re.escape(match.group()) + r"[^.!?]*[.!?]"
-                    sentence_match = re.search(sentence_pattern, text, re.IGNORECASE)
-                    if sentence_match:
-                        claims.append(sentence_match.group().strip())
+                for match in re.finditer(pattern, text, re.IGNORECASE):
+                    claim = match.group()
+                    if claim not in sentences:
+                        sentences[claim] = self._sentence_with(text, lowered, claim, ends)
+                    sentence = sentences[claim]
+                    if sentence is None:
+                        continue
+                    claims.append(sentence)
+                    if limit is not None and len(claims) >= limit:
+                        return claims
         return claims
+
+    @staticmethod
+    def _sentence_with(
+        text: str, lowered: Optional[str], claim: str, ends: List[int]
+    ) -> Optional[str]:
+        """The first sentence of ``text`` that contains ``claim``, whatever its case.
+
+        What ``[^.!?]*<claim>[^.!?]*[.!?]`` finds, worked out from where
+        sentences end (``ends``) instead of by trying that expression from every
+        position of the text, which on a long text without full stops did not
+        finish. None when no sentence that contains the claim comes to an end.
+        """
+        last_end = ends[-1]
+        length = len(claim)
+        # Where the claim first occurs. It has to be over by the last sentence
+        # end to be inside a sentence at all.
+        if lowered is not None:
+            # Plain text: looking for the lower-cased wording finds the same
+            # places as ignoring case does, and is much the faster way.
+            wording = claim.lower()
+            claim_start = lowered.find(wording, 0, last_end)
+
+            def occurs_at(start: int) -> bool:
+                return lowered.startswith(wording, start)
+
+        else:
+            occurrence = re.compile(re.escape(claim), re.IGNORECASE)
+            found = occurrence.search(text, 0, last_end)
+            claim_start = found.start() if found else -1
+
+            def occurs_at(start: int) -> bool:
+                return occurrence.match(text, start) is not None
+
+        if claim_start < 0:
+            return None
+        claim_end = claim_start + length
+
+        # The sentence begins after the last sentence end before the claim.
+        before = bisect.bisect_left(ends, claim_start)
+        sentence_start = ends[before - 1] + 1 if before else 0
+
+        # A claim can contain a full stop itself ("12.5%"). The expression took
+        # the last place the claim occurs before the first sentence end; with a
+        # full stop inside the claim that may be a later, overlapping one.
+        first_end = ends[before]
+        if first_end < claim_end:
+            for start in range(first_end, claim_start, -1):
+                if start + length <= last_end and occurs_at(start):
+                    claim_end = start + length
+                    break
+
+        sentence_end = ends[bisect.bisect_left(ends, claim_end)]
+        return text[sentence_start : sentence_end + 1].strip()
 
     def _count_hedge_words(self, text: str) -> int:
         """Count hedge words indicating uncertainty.
@@ -351,6 +473,46 @@ class HallucinationDetector:
                 return True
         return False
 
+    @staticmethod
+    def _find_pairs(anywhere, at_word_start, text: str) -> List[Tuple[str, str]]:
+        """What ``anywhere.findall(text)`` finds, in time proportional to the text.
+
+        The expression begins with a word, the subject. Tried from every
+        position, a failed attempt at the start of a word is repeated from each
+        of its other letters, so one long word (a base64 blob, a long number)
+        took time in proportion to the square of its length. ``at_word_start``
+        is the same expression held to the start of a word. A subject can begin
+        inside a word in one case only, straight after the number of the pair
+        before it ("is 5abc is 7"), and that one place is tried as it is.
+        """
+        pairs = []
+        position = 0
+        while position <= len(text):
+            match = None
+            if (
+                0 < position < len(text)
+                and _WORD_CHARACTER.match(text, position - 1)
+                and _WORD_CHARACTER.match(text, position)
+            ):
+                match = anywhere.match(text, position)
+            if match is None:
+                match = at_word_start.search(text, position)
+            if match is None:
+                break
+            pairs.append(match.groups())
+            position = match.end()
+        return pairs
+
+    def _subject_numbers(self, text: str) -> List[Tuple[str, str]]:
+        """Every "<subject> is <number>" in ``text``, as (subject, number)."""
+        return self._find_pairs(_SUBJECT_NUMBER, _SUBJECT_NUMBER_AT_WORD, text)
+
+    def _subject_numbers_in_context(self, text: str) -> List[Tuple[str, str]]:
+        """Every "<subject> is about <number>" in ``text``, as (subject, number)."""
+        return self._find_pairs(
+            _SUBJECT_NUMBER_IN_CONTEXT, _SUBJECT_NUMBER_IN_CONTEXT_AT_WORD, text
+        )
+
     def _check_internal_contradiction(self, text: str) -> bool:
         """Check if text contradicts itself internally.
 
@@ -369,12 +531,9 @@ class HallucinationDetector:
             return False
 
         # Look for contradictory numbers for the same subject
-        # Pattern: extract subject + number pairs
-        number_pattern = r"(\w+)\s+(?:is|are|was|were|reached?)\s+(\d+(?:,\d{3})*(?:\.\d+)?(?:\s*(?:million|billion|thousand))?)"
-
         subject_values = {}
         for sentence in sentences:
-            matches = re.findall(number_pattern, sentence.lower())
+            matches = self._subject_numbers(sentence.lower())
             for subject, value in matches:
                 if subject in subject_values:
                     # Same subject mentioned with different value
@@ -421,17 +580,13 @@ class HallucinationDetector:
 
         # Check for number contradictions with same subject
         # Extract subject + number pairs from both texts
-        number_pattern = r"(\w+)\s+(?:is|are|was|were|reached?)\s+(?:exactly|approximately|about)?\s*(\d+(?:,\d{3})*(?:\.\d+)?(?:\s*(?:million|billion|thousand))?)"
-
         context_numbers = {}
         text_numbers = {}
 
-        for match in re.finditer(number_pattern, context_lower):
-            subject, number = match.groups()
+        for subject, number in self._subject_numbers_in_context(context_lower):
             context_numbers[subject] = number.strip()
 
-        for match in re.finditer(number_pattern, text_lower):
-            subject, number = match.groups()
+        for subject, number in self._subject_numbers_in_context(text_lower):
             text_numbers[subject] = number.strip()
 
         # Check if same subject has different numbers

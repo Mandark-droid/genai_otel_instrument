@@ -12,7 +12,53 @@ overflows even with a higher Python limit. Run tests in batches if needed:
 import importlib
 import sys
 
+import pytest
+
 sys.setrecursionlimit(10000)
+
+
+_EVALUATION_STATE = (
+    "_pii_detector",
+    "_toxicity_detector",
+    "_bias_detector",
+    "_prompt_injection_detector",
+    "_restricted_topics_detector",
+    "_hallucination_detector",
+    "_blocking_active",
+    "_blocking_policies",
+)
+
+
+@pytest.fixture(autouse=True)
+def _evaluation_state_stays_in_its_test():
+    """Keep one test's detectors, and the work they do, out of the next test.
+
+    Detectors are registered on ``BaseInstrumentor`` itself, for the whole
+    process, and nothing unregisters them: a test that builds an evaluation span
+    processor leaves its detectors configured for every test that runs after it.
+    That used to pass unnoticed. Now that a call with a detector configured
+    hands its span to a worker thread, a later test that expects its span to
+    have ended when the call returns would fail for a reason in another file.
+
+    So what was registered before a test is put back after it, and detectors
+    still running on a worker are waited for first.
+    """
+    base = sys.modules.get("genai_otel.instrumentors.base")
+    saved = (
+        {name: getattr(base.BaseInstrumentor, name) for name in _EVALUATION_STATE}
+        if base is not None
+        else None
+    )
+    yield
+    base = sys.modules.get("genai_otel.instrumentors.base")
+    if base is None:
+        return
+    base.drain_evaluations(timeout=30)
+    for name in _EVALUATION_STATE:
+        default = frozenset() if name == "_blocking_policies" else None
+        if name == "_blocking_active":
+            default = False
+        setattr(base.BaseInstrumentor, name, saved[name] if saved else default)
 
 
 # ---------------------------------------------------------------------------

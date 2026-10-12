@@ -201,11 +201,11 @@ class TypeSafeInstrumentor(BaseInstrumentor):
             attrs["gen_ai.response"] = self._capture(answers)
         return attrs
 
-    def _extract_prompt_for_eval(self, kwargs) -> Optional[str]:
+    def _extract_prompt_for_eval(self, kwargs, operation: Optional[str] = None) -> Optional[str]:
         state, questions, _, _ = self._request_values(None, (), kwargs)
         if state is not None or questions is not None:
             return self._json({"state": state, "questions": questions})
-        return super()._extract_prompt_for_eval(kwargs)
+        return super()._extract_prompt_for_eval(kwargs, operation)
 
     def _extract_usage(self, result) -> Optional[Dict[str, int]]:
         usage = self._get_value(result, "usage")

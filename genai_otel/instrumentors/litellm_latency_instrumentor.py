@@ -16,6 +16,7 @@ span measured the request, this one deliberately publishes no TTFT/TPOT/usage of
 its own -- a single request must not be counted twice. See issue #22.
 """
 
+import asyncio
 import importlib.util
 import logging
 import sys
@@ -115,7 +116,14 @@ class LiteLLMLatencyInstrumentor(BaseInstrumentor):
             holder, scope_token = inner_measurement_scope()
             start_time = time.time()
             handed_to_stream = False
+            evaluate_later = False
+            result = None
             try:
+                # Block policies are enforced here even when a provider SDK
+                # beneath is instrumented too: litellm reaches some providers
+                # without one, and a blocked request must never be sent.
+                instrumentor._apply_block_policies(span, kwargs)
+
                 result = original(*args, **kwargs)
                 handled, value = instrumentor._install_stream_measurement(
                     span,
@@ -132,6 +140,11 @@ class LiteLLMLatencyInstrumentor(BaseInstrumentor):
 
                 if not holder:
                     instrumentor._record_result_metrics(span, result, start_time, kwargs)
+                    # Detectors run where the request was recorded: on the provider
+                    # span beneath when there is one, here when there is not.
+                    # "Here" is this thread, or a worker thread that is handed
+                    # the span in `finally` and ends it.
+                    evaluate_later = instrumentor._evaluate_or_defer(span, args, kwargs, result)
                 span.set_status(Status(StatusCode.OK))
                 return result
             except Exception as e:
@@ -141,7 +154,9 @@ class LiteLLMLatencyInstrumentor(BaseInstrumentor):
             finally:
                 close_inner_measurement_scope(scope_token)
                 otel_context.detach(token)
-                if not handed_to_stream:
+                if evaluate_later:
+                    instrumentor._end_span_after_evaluation(span, args, kwargs, result)
+                elif not handed_to_stream:
                     span.end()
 
         return wrapper
@@ -155,7 +170,12 @@ class LiteLLMLatencyInstrumentor(BaseInstrumentor):
             holder, scope_token = inner_measurement_scope()
             start_time = time.time()
             handed_to_stream = False
+            evaluate_later = False
+            result = None
             try:
+                if BaseInstrumentor._blocking_active:
+                    await instrumentor._enforce_precall_policy_async(span, kwargs)
+
                 result = await original(*args, **kwargs)
                 handled, value = instrumentor._install_stream_measurement(
                     span,
@@ -171,6 +191,28 @@ class LiteLLMLatencyInstrumentor(BaseInstrumentor):
 
                 if not holder:
                     instrumentor._record_result_metrics(span, result, start_time, kwargs)
+                    # Detectors: awaited on a worker thread, or left to one that
+                    # is handed the span in `finally` and ends it.
+                    if instrumentor._evaluation_active():
+                        if instrumentor._evaluation_in_background():
+                            evaluate_later = True
+                        else:
+                            try:
+                                await instrumentor._run_evaluation_checks_async(
+                                    span, args, kwargs, result
+                                )
+                            except asyncio.CancelledError:
+                                # The caller has stopped waiting; the detectors'
+                                # findings are still wanted. The span goes to the
+                                # evaluation queue, which ends it when they are done.
+                                evaluate_later = True
+                                raise
+                            except Exception as e:
+                                logger.warning(
+                                    "Failed to run evaluation checks for span '%s': %s",
+                                    span_name,
+                                    e,
+                                )
                 span.set_status(Status(StatusCode.OK))
                 return result
             except Exception as e:
@@ -180,7 +222,9 @@ class LiteLLMLatencyInstrumentor(BaseInstrumentor):
             finally:
                 close_inner_measurement_scope(scope_token)
                 otel_context.detach(token)
-                if not handed_to_stream:
+                if evaluate_later:
+                    instrumentor._end_span_after_evaluation(span, args, kwargs, result)
+                elif not handed_to_stream:
                     span.end()
 
         return wrapper

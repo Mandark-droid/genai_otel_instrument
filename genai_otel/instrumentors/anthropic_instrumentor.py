@@ -127,10 +127,12 @@ class _MeasuredStreamManagerBase:
                 otel_context.detach(self._token)
             except Exception as e:  # noqa: BLE001
                 logger.debug("Could not detach context for anthropic.messages.stream: %s", e)
-        if exc is not None:
-            self._instrumentor._fail_stream(self._span, exc)
-            return
         timing = self._timing if self._timing is not None else _StreamTiming(time.time())
+        if exc is not None:
+            # The events that arrived before the failure were timed; the
+            # measured variant records that before it ends the span.
+            self._instrumentor._fail_measured_stream(self._span, timing, self._model, exc)
+            return
         if timing.usage is None:
             # Nothing was observed during iteration, so the caller took the
             # answer some other way. The accumulated message still carries the
@@ -336,11 +338,23 @@ class AnthropicInstrumentor(BaseInstrumentor):
             if not instrumentor._instrumented:
                 return original_stream(*args, **kwargs)
 
-            manager = original_stream(*args, **kwargs)
             try:
                 span = instrumentor._start_stream_span(kwargs)
             except Exception as e:  # noqa: BLE001 - never break the caller's call
                 logger.debug("Could not start span for anthropic.messages.stream: %s", e)
+                span = None
+
+            # A streamed request is checked before it is built, like any other.
+            # This path opens its own span and ran no block policy at all.
+            instrumentor._block_or_end(span if span is not None else trace.INVALID_SPAN, kwargs)
+
+            try:
+                manager = original_stream(*args, **kwargs)
+            except Exception as e:
+                if span is not None:
+                    instrumentor._fail_unstarted_stream_span(span, e)
+                raise
+            if span is None:
                 return manager
 
             model = kwargs.get("model", "unknown")
@@ -349,6 +363,16 @@ class AnthropicInstrumentor(BaseInstrumentor):
             return _MeasuredStreamManager(manager, instrumentor, span, model)
 
         client.messages.stream = wrapped_stream
+
+    @staticmethod
+    def _fail_unstarted_stream_span(span, error) -> None:
+        """End a stream span whose stream could not be built."""
+        try:
+            span.set_status(trace.Status(trace.StatusCode.ERROR, str(error)))
+            span.record_exception(error)
+            span.end()
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Could not end span for anthropic.messages.stream: %s", e)
 
     def _start_stream_span(self, kwargs):
         """Open the span for a ``messages.stream()`` call."""

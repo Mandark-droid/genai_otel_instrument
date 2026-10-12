@@ -6,10 +6,11 @@ and optionally block sensitive or inappropriate topics in prompts and responses.
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Set
 
-from .config import RestrictedTopicsConfig
+from .config import DEFAULT_CACHE_SIZE, RestrictedTopicsConfig
+from .result_cache import ResultCache
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,11 @@ class RestrictedTopicsDetector:
         "financial_advice": {
             "patterns": [
                 r"should\s+I\s+(?:invest|buy|sell|trade)\s+(?:in\s+)?(?:stocks?|crypto|bitcoin|forex)",
-                r"(?:you|we)\s+should\s+(?:definitely|absolutely)?\s*(?:buy|sell|invest\s+in|trade)\s+(?:these\s+)?(?:stocks?|crypto|bitcoin)",  # "you should buy these stocks"
+                # "you should buy these stocks". The space after the adverb
+                # belongs to the adverb: written as "\s+(?:adverb)?\s*", a run
+                # of blank space could be split between the two in as many ways
+                # as it has characters, and every one of them was tried.
+                r"(?:you|we)\s+should\s+(?:(?:definitely|absolutely)\s*)?(?:buy|sell|invest\s+in|trade)\s+(?:these\s+)?(?:stocks?|crypto|bitcoin)",
                 r"(?:best|good|top)\s+(?:stocks?|investments?|crypto)\s+to\s+(?:buy|invest|purchase)",
                 r"(?:best|good|top)\s+investment\s+strategies",  # "best investment strategies"
                 r"(?:what|which)\s+(?:stocks?|crypto|investments?)\s+should\s+(?:I|we)\s+(?:buy|invest\s+in)",
@@ -151,6 +156,7 @@ class RestrictedTopicsDetector:
             config: Restricted topics detection configuration
         """
         self.config = config
+        self._cache = ResultCache(getattr(config, "cache_size", DEFAULT_CACHE_SIZE))
 
     def is_available(self) -> bool:
         """Check if restricted topics detector is available.
@@ -173,6 +179,11 @@ class RestrictedTopicsDetector:
             return RestrictedTopicsResult(has_restricted_topic=False, original_text=text)
 
         try:
+            key = self._cache_key(text)
+            cached = self._cache.get(key)
+            if cached is not None:
+                return replace(cached, original_text=text)
+
             # Perform pattern-based detection
             topic_scores = {}
             patterns_matched = {}
@@ -203,7 +214,7 @@ class RestrictedTopicsDetector:
             max_score = max(topic_scores.values(), default=0.0)
             blocked = self.config.block_on_detection and has_restricted_topic
 
-            return RestrictedTopicsResult(
+            result = RestrictedTopicsResult(
                 has_restricted_topic=has_restricted_topic,
                 detected_topics=detected_topics,
                 topic_scores=topic_scores,
@@ -212,10 +223,28 @@ class RestrictedTopicsDetector:
                 original_text=text,
                 blocked=blocked,
             )
+            # Stored without the text: the entry outlives the request it came from.
+            self._cache.put(key, replace(result, original_text=None))
+            return result
 
         except Exception as e:
+            # Not remembered: the detector must be asked again once it can answer.
             logger.error("Error detecting restricted topics: %s", e, exc_info=True)
             return RestrictedTopicsResult(has_restricted_topic=False, original_text=text)
+
+    def _cache_key(self, text: str):
+        """Key for a result: the text and every setting the result depends on."""
+        if not self._cache.enabled:
+            return None
+        try:
+            return self._cache.key(
+                text,
+                self.config.threshold,
+                tuple(self.config.restricted_topics or ()),
+                bool(self.config.block_on_detection),
+            )
+        except TypeError:
+            return None
 
     def _check_topic(self, text: str, topic: str) -> tuple[float, List[str]]:
         """Check for a specific restricted topic.
