@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.36.0] - 2026-10-12
+## [1.36.1] - 2026-10-12
+
+1.36.0 was tagged and not published. This is the first release of these changes.
 
 ### Added
 
