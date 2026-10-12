@@ -905,6 +905,78 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#where-detectors-apply" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where Detectors Apply
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-detectors-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where Detectors Run
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where Detectors Run">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-detectors-fall-behind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When Detectors Fall Behind
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#at-shutdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        At Shutdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-much-text-is-analysed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Much Text Is Analysed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toxicity-model-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Toxicity Model Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1475,6 +1547,78 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#where-detectors-apply" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where Detectors Apply
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-detectors-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where Detectors Run
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where Detectors Run">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-detectors-fall-behind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When Detectors Fall Behind
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#at-shutdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        At Shutdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-much-text-is-analysed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Much Text Is Analysed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toxicity-model-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Toxicity Model Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1647,6 +1791,134 @@
 <a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="p">)</span>
 </code></pre></div>
 <p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/comprehensive_evaluation_example.py">comprehensive evaluation example</a> and <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/ollama/multiple_evaluations_detection_example.py">Ollama multiple evaluations</a>.</p>
+<h2 id="where-detectors-apply">Where Detectors Apply<a class="headerlink" href="#where-detectors-apply" title="Permanent link">&para;</a></h2>
+<p>Detectors and block policies apply to sync and async clients alike, to the OpenAI Responses
+API as well as Chat Completions, to all four AWS Bedrock runtime calls (<code>converse</code>,
+<code>converse_stream</code>, <code>invoke_model</code>, <code>invoke_model_with_response_stream</code>, including the system
+prompt), and to streamed requests, which are checked before they are sent. A blocked request raises <code>PolicyViolationError</code> before anything reaches the provider,
+whether or not its trace is sampled.</p>
+<p>Framework-level spans (LangChain, LlamaIndex and agent frameworks) are not checked
+themselves. Detection happens on the provider call beneath them, so the provider's
+instrumentor has to be enabled for a block policy to take effect. <code>input</code> passed to an
+embeddings call is not treated as a prompt.</p>
+<p>Not covered yet: a prompt passed positionally (LiteLLM, llama.cpp), and providers whose prompt
+is not <code>messages</code>, <code>prompt</code> or the Responses <code>input</code>: Google Gemini and Vertex AI (<code>contents</code>),
+Cohere chat (<code>message</code>) and Replicate (<code>input</code>). A block policy does not stop those requests.</p>
+<h2 id="where-detectors-run">Where Detectors Run<a class="headerlink" href="#where-detectors-run" title="Permanent link">&para;</a></h2>
+<p>A block policy is checked before the request is sent, and the call waits for the verdict. On
+async clients that check runs on a worker thread, so it does not hold your event loop.</p>
+<p>The detectors that annotate a span run after your call has returned, on a worker thread. The
+span is exported when they have finished, with the end time of your call, so its duration is
+the call's and not the detectors'. Two things follow from that:</p>
+<ul>
+<li>
+<p><code>evaluation.*</code> attributes are not on the span at the moment the call returns. Code that reads
+  them in the same process waits first:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">flush_telemetry</span><span class="p">()</span>  <span class="c1"># waits for pending evaluations, then flushes</span>
+</code></pre></div>
+</li>
+<li>
+<p>An LLM span can be exported after the span that encloses it.</p>
+</li>
+</ul>
+<p>To have the detectors finish before the call returns, as they did up to 1.35.0:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span><span class="n">enable_pii_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">evaluation_mode</span><span class="o">=</span><span class="s2">&quot;inline&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>or set <code>GENAI_EVALUATION_MODE=inline</code>. Mistral, Hyperbolic, HuggingFace pipelines and Pydantic AI
+always evaluate inline. A streamed response is evaluated when its stream ends, on the thread that
+ends it, and only when content capture is on.</p>
+<p>If your application installs its own tracer provider before calling <code>instrument()</code>, the
+detectors run inline and a warning says so: a provider this library did not create does not
+wait for spans that are still being evaluated when it is flushed or shut down.</p>
+<h3 id="when-detectors-fall-behind">When Detectors Fall Behind<a class="headerlink" href="#when-detectors-fall-behind" title="Permanent link">&para;</a></h3>
+<p>At most <code>GENAI_EVALUATION_QUEUE_SIZE</code> spans wait for detectors. Past that a span is exported at
+once without evaluation, marked <code>evaluation.skipped="overloaded"</code>, and a warning, at most one a
+minute, says how many were skipped. Tracing is never slowed or dropped because detectors are
+slow. Filter on <code>evaluation.skipped</code> to see how much went unevaluated.</p>
+<p>Detectors share the Python interpreter with your application. A process that spends its time in
+Python code, as opposed to waiting on the network, leaves them less time.</p>
+<h3 id="at-shutdown">At Shutdown<a class="headerlink" href="#at-shutdown" title="Permanent link">&para;</a></h3>
+<p>At exit and on <code>uninstrument()</code>, pending evaluations get <code>GENAI_EVALUATION_SHUTDOWN_TIMEOUT</code>
+seconds. Spans the detectors have not reached by then are exported without evaluation, marked
+<code>evaluation.skipped="shutdown"</code>, so no span is lost. In a serverless function, call
+<code>genai_otel.flush_telemetry()</code> before returning, or use inline mode.</p>
+<h2 id="how-much-text-is-analysed">How Much Text Is Analysed<a class="headerlink" href="#how-much-text-is-analysed" title="Permanent link">&para;</a></h2>
+<p>Detectors read the last <code>GENAI_EVALUATION_MAX_CHARS</code> characters of a prompt, which is the newest
+content of a conversation, and the first of a response. The default is 1500. A span whose text
+was longer says so:</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>evaluation.truncated</code></td>
+<td><code>true</code> when detectors read only part of the text</td>
+</tr>
+<tr>
+<td><code>evaluation.prompt.length</code></td>
+<td>Characters in the prompt</td>
+</tr>
+<tr>
+<td><code>evaluation.prompt.analyzed_length</code></td>
+<td>Characters of the prompt the detectors read</td>
+</tr>
+<tr>
+<td><code>evaluation.response.length</code></td>
+<td>Characters in the response</td>
+</tr>
+<tr>
+<td><code>evaluation.response.analyzed_length</code></td>
+<td>Characters of the response the detectors read</td>
+</tr>
+<tr>
+<td><code>evaluation.pii.prompt.pattern_analyzed_length</code></td>
+<td>Characters the PII patterns covered</td>
+</tr>
+<tr>
+<td><code>evaluation.pii.prompt.model_analyzed_length</code></td>
+<td>Characters the PII entity model read</td>
+</tr>
+<tr>
+<td><code>evaluation.&lt;detector&gt;.prompt.analyzed_length</code></td>
+<td>Characters a pattern-based detector with a block policy read: the whole prompt</td>
+</tr>
+</tbody>
+</table>
+<p>PII detection keeps pattern coverage of the whole prompt. Card numbers, e-mail addresses, phone
+numbers, US social security numbers, IP addresses, the Indian identifiers and your custom
+patterns are found wherever they are. Entity types that need the language model, such as names
+and locations, are looked for only in the analysed part.</p>
+<p>The local toxicity model has its own, smaller limit: it reads the last
+<code>GENAI_TOXICITY_MAX_CHARS</code> characters of the prompt (default 500), recorded in
+<code>evaluation.toxicity.prompt.analyzed_length</code>. With both limits at <code>0</code> it scores the whole
+text in pieces and reports the highest score per category.</p>
+<p>PII in <code>redact</code> mode is not limited: a redacted copy is only built from text that was
+analysed. Under <code>GENAI_PROFILE=strict</code> both limits default to <code>0</code>.</p>
+<p>A block policy on prompt injection, restricted topics or bias always reads the whole prompt,
+whatever the limit, so padding a prompt cannot hide text from it. The span records that in
+<code>evaluation.&lt;detector&gt;.prompt.analyzed_length</code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">The limit applies to PII and toxicity block policies</p>
+<p>With a block policy, text outside the analysed part is not checked for toxicity, and not for
+names or locations. Set <code>GENAI_EVALUATION_MAX_CHARS=0</code> and <code>GENAI_TOXICITY_MAX_CHARS=0</code>
+when every character must be checked. Detection time then grows with the length of the
+prompt.</p>
+</div>
+<p>With a block policy a prompt is analysed once per call: the check before the request and the
+annotation after it share the result. Each detector remembers its most recent results, keyed by
+a digest of the analysed text and never by the text itself (<code>GENAI_EVALUATION_CACHE_SIZE</code>).</p>
+<h2 id="toxicity-model-options">Toxicity Model Options<a class="headerlink" href="#toxicity-model-options" title="Permanent link">&para;</a></h2>
+<p><code>GENAI_TOXICITY_QUANTIZE=true</code> runs the local Detoxify model with 8-bit weights. It is faster,
+and its scores differ from the default model's by enough to change some verdicts near the
+threshold, so compare the two on your own data before relying on it. It is off by default.</p>
+<p><code>GENAI_TOXICITY_TORCH_THREADS</code> sets how many threads torch may use. The setting is process-wide
+and applies to every torch model in the process, so it is unset by default.</p>
+<p>Enabling only the pattern-based detectors (bias, prompt injection, restricted topics,
+hallucination) does not load torch or the toxicity model.</p>
 <h2 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h2>
 <p>Each detector records metrics for monitoring:</p>
 <ul>

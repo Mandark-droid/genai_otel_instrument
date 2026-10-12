@@ -785,6 +785,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#detector-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detector Runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1967,6 +1978,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#detector-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detector Runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2787,6 +2809,21 @@ See the <a href="../../guides/arize-ax/">Arize AX guide</a> for a worked example
 <td><code>false</code></td>
 <td>Block requests with toxic content</td>
 </tr>
+<tr>
+<td><code>GENAI_TOXICITY_QUANTIZE</code></td>
+<td><code>false</code></td>
+<td>Run the local model with 8-bit weights. Faster, but scores shift and verdicts near the threshold can change: test it on your own data</td>
+</tr>
+<tr>
+<td><code>GENAI_TOXICITY_TORCH_THREADS</code></td>
+<td></td>
+<td>Threads torch may use for the local model. Process-wide: it applies to every torch model in the process</td>
+</tr>
+<tr>
+<td><code>GENAI_TOXICITY_MAX_CHARS</code></td>
+<td><code>500</code></td>
+<td>Characters the local toxicity model analyses: the end of the prompt. <code>0</code> follows <code>GENAI_EVALUATION_MAX_CHARS</code>. With no limit the whole text is scored in pieces</td>
+</tr>
 </tbody>
 </table>
 <h3 id="bias-detection">Bias Detection<a class="headerlink" href="#bias-detection" title="Permanent link">&para;</a></h3>
@@ -2892,6 +2929,44 @@ See the <a href="../../guides/arize-ax/">Arize AX guide</a> for a worked example
 </tr>
 </tbody>
 </table>
+<h3 id="detector-runtime">Detector Runtime<a class="headerlink" href="#detector-runtime" title="Permanent link">&para;</a></h3>
+<p>These apply to every enabled detector. The <a href="../../guides/evaluation/#where-detectors-run">Evaluation guide</a> explains each.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GENAI_EVALUATION_MODE</code></td>
+<td><code>background</code></td>
+<td><code>background</code>: detectors run on a worker thread after the call has returned. <code>inline</code>: the call waits for them. A block policy is always checked before the request is sent</td>
+</tr>
+<tr>
+<td><code>GENAI_EVALUATION_MAX_CHARS</code></td>
+<td><code>1500</code></td>
+<td>Characters the detectors analyse: the end of a prompt and the start of a response. <code>0</code> = no limit. A span whose text was cut carries <code>evaluation.truncated</code>. A block policy on prompt injection, restricted topics or bias reads the whole prompt regardless</td>
+</tr>
+<tr>
+<td><code>GENAI_EVALUATION_QUEUE_SIZE</code></td>
+<td><code>1000</code></td>
+<td>Spans that may wait for detectors. Past this a span is exported unevaluated, marked <code>evaluation.skipped="overloaded"</code></td>
+</tr>
+<tr>
+<td><code>GENAI_EVALUATION_SHUTDOWN_TIMEOUT</code></td>
+<td><code>5.0</code></td>
+<td>Seconds given to pending evaluations at exit and on <code>uninstrument()</code>. What is left is exported unevaluated, marked <code>evaluation.skipped="shutdown"</code></td>
+</tr>
+<tr>
+<td><code>GENAI_EVALUATION_CACHE_SIZE</code></td>
+<td><code>256</code></td>
+<td>Results each detector remembers, keyed by a digest of the analysed text. <code>0</code> disables</td>
+</tr>
+</tbody>
+</table>
 <h2 id="security-hardening-bfsi-on-prem">Security Hardening (BFSI / on-prem)<a class="headerlink" href="#security-hardening-bfsi-on-prem" title="Permanent link">&para;</a></h2>
 <p>For regulated on-prem deployments, <code>GENAI_PROFILE=strict</code> (aliases <code>bfsi</code>, <code>bank</code>)
 locks down the posture in one switch: audit content capture stays <strong>on</strong>, but all
@@ -2926,6 +3001,10 @@ third-party network egress is disabled and runtime model downloads are blocked.<
 <code>GENAI_AIR_GAPPED=true</code>, <code>GENAI_CO2_OFFLINE_MODE=true</code> and
 <code>GENAI_TOXICITY_USE_PERSPECTIVE_API=false</code>, and enables content capture for audit
 unless you pin <code>GENAI_ENABLE_CONTENT_CAPTURE</code> yourself.</p>
+<p>The profile also lifts the limits on analysed text: <code>GENAI_EVALUATION_MAX_CHARS</code> and
+<code>GENAI_TOXICITY_MAX_CHARS</code> default to <code>0</code> under it, so the PII entity model reads the
+whole prompt and toxicity is scored over the whole text. Detection time then grows with
+the length of the prompt. A limit you set yourself is kept.</p>
 <p>Blocking evaluation (<code>GENAI_PII_MODE=block</code>, <code>*_BLOCK_ON_DETECTION=true</code>) now
 intercepts the request <strong>before</strong> the LLM call and raises
 <code>genai_otel.exceptions.PolicyViolationError</code>, instead of only annotating the span
