@@ -399,6 +399,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../getting-started/coding-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Instrument with a Coding Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../getting-started/configuration/" class="md-nav__link">
         
   
@@ -856,6 +884,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -874,10 +929,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -895,8 +950,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1260,10 +1315,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -1281,8 +1336,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2088,9 +2143,10 @@ once.</p>
 </tbody>
 </table>
 <p>The <code>host.*</code>, <code>os.*</code> and <code>process.*</code> groups come from the OpenTelemetry SDK's
-own detectors, which this library enables by default via
-<code>OTEL_EXPERIMENTAL_RESOURCE_DETECTORS</code>. <code>host.ip</code> has no upstream detector and
-is resolved by the library.</p>
+own detectors. This library enables <code>host</code> and <code>os</code> by default via
+<code>OTEL_EXPERIMENTAL_RESOURCE_DETECTORS</code>; <code>process</code> is opt-in (add it to that
+variable). <code>host.ip</code> has no upstream detector and is resolved by the library
+only when <code>GENAI_OTEL_RESOURCE_HOST_IP=true</code>.</p>
 <div class="admonition warning">
 <p class="admonition-title">Credential values in <code>process.command_args</code> are redacted</p>
 <p>A value following a flag whose name looks like a credential

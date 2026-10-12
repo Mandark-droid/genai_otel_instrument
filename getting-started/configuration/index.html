@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://mandark-droid.github.io/genai_otel_instrument/getting-started/configuration/">
       
       
-        <link rel="prev" href="../quickstart/">
+        <link rel="prev" href="../coding-agents/">
       
       
         <link rel="next" href="../../guides/demo-app/">
@@ -379,6 +379,34 @@
     
   
     Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coding-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Instrument with a Coding Agent
   
 
     
@@ -1275,6 +1303,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     
     
     
@@ -1291,10 +1346,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -1312,8 +1367,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1464,10 +1519,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -1485,8 +1540,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2153,7 +2208,7 @@ provider span with no extra configuration. Every other provider (Anthropic,
 Bedrock, Gemini, Cohere, HuggingFace, ...) is implemented with litellm's own
 HTTP client, which no provider instrumentor sees. Enabling <code>litellm_latency</code>
 wraps litellm's own entry points so those routes report TTFT/TPOT too:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span><span class="s2">"openai,anthropic,litellm,litellm_latency"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span><span class="s2">&quot;openai,anthropic,litellm,litellm_latency&quot;</span>
 </code></pre></div>
 <p>The span it creates is the parent of any inner provider span. When an inner span
 already measured the request, this one records no tokens, cost or latency of its
@@ -2204,7 +2259,7 @@ in token and cost accounting for every litellm call.</p>
 </tr>
 </tbody>
 </table>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">'{"chat":{"my-model":{"promptPrice":0.001,"completionPrice":0.002}}}'</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CUSTOM_PRICING_JSON</span><span class="o">=</span><span class="s1">&#39;{&quot;chat&quot;:{&quot;my-model&quot;:{&quot;promptPrice&quot;:0.001,&quot;completionPrice&quot;:0.002}}}&#39;</span>
 </code></pre></div>
 <h2 id="gpu-metrics">GPU Metrics<a class="headerlink" href="#gpu-metrics" title="Permanent link">&para;</a></h2>
 <table>
@@ -2470,10 +2525,12 @@ instead and leave the handler off:</p>
 process. To bound the loss window there, shorten the batch delay with the
 standard <code>OTEL_BSP_SCHEDULE_DELAY</code>, trading export frequency for exposure.</p>
 <h2 id="host-and-instance-identity">Host and Instance Identity<a class="headerlink" href="#host-and-instance-identity" title="Permanent link">&para;</a></h2>
-<p>Spans carry host, OS, process and instance attributes so that traffic can be
-attributed to a machine and to one instance among several running on it. All of
-them are OpenTelemetry registry names, and all are controlled by standard
-<code>OTEL_*</code> variables - see
+<p>Spans carry host, OS and instance attributes so that traffic can be attributed
+to a machine and to one instance among several running on it. Process attributes
+(the OS user, the executable path and the full command line) and <code>host.ip</code> (every
+interface address) are opt-in: they describe the machine rather than the service,
+and on a workstation that is a description of the person using it. All of them
+are OpenTelemetry registry names, controlled by standard <code>OTEL_*</code> variables - see
 <a href="../../reference/semantic-conventions/#resource-attributes">Resource Attributes</a>
 for the full list.</p>
 <table>
@@ -2487,8 +2544,13 @@ for the full list.</p>
 <tbody>
 <tr>
 <td><code>OTEL_EXPERIMENTAL_RESOURCE_DETECTORS</code></td>
-<td><code>host,os,process</code></td>
-<td>SDK detectors to run. Set to <code>host,os</code> to drop process attributes, or <code>otel</code> for none</td>
+<td><code>host,os</code></td>
+<td>SDK detectors to run. Add <code>process</code> for the process attributes (<code>host,os,process</code>), or set <code>otel</code> for none</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_RESOURCE_HOST_IP</code></td>
+<td><code>false</code></td>
+<td><code>true</code> fills <code>host.ip</code> with the host's non-loopback addresses. A value in <code>OTEL_RESOURCE_ATTRIBUTES</code> is used either way</td>
 </tr>
 <tr>
 <td><code>OTEL_SERVICE_INSTANCE_ID</code></td>
@@ -2508,11 +2570,12 @@ for the full list.</p>
 </tbody>
 </table>
 <div class="admonition note">
-<p class="admonition-title">Defaults differ under the hardened profiles</p>
-<p><code>GENAI_PROFILE=strict|bfsi|bank</code> defaults the detector list to <code>host,os</code>,
-leaving out <code>process</code> so that no command line reaches the backend. Host and
-instance identity are unaffected. Setting
-<code>OTEL_EXPERIMENTAL_RESOURCE_DETECTORS</code> explicitly overrides this.</p>
+<p class="admonition-title">Changed in 1.35: process attributes and <code>host.ip</code> are opt-in</p>
+<p>Until 1.35 the default was <code>host,os,process</code> plus <code>host.ip</code>, and only
+<code>GENAI_PROFILE=strict|bfsi|bank</code> left out <code>process</code>. Every profile now
+defaults to <code>host,os</code>. To restore the old resource, set
+<code>OTEL_EXPERIMENTAL_RESOURCE_DETECTORS=host,os,process</code> and
+<code>GENAI_OTEL_RESOURCE_HOST_IP=true</code>.</p>
 </div>
 <h3 id="choosing-how-serviceinstanceid-is-generated">Choosing how <code>service.instance.id</code> is generated<a class="headerlink" href="#choosing-how-serviceinstanceid-is-generated" title="Permanent link">&para;</a></h3>
 <p><code>service.instance.id</code> is what separates two instances of the same service on
@@ -2944,9 +3007,9 @@ for per-call overhead numbers and the measurement tooling.</p>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
 <a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="c1"># Core</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">"my-app"</span><span class="p">,</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">endpoint</span><span class="o">=</span><span class="s2">"http://localhost:4318"</span><span class="p">,</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">"openai"</span><span class="p">,</span> <span class="s2">"anthropic"</span><span class="p">,</span> <span class="s2">"crewai"</span><span class="p">],</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;my-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">endpoint</span><span class="o">=</span><span class="s2">&quot;http://localhost:4318&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;openai&quot;</span><span class="p">,</span> <span class="s2">&quot;anthropic&quot;</span><span class="p">,</span> <span class="s2">&quot;crewai&quot;</span><span class="p">],</span>
 <a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="n">sampling_rate</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
 <a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="n">fail_on_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
@@ -2958,8 +3021,8 @@ for per-call overhead numbers and the measurement tooling.</p>
 <a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>
 <a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>    <span class="c1"># CO2 tracking</span>
 <a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>    <span class="n">enable_co2_tracking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>    <span class="n">co2_country_iso_code</span><span class="o">=</span><span class="s2">"USA"</span><span class="p">,</span>
-<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>    <span class="n">co2_region</span><span class="o">=</span><span class="s2">"california"</span><span class="p">,</span>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>    <span class="n">co2_country_iso_code</span><span class="o">=</span><span class="s2">&quot;USA&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>    <span class="n">co2_region</span><span class="o">=</span><span class="s2">&quot;california&quot;</span><span class="p">,</span>
 <a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>
 <a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>    <span class="c1"># GPU</span>
 <a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>    <span class="n">gpu_collection_interval</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
@@ -2967,7 +3030,7 @@ for per-call overhead numbers and the measurement tooling.</p>
 <a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>
 <a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>    <span class="c1"># Evaluation</span>
 <a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a>    <span class="n">enable_pii_detection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>    <span class="n">pii_mode</span><span class="o">=</span><span class="s2">"redact"</span><span class="p">,</span>
+<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>    <span class="n">pii_mode</span><span class="o">=</span><span class="s2">&quot;redact&quot;</span><span class="p">,</span>
 <a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>    <span class="n">pii_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
 <a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a>    <span class="n">pii_gdpr_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a>
@@ -3055,8 +3118,8 @@ for per-call overhead numbers and the measurement tooling.</p>
 <h2 id="session-and-user-tracking">Session and User Tracking<a class="headerlink" href="#session-and-user-tracking" title="Permanent link">&para;</a></h2>
 <p>For programmatic session/user tracking, provide extractor callables:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">session_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"metadata"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"session_id"</span><span class="p">),</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">user_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"metadata"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"user_id"</span><span class="p">),</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">session_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;session_id&quot;</span><span class="p">),</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">user_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">),</span>
 <a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="p">)</span>
 </code></pre></div>
 <p>CrewAI, LangGraph, and LangChain have built-in automatic session ID propagation. See the <a href="../../guides/multi-agent-frameworks/">Multi-Agent Frameworks guide</a> for details.</p>
