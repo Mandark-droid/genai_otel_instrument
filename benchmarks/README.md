@@ -4,6 +4,15 @@ Performance benchmarks and results for `genai-otel-instrument`. The dominant cos
 this library adds to a host application is the **per-LLM-call span-wrapper
 overhead**, so that is what is measured here.
 
+## What these scripts measure
+
+The scripts in this directory measure the **shared span wrapper on a no-op function** in a
+tight loop. That isolates the wrapper for regression checks, and reads about three times
+lower than a real SDK call: a no-op skips usage extraction and attribute work, and a tight
+loop keeps the wrapper in the CPU caches. Do not read the figures below as the overhead of a
+real request. The docs site's Benchmarks page has that: about 150 us per non-streaming call
+for 1.35.0.
+
 ## Tooling
 
 | Script | Measures |

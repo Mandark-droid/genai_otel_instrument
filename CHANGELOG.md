@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **A Benchmarks section on the docs site.** It gives the overhead of a real OpenAI SDK call
+  under this library and under OpenLIT, Traceloop, OpenInference, Langfuse, Opik and Galileo,
+  and separately the cost of the evaluation detectors, with the methodology and one reference
+  run. `benchmarks/README.md` now says that its own micro-benchmark measures the span wrapper
+  on a no-op function and reads about three times lower than a real call.
+
 ## [1.35.0] - 2026-10-11
 
 ### Changed

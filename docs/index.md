@@ -47,6 +47,7 @@ response = client.chat.completions.create(
 - [Cost Tracking](guides/cost-tracking.md) - Automatic cost calculation for 1,700+ models
 - [GPU Metrics](guides/gpu-metrics.md) - NVIDIA and AMD GPU monitoring
 - [Evaluation & Safety](guides/evaluation.md) - PII, toxicity, bias, prompt injection, hallucination detection
+- [Benchmarks](benchmarks.md) - Measured overhead next to other tracing SDKs
 
 ## Examples
 
