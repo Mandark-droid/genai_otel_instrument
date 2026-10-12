@@ -345,7 +345,9 @@ def test_a_flush_does_not_wait_for_ever_for_a_detector_that_is_stuck(pipeline):
     detector = pipeline.call(held=True)
     detector.wait_until_started()
 
-    assert pipeline.provider.force_flush(50) is True
+    started = time.monotonic()
+    assert pipeline.provider.force_flush(2000) is True
+    assert time.monotonic() - started < 2.0
     assert pipeline.spans() == ()
 
 

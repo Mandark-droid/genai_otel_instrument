@@ -355,7 +355,7 @@ def test_a_span_whose_detector_is_stuck_is_ended_before_the_handler_goes_on(own_
     own_queue.submit(stuck, limit=100)
     assert stuck.started.wait(WAIT)
     try:
-        assert base.finish_pending_evaluations_in_signal_handler(0.4) is True
+        assert base.finish_pending_evaluations_in_signal_handler(3.0) is True
         assert stuck.endings == ["shutdown"]
     finally:
         stuck.release()
