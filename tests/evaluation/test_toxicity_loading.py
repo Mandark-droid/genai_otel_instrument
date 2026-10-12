@@ -71,14 +71,15 @@ def _heavy(attempted):
 
 class TestNothingHeavyIsImportedUnlessNeeded:
     def test_importing_the_detectors_imports_no_model_library(self):
-        attempted = _run("""
+        script = """
             import genai_otel.evaluation.toxicity_detector
             import genai_otel.evaluation.span_processor
-            """)
+            """
+        attempted = _run(script)
         assert attempted == []
 
     def test_regex_detectors_alone_do_not_import_torch(self):
-        attempted = _run("""
+        script = """
             from genai_otel.evaluation.config import (
                 BiasConfig,
                 HallucinationConfig,
@@ -94,11 +95,12 @@ class TestNothingHeavyIsImportedUnlessNeeded:
                 hallucination_config=HallucinationConfig(enabled=True),
             )
             assert processor.bias_detector.detect("Women are always bad drivers.").has_bias
-            """)
+            """
+        attempted = _run(script)
         assert attempted == []
 
     def test_instrument_with_a_regex_detector_does_not_import_torch(self):
-        attempted = _run("""
+        script = """
             import os
 
             # instrument() reads a .env file when python-dotenv is installed. What a
@@ -123,31 +125,34 @@ class TestNothingHeavyIsImportedUnlessNeeded:
             assert BaseInstrumentor._bias_detector is not None
             assert BaseInstrumentor._prompt_injection_detector is not None
             assert BaseInstrumentor._toxicity_detector is None
-            """)
+            """
+        attempted = _run(script)
         assert _heavy(attempted) == []
 
     def test_the_local_toxicity_model_is_what_imports_it(self):
         """The control: the trap does see the import when the model is asked for."""
-        attempted = _run("""
+        script = """
             from genai_otel.evaluation.config import ToxicityConfig
             from genai_otel.evaluation.toxicity_detector import ToxicityDetector
 
             detector = ToxicityDetector(ToxicityConfig(enabled=True, use_local_model=True))
             assert not detector.is_available()
-            """)
+            """
+        attempted = _run(script)
         assert attempted == ["detoxify"]
 
     def test_toxicity_without_the_local_model_does_not_import_it(self):
-        attempted = _run("""
+        script = """
             from genai_otel.evaluation.config import ToxicityConfig
             from genai_otel.evaluation.toxicity_detector import ToxicityDetector
 
             ToxicityDetector(ToxicityConfig(enabled=True, use_local_model=False))
-            """)
+            """
+        attempted = _run(script)
         assert attempted == []
 
     def test_the_perspective_client_library_is_imported_only_for_perspective(self):
-        attempted = _run("""
+        script = """
             from genai_otel.evaluation.config import ToxicityConfig
             from genai_otel.evaluation.toxicity_detector import ToxicityDetector
 
@@ -159,7 +164,8 @@ class TestNothingHeavyIsImportedUnlessNeeded:
                     perspective_api_key="not-a-real-key",
                 )
             )
-            """)
+            """
+        attempted = _run(script)
         assert attempted == ["googleapiclient"]
 
 
