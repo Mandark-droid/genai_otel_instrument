@@ -1,7 +1,24 @@
 # Benchmarks
 
 How much time TraceVerde adds to an LLM call, how that compares with other tracing
-SDKs, and what the evaluation detectors cost on top.
+SDKs, and what the evaluation detectors cost on top. Every figure on this page comes
+from a tool that is in the repository, so you can run it and get your own.
+
+## Reproduce it
+
+```bash
+git clone https://github.com/Mandark-droid/genai_otel_instrument
+cd genai_otel_instrument/benchmarks/competitive
+python run_benchmark.py --quick        # the SDK comparison, a couple of minutes
+python run_eval_benchmark.py --quick   # TraceVerde's evaluation detectors
+```
+
+You need Python and, ideally, [`uv`](https://docs.astral.sh/uv/). The tool creates one
+virtual environment per library from pinned requirement files, runs the scenarios and
+writes raw JSON and Markdown tables. It needs no API keys and no accounts, and makes no
+network calls beyond installing packages. Its
+[README](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/benchmarks/competitive)
+describes every flag, what each configuration records, and how to add a library.
 
 ## How it is measured
 
@@ -147,7 +164,7 @@ pattern-based ones on a latency-critical path.
 ## Reading these numbers
 
 - **One machine, one SDK.** Results on Linux, on fewer cores or with another provider's
-  SDK will differ. Measure where your application runs.
+  SDK will differ. Run the tool where your application runs.
 - **A fake server.** Nothing here measures export, network or a collector.
 - **Configuration decides more than the library does.** What an SDK records by default
   changes its cost more than which SDK it is. Compare like with like.

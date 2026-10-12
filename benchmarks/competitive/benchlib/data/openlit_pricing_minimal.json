@@ -1,0 +1,9 @@
+{
+  "chat": {
+    "gpt-4o": {"promptPrice": 0.0025, "completionPrice": 0.01, "cacheReadPrice": 0.00125},
+    "gpt-4o-2024-08-06": {"promptPrice": 0.0025, "completionPrice": 0.01, "cacheReadPrice": 0.00125}
+  },
+  "embeddings": {},
+  "images": {},
+  "audio": {}
+}

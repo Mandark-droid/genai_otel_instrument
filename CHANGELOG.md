@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `benchmarks/competitive/`, the tool behind the Benchmarks page. It measures the overhead
+  of a real OpenAI SDK call, against an in-process fake server, under this library and six
+  other tracing SDKs, and separately the cost of the evaluation detectors. It needs no API
+  keys and no accounts. The Benchmarks page now says how to run it, so every figure on it
+  can be reproduced.
+
 ## [1.46.1] - 2026-10-28
 
 ### Fixed
