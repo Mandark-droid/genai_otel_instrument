@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.37.0] - 2026-10-18
+
 ### Added
 
 - **Token usage under the current GenAI metric conventions.** semantic-conventions-genai#374
