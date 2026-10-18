@@ -6,6 +6,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Token usage under the current GenAI metric conventions.** semantic-conventions-genai#374
+  removed the `gen_ai.client.token.usage` histogram and the `gen_ai.token.type` attribute, so a
+  backend reading token usage by its standard names got nothing from this library. Every inference
+  call whose provider reports usage now also records:
+  - counters `gen_ai.client.inference.usage.input_tokens`, `.output_tokens`,
+    `.cache_read.input_tokens`, `.cache_write.input_tokens` and `.reasoning.output_tokens`, unit
+    `{token}`, broken down by `gen_ai.token.modality`. A provider's `text`/`image`/`audio` breakdown
+    is used where it gives one, and what it leaves over is counted as `unknown`.
+  - histograms `gen_ai.client.inference.operation.input_tokens` and `.output_tokens`, one value per
+    call and no modality, with the same token buckets as the existing token histograms. An agent,
+    crew or workflow run that accounts its own tokens adds them to the counters only.
+  - Zero and missing counts add no point to the counters (semantic-conventions-genai#602).
+  - Not recorded for embeddings calls, for token counts this library estimated, or for failed calls.
+
+### Changed
+
+- **Anthropic and CometAPI's Anthropic-style usage carry `prompt_tokens_excludes_cache`.** Their
+  `input_tokens` leaves out cache reads and writes; the new input counter adds them back so the
+  cache counters are subsets of it, as the conventions define. Span attributes and cost are
+  unchanged.
+
+### Deprecated
+
+- **`gen_ai.client.token.usage`.** Still recorded, with its `token_type` label, beside the
+  instruments above so existing dashboards keep working. It is removed at 2.0.
+
 ## [1.36.1] - 2026-10-12
 
 1.36.0 was tagged and not published. This is the first release of these changes.

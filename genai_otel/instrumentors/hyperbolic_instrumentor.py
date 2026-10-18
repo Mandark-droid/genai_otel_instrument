@@ -227,6 +227,7 @@ class HyperbolicInstrumentor(BaseInstrumentor):
                     usage_dict["completion_tokens"],
                     {"token_type": "completion", "model": model, "provider": "hyperbolic"},
                 )
+            self._record_inference_usage_metrics(span, usage_dict)
 
             # Calculate and record cost
             if self.config.enable_cost_tracking:

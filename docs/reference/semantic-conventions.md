@@ -243,7 +243,7 @@ reason the GenAI token attributes are dual-emitted, and removed at 2.0:
 | Metric | Type | Unit | Description |
 |--------|------|------|-------------|
 | `gen_ai.requests` | Counter | requests | Request count by provider/model |
-| `gen_ai.client.token.usage` | Counter | tokens | Token usage (prompt/completion) |
+| `gen_ai.client.token.usage` | Counter | tokens | Token usage, labelled `token_type` (`prompt`/`completion`). No longer defined by the conventions; see [Token usage metrics](#token-usage-metrics) |
 | `gen_ai.client.operation.duration` | Histogram | seconds | Request latency |
 | `gen_ai.cost` | Counter | USD | Estimated costs |
 | `gen_ai.errors` | Counter | errors | Error count by type |
@@ -251,6 +251,47 @@ reason the GenAI token attributes are dual-emitted, and removed at 2.0:
 | `gen_ai.server.time_per_output_token` | Histogram | seconds | TPOT, recorded when the output-token count is known |
 | `gen_ai.server.ttft` | Histogram | seconds | Superseded spelling of TTFT |
 | `gen_ai.server.tbt` | Histogram | seconds | Time between streamed chunks: one sample per stream, its mean gap. With `GENAI_METRICS_PROFILE=full`, one sample per gap |
+
+### Token Usage Metrics
+
+[semantic-conventions-genai#374](https://github.com/open-telemetry/semantic-conventions-genai/pull/374)
+replaced the `gen_ai.client.token.usage` histogram and its `gen_ai.token.type` attribute with
+these instruments. They are recorded for every inference call whose provider reported usage.
+
+| Metric | Type | Unit | Records |
+|--------|------|------|---------|
+| `gen_ai.client.inference.usage.input_tokens` | Counter | `{token}` | Input tokens, cached ones included |
+| `gen_ai.client.inference.usage.output_tokens` | Counter | `{token}` | Output tokens, reasoning ones included |
+| `gen_ai.client.inference.usage.cache_read.input_tokens` | Counter | `{token}` | Input tokens served from the provider's cache. Part of `input_tokens` |
+| `gen_ai.client.inference.usage.cache_write.input_tokens` | Counter | `{token}` | Input tokens written to the provider's cache. Part of `input_tokens` |
+| `gen_ai.client.inference.usage.reasoning.output_tokens` | Counter | `{token}` | Output tokens spent on reasoning. Part of `output_tokens` |
+| `gen_ai.client.inference.operation.input_tokens` | Histogram | `{token}` | One call's input tokens |
+| `gen_ai.client.inference.operation.output_tokens` | Histogram | `{token}` | One call's output tokens |
+
+Attributes, each only when the span has it: `gen_ai.operation.name`, `gen_ai.provider.name`
+(read from `gen_ai.system` when only that is set), `gen_ai.request.model`, `gen_ai.response.model`,
+`server.address`, `server.port`. The counters also carry `gen_ai.token.modality`; the histograms do
+not, because percentiles taken per modality do not add up to a call.
+
+- **Modality.** Where the provider breaks usage down (`text`, `image`, `audio`), each part is counted
+  under its modality and whatever the breakdown leaves over is counted under `unknown`, so the
+  modalities of one counter always add up to its total. Usage with no breakdown is all `unknown`.
+- **Zero and missing counts record nothing on the counters**, as
+  [semantic-conventions-genai#602](https://github.com/open-telemetry/semantic-conventions-genai/pull/602)
+  proposes: a call with no cache activity adds no `cache_read` point. The histograms record one value per
+  call whenever usage was reported, zero included.
+- **Agent runs.** When a framework span (an agent, crew, graph or workflow run) is the one that
+  accounts a run's tokens, they are added to the counters but not to the histograms: a run's total is
+  not the size of any one model call.
+- **Cached input is counted as input.** Anthropic reports `input_tokens` without its cache reads and
+  writes; the input counter adds them back so that the cache counters stay subsets of it. The
+  `gen_ai.usage.input_tokens` span attribute is unchanged.
+- **Not recorded:** embeddings calls (the conventions are to give them their own instrument), token
+  counts this library estimated because the provider returned none (they stay on the span, marked
+  `gen_ai.usage.token_count_estimated`, and on `gen_ai.client.token.usage`), and failed calls.
+
+`gen_ai.client.token.usage` is still recorded alongside these with its existing `token_type`
+label, so dashboards built on it keep working. It is removed at 2.0.
 
 ### GPU Metrics
 

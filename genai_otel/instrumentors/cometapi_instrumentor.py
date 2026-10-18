@@ -385,6 +385,8 @@ class CometAPIInstrumentor(BaseInstrumentor):
                     "prompt_tokens": input_tokens,
                     "completion_tokens": output_tokens,
                     "total_tokens": input_tokens + output_tokens,
+                    # As with Anthropic, input_tokens leaves out cache reads and writes.
+                    "prompt_tokens_excludes_cache": True,
                 }
                 if hasattr(usage, "cache_read_input_tokens"):
                     usage_dict["cache_read_input_tokens"] = (

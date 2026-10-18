@@ -1318,6 +1318,14 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     _shared_request_finish_counter = None
     _shared_request_success_counter = None
     _shared_request_failure_counter = None
+    # Token usage under the current conventions (semantic-conventions-genai#374)
+    _shared_inference_usage_input_counter = None
+    _shared_inference_usage_output_counter = None
+    _shared_inference_usage_cache_read_counter = None
+    _shared_inference_usage_cache_write_counter = None
+    _shared_inference_usage_reasoning_counter = None
+    _shared_inference_operation_input_histogram = None
+    _shared_inference_operation_output_histogram = None
 
     # Evaluation detectors (set by EvaluationSpanProcessor)
     _pii_detector = None
@@ -1378,6 +1386,16 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         self.request_finish_counter = self._shared_request_finish_counter
         self.request_success_counter = self._shared_request_success_counter
         self.request_failure_counter = self._shared_request_failure_counter
+        # Token usage under the current conventions
+        self.inference_usage_input_counter = self._shared_inference_usage_input_counter
+        self.inference_usage_output_counter = self._shared_inference_usage_output_counter
+        self.inference_usage_cache_read_counter = self._shared_inference_usage_cache_read_counter
+        self.inference_usage_cache_write_counter = self._shared_inference_usage_cache_write_counter
+        self.inference_usage_reasoning_counter = self._shared_inference_usage_reasoning_counter
+        self.inference_operation_input_histogram = self._shared_inference_operation_input_histogram
+        self.inference_operation_output_histogram = (
+            self._shared_inference_operation_output_histogram
+        )
 
     @classmethod
     def _ensure_shared_metrics_created(cls):
@@ -1496,6 +1514,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     "gen_ai.server.request.failure",
                     description="Number of failed requests",
                 )
+                cls._create_inference_usage_instruments(meter)
 
                 _SHARED_METRICS_CREATED = True
                 logger.debug("Shared metrics created successfully")
@@ -1523,6 +1542,78 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 BaseInstrumentor._shared_request_finish_counter = None
                 BaseInstrumentor._shared_request_success_counter = None
                 BaseInstrumentor._shared_request_failure_counter = None
+                cls._clear_inference_usage_instruments()
+
+    # (attribute on BaseInstrumentor, metric name, description) for the token-usage
+    # instruments of semantic-conventions-genai#374.
+    _INFERENCE_USAGE_COUNTERS = (
+        (
+            "_shared_inference_usage_input_counter",
+            SC.GEN_AI_CLIENT_INFERENCE_USAGE_INPUT_TOKENS,
+            "The number of input (prompt) tokens used, including cached tokens.",
+        ),
+        (
+            "_shared_inference_usage_output_counter",
+            SC.GEN_AI_CLIENT_INFERENCE_USAGE_OUTPUT_TOKENS,
+            "The number of output (completion) tokens used, including reasoning tokens.",
+        ),
+        (
+            "_shared_inference_usage_cache_read_counter",
+            SC.GEN_AI_CLIENT_INFERENCE_USAGE_CACHE_READ_INPUT_TOKENS,
+            "The number of input tokens served from a provider-managed cache.",
+        ),
+        (
+            "_shared_inference_usage_cache_write_counter",
+            SC.GEN_AI_CLIENT_INFERENCE_USAGE_CACHE_WRITE_INPUT_TOKENS,
+            "The number of input tokens written to a provider-managed cache.",
+        ),
+        (
+            "_shared_inference_usage_reasoning_counter",
+            SC.GEN_AI_CLIENT_INFERENCE_USAGE_REASONING_OUTPUT_TOKENS,
+            "The number of output tokens used for reasoning.",
+        ),
+    )
+    _INFERENCE_OPERATION_HISTOGRAMS = (
+        (
+            "_shared_inference_operation_input_histogram",
+            SC.GEN_AI_CLIENT_INFERENCE_OPERATION_INPUT_TOKENS,
+            "The number of input (prompt) tokens used per inference operation.",
+        ),
+        (
+            "_shared_inference_operation_output_histogram",
+            SC.GEN_AI_CLIENT_INFERENCE_OPERATION_OUTPUT_TOKENS,
+            "The number of output (completion) tokens used per inference operation.",
+        ),
+    )
+
+    @classmethod
+    def _create_inference_usage_instruments(cls, meter) -> None:
+        """Create the #374 token-usage instruments.
+
+        Guarded on their own: an error here leaves them unset and every instrument
+        created before them working, rather than taking the whole set down with it.
+        """
+        try:
+            for attr, name, description in cls._INFERENCE_USAGE_COUNTERS:
+                setattr(
+                    BaseInstrumentor,
+                    attr,
+                    meter.create_counter(name, description=description, unit="{token}"),
+                )
+            for attr, name, description in cls._INFERENCE_OPERATION_HISTOGRAMS:
+                setattr(
+                    BaseInstrumentor,
+                    attr,
+                    meter.create_histogram(name, description=description, unit="{token}"),
+                )
+        except Exception as e:
+            logger.error("Failed to create inference token-usage metrics: %s", e, exc_info=True)
+            cls._clear_inference_usage_instruments()
+
+    @classmethod
+    def _clear_inference_usage_instruments(cls) -> None:
+        for attr, _, _ in cls._INFERENCE_USAGE_COUNTERS + cls._INFERENCE_OPERATION_HISTOGRAMS:
+            setattr(BaseInstrumentor, attr, None)
 
     @property
     def cost_calculator(self) -> "CostCalculator":
@@ -2507,6 +2598,131 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 if isinstance(value, (int, float)) and value > 0:
                     span.set_attribute(template.format(modality=modality), int(value))
 
+    # Operations the inference token instruments do not cover. #374 left embeddings to
+    # a dedicated instrument that is still to be defined, and the conventions say a
+    # fetched response reports no token usage at all.
+    _NON_INFERENCE_OPERATIONS = frozenset({"embeddings", "fetch_response"})
+
+    # Span attributes copied onto the inference token instruments: the conventions'
+    # metric attributes for GenAI client metrics, each only when the span has it.
+    _INFERENCE_METRIC_ATTRIBUTES = (
+        "gen_ai.operation.name",
+        SC.GEN_AI_PROVIDER_NAME,
+        "gen_ai.request.model",
+        "gen_ai.response.model",
+        "server.address",
+        "server.port",
+    )
+
+    @staticmethod
+    def _positive_count(value: Any) -> int:
+        """``value`` as a token count, or 0 when it is not a real positive number."""
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+            return 0
+        return int(value)
+
+    @classmethod
+    def _modality_contributions(
+        cls, total: int, usage: Dict[str, Any], key_template: str
+    ) -> Dict[str, int]:
+        """Split ``total`` over the modalities the provider reported.
+
+        Whatever the reported modalities do not account for is counted under
+        ``unknown``, so the contributions always sum to the total. A breakdown larger
+        than the total contradicts it and is not used. Only positive contributions are
+        returned (semantic-conventions-genai#602).
+        """
+        reported = {}
+        for modality in SC.TOKEN_MODALITIES:
+            count = cls._positive_count(usage.get(key_template.format(modality=modality)))
+            if count:
+                reported[modality] = count
+        if not total:
+            return reported
+        accounted = sum(reported.values())
+        if accounted > total:
+            return {SC.TOKEN_MODALITY_UNKNOWN: total}
+        if total > accounted:
+            reported[SC.TOKEN_MODALITY_UNKNOWN] = total - accounted
+        return reported
+
+    def _record_inference_usage_metrics(self, span, usage: Dict[str, Any]) -> None:
+        """Record ``usage`` on the token instruments of semantic-conventions-genai#374.
+
+        Recorded beside ``gen_ai.client.token.usage``, never instead of it. ``usage`` is
+        the canonical usage dict, and must be what the provider reported: counts this
+        library estimated stay off these instruments, which the conventions reserve for
+        counts the provider returned or the user chose to compute offline.
+
+        The counters carry only known, strictly positive contributions (#602), so a
+        missing or zero count records nothing. The histograms describe one operation
+        each, so they record the operation's total whenever usage was reported, zero
+        included, and nothing for an agent run.
+        """
+        try:
+            attrs = getattr(span, "attributes", None) or {}
+            operation = attrs.get("gen_ai.operation.name")
+            if operation in self._NON_INFERENCE_OPERATIONS or (
+                attrs.get("gen_ai.request.type") == "embedding"
+            ):
+                return
+
+            metric_attrs: Dict[str, Any] = {}
+            for key in self._INFERENCE_METRIC_ATTRIBUTES:
+                value = attrs.get(key)
+                if isinstance(value, (str, int)) and not isinstance(value, bool) and value != "":
+                    metric_attrs[key] = value
+            if SC.GEN_AI_PROVIDER_NAME not in metric_attrs:
+                superseded = attrs.get(SC.GEN_AI_SYSTEM)
+                if isinstance(superseded, str) and superseded:
+                    metric_attrs[SC.GEN_AI_PROVIDER_NAME] = superseded
+
+            cache_read = self._positive_count(usage.get("cache_read_input_tokens"))
+            cache_write = self._positive_count(usage.get("cache_creation_input_tokens"))
+            input_total = self._positive_count(usage.get("prompt_tokens"))
+            if usage.get("prompt_tokens_excludes_cache") is True:
+                # Anthropic counts only uncached input; the conventions count it all.
+                input_total += cache_read + cache_write
+            output_total = self._positive_count(usage.get("completion_tokens"))
+            details = usage.get("completion_tokens_details")
+            reasoning = (
+                self._positive_count(details.get("reasoning_tokens"))
+                if isinstance(details, dict)
+                else 0
+            )
+
+            for counter, total, key_template in (
+                (self.inference_usage_input_counter, input_total, "{modality}_input_tokens"),
+                (self.inference_usage_output_counter, output_total, "{modality}_output_tokens"),
+                (
+                    self.inference_usage_cache_read_counter,
+                    cache_read,
+                    "{modality}_cache_read_input_tokens",
+                ),
+                (self.inference_usage_cache_write_counter, cache_write, None),
+                (self.inference_usage_reasoning_counter, reasoning, None),
+            ):
+                if not counter:
+                    continue
+                contributions = (
+                    self._modality_contributions(total, usage, key_template)
+                    if key_template
+                    else ({SC.TOKEN_MODALITY_UNKNOWN: total} if total else {})
+                )
+                for modality, count in contributions.items():
+                    counter.add(count, {**metric_attrs, SC.GEN_AI_TOKEN_MODALITY: modality})
+
+            if self._is_agent_invocation(attrs):
+                # A framework span accounting several model calls: its tokens belong in
+                # the totals above, but its total is not the size of any one inference.
+                return
+            if self.inference_operation_input_histogram:
+                self.inference_operation_input_histogram.record(input_total, metric_attrs)
+            if self.inference_operation_output_histogram:
+                self.inference_operation_output_histogram.record(output_total, metric_attrs)
+        except Exception as e:
+            logger.debug("Failed to record inference token-usage metrics: %s", e)
+
     def _record_result_metrics(self, span, result, start_time: float, request_kwargs: dict = None):
         """Record metrics derived from the function result and execution time.
 
@@ -2677,6 +2893,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         self.completion_tokens_histogram.record(
                             int(completion_tokens), {"model": str(model), "operation": _sname}
                         )
+
+                if not estimated:
+                    self._record_inference_usage_metrics(span, usage)
 
                 # Record total tokens
                 if isinstance(total_tokens, (int, float)) and total_tokens > 0:
@@ -4263,6 +4482,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 int(completion_tokens),
                                 {"model": model, "operation": _span_name(span)},
                             )
+
+                    self._record_inference_usage_metrics(span, usage)
 
                     if isinstance(total_tokens, (int, float)) and total_tokens > 0:
                         span.set_attribute("gen_ai.usage.total_tokens", int(total_tokens))

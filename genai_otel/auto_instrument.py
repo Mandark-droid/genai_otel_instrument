@@ -304,6 +304,18 @@ def _setup_meter_provider(resource, metric_reader):
                 boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
             ),
         ),
+        View(
+            instrument_name=SC.GEN_AI_CLIENT_INFERENCE_OPERATION_INPUT_TOKENS,
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
+            ),
+        ),
+        View(
+            instrument_name=SC.GEN_AI_CLIENT_INFERENCE_OPERATION_OUTPUT_TOKENS,
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=_GEN_AI_CLIENT_TOKEN_USAGE_BUCKETS
+            ),
+        ),
     ]
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader], views=views)
     metrics.set_meter_provider(meter_provider)

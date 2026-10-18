@@ -216,6 +216,15 @@ export GENAI_CUSTOM_PRICING_JSON='{"chat":{"my-model":{"promptPrice":0.001,"comp
 
 [Cost tracking guide >>](https://mandark-droid.github.io/genai_otel_instrument/guides/cost-tracking/)
 
+### Token Usage Metrics
+
+Token usage is recorded under the current OpenTelemetry GenAI metric conventions: five counters
+(`gen_ai.client.inference.usage.input_tokens`, `.output_tokens`, `.cache_read.input_tokens`,
+`.cache_write.input_tokens`, `.reasoning.output_tokens`) broken down by `gen_ai.token.modality`,
+and two per-call histograms (`gen_ai.client.inference.operation.input_tokens` / `.output_tokens`).
+The `gen_ai.client.token.usage` counter, which the conventions no longer define, is still recorded
+alongside them until 2.0. [Metric reference >>](https://mandark-droid.github.io/genai_otel_instrument/reference/semantic-conventions/#token-usage-metrics)
+
 ### GPU Metrics (NVIDIA + AMD)
 
 Real-time monitoring of utilization, memory, temperature, power, PCIe throughput, throttling, and ECC errors. Multi-GPU aggregate metrics included.

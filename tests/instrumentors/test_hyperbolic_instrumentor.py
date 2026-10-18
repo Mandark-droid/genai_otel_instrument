@@ -117,6 +117,35 @@ class TestHyperbolicInstrumentor(unittest.TestCase):
         # Verify token metrics were recorded
         self.assertEqual(instrumentor.token_counter.add.call_count, 2)
 
+    def test_response_usage_reaches_the_inference_usage_counters(self):
+        """The provider's usage is recorded under the current conventions too."""
+        instrumentor = HyperbolicInstrumentor()
+        instrumentor.config = OTelConfig(enable_cost_tracking=False)
+        instrumentor.token_counter = MagicMock()
+        instrumentor.inference_usage_input_counter = MagicMock()
+        instrumentor.inference_usage_output_counter = MagicMock()
+
+        mock_span = MagicMock()
+        mock_span.attributes = {
+            "gen_ai.operation.name": "chat",
+            "gen_ai.system": "hyperbolic",
+            "gen_ai.request.model": "Qwen/Qwen3-Next-80B-A3B-Thinking",
+        }
+        response_data = {
+            "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
+        }
+
+        instrumentor._extract_and_record_response(mock_span, response_data)
+
+        expected = {
+            "gen_ai.operation.name": "chat",
+            "gen_ai.provider.name": "hyperbolic",
+            "gen_ai.request.model": "Qwen/Qwen3-Next-80B-A3B-Thinking",
+            "gen_ai.token.modality": "unknown",
+        }
+        instrumentor.inference_usage_input_counter.add.assert_called_once_with(10, expected)
+        instrumentor.inference_usage_output_counter.add.assert_called_once_with(20, expected)
+
     def test_extract_usage_returns_none(self):
         """Test that _extract_usage returns None (not used for HTTP instrumentation)."""
         instrumentor = HyperbolicInstrumentor()

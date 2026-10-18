@@ -78,7 +78,34 @@ class SemanticConvention:
 
     # GenAI Client metrics
     GEN_AI_REQUESTS = "gen_ai.requests"
+    # Removed upstream by semantic-conventions-genai#374 (merged 2026-09-22) together
+    # with `gen_ai.token.type`. Still recorded, beside the instruments below, because
+    # consumers read it; it goes at 2.0.
     GEN_AI_CLIENT_TOKEN_USAGE = "gen_ai.client.token.usage"
+    # What replaced it (#374). Counters carry cumulative usage broken down by
+    # `gen_ai.token.modality`; cache_read/cache_write are subsets of input_tokens and
+    # reasoning a subset of output_tokens. The two histograms describe single
+    # operations and take no modality, because per-modality percentiles do not add up.
+    GEN_AI_CLIENT_INFERENCE_USAGE_INPUT_TOKENS = "gen_ai.client.inference.usage.input_tokens"
+    GEN_AI_CLIENT_INFERENCE_USAGE_OUTPUT_TOKENS = "gen_ai.client.inference.usage.output_tokens"
+    GEN_AI_CLIENT_INFERENCE_USAGE_CACHE_READ_INPUT_TOKENS = (
+        "gen_ai.client.inference.usage.cache_read.input_tokens"
+    )
+    GEN_AI_CLIENT_INFERENCE_USAGE_CACHE_WRITE_INPUT_TOKENS = (
+        "gen_ai.client.inference.usage.cache_write.input_tokens"
+    )
+    GEN_AI_CLIENT_INFERENCE_USAGE_REASONING_OUTPUT_TOKENS = (
+        "gen_ai.client.inference.usage.reasoning.output_tokens"
+    )
+    GEN_AI_CLIENT_INFERENCE_OPERATION_INPUT_TOKENS = (
+        "gen_ai.client.inference.operation.input_tokens"
+    )
+    GEN_AI_CLIENT_INFERENCE_OPERATION_OUTPUT_TOKENS = (
+        "gen_ai.client.inference.operation.output_tokens"
+    )
+    GEN_AI_TOKEN_MODALITY = "gen_ai.token.modality"
+    # The modality of tokens the provider counted without saying which modality.
+    TOKEN_MODALITY_UNKNOWN = "unknown"
     GEN_AI_CLIENT_OPERATION_DURATION = "gen_ai.client.operation.duration"
     GEN_AI_USAGE_COST = "gen_ai.usage.cost"
     GEN_AI_USAGE_INPUT_TOKENS = "gen_ai.usage.input_tokens"

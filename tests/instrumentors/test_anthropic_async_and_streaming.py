@@ -670,7 +670,12 @@ def test_extract_usage_reads_nested_message_usage():
 
     usage = inst._extract_usage(event)
 
-    assert usage == {"prompt_tokens": 7, "completion_tokens": 3, "total_tokens": 10}
+    assert usage == {
+        "prompt_tokens": 7,
+        "completion_tokens": 3,
+        "total_tokens": 10,
+        "prompt_tokens_excludes_cache": True,
+    }
 
 
 def test_extract_usage_returns_none_for_a_bare_message_stop():
@@ -691,7 +696,12 @@ def test_extract_usage_tolerates_none_token_counts():
 
     usage = inst._extract_usage(event)
 
-    assert usage == {"prompt_tokens": 0, "completion_tokens": 12, "total_tokens": 12}
+    assert usage == {
+        "prompt_tokens": 0,
+        "completion_tokens": 12,
+        "total_tokens": 12,
+        "prompt_tokens_excludes_cache": True,
+    }
 
 
 def test_extract_usage_keeps_cache_token_counts():

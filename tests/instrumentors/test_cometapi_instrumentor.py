@@ -346,6 +346,8 @@ class TestCometAPIInstrumentor(unittest.TestCase):
             self.assertEqual(extracted["total_tokens"], 150)
             self.assertEqual(extracted["cache_read_input_tokens"], 10)
             self.assertEqual(extracted["cache_creation_input_tokens"], 5)
+            # As with Anthropic, input_tokens leaves the cache out.
+            self.assertIs(extracted["prompt_tokens_excludes_cache"], True)
 
     def test_extract_usage_without_usage(self):
         """Test that _extract_usage handles missing usage information."""

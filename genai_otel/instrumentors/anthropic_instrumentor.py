@@ -495,6 +495,9 @@ class AnthropicInstrumentor(BaseInstrumentor):
             "prompt_tokens": input_tokens,
             "completion_tokens": output_tokens,
             "total_tokens": input_tokens + output_tokens,
+            # Anthropic's input_tokens leaves out cache reads and writes. The
+            # inference token counters count all input, so they add them back.
+            "prompt_tokens_excludes_cache": True,
         }
 
         # Extract cache tokens for Anthropic models (Phase 3.2)

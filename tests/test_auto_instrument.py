@@ -192,9 +192,9 @@ class TestAutoInstrumentation:
                         assert call_kwargs["resource"] is built_resource
                         assert call_kwargs["metric_readers"] == [mock_metric_reader_instance]
                         assert "views" in call_kwargs
-                        assert (
-                            len(call_kwargs["views"]) == 8
-                        )  # GenAI duration + 3 MCP + 2 streaming + 2 token histograms
+                        # GenAI duration + 3 MCP + 2 streaming + 2 token histograms
+                        # + 2 inference operation token histograms
+                        assert len(call_kwargs["views"]) == 10
                         mock_metrics.set_meter_provider.assert_called_once_with(
                             mock_meter_provider_instance
                         )
