@@ -9,10 +9,27 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
+import wrapt
+
 from ..config import OTelConfig
 from .base import BaseInstrumentor, find_base_url_claim, strip_content_attributes
+from .decision import (
+    PROTOCOL_GRANITE_ADAPTER,
+    PROTOCOL_OPENAI_DECISIONS,
+    SYSTEM_OPENAI,
+    BaseDecisionInstrumentor,
+    DecisionQuestion,
+    DecisionRequest,
+    _get,
+    openai_questions,
+    provider_for_base_url,
+)
 
 logger = logging.getLogger(__name__)
+
+# The Granite Switch adapter that answers decisions. Its other adapters
+# (``guardian-core``) generate text and stay chat spans.
+GRANITE_DECISION_ADAPTER = "decision"
 
 
 def _cap_content(config, text):
@@ -54,6 +71,132 @@ def _responses_content_to_text(content: Any) -> str:
                 parts.append(text)
         return "".join(parts)
     return ""
+
+
+def granite_adapter_name(kwargs: Dict[str, Any]) -> Optional[str]:
+    """The Granite Switch adapter a chat call activates, if any.
+
+    Passed as ``extra_body={"chat_template_kwargs": {"adapter_name": ...}}``.
+    """
+    adapter = _get(_get(kwargs.get("extra_body"), "chat_template_kwargs"), "adapter_name")
+    return str(adapter) if adapter else None
+
+
+class OpenAIDecisionsTracer(BaseDecisionInstrumentor):
+    """Decision spans for calls made with an OpenAI client.
+
+    Covers ``client.decisions.create`` (OpenAI, Azure OpenAI and OpenRouter
+    clients alike, and any server that speaks ``/v1/decisions``) and a chat call
+    that activates Granite Switch's ``decision`` adapter. Owned by the OpenAI and
+    OpenRouter instrumentors and configured by them; it is not an instrumentor of
+    its own, so ``GENAI_ENABLED_INSTRUMENTORS=openai`` covers decisions.
+    """
+
+    def instrument(self, config: OTelConfig) -> None:
+        self.config = config
+        self._instrumented = True
+
+    def decisions_request(self, client: Any, kwargs: Dict[str, Any]) -> DecisionRequest:
+        """A ``decisions.create`` request (keyword-only in the SDK)."""
+        questions = kwargs.get("questions")
+        return DecisionRequest(
+            protocol=PROTOCOL_OPENAI_DECISIONS,
+            system=SYSTEM_OPENAI,
+            operation="openai.decisions",
+            model=str(kwargs["model"]) if kwargs.get("model") else None,
+            provider=provider_for_base_url(
+                getattr(client, "base_url", None), self._configured_provider()
+            ),
+            questions=openai_questions(questions),
+            payload={
+                "model": kwargs.get("model"),
+                "input": kwargs.get("input"),
+                "questions": questions,
+            },
+        )
+
+    def granite_request(self, client: Any, kwargs: Dict[str, Any]) -> DecisionRequest:
+        """A chat call through Granite Switch's ``decision`` adapter: one choice question.
+
+        Its options are the labels whose logprobs the caller asked for
+        (``logprob_token_ids``); without them the option count is unknown.
+        """
+        extra_body = kwargs.get("extra_body")
+        label_ids = _get(extra_body, "logprob_token_ids")
+        options = len(label_ids) if isinstance(label_ids, (list, tuple)) and label_ids else None
+        return DecisionRequest(
+            protocol=PROTOCOL_GRANITE_ADAPTER,
+            system=SYSTEM_OPENAI,
+            operation="openai.chat.decision",
+            model=str(kwargs["model"]) if kwargs.get("model") else None,
+            provider=provider_for_base_url(
+                getattr(client, "base_url", None), self._configured_provider()
+            ),
+            questions=[DecisionQuestion(name=None, type="choice", option_count=options)],
+            payload={
+                "model": kwargs.get("model"),
+                "messages": kwargs.get("messages"),
+                "extra_body": extra_body,
+            },
+        )
+
+
+def wrap_decisions_resource(owner: BaseInstrumentor, client: Any, span_name: str) -> bool:
+    """Trace ``client.decisions.create`` as a DECISION span. Returns whether it was wrapped.
+
+    An ``openai`` release without the Decisions resource has no ``decisions``
+    attribute, and the client is left alone. ``with_raw_response.create`` goes
+    through the wrapped method, because the SDK builds that wrapper from the
+    instance's ``create`` the first time it is asked for, which is after this.
+    """
+    decisions = getattr(client, "decisions", None)
+    original = getattr(decisions, "create", None) if decisions is not None else None
+    if not callable(original):
+        return False
+
+    def create(*args, **kwargs):
+        tracer = _decision_tracer_for(owner)
+        try:
+            request = tracer.decisions_request(client, kwargs)
+        except Exception as e:  # noqa: BLE001 - never let telemetry block the call
+            logger.debug("Could not read decisions request: %s", e)
+            return original(*args, **kwargs)
+        return tracer._traced_decision(span_name, request, original, client, args, kwargs)
+
+    decisions.create = create
+    return True
+
+
+def _decision_tracer_for(owner: BaseInstrumentor) -> OpenAIDecisionsTracer:
+    """The decision tracer an instrumentor owns, kept in step with its configuration."""
+    tracer = getattr(owner, "_genai_decision_tracer", None)
+    if tracer is None:
+        tracer = OpenAIDecisionsTracer()
+        owner._genai_decision_tracer = tracer
+    tracer.config = owner.config
+    tracer.tracer = owner.tracer
+    tracer._instrumented = True
+    tracer._cost_calculator_override = getattr(owner, "_cost_calculator_override", None)
+    return tracer
+
+
+def _with_granite_decisions(owner: BaseInstrumentor, client: Any, original: Any, chat_create: Any):
+    """``chat_create``, except that a Granite ``decision`` adapter call is a DECISION span."""
+
+    def dispatch(wrapped, instance, args, kwargs):
+        if granite_adapter_name(kwargs) != GRANITE_DECISION_ADAPTER:
+            return wrapped(*args, **kwargs)
+        tracer = _decision_tracer_for(owner)
+        try:
+            request = tracer.granite_request(client, kwargs)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Could not read Granite decision request: %s", e)
+            return wrapped(*args, **kwargs)
+        return tracer._traced_decision(
+            "openai.chat.decision", request, original, client, args, kwargs
+        )
+
+    return wrapt.FunctionWrapper(chat_create, dispatch)
 
 
 class OpenAIInstrumentor(BaseInstrumentor):
@@ -166,7 +309,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 span_name="openai.chat.completion",
                 extract_attributes=self._extract_openai_attributes,
             )(original_create)
-            client.chat.completions.create = instrumented_create_method
+            client.chat.completions.create = _with_granite_decisions(
+                self, client, original_create, instrumented_create_method
+            )
 
         # Embeddings are the retrieval half of a RAG call. Without a span here
         # the trace shows only the generation leg: the lookup that selected the
@@ -189,6 +334,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 extract_attributes=self._extract_responses_attributes,
             )(original_responses_create)
 
+        # The Decisions API (`POST /v1/decisions`): a DECISION span, not a chat one.
+        wrap_decisions_resource(self, client, "openai.decisions")
+
     def _instrument_async_client(self, client):
         """Instrument AsyncOpenAI client methods.
 
@@ -205,7 +353,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 span_name="openai.chat.completion",
                 extract_attributes=self._extract_openai_attributes,
             )(original_create)
-            client.chat.completions.create = instrumented_create_method
+            client.chat.completions.create = _with_granite_decisions(
+                self, client, original_create, instrumented_create_method
+            )
 
         if hasattr(client, "embeddings") and hasattr(client.embeddings, "create"):
             original_embeddings_create = client.embeddings.create
@@ -220,6 +370,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 span_name="openai.responses",
                 extract_attributes=self._extract_responses_attributes,
             )(original_responses_create)
+
+        wrap_decisions_resource(self, client, "openai.decisions")
 
     async def _call_sampled_out(self, span, span_name, extract_attributes, func, args, kwargs):
         """Make an async call whose span the sampler dropped.

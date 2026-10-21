@@ -141,6 +141,10 @@ class EvaluationEnrichingSpanExporter(SpanExporter):
             if has_enrichment:
                 # Mark the span as evaluated so any later pass is a no-op.
                 attributes["evaluation.completed"] = True
+                from .evaluation.span_processor import DECISION_SKIPPED_REASON, is_decision_span
+
+                if is_decision_span(attributes):
+                    attributes["evaluation.skipped_reason"] = DECISION_SKIPPED_REASON
                 enriched_span = ReadableSpan(
                     name=span.name,
                     context=span.context,

@@ -505,6 +505,28 @@ class OTelConfig:
         default_factory=lambda: os.getenv("GENAI_CUSTOM_PRICING_JSON")
     )
 
+    # Decision models (OpenAI Decisions, SystemOne / Jev, Granite Switch's decision
+    # adapter). Their spans are OpenInference DECISION spans.
+    #
+    # `true` keeps `openinference.span.kind=LLM` on SystemOne calls, for consumers
+    # that still need the kind they had before 1.38. Every decision attribute is
+    # still emitted. Removed in 2.0.
+    decision_legacy_llm_kind: bool = field(
+        default_factory=lambda: os.getenv("GENAI_DECISION_LEGACY_LLM_KIND", "false").strip().lower()
+        == "true"
+    )
+    # A POST to /v1/systemone, /decisions/v1/systemone or /v1/decisions made with
+    # plain `requests` / `httpx` / `httpx2`, outside any SDK, becomes a DECISION span.
+    decision_http_matcher: bool = field(
+        default_factory=lambda: os.getenv("GENAI_DECISION_HTTP_MATCHER", "true").strip().lower()
+        != "false"
+    )
+    # Names the provider behind a host the library cannot recognise (a self-hosted
+    # vLLM server, a gateway). A recognised host always wins.
+    decision_provider: Optional[str] = field(
+        default_factory=lambda: (os.getenv("GENAI_DECISION_PROVIDER") or "").strip() or None
+    )
+
     # Evaluation and Safety Features (v0.2.0)
     # PII Detection
     enable_pii_detection: bool = field(

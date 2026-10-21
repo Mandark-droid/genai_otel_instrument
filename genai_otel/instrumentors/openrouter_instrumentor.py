@@ -147,6 +147,14 @@ class OpenRouterInstrumentor(BaseInstrumentor):
                 extract_attributes=self._extract_embedding_attributes,
             )(original_embeddings_create)
 
+        # OpenRouter's Decisions API, through the OpenAI SDK's Decisions resource.
+        # The generic OpenAI instrumentor skips this client, so without this a
+        # decision made through OpenRouter would have no SDK span (the HTTP path
+        # matcher would still see it).
+        from .openai_instrumentor import wrap_decisions_resource
+
+        wrap_decisions_resource(self, client, "openrouter.decisions")
+
     def _extract_openrouter_attributes(
         self, instance: Any, args: Any, kwargs: Any
     ) -> Dict[str, Any]:

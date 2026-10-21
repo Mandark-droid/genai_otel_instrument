@@ -29,6 +29,21 @@ from .toxicity_detector import ToxicityDetector
 
 logger = logging.getLogger(__name__)
 
+# What a span says when its response checks did not run because it has no
+# generated text: a decision model returns typed answers, not prose to judge.
+DECISION_SKIPPED_REASON = "decision_span"
+
+
+def is_decision_span(attributes) -> bool:
+    """Whether ``attributes`` belong to a decision-model span (any spelling)."""
+    if not attributes:
+        return False
+    return (
+        str(attributes.get("openinference.span.kind", "")).upper() == "DECISION"
+        or attributes.get("gen_ai.request.type") == "decision"
+        or "genai.decision.protocol" in attributes
+    )
+
 
 class EvaluationSpanProcessor(SpanProcessor):
     """Span processor for evaluation and safety features.
@@ -419,6 +434,9 @@ class EvaluationSpanProcessor(SpanProcessor):
 
             prompt = self._extract_prompt_from_events(span) or self._extract_prompt(attributes)
             response = self._extract_response(attributes)
+            if is_decision_span(attributes):
+                # The input is still screened; there is no answer text to check.
+                safe_set_attribute("evaluation.skipped_reason", DECISION_SKIPPED_REASON)
 
             # Run PII detection
             if self.pii_config.enabled and self.pii_detector:
@@ -603,6 +621,11 @@ class EvaluationSpanProcessor(SpanProcessor):
         Returns:
             Optional[str]: Response text if found
         """
+        if is_decision_span(attributes):
+            # output.value on a decision span is the answer JSON, not a response:
+            # hallucination or toxicity scores on it would mean nothing.
+            return None
+
         # Try different attribute names used by various instrumentors
         response_keys = [
             "gen_ai.response",
