@@ -3036,6 +3036,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 span.set_attribute(
                                     "gen_ai.usage.cost.cache_write", costs["cache_write"]
                                 )
+                        elif call_type == "decision":
+                            self._record_decision_cost(span, model, usage)
                         else:
                             # For non-chat requests (image, audio, embedding,
                             # speech_to_text, ...), use simple cost calculation
@@ -4588,6 +4590,25 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         logger.debug("Streaming completed: %d chunks in %.3fs", timing.chunk_count, duration)
 
     # Phase 4.2: RAG/Embedding Helper Methods
+    def _record_decision_cost(self, span, model: str, usage: Dict[str, Any]) -> None:
+        """Price a decision-model call from the ``decision`` section, and only from it.
+
+        The cost goes on ``gen_ai.usage.cost.total``, as on every other span, so
+        existing totals still add up, and on ``gen_ai.usage.cost.decision``, so a
+        reader can keep decision spend apart without reading the span kind. A model
+        the section does not price gets no cost attribute at all: a self-hosted
+        decision model has no list price, and 0.0 would read as "free".
+        """
+        source = self.cost_calculator.pricing_source(model, "decision")
+        span.set_attribute("gen_ai.usage.cost.pricing_source", source)
+        if source != "table":
+            return
+        cost = self.cost_calculator.calculate_cost(model, usage, "decision")
+        span.set_attribute("gen_ai.usage.cost.total", cost)
+        span.set_attribute("gen_ai.usage.cost.decision", cost)
+        if cost > 0 and self.cost_counter:
+            self.cost_counter.add(cost, {"model": str(model)})
+
     def _add_generic_embedding_content(self, span, result, request_kwargs: dict):
         """Capture bounded embedding text for providers without custom content hooks."""
         value = request_kwargs.get("input")

@@ -62,6 +62,16 @@ class CostCalculator:
     # Metadata registries, not pricing categories. Kept out of the model index so
     # a call_type matching one of these names cannot resolve against it.
     METADATA_KEYS = frozenset({DEPRECATED_KEY, PRICES_CHECKED_KEY})
+    # Pricing sections a GENAI_CUSTOM_PRICING_JSON may add to.
+    CUSTOM_PRICING_CATEGORIES = ("chat", "embeddings", "images", "audio", "decision")
+    # Decision models are priced from this section ONLY. A model missing from it is
+    # unpriced, never priced as chat: gpt-6-luna the decision model bills input only,
+    # while gpt-6-luna the chat model bills output at $0.50/1M.
+    DECISION_SECTION = "decision"
+    # Vendor prefixes a gateway puts in front of a decision model's own id
+    # ("liquid/d1"). Only these are stripped: a community checkpoint such as
+    # "autotrust/JEV-27B" is self-hosted weights, not the vendor's billed service.
+    DECISION_VENDOR_PREFIXES = ("openai/", "liquid/", "liquidai/", "typesafe/")
 
     def __init__(self, custom_pricing_json: Optional[str] = None):
         """Initializes the CostCalculator by loading pricing data from a JSON file.
@@ -196,13 +206,14 @@ class CostCalculator:
                 )
                 return
 
-            # Merge custom pricing into each category (chat, embeddings, images, audio)
+            # Merge custom pricing into each category. "decision" lets an operator
+            # price an on-prem decision model per input token; nothing else will.
             for category, models in custom_pricing.items():
-                if category not in ["chat", "embeddings", "images", "audio"]:
+                if category not in self.CUSTOM_PRICING_CATEGORIES:
                     logger.warning(
-                        "Unknown pricing category '%s' in custom pricing. Valid categories: "
-                        "chat, embeddings, images, audio",
+                        "Unknown pricing category '%s' in custom pricing. Valid categories: %s",
                         category,
+                        ", ".join(self.CUSTOM_PRICING_CATEGORIES),
                     )
                     continue
 
@@ -266,6 +277,8 @@ class CostCalculator:
             # The speech_to_text table (promptPrice / completionPrice per 1,000 tokens)
             # shipped with no branch here, so all of its entries were unreachable.
             return self._calculate_speech_to_text_cost(model, usage)
+        if call_type == "decision":
+            return self._calculate_decision_cost(model, usage)
 
         logger.warning("Unknown call type '%s' for cost calculation.", call_type)
         return 0.0
@@ -321,6 +334,7 @@ class CostCalculator:
         "image": "images",
         "audio": "audio",
         "speech_to_text": "speech_to_text",
+        "decision": DECISION_SECTION,
     }
 
     def _section_for(self, call_type: str) -> str:
@@ -331,6 +345,9 @@ class CostCalculator:
         and text-embedding-3-small "estimated" although both are priced.
         """
         category = self.CALL_TYPE_SECTION.get(call_type, call_type)
+        if category == self.DECISION_SECTION:
+            # Never the chat table, even when no decision section is loaded.
+            return category
         return category if category in self.pricing_data else "chat"
 
     def pricing_source(self, model: str, call_type: str = "chat") -> str:
@@ -547,6 +564,64 @@ class CostCalculator:
             "cache_write": cache_write_cost,
         }
 
+    def _calculate_decision_cost(self, model: str, usage: Dict[str, Any]) -> float:
+        """Cost of a decision-model call, from the ``decision`` section only.
+
+        Every verified decision provider bills input only. Cached input is billed at
+        the entry's ``cacheReadPrice`` when it has one (gpt-6-luna's is 0: cache reads
+        are free), and at the input price otherwise. An unpriced model costs 0.0 here;
+        callers check :meth:`pricing_source` first so that 0.0 is never recorded as
+        a price.
+        """
+        model_key = self._normalize_model_name(model, self.DECISION_SECTION)
+        if not model_key:
+            logger.debug("Pricing not found for decision model: %s", model)
+            return 0.0
+        entry = self.pricing_data[self.DECISION_SECTION][model_key]
+        if not isinstance(entry, dict):
+            return 0.0
+        prompt_price = entry.get("promptPrice", 0.0) or 0.0
+        input_tokens = usage.get("prompt_tokens", 0) or 0
+        cached = usage.get("cache_read_input_tokens", 0) or 0
+        cost = 0.0
+        if cached and "cacheReadPrice" in entry:
+            cached = min(cached, input_tokens)
+            input_tokens -= cached
+            cost += (cached / 1000) * (entry.get("cacheReadPrice") or 0.0)
+        cache_write = usage.get("cache_creation_input_tokens", 0) or 0
+        if cache_write and "cacheWritePrice" in entry:
+            cache_write = min(cache_write, input_tokens)
+            input_tokens -= cache_write
+            cost += (cache_write / 1000) * (entry.get("cacheWritePrice") or 0.0)
+        cost += (input_tokens / 1000) * prompt_price
+        completion = usage.get("completion_tokens", 0) or 0
+        cost += (completion / 1000) * (entry.get("completionPrice", 0.0) or 0.0)
+        return cost
+
+    def _resolve_decision_key(self, model: str) -> Optional[str]:
+        """Resolve a decision model id: exact, or a dated / suffixed variant of a key.
+
+        Anchored at the start of the id, unlike the chat lookup's token-boundary
+        substring match: "autotrust/JEV-27B" must not bill as TypeSafe's hosted Jev.
+        """
+        exact = self._exact_index.get(self.DECISION_SECTION)
+        if not exact or not model:
+            return None
+        lowered = model.lower()
+        candidates = [lowered]
+        for prefix in self.DECISION_VENDOR_PREFIXES:
+            if lowered.startswith(prefix):
+                candidates.append(lowered[len(prefix) :])
+        for name in candidates:
+            hit = exact.get(name)
+            if hit is not None:
+                return hit
+        for name in candidates:
+            for lower_key, original_key in self._substr_index.get(self.DECISION_SECTION, ()):
+                if name.startswith(lower_key) and not name[len(lower_key)].isalnum():
+                    return original_key
+        return None
+
     def _calculate_embedding_cost(self, model: str, usage: Dict[str, int]) -> float:
         """Calculate cost for embedding models."""
         model_key = self._normalize_model_name(model, "embeddings")
@@ -726,6 +801,8 @@ class CostCalculator:
         # index rebuild.
         if self._indexed_counts.get(category) != len(cat_data):
             self._build_indices()
+        if category == self.DECISION_SECTION:
+            return self._resolve_decision_key(model)
         exact = self._exact_index.get(category)
         if not exact:
             return None

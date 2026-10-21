@@ -87,6 +87,7 @@ class CostEnrichingSpanExporter(SpanExporter):
                 attributes.get("gen_ai.request.model")
                 or attributes.get("llm.model_name")
                 or attributes.get("embedding.model_name")
+                or attributes.get("decision.model_name")  # OpenInference DECISION spans
             )
             if not model:
                 return span
@@ -105,12 +106,14 @@ class CostEnrichingSpanExporter(SpanExporter):
                 attributes.get("gen_ai.usage.input_tokens")
                 or attributes.get("gen_ai.usage.prompt_tokens")  # superseded
                 or attributes.get("llm.token_count.prompt")  # OpenInference
+                or attributes.get("decision.token_count.input")  # OpenInference DECISION
                 or 0
             )
             completion_tokens = (
                 attributes.get("gen_ai.usage.output_tokens")
                 or attributes.get("gen_ai.usage.completion_tokens")  # superseded
                 or attributes.get("llm.token_count.completion")  # OpenInference
+                or attributes.get("decision.token_count.output")  # OpenInference DECISION
                 or 0
             )
 
@@ -139,6 +142,11 @@ class CostEnrichingSpanExporter(SpanExporter):
                 "agent": "chat",
             }
             normalized_call_type = call_type_mapping.get(str(call_type).lower(), "chat")
+            # A decision model is priced from the decision section only. Read as a
+            # chat call, a self-hosted one would pick up a parameter-count estimate
+            # and gpt-6-luna would be billed for output it does not charge for.
+            if span_kind == "DECISION" or attributes.get("gen_ai.request.type") == "decision":
+                normalized_call_type = "decision"
 
             # Calculate cost
             usage = {
@@ -156,6 +164,8 @@ class CostEnrichingSpanExporter(SpanExporter):
             if cost_info and cost_info.get("total", 0.0) > 0:
                 # Add cost attributes to the mutable copy
                 attributes["gen_ai.usage.cost.total"] = cost_info["total"]
+                if normalized_call_type == "decision":
+                    attributes["gen_ai.usage.cost.decision"] = cost_info["total"]
 
                 if cost_info.get("prompt", 0.0) > 0:
                     attributes["gen_ai.usage.cost.prompt"] = cost_info["prompt"]

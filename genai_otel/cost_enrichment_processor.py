@@ -62,6 +62,7 @@ class CostEnrichmentSpanProcessor(SpanProcessor):
                 attributes.get("gen_ai.request.model")
                 or attributes.get("llm.model_name")
                 or attributes.get("embedding.model_name")
+                or attributes.get("decision.model_name")  # OpenInference DECISION spans
             )
             if not model:
                 return
@@ -80,12 +81,14 @@ class CostEnrichmentSpanProcessor(SpanProcessor):
                 attributes.get("gen_ai.usage.input_tokens")
                 or attributes.get("gen_ai.usage.prompt_tokens")  # superseded
                 or attributes.get("llm.token_count.prompt")  # OpenInference
+                or attributes.get("decision.token_count.input")  # OpenInference DECISION
                 or 0
             )
             completion_tokens = (
                 attributes.get("gen_ai.usage.output_tokens")
                 or attributes.get("gen_ai.usage.completion_tokens")  # superseded
                 or attributes.get("llm.token_count.completion")  # OpenInference
+                or attributes.get("decision.token_count.output")  # OpenInference DECISION
                 or 0
             )
 
@@ -119,6 +122,11 @@ class CostEnrichmentSpanProcessor(SpanProcessor):
                 "agent": "chat",
             }
             normalized_call_type = call_type_mapping.get(str(call_type).lower(), "chat")
+            # A decision model is priced from the decision section only. Read as a
+            # chat call, a self-hosted one would pick up a parameter-count estimate
+            # and gpt-6-luna would be billed for output it does not charge for.
+            if span_kind == "DECISION" or attributes.get("gen_ai.request.type") == "decision":
+                normalized_call_type = "decision"
 
             # Calculate cost
             usage = {

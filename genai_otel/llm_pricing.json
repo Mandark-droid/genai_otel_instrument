@@ -9318,6 +9318,32 @@
       "note": "OpenRouter - Perplexity Sonar Large"
     }
   },
+  "decision": {
+    "gpt-6-luna": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0,
+      "cacheReadPrice": 0.0,
+      "cacheWritePrice": 0.0,
+      "note": "OpenAI Decisions API (POST /v1/decisions), gpt-6-luna. input $0.10/1M; output, cache read and cache write are free. Regional and long-context multipliers are not modelled. This is NOT the chat price of the same model name, which bills output at $0.50/1M. Source: https://developers.openai.com/api/docs/guides/decisions"
+    },
+    "openai/gpt-6-luna-decisions": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0,
+      "cacheReadPrice": 0.0,
+      "cacheWritePrice": 0.0,
+      "note": "gpt-6-luna through OpenRouter's Decisions API. input $0.10/1M, output $0. Source: https://openrouter.ai/openai/gpt-6-luna-decisions"
+    },
+    "d1": {
+      "promptPrice": 2e-05,
+      "completionPrice": 0.0,
+      "note": "LiquidAI D1 decision model. input $0.02/1M, output $0, the same price wherever it is called. Source: https://www.liquid.ai/pricing"
+    },
+    "d1-ultra": {
+      "promptPrice": 4.2e-05,
+      "completionPrice": 0.0,
+      "note": "LiquidAI D1 Ultra decision model. input $0.042/1M, output $0, the same price wherever it is called. Source: https://www.liquid.ai/pricing"
+    }
+  },
   "deprecated": {
     "assemblyai/slam-1": "Deprecated by AssemblyAI; migrate to universal-3-pro. No published rate remains, so the stored value is a legacy figure. Source: assemblyai.com/pricing",
     "deepgram/base": "Deepgram no longer publishes a rate for this tier; its pricing page lists Nova-3 only. Stored value is a historical figure, not a confirmed one. Source: deepgram.com/pricing",
