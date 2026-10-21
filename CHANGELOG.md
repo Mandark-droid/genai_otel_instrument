@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.38.0] - 2026-10-21
+
 ### Added
 
 - **Decision models as OpenInference `DECISION` spans.** A decision model takes a state and
