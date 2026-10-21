@@ -1,25 +1,44 @@
-"""Native OpenTelemetry instrumentation for the TypeSafe Python SDK.
+"""Native OpenTelemetry instrumentation for the TypeSafe Python SDK (SystemOne).
 
 TypeSafe's System One API evaluates structured questions against a state and
-returns typed decisions rather than chat messages. This instrumentor wraps the
-public ``TypeSafeClient.system_one`` and ``AsyncTypeSafeClient.system_one``
-methods without depending on OpenInference's TypeSafe package.
+returns typed decisions rather than chat messages. The same protocol
+(``POST /v1/systemone``) is answered by LiquidAI, Cloudflare Workers AI and any
+vLLM / SGLang / community server, all reachable with ``typesafe-sdk`` and a
+``base_url``, so this one wrapper covers every SystemOne host.
+
+Since 1.38 the spans are OpenInference ``DECISION`` spans. The ``llm.*``
+attributes they carried as ``LLM`` spans are still emitted (until 2.0), and
+``GENAI_DECISION_LEGACY_LLM_KIND=true`` keeps the old span kind.
+
+This instrumentor wraps the public ``TypeSafeClient.system_one`` and
+``AsyncTypeSafeClient.system_one`` methods without depending on OpenInference's
+TypeSafe package.
 """
 
-import dataclasses
 import json
 import logging
 import os
-from collections.abc import Mapping, Sequence
 from typing import Any, Dict, Optional, Tuple
 
 from ..config import OTelConfig
-from .base import BaseInstrumentor
+from .decision import (
+    PROTOCOL_SYSTEMONE,
+    SYSTEM_TYPESAFE,
+    BaseDecisionInstrumentor,
+    DecisionRequest,
+    _get,
+    payload_json,
+    provider_for_base_url,
+    request_attributes,
+    request_content_attributes,
+    systemone_questions,
+    to_jsonable,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class TypeSafeInstrumentor(BaseInstrumentor):
+class TypeSafeInstrumentor(BaseDecisionInstrumentor):
     """Instrument synchronous and asynchronous TypeSafe System One calls."""
 
     def __init__(self):
@@ -75,58 +94,21 @@ class TypeSafeInstrumentor(BaseInstrumentor):
                 raise
 
     def _wrap_system_one(self, wrapped, instance, args, kwargs):
-        return self.create_span_wrapper(
-            span_name="typesafe.system_one",
-            extract_attributes=self._extract_request_attributes,
-        )(wrapped)(*args, **kwargs)
-
-    @staticmethod
-    def _get_value(value: Any, name: str, default: Any = None) -> Any:
-        if isinstance(value, Mapping):
-            return value.get(name, default)
-        return getattr(value, name, default)
-
-    @classmethod
-    def _to_jsonable(cls, value: Any) -> Any:
-        """Convert SDK structs, Pydantic models, and mappings to JSON values."""
-        if value is None or isinstance(value, (str, int, float, bool)):
-            return value
-        try:
-            import msgspec
-
-            if isinstance(value, msgspec.Struct):
-                return cls._to_jsonable(msgspec.to_builtins(value))
-        except (ImportError, TypeError):
-            pass
-        if isinstance(value, Mapping):
-            return {str(key): cls._to_jsonable(item) for key, item in value.items()}
-        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-            return [cls._to_jsonable(item) for item in value]
-        if dataclasses.is_dataclass(value):
-            return cls._to_jsonable(dataclasses.asdict(value))
-        for method_name in ("model_dump", "dict"):
-            method = getattr(value, method_name, None)
-            if callable(method):
-                try:
-                    return cls._to_jsonable(method())
-                except TypeError:
-                    try:
-                        return cls._to_jsonable(method(mode="json"))
-                    except Exception:  # pragma: no cover - SDK-version defensive path
-                        pass
-        attrs = getattr(value, "__dict__", None)
-        if isinstance(attrs, dict):
-            return {str(key): cls._to_jsonable(item) for key, item in attrs.items()}
-        return str(value)
+        # ``state`` and ``questions`` are named parameters. Passed positionally
+        # they are moved into kwargs, so block policies and detectors, which
+        # read the request from kwargs, see the state that is sent.
+        if len(args) <= 2:
+            kwargs = dict(kwargs)
+            for name, value in zip(("state", "questions"), args):
+                kwargs.setdefault(name, value)
+            args = ()
+        request = self._decision_request(instance, args, kwargs)
+        return self._traced_decision(
+            "typesafe.system_one", request, wrapped, instance, args, kwargs
+        )
 
     def _json(self, value: Any) -> str:
-        return json.dumps(self._to_jsonable(value), default=str, sort_keys=True)
-
-    def _capture(self, value: Any) -> str:
-        payload = self._json(value)
-        config = getattr(self, "config", None)
-        maximum = getattr(config, "content_max_length", 200) if config else 200
-        return payload[:maximum] if maximum and maximum > 0 else payload
+        return json.dumps(to_jsonable(value), default=str, sort_keys=True)
 
     @staticmethod
     def _request_values(instance: Any, args: Tuple[Any, ...], kwargs: Dict[str, Any]):
@@ -136,14 +118,17 @@ class TypeSafeInstrumentor(BaseInstrumentor):
         extra_body = kwargs.get("extra_body", args[3] if len(args) > 3 else None)
         return state, questions, model, extra_body
 
+    @staticmethod
+    def _client_config_value(instance: Any, name: str) -> Optional[str]:
+        for config_name in ("_config", "config"):
+            value = _get(getattr(instance, config_name, None), name)
+            if value:
+                return str(value)
+        return None
+
     @classmethod
     def _client_default_model(cls, instance: Any) -> Optional[str]:
-        for config_name in ("_config", "config"):
-            config = getattr(instance, config_name, None)
-            model = cls._get_value(config, "default_model")
-            if model:
-                return str(model)
-        return None
+        return cls._client_config_value(instance, "default_model")
 
     def _model_name(self, instance: Any, model: Any) -> str:
         return str(
@@ -153,52 +138,83 @@ class TypeSafeInstrumentor(BaseInstrumentor):
             or "jev-latest"
         )
 
-    def _extract_request_attributes(self, instance, args, kwargs) -> Dict[str, Any]:
+    def _base_url(self, instance: Any) -> Optional[str]:
+        """The host the client sends to: TypeSafe, LiquidAI, Workers AI or a self-hosted server."""
+        return self._client_config_value(instance, "base_url") or (
+            str(getattr(instance, "base_url", "") or "") or None
+        )
+
+    def _decision_request(self, instance: Any, args, kwargs) -> DecisionRequest:
         state, questions, model, extra_body = self._request_values(instance, args, kwargs)
         model_name = self._model_name(instance, model)
-        invocation = {"model": model_name}
-        if extra_body is not None:
-            invocation["extra_body"] = extra_body
+        extras = {"extra_body": extra_body} if extra_body is not None else {}
+        return DecisionRequest(
+            protocol=PROTOCOL_SYSTEMONE,
+            system=SYSTEM_TYPESAFE,
+            operation="typesafe.system_one",
+            model=model_name,
+            provider=provider_for_base_url(self._base_url(instance), self._configured_provider()),
+            questions=systemone_questions(questions),
+            payload={"state": state, "model": model_name, "questions": questions},
+            legacy_llm_kind=bool(getattr(self.config, "decision_legacy_llm_kind", False)),
+            extras=extras,
+        )
 
+    def _extra_request_attributes(self, request: DecisionRequest, capture: bool) -> Dict[str, Any]:
+        """The ``llm.*`` request attributes Jev spans carried before 1.38 (kept until 2.0)."""
+        invocation: Dict[str, Any] = {"model": request.model}
+        invocation.update(request.extras)
         attrs: Dict[str, Any] = {
-            "gen_ai.system": "typesafe",
-            "gen_ai.operation.name": "typesafe.system_one",
-            "gen_ai.request.model": model_name,
-            "gen_ai.request.type": "chat",
-            "openinference.span.kind": "LLM",
-            "llm.request.model_name": model_name,
+            "llm.request.model_name": request.model,
             "llm.invocation_parameters": self._json(invocation),
         }
-        if self.config and self.config.enable_content_capture:
-            request = {"state": state, "model": model_name, "questions": questions}
-            attrs["input.value"] = self._capture(request)
-            attrs["gen_ai.request.first_message"] = self._capture(
-                {"role": "user", "content": request}
+        if capture:
+            attrs["gen_ai.request.first_message"] = payload_json(
+                {"role": "user", "content": request.payload}, self._max_length()
             )
         return attrs
 
+    def _extract_request_attributes(self, instance, args, kwargs) -> Dict[str, Any]:
+        """Every scalar request attribute of a System One call, as the span starts with them."""
+        request = self._decision_request(instance, args, kwargs)
+        capture = self._capture()
+        attrs = request_attributes(request)
+        if capture:
+            attrs.update(request_content_attributes(request, self._max_length()))
+        attrs.update(self._extra_request_attributes(request, capture))
+        return attrs
+
+    def _content_payload(self, payload: Any) -> Any:
+        """``output.value`` keeps the shape Jev spans have always had."""
+        return {
+            "model": _get(payload, "model"),
+            "answers": _get(payload, "answers"),
+            "usage": _get(payload, "usage"),
+        }
+
     def _extract_response_attributes(self, result: Any) -> Dict[str, Any]:
-        model = self._get_value(result, "model")
-        answers = self._get_value(result, "answers")
-        usage = self._get_value(result, "usage")
+        """The ``llm.*`` response attributes Jev spans carried before 1.38 (kept until 2.0).
+
+        The ``decision.*`` and ``genai.decision.*`` attributes are written by
+        :meth:`BaseDecisionInstrumentor._record_result_metrics`.
+        """
+        model = _get(result, "model")
+        usage = _get(result, "usage")
         attrs: Dict[str, Any] = {}
         if model:
             attrs["gen_ai.response.model"] = str(model)
             attrs["llm.response.model_name"] = str(model)
         if usage is not None:
-            prompt = self._get_value(usage, "input_tokens")
-            completion = self._get_value(usage, "output_tokens")
-            total = self._get_value(usage, "total_tokens")
-            if isinstance(prompt, (int, float)):
-                attrs["llm.token_count.prompt"] = int(prompt)
-            if isinstance(completion, (int, float)):
-                attrs["llm.token_count.completion"] = int(completion)
-            if isinstance(total, (int, float)):
-                attrs["llm.token_count.total"] = int(total)
-        if self.config and self.config.enable_content_capture:
-            response = {"model": model, "answers": answers, "usage": usage}
-            attrs["output.value"] = self._capture(response)
-            attrs["gen_ai.response"] = self._capture(answers)
+            for source, key in (
+                ("input_tokens", "llm.token_count.prompt"),
+                ("output_tokens", "llm.token_count.completion"),
+                ("total_tokens", "llm.token_count.total"),
+            ):
+                value = _get(usage, source)
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    attrs[key] = int(value)
+        if self._capture():
+            attrs["gen_ai.response"] = payload_json(_get(result, "answers"), self._max_length())
         return attrs
 
     def _extract_prompt_for_eval(self, kwargs, operation: Optional[str] = None) -> Optional[str]:
@@ -206,28 +222,3 @@ class TypeSafeInstrumentor(BaseInstrumentor):
         if state is not None or questions is not None:
             return self._json({"state": state, "questions": questions})
         return super()._extract_prompt_for_eval(kwargs, operation)
-
-    def _extract_usage(self, result) -> Optional[Dict[str, int]]:
-        usage = self._get_value(result, "usage")
-        if usage is None:
-            return None
-        prompt = self._get_value(usage, "input_tokens")
-        if prompt is None:
-            prompt = self._get_value(usage, "prompt_tokens")
-        completion = self._get_value(usage, "output_tokens")
-        if completion is None:
-            completion = self._get_value(usage, "completion_tokens")
-        total = self._get_value(usage, "total_tokens")
-        if not any(isinstance(value, (int, float)) for value in (prompt, completion, total)):
-            return None
-        if (
-            not isinstance(total, (int, float))
-            and isinstance(prompt, (int, float))
-            and isinstance(completion, (int, float))
-        ):
-            total = prompt + completion
-        return {
-            "prompt_tokens": int(prompt or 0),
-            "completion_tokens": int(completion or 0),
-            "total_tokens": int(total or 0),
-        }

@@ -371,6 +371,9 @@ dev = [
     # importable in dev. The package requires 3.10+; the tests that need it
     # skip themselves on 3.9.
     "mcp>=1.0.0; python_version >= '3.10'",
+    # tests/instrumentors/test_typesafe_sdk_decisions.py drives the real
+    # TypeSafeClient over a mock transport (SystemOne DECISION spans).
+    "typesafe-sdk>=0.7.0; python_version >= '3.10'",
     # Patched version (GHSA-3936-cmfr-pm3m) requires Python 3.10+; keep
     # 3.9 dev environments on the latest 3.9-compatible release. Black is
     # dev-only and not in the published wheel, so the residual exposure

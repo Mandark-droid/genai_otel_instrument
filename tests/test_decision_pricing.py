@@ -182,3 +182,32 @@ class TestEnrichersNeverChatPriceADecision:
             )
         )
         assert "Cost calculated" not in caplog.text
+
+
+class TestJev:
+    """TypeSafe's Jev is a decision model: priced from the decision section since 1.38."""
+
+    def test_moved_out_of_chat_at_the_same_price(self, calc):
+        assert "jev" in calc.pricing_data["decision"]
+        assert "jev" not in calc.pricing_data["chat"]
+        assert calc.calculate_cost("jev", USAGE, "decision") == pytest.approx(0.042)
+
+    @pytest.mark.parametrize("model", ["jev-1.13.0-20260917", "jev-latest", "JEV"])
+    def test_dated_and_aliased_names(self, calc, model):
+        assert calc._normalize_model_name(model, "decision") == "jev"
+
+    @pytest.mark.parametrize("model", ["autotrust/JEV-27B", "jevons"])
+    def test_community_weights_and_lookalikes_are_not_jev(self, calc, model):
+        # autotrust/JEV-27B is self-hosted weights, not TypeSafe's billed service.
+        assert calc.pricing_source(model, "decision") == "unpriced"
+
+    def test_a_legacy_kind_jev_span_is_still_priced_as_a_decision(self):
+        attrs = {
+            "openinference.span.kind": "LLM",
+            "gen_ai.request.type": "decision",
+            "gen_ai.request.model": "jev-1",
+            "llm.token_count.prompt": 1000,
+        }
+        exporter = CostEnrichingSpanExporter(MagicMock())
+        enriched = exporter._enrich_span(_span(attrs)).attributes
+        assert enriched["gen_ai.usage.cost.decision"] == pytest.approx(1000 * 0.042 / 1e6)
