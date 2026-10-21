@@ -94,6 +94,30 @@ export GENAI_SAMPLING_RATE=0.1  # Sample 10% of traces
 export GENAI_CUSTOM_PRICING_JSON='{"chat":{"my-model":{"promptPrice":0.001,"completionPrice":0.002}}}'
 ```
 
+Custom pricing accepts the sections `chat`, `embeddings`, `images`, `audio` and `decision`.
+Prices are per 1,000 tokens. A `decision` section prices an on-prem decision model per input
+token; decision spans are priced from that section only, never from `chat`:
+
+```bash
+export GENAI_CUSTOM_PRICING_JSON='{"decision":{"Cloudflare/clef-flash":{"promptPrice":0.00001,"completionPrice":0}}}'
+```
+
+## Decision Models
+
+Decision-model calls (OpenAI Decisions, SystemOne / Jev, Granite Switch's decision adapter,
+`genai_otel.decision_span`) are OpenInference `DECISION` spans. See
+[Decision models](../guides/llm-providers.md#decision-models).
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GENAI_ENABLE_CONTENT_CAPTURE` | `false` | Also decides what a decision span records: the chosen answer, confidences, every score derived from them and the question names are recorded only when it is on |
+| `GENAI_DECISION_LEGACY_LLM_KIND` | `false` | `true` keeps `openinference.span.kind=LLM` on SystemOne (Jev) calls for consumers that still need it. Every decision attribute is still emitted. Removed in 2.0 |
+| `GENAI_DECISION_HTTP_MATCHER` | `true` | `false` turns off the path matcher that traces POSTs to `/v1/systemone`, `/decisions/v1/systemone` and `/v1/decisions` made with `requests`, `httpx` or `httpx2` outside an SDK |
+| `GENAI_DECISION_PROVIDER` | unset | Names the provider behind a host the library cannot recognise (a self-hosted vLLM server, a gateway). A recognised host always wins |
+
+There is no separate instrumentor id: `openai` covers OpenAI Decisions and Granite Switch,
+`typesafe` covers SystemOne.
+
 ## GPU Metrics
 
 | Variable | Default | Description |

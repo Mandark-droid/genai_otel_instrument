@@ -35,16 +35,149 @@ without appearing here.
 | HuggingFace Transformers | Local models, cost estimated from parameter count | `[huggingface]` | - |
 | Sentence Transformers | Local embedding models | `[huggingface]` | - |
 | Hyperbolic | Open-weight models over raw HTTP. Disabled by default - see below | - | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/hyperbolic_example.py) |
-| TypeSafe AI / Jev | Structured Choice, Score, and Noul decisions with confidence and probabilities | `[typesafe]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/typesafe/example.py) |
+| TypeSafe AI / Jev | SystemOne decisions (Jev, LiquidAI D1, self-hosted Hub models) as DECISION spans; see [Decision models](#decision-models) | `[typesafe]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/typesafe/example.py) |
+
+## Decision models
+
+A decision model takes a state plus a set of typed questions and returns, for each question,
+a probability distribution over answers you supplied. It writes no text. TraceVerde records
+every decision-model call as an OpenInference `DECISION` span (`openinference.span.kind =
+DECISION`), whichever way it was made, with one attribute shape and its own cost.
+
+### Protocols and call paths
+
+Almost every decision model speaks one of two wire protocols, so the library instruments
+**call paths, not models**. A Hub decision model served through any of these paths is covered
+without an instrumentor of its own.
+
+| Call path | Protocol | Span | Covers |
+|---|---|---|---|
+| `client.decisions.create` (OpenAI SDK, sync and async, `with_raw_response` too) | OpenAI Decisions (`POST /v1/decisions`) | `openai.decisions` | OpenAI `gpt-6-luna`; Azure OpenAI through `AzureOpenAI`; OpenRouter (`openrouter.decisions`); any server that answers `/v1/decisions` |
+| `TypeSafeClient.system_one` / `AsyncTypeSafeClient.system_one` (`typesafe-sdk`, any `base_url`) | SystemOne (`POST /v1/systemone`) | `typesafe.system_one` | TypeSafe Jev, LiquidAI D1 / D1 Ultra, Cloudflare Workers AI, vLLM / SGLang / Ollajev / laya-serve serving Hub decision models (JEV, Clef, GEV, decider, ...) |
+| a POST with `requests`, `httpx` or `httpx2` to `.../v1/systemone`, `.../decisions/v1/systemone` or `.../v1/decisions`, outside an SDK call | either | `decision.http.systemone` / `decision.http.openai` | apps that call the endpoints without an SDK, such as LiquidAI's image examples |
+| OpenAI chat completions with `extra_body={"chat_template_kwargs": {"adapter_name": "decision"}}` | Granite Switch decision adapter | `openai.chat.decision` | IBM Granite Switch 4.1 on vLLM. Its other adapters (`guardian-core`) stay chat spans |
+| `genai_otel.decision_span` (context manager or decorator) | in-process | `decision` (or your name) | Laya `Router`, Clef's `joint_schema_model.systemone`, `transformers` checkpoints, rules engines |
+
+`GENAI_ENABLED_INSTRUMENTORS=openai` covers OpenAI Decisions and Granite Switch;
+`typesafe` covers SystemOne. The HTTP path matcher is governed by
+`GENAI_DECISION_HTTP_MATCHER` (on by default) and never wraps a call already inside an SDK
+decision span, so one decision is one span. An `openai` release without the Decisions
+resource (before 3.26) is skipped silently.
+
+LLM structured outputs, logprob classification on a plain chat model and Instructor still
+produce generated text that is parsed, so they stay LLM spans. To record one of them as a
+decision, use `decision_span`.
+
+### Self-hosted servers
+
+Point the client at your server:
+
+```python
+from typesafe_sdk import TypeSafeClient
+
+client = TypeSafeClient(api_key="unused", base_url="http://localhost:8000")  # vLLM / SGLang
+client.system_one(state=ticket, questions=questions, model="Cloudflare/clef-flash")
+```
+
+`decision.provider` is taken from the host: `api.openai.com` -> `openai`, `openrouter.ai` ->
+`openrouter`, `api.liquid.ai` -> `liquid`, `api.typesafe.ai` -> `typesafe`,
+`api.cloudflare.com` -> `cloudflare`, `*.openai.azure.com` -> `azure`. Any other host is
+self-hosted and gets no provider, unless `GENAI_DECISION_PROVIDER` names one.
+
+### In-process models
+
+```python
+from genai_otel import decision_span
+
+with decision_span(model="laya-router-421m", questions=questions, state=message) as d:
+    result = router(message)
+    d.record({"next_tool": {"type": "choice", "choice": result.label,
+                            "confidence": result.confidence,
+                            "probabilities": result.probabilities}},
+             usage=None)   # leave usage out when the model reports none
+```
+
+`questions` and answers may be a SystemOne mapping or an OpenAI Decisions list. As a
+decorator, the function's return value is recorded when it is a response (has `answers`) or a
+set of answers. `d.fail(message)` ends the span as an error without an exception.
+
+### Attributes
+
+| Attribute | When | Notes |
+|---|---|---|
+| `openinference.span.kind` = `DECISION` | always | `LLM` on SystemOne calls under `GENAI_DECISION_LEGACY_LLM_KIND=true` |
+| `decision.system` | always | the API shape: `openai`, `typesafe`, or `custom` for the helper |
+| `decision.provider` | recognised host, or `GENAI_DECISION_PROVIDER` | never guessed |
+| `decision.model_name` | always | response model, else request model |
+| `decision.request.model_name`, `decision.response.model_name` | when they differ | |
+| `decision.token_count.input`, `.output` | only when the provider reports them | never 0 for a missing value |
+| `gen_ai.system`, `gen_ai.request.model`, `gen_ai.response.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` | always / when reported | kept so `gen_ai.*` readers see decisions |
+| `gen_ai.operation.name` | always | `openai.decisions`, `typesafe.system_one`, `openai.chat.decision` or `decision` |
+| `gen_ai.request.type` = `decision` | always | selects the `decision` pricing section |
+| `gen_ai.usage.cost.total`, `gen_ai.usage.cost.decision` | when the model is priced | the same value on both |
+| `genai.decision.protocol` | always | `openai_decisions`, `systemone`, `granite_adapter` or `manual` |
+| `genai.decision.question_count`, `.refusal_count`, `.question.types` | always | counts and types only (`predicate`, `choice`, `score`, `refusal`, `box`; SystemOne's `noul` is recorded as `predicate`) |
+| `genai.decision.option_count` | one-question calls | how many choices or levels were offered |
+| `genai.decision.question.names` | **content capture on** | caller labels can be sensitive |
+| `genai.decision.min_confidence` | **content capture on** | lowest confidence across choice and score answers |
+| `genai.decision.choice`, `.confidence`, `.probability`, `.score`, `.margin` | **content capture on**, one-question calls | `margin` is the top probability minus the second |
+| `input.value`, `output.value`, `*.mime_type` = `application/json` | **content capture on** | the request and response JSON, images replaced with `[image omitted]`, capped at `GENAI_CONTENT_MAX_LENGTH` |
+
+SystemOne spans also keep the attributes they carried as LLM spans before 1.38
+(`llm.request.model_name`, `llm.response.model_name`, `llm.token_count.*`,
+`llm.invocation_parameters`, `gen_ai.response`) until 2.0.
+
+### What content capture decides
+
+With content capture off (the default) a decision span says which model decided, through
+which provider, how many questions of which types, how many were refused, tokens, cost,
+latency and status, and **nothing about the answer**: no chosen value, no confidence or score,
+no question names, no state. `GENAI_ENABLE_CONTENT_CAPTURE=true` adds them. The default
+200-character content cap truncates the request and response JSON, which is why the summary
+attributes exist.
+
+### Cost
+
+Decision models are priced from their own `decision` section of the pricing table, and **only**
+from it. A model missing from that section gets no cost attribute rather than a chat price:
+`gpt-6-luna` used as a decision model bills input only, while `gpt-6-luna` the chat model bills
+output at $0.50/1M.
+
+| Model key | Input per 1M | Output |
+|---|---|---|
+| `gpt-6-luna` (OpenAI Decisions; cache reads and writes free) | $0.10 | $0 |
+| `openai/gpt-6-luna-decisions` (OpenRouter) | $0.10 | $0 |
+| `d1` / `d1-ultra` (LiquidAI, any route) | $0.02 / $0.042 | $0 |
+| `jev` (TypeSafe) | $0.042 | $0 |
+| `clef`, `clef-flash`, `clef-omni` | not priced until Cloudflare publishes a price | |
+
+Dated and routed variants resolve to their key (`jev-1.13.0-20260917`, `liquid/d1`).
+Self-hosted weights (Hub models, Granite Switch, Laya) have no list price and get no cost
+attribute; price one with a `decision` section in `GENAI_CUSTOM_PRICING_JSON`. Regional and
+long-context multipliers are not modelled.
+
+### Evaluation
+
+On decision spans the input is still screened for PII, prompt injection and restricted topics.
+Hallucination and response checks are skipped, because there is no generated text, and the
+span says so with `evaluation.skipped_reason = decision_span`.
+
+### Examples
+
+`examples/decisions/` has one runnable example per call path; the README there says which ones
+need a key or a server.
 
 ## TypeSafe AI / Jev
 
 TypeSafe's System One API evaluates typed questions against unstructured state and
 returns decisions instead of generated prose. TraceVerde wraps both
-`TypeSafeClient.system_one` and `AsyncTypeSafeClient.system_one` natively, recording
-the model, typed answers, confidence/probability payload, token usage, and Jev's
-published input pricing. Content capture remains opt-in, like the other
-instrumentors.
+`TypeSafeClient.system_one` and `AsyncTypeSafeClient.system_one` natively, as
+`DECISION` spans (see [Decision models](#decision-models)): the model, the provider
+behind `base_url`, question counts and types, token usage and Jev's published input
+price, and, with content capture on, the typed answers and their confidence.
+
+Before 1.38 these were `LLM` spans. The `llm.*` attributes are still emitted until
+2.0, and `GENAI_DECISION_LEGACY_LLM_KIND=true` keeps the old span kind.
 
 ```bash
 pip install 'genai-otel-instrument[typesafe]'

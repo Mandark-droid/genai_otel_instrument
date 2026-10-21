@@ -1,5 +1,15 @@
 """Manual TypeSafe AI / Jev instrumentation example.
 
+Since 1.38 a System One call is an OpenInference DECISION span
+(``openinference.span.kind=DECISION``) with ``decision.*`` and
+``genai.decision.*`` attributes. The ``llm.*`` attributes it carried as an LLM
+span are still emitted until 2.0; set ``GENAI_DECISION_LEGACY_LLM_KIND=true`` to
+keep the old span kind for a consumer that needs it. Answers, confidences and
+question names are recorded only with ``GENAI_ENABLE_CONTENT_CAPTURE=true``.
+
+The same client reaches LiquidAI or a self-hosted ``/v1/systemone`` server with
+``TypeSafeClient(base_url=...)``; see ``examples/decisions/``.
+
 Prerequisites:
     pip install -e ".[typesafe]"
     set TYPESAFE_API_KEY=your-key       # PowerShell: $env:TYPESAFE_API_KEY=...
@@ -83,7 +93,7 @@ def main() -> None:
         print(f"  {key}: {answer}")
     print("usage:", getattr(response, "usage", None))
     genai_otel.flush_telemetry()
-    print("Trace exported as typesafe.system_one to the configured OTLP backend.")
+    print("Trace exported as a typesafe.system_one DECISION span to the configured OTLP backend.")
 
 
 if __name__ == "__main__":

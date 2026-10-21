@@ -6,6 +6,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Decision models as OpenInference `DECISION` spans.** A decision model takes a state and
+  typed questions and returns a probability distribution over answers the caller supplied; it
+  writes no text. Every call path now produces one `DECISION` span
+  (`openinference.span.kind=DECISION`) with one attribute shape, built by a shared normaliser
+  (`genai_otel/instrumentors/decision.py`):
+  - **OpenAI Decisions API**: `client.decisions.create`, sync and async, including
+    `with_raw_response`, as `openai.decisions` spans. An `openai` release without the Decisions
+    resource is skipped silently. OpenRouter clients get `openrouter.decisions` spans, and
+    `AzureOpenAI` clients are covered by the same wrapper.
+  - **Granite Switch decision adapter**: a chat-completions call with
+    `extra_body.chat_template_kwargs.adapter_name == "decision"` is an `openai.chat.decision`
+    `DECISION` span (`genai.decision.protocol=granite_adapter`); option probabilities come from
+    the label logprobs when the caller asked for them. Other adapters stay chat spans.
+  - **HTTP path matcher**: a POST made with `requests`, `httpx` or `httpx2` to `.../v1/systemone`,
+    `.../decisions/v1/systemone` or `.../v1/decisions`, outside an SDK decision span, becomes a
+    `DECISION` span parsed from the JSON bodies. An HTTP error status ends it as an error. On by
+    default; `GENAI_DECISION_HTTP_MATCHER=false` turns it off. All other traffic, including the
+    OTLP exporter's own, passes straight through.
+  - **`genai_otel.decision_span`**, a context manager and decorator for in-process decision models
+    (Laya, Clef's `joint_schema_model.systemone`, `transformers`) and rules engines
+    (`genai.decision.protocol=manual`).
+  - Attributes: `decision.system`, `decision.provider` (from the host; `GENAI_DECISION_PROVIDER`
+    names an unrecognised one), `decision.model_name` (and the request/response names when they
+    differ), `decision.token_count.input/.output` (only when reported, never 0 for a missing
+    value), `genai.decision.protocol`, `.question_count`, `.refusal_count`, `.question.types` and,
+    for one-question calls, `.option_count`. `gen_ai.*` model, token and cost attributes are
+    kept, with `gen_ai.request.type=decision`.
+  - **Content capture decides what is recorded about the answer.** With it off a decision span
+    records the model, provider, question counts and types, refusals, tokens, cost and latency,
+    and nothing about the answer. With it on it adds `genai.decision.question.names`,
+    `.min_confidence`, the one-question `.choice`, `.confidence`, `.probability`, `.score` and
+    `.margin`, and `input.value` / `output.value` as JSON with images replaced by
+    `[image omitted]`.
+  - **Decision cost of its own.** A `decision` section in `llm_pricing.json` (`gpt-6-luna` $0.10/1M
+    input with free output and cache; `openai/gpt-6-luna-decisions` $0.10/1M; LiquidAI `d1`
+    $0.02/1M and `d1-ultra` $0.042/1M; `jev` $0.042/1M). Decision spans are priced from that
+    section only and never fall back to chat pricing, so an unpriced model (Cloudflare Clef until
+    Cloudflare publishes a price, every self-hosted model) gets no cost attribute. The cost lands
+    on `gen_ai.usage.cost.total` and on the new `gen_ai.usage.cost.decision`.
+    `GENAI_CUSTOM_PRICING_JSON` accepts a `decision` section.
+  - **Evaluation**: decision spans still have their input screened for PII, prompt injection and
+    restricted topics; hallucination and response checks are skipped and the span says so with
+    `evaluation.skipped_reason=decision_span`, in the instrumentors, the evaluation span processor
+    and the enriching exporter alike.
+  - Runnable examples, one per call path, in `examples/decisions/`.
+
+### Changed
+
+- **TypeSafe / Jev (SystemOne) spans are now `DECISION` spans** (they were `LLM` spans), with
+  `gen_ai.request.type=decision` (was `chat`) and the `decision.*` / `genai.decision.*`
+  attributes. The `llm.*` attributes they carried (`llm.request.model_name`,
+  `llm.response.model_name`, `llm.token_count.*`, `llm.invocation_parameters`) and
+  `gen_ai.response` are still emitted until 2.0. Set `GENAI_DECISION_LEGACY_LLM_KIND=true` to keep
+  `openinference.span.kind=LLM`. The same wrapper covers LiquidAI, Cloudflare Workers AI and
+  self-hosted `/v1/systemone` servers reached through `typesafe-sdk`'s `base_url`.
+- **`jev` moved from the `chat` pricing section to `decision`**, price unchanged. Jev spans carry
+  their cost on `gen_ai.usage.cost.total` and `gen_ai.usage.cost.decision`, and no longer on
+  `gen_ai.usage.cost.prompt`.
+- The cost-enriching exporter and processor price decision spans (by span kind or
+  `gen_ai.request.type`) from the `decision` section only, and read `decision.model_name` /
+  `decision.token_count.*` for OpenInference decision spans from other instrumentors.
+- `typesafe-sdk` is in the `dev` extra, so the SystemOne tests run against the real SDK.
+
 ## [1.37.0] - 2026-10-18
 
 ### Added

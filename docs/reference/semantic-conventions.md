@@ -124,7 +124,8 @@ successfully completes through the degraded path.
 | `gen_ai.usage.cost.total` | float | Total cost in USD |
 | `gen_ai.usage.cost.prompt` | float | Prompt token cost |
 | `gen_ai.usage.cost.completion` | float | Completion token cost |
-| `gen_ai.usage.cost.pricing_source` | string | Where the price came from: `table`, `estimated` or `unpriced` |
+| `gen_ai.usage.cost.decision` | float | Decision-model cost, on decision spans only. Equal to `cost.total` there, so a reader can keep decision spend apart without reading the span kind |
+| `gen_ai.usage.cost.pricing_source` | string | Where the price came from: `table`, `estimated` or `unpriced` (decision spans: `table` or `unpriced`, never `estimated`) |
 | `gen_ai.request.model.deprecated` | bool | Set only when the provider has announced the model's retirement |
 | `gen_ai.request.model.deprecation_note` | string | Retirement date and migration target |
 
@@ -142,6 +143,28 @@ successfully completes through the degraded path.
 
     A dashboard that sums `cost.total` without filtering on `pricing_source`
     will silently under-report spend for every unpriced model.
+
+### Decision Spans
+
+Decision-model calls are OpenInference `DECISION` spans
+(`openinference.span.kind = DECISION`). The full attribute table, and which attributes
+need content capture, is in [Decision models](../guides/llm-providers.md#decision-models).
+
+| Attribute | Type | Recorded |
+|-----------|------|----------|
+| `decision.system` | string | always: `openai`, `typesafe` or `custom` |
+| `decision.provider` | string | recognised host, or `GENAI_DECISION_PROVIDER` |
+| `decision.model_name`, `decision.request.model_name`, `decision.response.model_name` | string | always / when they differ |
+| `decision.token_count.input`, `decision.token_count.output` | int | when reported |
+| `genai.decision.protocol` | string | always: `openai_decisions`, `systemone`, `granite_adapter`, `manual` |
+| `genai.decision.question_count`, `genai.decision.refusal_count` | int | always |
+| `genai.decision.question.types` | string[] | always |
+| `genai.decision.option_count` | int | one-question calls |
+| `genai.decision.question.names` | string[] | content capture on |
+| `genai.decision.min_confidence` | double | content capture on |
+| `genai.decision.choice` | string | content capture on, one-question calls |
+| `genai.decision.confidence`, `.probability`, `.score`, `.margin` | double | content capture on, one-question calls |
+| `evaluation.skipped_reason` | string | `decision_span` when the response detectors had no text to read |
 
 ### Streaming Latency
 
