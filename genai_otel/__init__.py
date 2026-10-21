@@ -64,6 +64,9 @@ _LAZY_IMPORTS = {
     "MCPInstrumentorManager": (".mcp_instrumentors.manager", "MCPInstrumentorManager"),
     # Tracing utilities
     "trace_operation": (".tracing", "trace_operation"),
+    # Decision spans for in-process decision models
+    "decision_span": (".decision", "decision_span"),
+    "DecisionRecorder": (".decision", "DecisionRecorder"),
 }
 
 
@@ -171,4 +174,6 @@ __all__ = [
     "MCPInstrumentorManager",
     # Tracing utilities
     "trace_operation",
+    "decision_span",
+    "DecisionRecorder",
 ]

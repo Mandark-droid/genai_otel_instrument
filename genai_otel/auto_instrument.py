@@ -731,6 +731,23 @@ def setup_auto_instrumentation(config: OTelConfig):
             else:
                 logger.warning("Unknown instrumentor '%s' requested.", name)
 
+    # Decision endpoints called over plain HTTP (/v1/systemone, /v1/decisions).
+    # Not an entry in INSTRUMENTORS: it covers no library of its own, and it is
+    # governed by GENAI_DECISION_HTTP_MATCHER rather than the instrumentor list.
+    # The manual decision_span helper is pointed at the same configuration.
+    try:
+        from . import decision as _decision_helper
+        from .instrumentors.decision_http import DecisionHTTPInstrumentor
+
+        _decision_helper.configure(config)
+        if config.decision_http_matcher:
+            DecisionHTTPInstrumentor().instrument(config)
+            logger.info("Decision HTTP path matcher enabled")
+    except Exception as e:
+        logger.error("Failed to set up decision instrumentation: %s", e, exc_info=True)
+        if config.fail_on_error:
+            raise
+
     # Auto-instrument MCP tools (databases, APIs, etc.)
     # NOTE: OTLP endpoints are excluded via OTEL_PYTHON_REQUESTS_EXCLUDED_URLS set above
     if config.enable_mcp_instrumentation:
