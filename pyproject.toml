@@ -68,7 +68,7 @@ openinference = [
     "openinference-instrumentation-litellm>=0.1.19,<1.0.0",
     "openinference-instrumentation-mcp>=1.3.0,<2.0.0",
     "openinference-instrumentation-smolagents>=0.1.11,<1.0.0",
-    "litellm>=1.0.0,!=1.82.7,!=1.82.8"
+    "litellm>=1.0.0,!=1.82.7,!=1.82.8,!=1.107.0"
 ]
 
 # Native TypeSafe System One / Jev instrumentation (Python >= 3.10).
@@ -239,7 +239,7 @@ all-providers = [
     "transformers>=4.30.0",
     "sentence-transformers>=2.2.0",
     "liquid-audio>=1.2.0",
-    "litellm>=1.0.0,!=1.82.7,!=1.82.8",
+    "litellm>=1.0.0,!=1.82.7,!=1.82.8,!=1.107.0",
     "typesafe-sdk>=0.6.0; python_version >= '3.10'",
     "strands-harness>=0.1.1; python_version >= '3.10'",
     "crewai>=0.1.0",

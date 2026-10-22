@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.38.1] - 2026-10-22
+
+### Security
+
+- **LiteLLM version pinning** - Excluded `litellm` 1.107.0 from the `openinference` and
+  `all-providers` extras. That release was published through LiteLLM's compromised release
+  pipeline on 2026-10-21 and contains credential-stealing code
+  (https://docs.litellm.ai/blog/security-incident-oct-21-2026). The core package does not depend
+  on `litellm`, and the 1.38.0 build and publish never installed it.
+
 ## [1.38.0] - 2026-10-21
 
 ### Added
