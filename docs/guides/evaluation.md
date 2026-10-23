@@ -296,6 +296,46 @@ Each detector records metrics for monitoring:
 
 See the [README](https://github.com/Mandark-droid/genai_otel_instrument#evaluation-features-v10) for the complete list of span attributes.
 
+## Evaluation outcomes, provenance, and coverage
+
+Evaluation spans carry bounded outcome metadata so a missing verdict cannot be read as a
+successful check:
+
+| Attribute | Values / meaning |
+|-----------|------------------|
+| `evaluation.outcome` | `completed`, `no_applicable_input`, `unsupported_operation`, `skipped`, or `error` for the detector suite |
+| `evaluation.<detector>.outcome` | The same bounded values for `pii`, `toxicity`, `bias`, `prompt_injection`, `restricted_topics`, and `hallucination` |
+| `evaluation.content.outcomes` | A bounded list containing `captured`, `omitted`, `truncated`, `redacted`, `rejected`, or `error` as applicable |
+| `evaluation.provenance.sdk.name` / `.version` | SDK identity and installed version |
+| `evaluation.provenance.detector.<name>.implementation` / `.version` | Detector implementation identifier and SDK version |
+| `evaluation.config.fingerprint` | SHA-256 of a normalized schema version and the enabled detector names; thresholds, custom values, credentials, and content are excluded |
+
+`completed` means that the detector ran on at least one applicable text input. It is not a
+claim that every part of the operation was captured, that detection is complete, or that a
+policy was enforced. `no_applicable_input` means the instrumentor did not provide usable text;
+`unsupported_operation` identifies operations such as embeddings, for which these text
+detectors do not apply; `skipped` records work bypassed by queue pressure or shutdown; and
+`error` records a detector failure. These attributes are additive and do not change detection,
+redaction, blocking, or content-capture behavior.
+
+### Operation surfaces
+
+The evaluation processor reads text supplied through GenAI prompt events
+(`gen_ai.prompt.*`), prompt attributes (`gen_ai.prompt`, `gen_ai.request.prompt`,
+`gen_ai.request.first_message`), OpenInference `llm.input_messages` / `llm.output_messages`,
+and common `input.value` / `output.value` attributes. It analyzes text that the SDK
+instrumentor can extract as a string. Input checks cover prompts; PII, toxicity, bias, and
+restricted-topic checks can also cover response text; prompt-injection checks cover prompts;
+hallucination checks cover responses.
+
+Streaming checks run after a supported stream finishes and its instrumentor has assembled
+text. A stream that is abandoned, closed before text is available, or whose instrumentor does
+not expose text may have no applicable input or be skipped. Embedding vectors, image/audio
+payloads, and other non-text content are not evaluated by these detectors. Only content
+actually present on the span can be reported as captured; no outcome field contains source
+text. The reported outcome is instrumentation evidence, not proof of complete capture or
+runtime enforcement. Blocking is enforced only by the separate pre-call policy hook.
+
 ## All Examples
 
 Browse all evaluation examples in the [examples/ directory](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples).

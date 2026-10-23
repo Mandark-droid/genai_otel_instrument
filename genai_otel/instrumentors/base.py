@@ -235,6 +235,38 @@ def _background_worker_count() -> int:
     return min(_BACKGROUND_EVALUATION_WORKERS, os.cpu_count() or 1)
 
 
+def _apply_skipped_evaluation_metadata(span, reason: str) -> None:
+    """Mark bounded evaluation outcomes when queued work ends without checks."""
+    try:
+        from genai_otel.evaluation.telemetry import apply_evaluation_telemetry
+
+        detectors = {
+            name
+            for name, detector in (
+                ("pii", BaseInstrumentor._pii_detector),
+                ("toxicity", BaseInstrumentor._toxicity_detector),
+                ("bias", BaseInstrumentor._bias_detector),
+                ("prompt_injection", BaseInstrumentor._prompt_injection_detector),
+                ("restricted_topics", BaseInstrumentor._restricted_topics_detector),
+                ("hallucination", BaseInstrumentor._hallucination_detector),
+            )
+            if detector is not None
+        }
+        attributes = dict(getattr(span, "attributes", None) or {})
+        attributes["evaluation.skipped"] = reason
+        apply_evaluation_telemetry(
+            span,
+            attributes,
+            detectors,
+            None,
+            None,
+            attributes.get("gen_ai.operation.name", ""),
+            getattr(span, "events", ()),
+        )
+    except Exception as exc:  # noqa: BLE001 - telemetry must not break span export
+        logger.debug("Could not write skipped evaluation metadata: %s", type(exc).__name__)
+
+
 class _SpanUnderEvaluation:
     """A span whose call has returned and whose detectors have not finished.
 
@@ -302,6 +334,7 @@ class _SpanUnderEvaluation:
         try:
             if skipped:
                 self.span.set_attribute("evaluation.skipped", skipped)
+                _apply_skipped_evaluation_metadata(self.span, skipped)
         finally:
             self.span.end(end_time=self.end_time)
         return True
@@ -3283,8 +3316,17 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     result = detector.detect(text)
             except Exception as e:  # noqa: BLE001 - a detector fault must not block the call
                 logger.warning("Pre-call %s policy check failed: %s", name, e)
+                try:
+                    span.set_attribute(f"evaluation.{name}.error", type(e).__name__)
+                except Exception:  # noqa: BLE001
+                    pass
                 continue
-            if getattr(result, flag, False):
+            detected = bool(getattr(result, flag, False))
+            try:
+                span.set_attribute(f"evaluation.{name}.prompt.detected", detected)
+            except Exception:  # noqa: BLE001
+                pass
+            if detected:
                 try:
                     span.set_attribute(f"evaluation.{name}.prompt.blocked", True)
                 except Exception:  # noqa: BLE001
@@ -3300,6 +3342,33 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 span.set_attribute("evaluation.blocked_reasons", triggered)
             except Exception:  # noqa: BLE001
                 pass
+            try:
+                from genai_otel.evaluation.telemetry import apply_evaluation_telemetry
+
+                detectors = {
+                    name
+                    for name, detector in (
+                        ("pii", BaseInstrumentor._pii_detector),
+                        ("toxicity", BaseInstrumentor._toxicity_detector),
+                        ("bias", BaseInstrumentor._bias_detector),
+                        ("prompt_injection", BaseInstrumentor._prompt_injection_detector),
+                        ("restricted_topics", BaseInstrumentor._restricted_topics_detector),
+                        ("hallucination", BaseInstrumentor._hallucination_detector),
+                    )
+                    if detector is not None
+                }
+                attributes = dict(getattr(span, "attributes", None) or {})
+                apply_evaluation_telemetry(
+                    span,
+                    attributes,
+                    detectors,
+                    prompt,
+                    None,
+                    operation or attributes.get("gen_ai.operation.name", ""),
+                    getattr(span, "events", ()),
+                )
+            except Exception as e:  # noqa: BLE001 - telemetry must not change policy behavior
+                logger.debug("Could not write policy outcome metadata: %s", type(e).__name__)
             raise PolicyViolationError(
                 "Request blocked by evaluation policy: " + ", ".join(triggered),
                 policy=triggered[0],
@@ -3600,6 +3669,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             # The detectors are behind. The span is exported now, unevaluated
             # and saying so: tracing does not wait for them.
             span.set_attribute("evaluation.skipped", "overloaded")
+            _apply_skipped_evaluation_metadata(span, "overloaded")
             _EVALUATION_QUEUE.note_overload()
         except Exception as e:  # noqa: BLE001
             logger.warning(
@@ -3831,6 +3901,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     else:
                         span.set_attribute("evaluation.pii.prompt.detected", False)
                 except Exception as e:
+                    span.set_attribute("evaluation.pii.error", type(e).__name__)
                     logger.warning(f"PII detection failed: {e}", exc_info=True)
 
             # Run toxicity detection
@@ -3857,6 +3928,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     else:
                         span.set_attribute("evaluation.toxicity.prompt.detected", False)
                 except Exception as e:
+                    span.set_attribute("evaluation.toxicity.error", type(e).__name__)
                     logger.warning(f"Toxicity detection failed: {e}", exc_info=True)
 
             # Run bias detection
@@ -3896,6 +3968,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     else:
                         span.set_attribute("evaluation.bias.prompt.detected", False)
                 except Exception as e:
+                    span.set_attribute("evaluation.bias.error", type(e).__name__)
                     logger.warning(f"Bias detection failed: {e}", exc_info=True)
 
             # Run prompt injection detection
@@ -3923,6 +3996,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     else:
                         span.set_attribute("evaluation.prompt_injection.detected", False)
                 except Exception as e:
+                    span.set_attribute("evaluation.prompt_injection.error", type(e).__name__)
                     logger.warning(f"Prompt injection detection failed: {e}", exc_info=True)
 
             # Run restricted topics detection
@@ -3950,6 +4024,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     else:
                         span.set_attribute("evaluation.restricted_topics.prompt.detected", False)
                 except Exception as e:
+                    span.set_attribute("evaluation.restricted_topics.error", type(e).__name__)
                     logger.warning(f"Restricted topics detection failed: {e}", exc_info=True)
 
             # Run hallucination detection (requires response)
@@ -3991,6 +4066,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 hallucination_result.unsupported_claims[:3],
                             )
                 except Exception as e:
+                    span.set_attribute("evaluation.hallucination.error", type(e).__name__)
                     logger.warning(f"Hallucination detection failed: {e}", exc_info=True)
 
             # Mark evaluation as done so the downstream EvaluationSpanProcessor /
@@ -3998,11 +4074,39 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             # detector suite on the same span - detectors previously ran up to 3x
             # per request (inline here, in on_end, and in the exporter).
             try:
+                from genai_otel.evaluation.telemetry import apply_evaluation_telemetry
+
+                detectors = {
+                    name
+                    for name, detector in (
+                        ("pii", BaseInstrumentor._pii_detector),
+                        ("toxicity", BaseInstrumentor._toxicity_detector),
+                        ("bias", BaseInstrumentor._bias_detector),
+                        ("prompt_injection", BaseInstrumentor._prompt_injection_detector),
+                        ("restricted_topics", BaseInstrumentor._restricted_topics_detector),
+                        ("hallucination", BaseInstrumentor._hallucination_detector),
+                    )
+                    if detector is not None
+                }
+                attrs = dict(getattr(span, "attributes", None) or {})
+                apply_evaluation_telemetry(
+                    span,
+                    attrs,
+                    detectors,
+                    prompt,
+                    response,
+                    attrs.get("gen_ai.operation.name", ""),
+                    getattr(span, "events", ()),
+                )
                 span.set_attribute("evaluation.completed", True)
             except Exception:  # noqa: BLE001
                 pass
 
         except Exception as e:
+            try:
+                span.set_attribute("evaluation.outcome", "error")
+            except Exception:  # noqa: BLE001
+                pass
             logger.warning(f"Evaluation checks failed: {e}", exc_info=True)
 
     def _wrap_streaming_response(

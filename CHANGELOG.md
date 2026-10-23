@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.39.0] - 2026-10-23
+
+### Added
+
+- **Evaluation outcome and provenance telemetry** - Evaluation spans now report bounded suite
+  and per-detector outcomes, content-handling outcomes, SDK/detector provenance, and a
+  configuration fingerprint that excludes raw values, secrets, and content. The evaluation
+  guide documents supported operation surfaces and known text/streaming coverage gaps.
+
+### Security
+
+- **Patch kafka-python denial-of-service vulnerabilities** - Require `kafka-python>=2.3.2`
+  across runtime extras and development/testing requirements, fixing the unbounded SCRAM
+  iteration-count and protocol frame-length issues (CVE-2026-10143 and CVE-2026-10142).
+
 ## [1.38.1] - 2026-10-22
 
 ### Security

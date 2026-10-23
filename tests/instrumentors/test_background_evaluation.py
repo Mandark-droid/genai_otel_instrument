@@ -315,6 +315,8 @@ def test_a_blocked_request_is_still_refused_before_it_is_sent(detectors, tracing
     assert detector.threads == [threading.get_ident()]
     (span,) = spans()
     assert span.attributes["evaluation.blocked"] is True
+    assert span.attributes["evaluation.pii.outcome"] == "completed"
+    assert span.attributes["evaluation.content.outcomes"] == ("omitted", "rejected")
 
 
 # --- when the detectors cannot keep up -----------------------------------------

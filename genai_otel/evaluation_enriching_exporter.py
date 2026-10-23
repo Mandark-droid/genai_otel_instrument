@@ -138,6 +138,55 @@ class EvaluationEnrichingSpanExporter(SpanExporter):
             ):
                 has_enrichment |= self._check_hallucination(attributes, prompt, response)
 
+            from .evaluation.telemetry import apply_evaluation_telemetry
+
+            enabled_detectors = [
+                name
+                for name, config, detector in (
+                    (
+                        "pii",
+                        self.evaluation_processor.pii_config,
+                        self.evaluation_processor.pii_detector,
+                    ),
+                    (
+                        "toxicity",
+                        self.evaluation_processor.toxicity_config,
+                        self.evaluation_processor.toxicity_detector,
+                    ),
+                    (
+                        "bias",
+                        self.evaluation_processor.bias_config,
+                        self.evaluation_processor.bias_detector,
+                    ),
+                    (
+                        "prompt_injection",
+                        self.evaluation_processor.prompt_injection_config,
+                        self.evaluation_processor.prompt_injection_detector,
+                    ),
+                    (
+                        "restricted_topics",
+                        self.evaluation_processor.restricted_topics_config,
+                        self.evaluation_processor.restricted_topics_detector,
+                    ),
+                    (
+                        "hallucination",
+                        self.evaluation_processor.hallucination_config,
+                        self.evaluation_processor.hallucination_detector,
+                    ),
+                )
+                if config.enabled and detector is not None
+            ]
+            apply_evaluation_telemetry(
+                attributes,
+                attributes,
+                enabled_detectors,
+                prompt,
+                response,
+                attributes.get("gen_ai.operation.name", ""),
+                getattr(span, "events", ()),
+            )
+            has_enrichment |= bool(enabled_detectors)
+
             if has_enrichment:
                 # Mark the span as evaluated so any later pass is a no-op.
                 attributes["evaluation.completed"] = True

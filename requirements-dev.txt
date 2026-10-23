@@ -50,7 +50,7 @@ pydantic-ai>=0.0.1
 google-cloud-aiplatform>=1.0.0
 
 # For Kafka instrumentation (optional)
-kafka-python==2.0.2
+kafka-python>=2.3.2
 opentelemetry-instrumentation-kafka-python
 
 # Or alternatively, use confluent-kafka which is more maintained

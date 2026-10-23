@@ -40,7 +40,7 @@ psycopg2-binary>=2.9.0
 
 # Message queues
 opentelemetry-instrumentation-kafka-python>=0.41b0
-kafka-python>=2.0.0
+kafka-python>=2.3.2
 
 # LLM providers for testing
 openai>=1.0.0

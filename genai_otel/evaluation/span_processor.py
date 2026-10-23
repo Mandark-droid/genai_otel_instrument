@@ -25,6 +25,7 @@ from .hallucination_detector import HallucinationDetector
 from .pii_detector import PIIDetector
 from .prompt_injection_detector import PromptInjectionDetector
 from .restricted_topics_detector import RestrictedTopicsDetector
+from .telemetry import apply_evaluation_telemetry
 from .toxicity_detector import ToxicityDetector
 
 logger = logging.getLogger(__name__)
@@ -461,6 +462,36 @@ class EvaluationSpanProcessor(SpanProcessor):
             # Run hallucination detection (responses only)
             if self.hallucination_config.enabled and self.hallucination_detector:
                 self._check_hallucination(span, prompt, response, attributes, safe_set_attribute)
+
+            attributes = dict(span.attributes or {})
+            apply_evaluation_telemetry(
+                span,
+                attributes,
+                [
+                    name
+                    for name, config, detector in (
+                        ("pii", self.pii_config, self.pii_detector),
+                        ("toxicity", self.toxicity_config, self.toxicity_detector),
+                        ("bias", self.bias_config, self.bias_detector),
+                        (
+                            "prompt_injection",
+                            self.prompt_injection_config,
+                            self.prompt_injection_detector,
+                        ),
+                        (
+                            "restricted_topics",
+                            self.restricted_topics_config,
+                            self.restricted_topics_detector,
+                        ),
+                        ("hallucination", self.hallucination_config, self.hallucination_detector),
+                    )
+                    if config.enabled and detector is not None
+                ],
+                prompt,
+                response,
+                attributes.get("gen_ai.operation.name", ""),
+                getattr(span, "events", ()),
+            )
 
             # Mark the span as evaluated so downstream paths (the enriching
             # exporter) do not re-run the detector suite on it.

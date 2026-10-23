@@ -56,7 +56,7 @@ mysql-connector-python>=9.1.0
 
 # Messaging
 opentelemetry-instrumentation-kafka-python>=0.41b0
-kafka-python>=2.0.0
+kafka-python>=2.3.2
 
 # Vector DBs
 pinecone>=3.0.0

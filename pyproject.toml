@@ -179,7 +179,7 @@ databases = [
 # Message queue instrumentation
 messaging = [
     "opentelemetry-instrumentation-kafka-python>=0.41b0",
-    "kafka-python",
+    "kafka-python>=2.3.2",
     "pika>=1.0.0",
 ]
 
@@ -349,7 +349,7 @@ all = [
     "redis",
     "pymongo",
     "sqlalchemy>=1.4.0",
-    "kafka-python",
+    "kafka-python>=2.3.2",
     "pika>=1.0.0",
     "opentelemetry-instrumentation-mysql>=0.41b0",
     "opentelemetry-instrumentation-psycopg2>=0.41b0",
