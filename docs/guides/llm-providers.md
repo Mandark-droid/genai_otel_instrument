@@ -1,6 +1,6 @@
 # LLM Providers
 
-TraceVerde auto-instruments 26 LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
+TraceVerde auto-instruments 27 LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
 
 The table below is the complete list, and `tests/test_docs_provider_coverage.py` asserts
 it stays in step with the `INSTRUMENTORS` registry, so a provider cannot be added in code
@@ -13,6 +13,7 @@ without appearing here.
 | OpenAI | GPT-4o, GPT-4 Turbo, GPT-5.2, o1/o3, embeddings, Responses API (50+) | `[openai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openai/example.py) |
 | OpenRouter | All models via OpenAI-compatible API | `[openrouter]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openrouter/example.py) |
 | CometAPI | 500+ models via OpenAI- or Anthropic-compatible API | `[cometapi]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/comet_api.py) |
+| Databricks | Model Serving and Foundation Model APIs (OpenAI-compatible chat, completions, embeddings, and Responses) | `[databricks]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/databricks/example.py) |
 | Anthropic | Claude Sonnet 4.6, Claude 3.5/3 series (15+) | `[anthropic]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/anthropic/example.py) |
 | Google AI | Gemini 2.5/2.0 Pro/Flash, PaLM 2 (30+) | `[google]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_ai/example.py) |
 | AWS Bedrock | Amazon Titan, Claude, Llama, Mistral (25+), Converse API | `[aws]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/aws_bedrock/example.py) |
@@ -36,6 +37,59 @@ without appearing here.
 | Sentence Transformers | Local embedding models | `[huggingface]` | - |
 | Hyperbolic | Open-weight models over raw HTTP. Disabled by default - see below | - | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/hyperbolic_example.py) |
 | TypeSafe AI / Jev | SystemOne decisions (Jev, LiquidAI D1, self-hosted Hub models) as DECISION spans; see [Decision models](#decision-models) | `[typesafe]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/typesafe/example.py) |
+
+## Databricks Model Serving
+
+Install the integration and OpenAI-compatible SDK:
+
+```bash
+pip install "genai-otel-instrument[databricks]"
+```
+
+Enable the Databricks instrumentor before creating the client. Point it at a
+Databricks workspace serving endpoint and pass the endpoint or model-service name in
+`model`. Credentials stay in environment variables:
+
+```python
+import os
+
+import genai_otel
+from openai import OpenAI
+
+genai_otel.instrument(enabled_instrumentors=["databricks"])
+
+client = OpenAI(
+    api_key=os.environ["DATABRICKS_TOKEN"],
+    base_url=f"{os.environ['DATABRICKS_HOST'].rstrip('/')}/serving-endpoints",
+)
+response = client.chat.completions.create(
+    model=os.environ["DATABRICKS_MODEL"],
+    messages=[{"role": "user", "content": "Hello from TraceVerde"}],
+)
+```
+
+Set `DATABRICKS_HOST` to your workspace URL, `DATABRICKS_TOKEN` to a token with
+query access, and `DATABRICKS_MODEL` to the serving endpoint name. The instrumentor
+also recognizes Databricks AI Gateway routes under `/ai-gateway/` and works with
+`databricks-openai` clients that use these endpoints. It records chat, completions,
+embeddings, and Responses API calls as `databricks.*` spans with
+`gen_ai.provider.name=databricks`. See the complete [Databricks example](../../examples/databricks/example.py).
+
+The native Databricks SDK is supported too:
+
+```python
+import genai_otel
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.serving import ChatMessage, ChatMessageRole
+
+genai_otel.instrument(enabled_instrumentors=["databricks"])
+workspace = WorkspaceClient()  # Uses Databricks SDK authentication configuration
+result = workspace.serving_endpoints.query(
+    name="my-chat-endpoint",
+    messages=[ChatMessage(role=ChatMessageRole.USER, content="Hello")],
+)
+```
+See the complete [native SDK example](../../examples/databricks/sdk_example.py).
 
 ## Decision models
 

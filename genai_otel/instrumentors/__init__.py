@@ -20,6 +20,7 @@ from .bedrock_agents_instrumentor import BedrockAgentsInstrumentor
 from .cohere_instrumentor import CohereInstrumentor
 from .cometapi_instrumentor import CometAPIInstrumentor
 from .crewai_instrumentor import CrewAIInstrumentor
+from .databricks_instrumentor import DatabricksInstrumentor
 from .dspy_instrumentor import DSPyInstrumentor
 from .elevenlabs_instrumentor import ElevenLabsInstrumentor
 from .google_adk_instrumentor import GoogleADKInstrumentor
@@ -71,6 +72,7 @@ __all__ = [
     "CohereInstrumentor",
     "CometAPIInstrumentor",
     "CrewAIInstrumentor",
+    "DatabricksInstrumentor",
     "DSPyInstrumentor",
     "MistralAIInstrumentor",
     "TogetherAIInstrumentor",

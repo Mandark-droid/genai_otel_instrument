@@ -72,7 +72,7 @@ Steps
 
        pip install "genai-otel-instrument[openai,langgraph]"
 
-   Extras are named after the library: openai, anthropic, google, langchain,
+   Extras are named after the library: openai, databricks, anthropic, google, langchain,
    langgraph, crewai, pydantic-ai, autogen-agentchat, llamaindex, and others listed
    in the docs. Plain "pip install genai-otel-instrument" is enough when the SDK is
    already a dependency of this project.
@@ -134,7 +134,7 @@ Rules
 | Feature | TraceVerde | OpenLIT | Traceloop/OpenLLMetry | Langfuse | Galileo | Arize (Phoenix) | Opik (Comet) |
 |---------|-----------|---------|----------------------|----------|---------|-----------------|--------------|
 | Zero-code setup | Yes | Yes | Yes | SDK required | SDK required | SDK / auto (OpenInference) | SDK required |
-| LLM providers | 26 | 25+ | 15+ | Via integrations | Via integrations | Via integrations | Via integrations |
+| LLM providers | 27 | 25+ | 15+ | Via integrations | Via integrations | Via integrations | Via integrations |
 | Multi-agent frameworks | 9 (CrewAI, LangGraph, ADK, Antigravity, AutoGen, OpenAI Agents, Pydantic AI, etc.) | Limited | Limited | Limited | Limited | Limited | Limited |
 | Cost tracking | Automatic (1,700+ models) | Manual config | Manual config | Manual config | Yes | Yes | Yes |
 | GPU metrics (NVIDIA + AMD) | Yes | No | No | No | No | No | No |
@@ -146,8 +146,8 @@ Rules
 
 ## What Gets Instrumented?
 
-### LLM Providers (26+)
-OpenAI, OpenRouter, CometAPI, Anthropic, Google AI, Google GenAI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, vLLM, llama.cpp, Vertex AI, Replicate, HuggingFace, SambaNova, Sarvam AI, ElevenLabs, Hyperbolic, LiteLLM, TypeSafe AI / Jev
+### LLM Providers (27+)
+OpenAI, Databricks Model Serving, OpenRouter, CometAPI, Anthropic, Google AI, Google GenAI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, vLLM, llama.cpp, Vertex AI, Replicate, HuggingFace, SambaNova, Sarvam AI, ElevenLabs, Hyperbolic, LiteLLM, TypeSafe AI / Jev
 
 **Decision models** (OpenInference `DECISION` spans, priced separately from chat): OpenAI Decisions (`gpt-6-luna`, also via OpenRouter and Azure), SystemOne servers (TypeSafe Jev, LiquidAI D1, Cloudflare Clef, self-hosted Hub decision models on vLLM / SGLang), Granite Switch's decision adapter, plain-HTTP calls to those endpoints, and in-process models through `genai_otel.decision_span`
 

@@ -2,6 +2,9 @@
 
 This directory contains examples demonstrating how to use `genai-otel-instrument` with various LLM providers and frameworks.
 
+- [Databricks Model Serving / Foundation Model APIs](databricks/example.py)
+- [Databricks native SDK queries](databricks/sdk_example.py)
+
 ## Quick Start Pattern
 
 All examples follow the same simple pattern:

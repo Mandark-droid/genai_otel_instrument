@@ -60,6 +60,7 @@ PROVIDER_DISPLAY_NAMES = {
     "boto3": "AWS Bedrock",
     "cohere": "Cohere",
     "cometapi": "CometAPI",
+    "databricks": "Databricks",
     "elevenlabs": "ElevenLabs",
     "google.generativeai": "Google AI",
     "groq": "Groq",

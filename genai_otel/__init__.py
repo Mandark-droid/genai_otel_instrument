@@ -44,6 +44,7 @@ _LAZY_IMPORTS = {
     "get_server_metrics": (".server_metrics", "get_server_metrics"),
     # Instrumentors
     "OpenAIInstrumentor": (".instrumentors", "OpenAIInstrumentor"),
+    "DatabricksInstrumentor": (".instrumentors", "DatabricksInstrumentor"),
     "AnthropicInstrumentor": (".instrumentors", "AnthropicInstrumentor"),
     "GoogleAIInstrumentor": (".instrumentors", "GoogleAIInstrumentor"),
     "AWSBedrockInstrumentor": (".instrumentors", "AWSBedrockInstrumentor"),

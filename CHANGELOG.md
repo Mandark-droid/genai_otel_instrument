@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.40.0] - 2026-10-24
+
+### Added
+
+- **Databricks Model Serving and Foundation Model API instrumentation.** OpenAI-compatible
+  clients pointed at Databricks serving endpoints or AI Gateway routes, and native Databricks
+  SDK serving queries, now emit dedicated `databricks.*` spans with
+  `gen_ai.provider.name=databricks`. Added the `[databricks]` extra and runnable examples.
+
 ## [1.39.0] - 2026-10-23
 
 ### Added

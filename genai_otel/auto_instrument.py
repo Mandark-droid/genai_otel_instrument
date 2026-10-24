@@ -70,6 +70,7 @@ try:
         CohereInstrumentor,
         CometAPIInstrumentor,
         CrewAIInstrumentor,
+        DatabricksInstrumentor,
         DSPyInstrumentor,
         ElevenLabsInstrumentor,
         GoogleADKInstrumentor,
@@ -117,6 +118,7 @@ except ImportError:
         CohereInstrumentor,
         CometAPIInstrumentor,
         CrewAIInstrumentor,
+        DatabricksInstrumentor,
         DSPyInstrumentor,
         ElevenLabsInstrumentor,
         GoogleADKInstrumentor,
@@ -217,6 +219,7 @@ INSTRUMENTORS = {
     "bedrock_agents": BedrockAgentsInstrumentor,  # AWS Bedrock Agents
     "cohere": CohereInstrumentor,
     "crewai": CrewAIInstrumentor,  # CrewAI multi-agent framework
+    "databricks": DatabricksInstrumentor,  # Databricks Model Serving and Foundation Model APIs
     # Streaming latency for litellm routes that bypass provider SDKs (issue #22).
     # Distinct from the OpenInference "litellm" entry, which stays as-is.
     "litellm_latency": LiteLLMLatencyInstrumentor,

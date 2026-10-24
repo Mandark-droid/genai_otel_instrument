@@ -30,6 +30,16 @@ Install additional capabilities as needed:
 
 ### LLM Providers
 
+For Databricks Model Serving and Foundation Model APIs, install the `databricks`
+extra, which includes the OpenAI-compatible client and Databricks Python SDK:
+
+```bash
+pip install "genai-otel-instrument[databricks]"
+```
+
+See the [Databricks provider example](../../examples/databricks/example.py) for
+environment variables and setup.
+
 ```bash
 # Individual providers
 pip install genai-otel-instrument[openai]

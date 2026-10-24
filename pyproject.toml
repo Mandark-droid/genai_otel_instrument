@@ -113,6 +113,7 @@ all-gpu = [
 co2 = ["codecarbon>=2.3.0"]
 # Individual LLM providers
 openai = ["openai>=1.0.0"]
+databricks = ["openai>=1.0.0", "databricks-sdk>=0.49.0"]
 openrouter = ["openai>=1.0.0"]  # OpenRouter uses the OpenAI client SDK
 cometapi = ["openai>=1.0.0", "anthropic>=0.18.0"]  # CometAPI works via OpenAI or Anthropic SDKs
 anthropic = ["anthropic>=0.18.0"]
@@ -218,6 +219,7 @@ multimodal = [
 # All LLM providers
 all-providers = [
     "openai>=1.0.0",
+    "databricks-sdk>=0.49.0",
     "anthropic>=0.18.0",
     "google-generativeai>=0.3.0",
     "boto3>=1.28.0",
@@ -281,6 +283,7 @@ all-mcp = [
 # Everything
 all = [
     "openai>=1.0.0",
+    "databricks-sdk>=0.49.0",
     "anthropic>=0.18.0",
     "google-generativeai>=0.3.0",
     "boto3>=1.28.0",

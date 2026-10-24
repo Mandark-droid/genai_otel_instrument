@@ -2,12 +2,12 @@
 
 **The most comprehensive OpenTelemetry auto-instrumentation library for LLM/GenAI applications.**
 
-TraceVerde provides production-ready, zero-code instrumentation for GenAI applications. Install, set two environment variables, and get complete observability across 26 LLM providers, 9 multi-agent frameworks, and 20+ MCP tools.
+TraceVerde provides production-ready, zero-code instrumentation for GenAI applications. Install, set two environment variables, and get complete observability across 27 LLM providers, 9 multi-agent frameworks, and 20+ MCP tools.
 
 ## Key Features
 
 - **Zero-Code Setup** - Just install and set env vars, or add one line of code
-- **26 LLM Providers** - OpenAI, Anthropic, Google AI, AWS Bedrock, Azure, Cohere, Mistral, Together AI, Groq, Ollama, TypeSafe AI / Jev, and more
+- **27 LLM Providers** - OpenAI, Databricks, Anthropic, Google AI, AWS Bedrock, Azure, Cohere, Mistral, Together AI, Groq, Ollama, TypeSafe AI / Jev, and more
 - **9 Multi-Agent Frameworks** - CrewAI, LangGraph, Google ADK, Antigravity, AutoGen, OpenAI Agents SDK, Pydantic AI, Haystack, DSPy
 - **Automatic Cost Tracking** - 1,700+ model pricing database with per-request cost breakdown
 - **GPU Metrics** - Real-time NVIDIA and AMD GPU monitoring (utilization, memory, temperature, power)
@@ -41,7 +41,7 @@ response = client.chat.completions.create(
 - [Quick Start](getting-started/quickstart.md) - Get up and running in minutes
 - [Instrument with a Coding Agent](getting-started/coding-agents.md) - A prompt to paste into your AI coding agent
 - [Configuration](getting-started/configuration.md) - Environment variables and options
-- [LLM Providers](guides/llm-providers.md) - 26 providers with code examples
+- [LLM Providers](guides/llm-providers.md) - 27 providers with code examples
 - [Multi-Agent Frameworks](guides/multi-agent-frameworks.md) - CrewAI, LangGraph, Google ADK, Antigravity, AutoGen, and more
 - [MCP Tools](guides/mcp-tools.md) - Databases, caches, vector DBs, message queues
 - [Cost Tracking](guides/cost-tracking.md) - Automatic cost calculation for 1,700+ models
