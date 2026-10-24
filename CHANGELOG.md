@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.40.1] - 2026-10-24
+
+### Fixed
+
+- **Keep coding-agent setup prompts synchronized.** Add the new `databricks` install extra
+  to the documentation copy of the README's setup prompt.
+
 ## [1.40.0] - 2026-10-24
 
 ### Added

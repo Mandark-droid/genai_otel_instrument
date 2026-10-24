@@ -29,7 +29,7 @@ Steps
 
        pip install "genai-otel-instrument[openai,langgraph]"
 
-   Extras are named after the library: openai, anthropic, google, langchain,
+   Extras are named after the library: openai, databricks, anthropic, google, langchain,
    langgraph, crewai, pydantic-ai, autogen-agentchat, llamaindex, and others listed
    in the docs. Plain "pip install genai-otel-instrument" is enough when the SDK is
    already a dependency of this project.
