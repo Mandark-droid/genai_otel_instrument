@@ -87,6 +87,32 @@ class DatabricksInstrumentor(OpenAIInstrumentor):
                 WorkspaceClient._genai_otel_databricks_instrumented = True
                 installed = True
 
+            # MLflow's Databricks deployment client is a separate request path
+            # from both the OpenAI SDK and WorkspaceClient. Install the factory
+            # hook only when MLflow is present; importing this instrumentor must
+            # remain safe in environments that do not use MLflow.
+            try:
+                import mlflow.deployments as mlflow_deployments
+            except ImportError:
+                mlflow_deployments = None
+            if mlflow_deployments is not None and not getattr(
+                mlflow_deployments, "_genai_otel_databricks_instrumented", False
+            ):
+                original_get_deploy_client = mlflow_deployments.get_deploy_client
+
+                def wrapped_get_deploy_client(wrapped, instance, args, kwargs):
+                    target = args[0] if args else kwargs.get("target_uri")
+                    client = wrapped(*args, **kwargs)
+                    if str(target or "").lower() == "databricks":
+                        self._instrument_mlflow_client(client)
+                    return client
+
+                mlflow_deployments.get_deploy_client = wrapt.FunctionWrapper(
+                    original_get_deploy_client, wrapped_get_deploy_client
+                )
+                mlflow_deployments._genai_otel_databricks_instrumented = True
+                installed = True
+
             self._instrumented = installed
             if installed:
                 logger.info("Databricks Model Serving instrumentation enabled")
@@ -112,6 +138,91 @@ class DatabricksInstrumentor(OpenAIInstrumentor):
         except Exception:  # noqa: BLE001
             pass
         serving_endpoints.query = wrapped_query
+
+    def _instrument_mlflow_client(self, client):
+        """Wrap inference methods on an MLflow Databricks deployment client."""
+        for method_name in ("predict", "predict_stream"):
+            method = getattr(client, method_name, None)
+            if not callable(method) or getattr(method, "_genai_otel_databricks_wrapped", False):
+                continue
+            if method_name == "predict_stream":
+                wrapped_method = self._wrap_mlflow_stream(method)
+            else:
+                wrapped_method = self.create_span_wrapper(
+                    span_name="databricks.mlflow.predict",
+                    extract_attributes=self._extract_mlflow_attributes,
+                )(method)
+            try:
+                wrapped_method._genai_otel_databricks_wrapped = True
+            except Exception:  # noqa: BLE001
+                pass
+            setattr(client, method_name, wrapped_method)
+
+    def _wrap_mlflow_stream(self, method):
+        """Route MLflow's iterator response through the common stream measurer."""
+        import wrapt
+
+        span_wrapper = self.create_span_wrapper(
+            span_name="databricks.mlflow.predict_stream",
+            extract_attributes=self._extract_mlflow_attributes,
+        )
+
+        def call_stream(instance, args, kwargs):
+            # The common wrapper uses the stream flag to retain the span and
+            # capture final-chunk usage. MLflow exposes this as a separate
+            # method, so don't forward the internal flag to its API.
+            def invoke(*inner_args, **inner_kwargs):
+                inner_kwargs.pop("stream", None)
+                return method(*inner_args, **inner_kwargs)
+
+            return span_wrapper(invoke)(*args, **dict(kwargs, stream=True))
+
+        def wrapped_stream(wrapped, instance, args, kwargs):
+            return call_stream(instance, args, kwargs)
+
+        return wrapt.FunctionWrapper(method, wrapped_stream)
+
+    def _extract_mlflow_attributes(self, instance, args, kwargs):
+        """Extract endpoint, model input, and provider fields from MLflow calls."""
+        endpoint = kwargs.get("endpoint") or kwargs.get("deployment_name")
+        inputs = kwargs.get("inputs")
+        if not endpoint:
+            endpoint = (args[2] if len(args) > 2 else None) or (args[0] if args else None)
+        if inputs is None and len(args) > 1:
+            inputs = args[1]
+        attrs: Dict[str, Any] = {
+            "gen_ai.system": "databricks",
+            "gen_ai.provider.name": "databricks",
+            "gen_ai.request.model": str(endpoint or "unknown"),
+            "gen_ai.operation.name": "chat",
+        }
+        if isinstance(inputs, dict):
+            messages = inputs.get("messages")
+            if isinstance(messages, (list, tuple)):
+                attrs["gen_ai.request.message_count"] = len(messages)
+                first_message = self._build_first_message(messages)
+                if first_message:
+                    attrs["gen_ai.request.first_message"] = first_message
+            if inputs.get("input") is not None:
+                attrs["gen_ai.operation.name"] = "embeddings"
+                attrs["gen_ai.request.type"] = "embedding"
+                attrs["gen_ai.request.input_count"] = self._count_embedding_inputs(inputs["input"])
+        return attrs
+
+    def _extract_usage(self, result):
+        """Read MLflow's dictionary-shaped response and standard SDK responses."""
+        if isinstance(result, dict):
+            usage = result.get("usage")
+            if isinstance(usage, dict):
+                prompt = usage.get("prompt_tokens", usage.get("input_tokens", 0)) or 0
+                completion = usage.get("completion_tokens", usage.get("output_tokens", 0)) or 0
+                return {
+                    "prompt_tokens": prompt,
+                    "completion_tokens": completion,
+                    "total_tokens": usage.get("total_tokens", prompt + completion)
+                    or prompt + completion,
+                }
+        return super()._extract_usage(result)
 
     def _extract_sdk_query_attributes(self, instance, args, kwargs):
         """Normalize native SDK query fields to the common GenAI attributes."""

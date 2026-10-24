@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.40.2] - 2026-10-24
+
+### Added
+
+- **MLflow Databricks deployment instrumentation.** `predict` and streaming
+  `predict_stream` calls now emit Databricks spans with endpoint identity and token
+  usage. Added the runnable MLflow example and documented Databricks LangChain coverage.
+
 ## [1.40.1] - 2026-10-24
 
 ### Fixed

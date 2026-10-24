@@ -149,6 +149,12 @@ Rules
 ### LLM Providers (27+)
 OpenAI, Databricks Model Serving, OpenRouter, CometAPI, Anthropic, Google AI, Google GenAI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, vLLM, llama.cpp, Vertex AI, Replicate, HuggingFace, SambaNova, Sarvam AI, ElevenLabs, Hyperbolic, LiteLLM, TypeSafe AI / Jev
 
+Databricks instrumentation covers OpenAI-compatible serving and AI Gateway clients,
+the native Workspace SDK, and MLflow deployment clients (including completed streaming
+responses). Install `genai-otel-instrument[databricks]`; see the [Databricks setup and
+examples](https://mandark-droid.github.io/genai_otel_instrument/guides/llm-providers/#databricks-model-serving)
+for OpenAI, SDK, and MLflow code.
+
 **Decision models** (OpenInference `DECISION` spans, priced separately from chat): OpenAI Decisions (`gpt-6-luna`, also via OpenRouter and Azure), SystemOne servers (TypeSafe Jev, LiquidAI D1, Cloudflare Clef, self-hosted Hub decision models on vLLM / SGLang), Granite Switch's decision adapter, plain-HTTP calls to those endpoints, and in-process models through `genai_otel.decision_span`
 
 [See all providers with examples >>](https://mandark-droid.github.io/genai_otel_instrument/guides/llm-providers/)

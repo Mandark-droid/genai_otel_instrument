@@ -13,7 +13,7 @@ without appearing here.
 | OpenAI | GPT-4o, GPT-4 Turbo, GPT-5.2, o1/o3, embeddings, Responses API (50+) | `[openai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openai/example.py) |
 | OpenRouter | All models via OpenAI-compatible API | `[openrouter]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/openrouter/example.py) |
 | CometAPI | 500+ models via OpenAI- or Anthropic-compatible API | `[cometapi]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/comet_api.py) |
-| Databricks | Model Serving and Foundation Model APIs (OpenAI-compatible chat, completions, embeddings, and Responses) | `[databricks]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/databricks/example.py) |
+| Databricks | Model Serving and Foundation Model APIs, native SDK queries, and MLflow deployment clients (including streaming) | `[databricks]` | [examples](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/databricks) |
 | Anthropic | Claude Sonnet 4.6, Claude 3.5/3 series (15+) | `[anthropic]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/anthropic/example.py) |
 | Google AI | Gemini 2.5/2.0 Pro/Flash, PaLM 2 (30+) | `[google]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_ai/example.py) |
 | AWS Bedrock | Amazon Titan, Claude, Llama, Mistral (25+), Converse API | `[aws]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/aws_bedrock/example.py) |
@@ -90,6 +90,29 @@ result = workspace.serving_endpoints.query(
 )
 ```
 See the complete [native SDK example](../../examples/databricks/sdk_example.py).
+
+MLflow deployment clients are supported as well. The `[databricks]` extra includes
+`mlflow-skinny` for this path. Calls to `predict` and `predict_stream` on
+`get_deploy_client("databricks")` are recorded as Databricks spans; streaming spans
+stay open through iteration so final-chunk token usage is captured. Other MLflow
+deployment targets are left to their own provider instrumentation.
+
+```python
+import genai_otel
+from mlflow.deployments import get_deploy_client
+
+genai_otel.instrument(enabled_instrumentors=["databricks"])
+client = get_deploy_client("databricks")
+response = client.predict(
+    endpoint="my-chat-endpoint",
+    inputs={"messages": [{"role": "user", "content": "Hello"}]},
+)
+```
+
+See the [MLflow example](../../examples/databricks/mlflow_example.py). `ChatDatabricks`
+from `databricks-langchain` is also covered when its underlying client uses a
+Databricks serving-endpoint or AI Gateway URL; the Databricks client span is emitted
+under any framework span produced by LangChain.
 
 ## Decision models
 

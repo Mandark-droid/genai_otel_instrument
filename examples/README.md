@@ -4,6 +4,7 @@ This directory contains examples demonstrating how to use `genai-otel-instrument
 
 - [Databricks Model Serving / Foundation Model APIs](databricks/example.py)
 - [Databricks native SDK queries](databricks/sdk_example.py)
+- [Databricks MLflow deployment client](databricks/mlflow_example.py)
 
 ## Quick Start Pattern
 
