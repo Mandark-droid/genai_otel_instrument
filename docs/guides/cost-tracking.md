@@ -170,7 +170,7 @@ and the recorded cost would then depend on which aggregator was indexed first.
 | IBM Granite | Chat, vision, embeddings (10+) | Per token |
 | DeepSeek | V3, R1, VL (15+) | Per token |
 | Qwen/Alibaba | Qwen 3.5, VL, embeddings (25+) | Per token |
-| xAI | Grok 4.6, Grok 4.20, Grok 4.1 (5+) | Per token |
+| xAI | Grok text, image/video generation, and voice APIs | Provider-reported request cost; TTS per character; STT per audio second when duration is returned |
 | Upstage | Solar Pro 4, Solar Pro 2, Solar Mini | Per token |
 
 ## Special Pricing

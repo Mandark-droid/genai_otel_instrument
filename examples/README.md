@@ -40,6 +40,7 @@ That's it! No code changes needed in your application logic.
 - **[replicate/](replicate/)** - Replicate API
 - **[togetherai/](togetherai/)** - Together AI
 - **[vertexai/](vertexai/)** - Google Cloud Vertex AI
+- **[xai_sdk/](xai_sdk/)** - xAI Grok chat, image/video generation, and voice TTS REST
 - **[typesafe/](typesafe/)** - TypeSafe AI / Jev structured decisions
 
 ### Frameworks
@@ -76,6 +77,9 @@ pip install genai-otel-instrument[openai]
 
 # TypeSafe AI / Jev (Python 3.10+)
 pip install 'genai-otel-instrument[typesafe]'
+
+# xAI Grok (Python 3.10+)
+pip install 'genai-otel-instrument[xai]'
 
 # Or install with all providers
 pip install genai-otel-instrument[all]

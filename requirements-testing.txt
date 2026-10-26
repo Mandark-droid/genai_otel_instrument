@@ -3,6 +3,7 @@
 
 # Core package (editable install)
 -e .
+certifi>=2026.10.19
 
 # Testing dependencies
 pytest>=7.0.0

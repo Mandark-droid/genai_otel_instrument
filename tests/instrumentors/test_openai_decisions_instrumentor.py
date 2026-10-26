@@ -488,7 +488,9 @@ class TestEvaluation:
         assert seen and "blue trainers" in seen[0]
         assert attrs["evaluation.skipped_reason"] == "decision_span"
         assert attrs["evaluation.pii.prompt.detected"] is False
-        assert not any(key.startswith("evaluation.hallucination") for key in attrs)
+        assert attrs["evaluation.hallucination.outcome"] == "unsupported_operation"
+        assert "evaluation.hallucination.response.detected" not in attrs
+        assert "evaluation.hallucination.error" not in attrs
 
 
 class TestGraniteSwitch:

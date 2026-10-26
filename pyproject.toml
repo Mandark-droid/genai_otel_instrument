@@ -53,6 +53,9 @@ classifiers = [
 ]
 
 dependencies = [
+    # Ensure HTTP clients in the telemetry/export stack reject the compromised
+    # eMudhra/emSign CA intermediates disclosed in October 2026.
+    "certifi>=2026.10.19",
     "opentelemetry-api>=1.20.0,<2.0.0",
     "opentelemetry-sdk>=1.20.0,<2.0.0",
     "opentelemetry-instrumentation>=0.41b0",
@@ -156,6 +159,7 @@ guardrails = ["guardrails-ai>=0.4.0"]
 instructor = ["instructor>=1.0.0"]
 pydantic-ai = ["pydantic-ai>=0.0.1"]
 vertexai = ["google-cloud-aiplatform>=1.0.0"]
+xai = ["xai-sdk>=1.0.0; python_version >= '3.10'"]
 
 # Database instrumentations
 databases = [
@@ -253,6 +257,7 @@ all-providers = [
     "dspy-ai>=2.0.0",
     "guardrails-ai>=0.4.0",
     "instructor>=1.0.0",
+    "xai-sdk>=1.0.0; python_version >= '3.10'",
     "pydantic-ai>=0.0.1",
     "google-cloud-aiplatform>=1.0.0",
 ]
@@ -284,6 +289,7 @@ all-mcp = [
 # Everything
 all = [
     "openai>=1.0.0",
+    "xai-sdk>=1.0.0; python_version >= '3.10'",
     "databricks-sdk>=0.49.0",
     "mlflow-skinny>=2.0.0",
     "anthropic>=0.18.0",

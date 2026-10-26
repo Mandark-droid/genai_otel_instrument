@@ -134,7 +134,7 @@ Rules
 | Feature | TraceVerde | OpenLIT | Traceloop/OpenLLMetry | Langfuse | Galileo | Arize (Phoenix) | Opik (Comet) |
 |---------|-----------|---------|----------------------|----------|---------|-----------------|--------------|
 | Zero-code setup | Yes | Yes | Yes | SDK required | SDK required | SDK / auto (OpenInference) | SDK required |
-| LLM providers | 27 | 25+ | 15+ | Via integrations | Via integrations | Via integrations | Via integrations |
+| LLM providers | 28 | 25+ | 15+ | Via integrations | Via integrations | Via integrations | Via integrations |
 | Multi-agent frameworks | 9 (CrewAI, LangGraph, ADK, Antigravity, AutoGen, OpenAI Agents, Pydantic AI, etc.) | Limited | Limited | Limited | Limited | Limited | Limited |
 | Cost tracking | Automatic (1,700+ models) | Manual config | Manual config | Manual config | Yes | Yes | Yes |
 | GPU metrics (NVIDIA + AMD) | Yes | No | No | No | No | No | No |
@@ -146,8 +146,8 @@ Rules
 
 ## What Gets Instrumented?
 
-### LLM Providers (27+)
-OpenAI, Databricks Model Serving, OpenRouter, CometAPI, Anthropic, Google AI, Google GenAI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, vLLM, llama.cpp, Vertex AI, Replicate, HuggingFace, SambaNova, Sarvam AI, ElevenLabs, Hyperbolic, LiteLLM, TypeSafe AI / Jev
+### LLM Providers (28+)
+OpenAI, Databricks Model Serving, OpenRouter, CometAPI, Anthropic, Google AI, Google GenAI, AWS Bedrock, Azure OpenAI, Cohere, Mistral AI, Together AI, Groq, Ollama, vLLM, llama.cpp, Vertex AI, xAI SDK, Replicate, HuggingFace, SambaNova, Sarvam AI, ElevenLabs, Hyperbolic, LiteLLM, TypeSafe AI / Jev
 
 Databricks instrumentation covers OpenAI-compatible serving and AI Gateway clients,
 the native Workspace SDK, and MLflow deployment clients (including completed streaming

@@ -274,8 +274,12 @@ class CostCalculator:
         if call_type == "audio":
             return self._calculate_audio_cost(model, usage)
         if call_type == "speech_to_text":
-            # The speech_to_text table (promptPrice / completionPrice per 1,000 tokens)
-            # shipped with no branch here, so all of its entries were unreachable.
+            # Some STT vendors bill by audio duration, while older integrations
+            # provide token usage against the speech_to_text table. Preserve both
+            # representations and route duration-based usage to the unit-aware
+            # audio price table.
+            if "seconds" in usage:
+                return self._calculate_audio_cost(model, usage)
             return self._calculate_speech_to_text_cost(model, usage)
         if call_type == "decision":
             return self._calculate_decision_cost(model, usage)

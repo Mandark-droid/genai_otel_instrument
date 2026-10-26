@@ -4,7 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.41.0] - 2026-10-26
+
+### Added
+
+- Add xAI Python SDK instrumentation for chat, image, and video generation, using
+  the provider's reported per-request cost where available. Add xAI TTS/STT REST
+  spans and published per-character/per-second cost rates, plus runnable examples.
+
+### Security
+
+- Require `certifi>=2026.10.19` so fresh SDK installs use a CA bundle that removes
+  the compromised eMudhra/emSign roots. Existing environments must still update
+  `certifi` and `pip` separately; pip must be at least 26.2.2 because it vendors
+  its own CA bundle.
 
 ## [1.40.2] - 2026-10-24
 
@@ -4948,7 +4961,8 @@ This is the first public release of genai-otel-instrument, a comprehensive OpenT
 - Fixed tests for base/redis and auto instrument (a701603)
 - Updated `test_auto_instrument.py` assertions to match new OTLP exporter configuration (exporters now read endpoint from environment variables instead of direct parameters)
 
-[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.34.0...HEAD
+[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.41.0...HEAD
+[1.41.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.40.2...v1.41.0
 [1.34.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.33.0...v1.34.0
 [1.33.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.32.0...v1.33.0
 [1.32.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.31.1...v1.32.0

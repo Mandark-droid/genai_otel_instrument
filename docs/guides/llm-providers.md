@@ -1,6 +1,6 @@
 # LLM Providers
 
-TraceVerde auto-instruments 27 LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
+TraceVerde auto-instruments 28 LLM providers. No code changes are needed - just install the provider SDK and TraceVerde handles the rest.
 
 The table below is the complete list, and `tests/test_docs_provider_coverage.py` asserts
 it stays in step with the `INSTRUMENTORS` registry, so a provider cannot be added in code
@@ -26,6 +26,7 @@ without appearing here.
 | vLLM | In-process batch inference with queue/prefill/decode latency | `[vllm]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/inference_engines/vllm_example.py) |
 | llama.cpp | Local GGUF models via llama-cpp-python | `[llamacpp]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/inference_engines/llamacpp_example.py) |
 | Vertex AI | Gemini models via Google Cloud | `[vertexai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/vertexai/example.py) |
+| xAI SDK | Grok chat, image, and video generation; xAI voice REST calls | `[xai]` | [examples](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/xai_sdk) |
 | SambaNova | sarvam-m, Saarika, Bulbul (12+) | `[sambanova]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sambanova_example.py) |
 | Sarvam AI | Indian language models | `[sarvamai]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/sarvam/) |
 | ElevenLabs | Text-to-speech + Scribe speech-to-text | `[elevenlabs]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/elevenlabs_example.py) |
@@ -37,6 +38,46 @@ without appearing here.
 | Sentence Transformers | Local embedding models | `[huggingface]` | - |
 | Hyperbolic | Open-weight models over raw HTTP. Disabled by default - see below | - | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/hyperbolic_example.py) |
 | TypeSafe AI / Jev | SystemOne decisions (Jev, LiquidAI D1, self-hosted Hub models) as DECISION spans; see [Decision models](#decision-models) | `[typesafe]` | [example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/typesafe/example.py) |
+
+## xAI SDK
+
+Install the optional SDK dependency and set your xAI API key as `XAI_API_KEY`:
+
+```bash
+pip install "genai-otel-instrument[xai]"
+```
+
+Enable `xai_sdk` before creating the xAI client. Chat `sample()` and `stream()`,
+image generation, and video generation are traced for both `Client` and `AsyncClient`,
+including model, usage, latency, and xAI's exact reported request cost. The xAI
+Text to Speech REST endpoint is also traced; cost uses the published per-character
+rate because its audio response does not include a cost field. STT REST calls are
+priced when the response provides audio duration. Request text and audio are not
+captured. See the [chat](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/xai_sdk/chat.py),
+[image/video](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/xai_sdk/image_video.py),
+and [voice](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/xai_sdk/voice_tts.py)
+examples.
+
+The current official Python package exposes chat, image, and video helpers. Voice
+helpers are not part of its released `Client` API yet, so TTS and STT are currently
+instrumented through the documented xAI REST endpoints. WebSocket voice sessions
+are not covered by this integration.
+
+```python
+import genai_otel
+from xai_sdk import Client
+from xai_sdk.chat import user
+
+genai_otel.instrument(enabled_instrumentors=["xai_sdk"])
+client = Client()
+chat = client.chat.create(model="grok-4.6")
+chat.append(user("Hello"))
+response = chat.sample()
+print(response.content)
+```
+
+xAI also offers an opt-in telemetry exporter in its SDK. Configure one exporter
+path at a time to avoid duplicate spans for the same SDK calls.
 
 ## Databricks Model Serving
 

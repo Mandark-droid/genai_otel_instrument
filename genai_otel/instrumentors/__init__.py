@@ -54,6 +54,7 @@ from .togetherai_instrumentor import TogetherAIInstrumentor
 from .typesafe_instrumentor import TypeSafeInstrumentor
 from .vertexai_instrumentor import VertexAIInstrumentor
 from .vllm_instrumentor import VLLMInstrumentor
+from .xai_instrumentor import XAIInstrumentor
 
 __all__ = [
     "OpenAIInstrumentor",
@@ -100,4 +101,5 @@ __all__ = [
     "SentenceTransformersInstrumentor",
     "TypeSafeInstrumentor",
     "StrandsHarnessInstrumentor",
+    "XAIInstrumentor",
 ]

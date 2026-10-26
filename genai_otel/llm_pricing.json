@@ -497,6 +497,18 @@
     }
   },
   "audio": {
+    "xai-tts": {
+      "per_1k_chars": 0.015,
+      "note": "xAI Text to Speech API, $15 per 1M input characters. Source: docs.x.ai/developers/pricing; checked 2026-10-26."
+    },
+    "xai-stt": {
+      "per_second": 0.0000277777777778,
+      "note": "xAI Speech to Text REST API, $0.10 per audio hour. Source: docs.x.ai/developers/pricing; checked 2026-10-26."
+    },
+    "xai-stt-streaming": {
+      "per_second": 0.0000555555555556,
+      "note": "xAI Speech to Text streaming API, $0.20 per audio hour. Source: docs.x.ai/developers/pricing; checked 2026-10-26."
+    },
     "tts-1": {
       "per_1k_chars": 0.015
     },

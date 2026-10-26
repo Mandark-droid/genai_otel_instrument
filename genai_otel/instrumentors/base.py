@@ -2756,7 +2756,15 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         except Exception as e:
             logger.debug("Failed to record inference token-usage metrics: %s", e)
 
-    def _record_result_metrics(self, span, result, start_time: float, request_kwargs: dict = None):
+    def _record_result_metrics(
+        self,
+        span,
+        result,
+        start_time: float,
+        request_kwargs: dict = None,
+        reported_cost: Optional[float] = None,
+        usage_override: Optional[Dict[str, Any]] = None,
+    ):
         """Record metrics derived from the function result and execution time.
 
         Args:
@@ -2764,6 +2772,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             result: The result from the wrapped function.
             start_time: The time when the function started executing.
             request_kwargs: The original request kwargs (for content capture).
+            reported_cost: Optional exact provider-reported USD amount.
+            usage_override: Optional normalized usage values for non-token APIs.
         """
         # A raw-response wrapper hides the model behind .parse(); unwrap before
         # any extraction runs, or usage, cost and finish-reason are all silently
@@ -2863,6 +2873,8 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         # consumers can distinguish exact from estimated token counts.
         try:
             usage = self._extract_usage(result)
+            if usage_override is not None:
+                usage = usage_override
             estimated = False
             if not usage:
                 est = self._estimate_usage(result, request_kwargs or {})
@@ -2991,8 +3003,15 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                         # Specific instrumentors will provide the actual call_type.
                         call_type = _sattrs.get("gen_ai.request.type", "chat")
 
+                        # Prefer the provider's exact per-request amount when
+                        # supplied; otherwise use the local pricing table.
+                        if isinstance(reported_cost, (int, float)) and reported_cost >= 0:
+                            if reported_cost > 0 and self.cost_counter:
+                                self.cost_counter.add(reported_cost, {"model": str(model)})
+                            span.set_attribute("gen_ai.usage.cost.total", float(reported_cost))
+                            span.set_attribute("gen_ai.usage.cost.pricing_source", "provider")
                         # Use granular cost calculation for chat requests
-                        if call_type == "chat":
+                        elif call_type == "chat":
                             costs = self.cost_calculator.calculate_granular_cost(
                                 model, usage, call_type
                             )
@@ -3082,6 +3101,10 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                                 if self.cost_counter:
                                     self.cost_counter.add(cost, {"model": str(model)})
                                 span.set_attribute("gen_ai.usage.cost.total", cost)
+                            span.set_attribute(
+                                "gen_ai.usage.cost.pricing_source",
+                                self.cost_calculator.pricing_source(model, call_type),
+                            )
                     except Exception as e:
                         logger.warning("Failed to calculate cost for span '%s': %s", _sname, e)
 

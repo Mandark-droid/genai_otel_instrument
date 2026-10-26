@@ -80,6 +80,7 @@ PROVIDER_DISPLAY_NAMES = {
     "typesafe": "TypeSafe AI / Jev",
     "transformers": "HuggingFace Transformers",
     "vertexai": "Vertex AI",
+    "xai_sdk": "xAI SDK",
 }
 
 

@@ -363,13 +363,13 @@ def test_record_result_metrics_success(instrumentor):
     )
     inst.cost_counter.add.assert_called_once_with(0.01, {"model": "test_model"})
     inst.latency_histogram.record.assert_called_once()
-    # 6 attributes: input_tokens + output_tokens (current names), their two
-    # superseded spellings, total_tokens, and cost.total. The superseded pair is
+    # 7 attributes: input_tokens + output_tokens (current names), their two
+    # superseded spellings, total_tokens, cost.total, and its pricing source. The superseded pair is
     # present because dual emission is the DEFAULT — see
     # genai_otel.semconv.genai_semconv_modes. Under an explicit "gen_ai"
     # (current-only) this drops back to 4; that case is covered by
     # test_token_attributes_current_only_when_explicitly_requested.
-    assert mock_span.set_attribute.call_count == 6
+    assert mock_span.set_attribute.call_count == 7
 
 
 def test_record_result_metrics_with_errors(instrumentor, caplog):

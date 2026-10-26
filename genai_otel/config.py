@@ -47,6 +47,7 @@ DEFAULT_INSTRUMENTORS = [
     "ollama",
     "vllm",
     "vertexai",
+    "xai_sdk",
     "replicate",
     "anyscale",
     "sambanova",
