@@ -12,7 +12,9 @@ and security authority. See the [full agent contribution guide](docs/community/a
 
 ## Code of Conduct
 
-Please be respectful and constructive in all interactions. We're here to build something useful together.
+Participation in issues, pull requests, discussions, and project events is covered
+by the [Code of Conduct](CODE_OF_CONDUCT.md). To report a concern privately, follow
+the reporting instructions in that file.
 
 ## How to Contribute
 
