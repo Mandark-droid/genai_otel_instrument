@@ -1179,6 +1179,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#decision-spans" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision Spans
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#streaming-latency" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1233,6 +1244,17 @@
     <span class="md-ellipsis">
       
         GenAI Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#token-usage-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token Usage Metrics
       
     </span>
   </a>
@@ -1543,6 +1565,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#decision-spans" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision Spans
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#streaming-latency" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1597,6 +1630,17 @@
     <span class="md-ellipsis">
       
         GenAI Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#token-usage-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token Usage Metrics
       
     </span>
   </a>
@@ -1959,9 +2003,14 @@ successfully completes through the degraded path.</p>
 <td>Completion token cost</td>
 </tr>
 <tr>
+<td><code>gen_ai.usage.cost.decision</code></td>
+<td>float</td>
+<td>Decision-model cost, on decision spans only. Equal to <code>cost.total</code> there, so a reader can keep decision spend apart without reading the span kind</td>
+</tr>
+<tr>
 <td><code>gen_ai.usage.cost.pricing_source</code></td>
 <td>string</td>
-<td>Where the price came from: <code>table</code>, <code>estimated</code> or <code>unpriced</code></td>
+<td>Where the price came from: <code>table</code>, <code>estimated</code> or <code>unpriced</code> (decision spans: <code>table</code> or <code>unpriced</code>, never <code>estimated</code>)</td>
 </tr>
 <tr>
 <td><code>gen_ai.request.model.deprecated</code></td>
@@ -2005,6 +2054,86 @@ model". Always read <code>pricing_source</code> alongside it:</p>
 <p>A dashboard that sums <code>cost.total</code> without filtering on <code>pricing_source</code>
 will silently under-report spend for every unpriced model.</p>
 </div>
+<h3 id="decision-spans">Decision Spans<a class="headerlink" href="#decision-spans" title="Permanent link">&para;</a></h3>
+<p>Decision-model calls are OpenInference <code>DECISION</code> spans
+(<code>openinference.span.kind = DECISION</code>). The full attribute table, and which attributes
+need content capture, is in <a href="../../guides/llm-providers/#decision-models">Decision models</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Recorded</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>decision.system</code></td>
+<td>string</td>
+<td>always: <code>openai</code>, <code>typesafe</code> or <code>custom</code></td>
+</tr>
+<tr>
+<td><code>decision.provider</code></td>
+<td>string</td>
+<td>recognised host, or <code>GENAI_DECISION_PROVIDER</code></td>
+</tr>
+<tr>
+<td><code>decision.model_name</code>, <code>decision.request.model_name</code>, <code>decision.response.model_name</code></td>
+<td>string</td>
+<td>always / when they differ</td>
+</tr>
+<tr>
+<td><code>decision.token_count.input</code>, <code>decision.token_count.output</code></td>
+<td>int</td>
+<td>when reported</td>
+</tr>
+<tr>
+<td><code>genai.decision.protocol</code></td>
+<td>string</td>
+<td>always: <code>openai_decisions</code>, <code>systemone</code>, <code>granite_adapter</code>, <code>manual</code></td>
+</tr>
+<tr>
+<td><code>genai.decision.question_count</code>, <code>genai.decision.refusal_count</code></td>
+<td>int</td>
+<td>always</td>
+</tr>
+<tr>
+<td><code>genai.decision.question.types</code></td>
+<td>string[]</td>
+<td>always</td>
+</tr>
+<tr>
+<td><code>genai.decision.option_count</code></td>
+<td>int</td>
+<td>one-question calls</td>
+</tr>
+<tr>
+<td><code>genai.decision.question.names</code></td>
+<td>string[]</td>
+<td>content capture on</td>
+</tr>
+<tr>
+<td><code>genai.decision.min_confidence</code></td>
+<td>double</td>
+<td>content capture on</td>
+</tr>
+<tr>
+<td><code>genai.decision.choice</code></td>
+<td>string</td>
+<td>content capture on, one-question calls</td>
+</tr>
+<tr>
+<td><code>genai.decision.confidence</code>, <code>.probability</code>, <code>.score</code>, <code>.margin</code></td>
+<td>double</td>
+<td>content capture on, one-question calls</td>
+</tr>
+<tr>
+<td><code>evaluation.skipped_reason</code></td>
+<td>string</td>
+<td><code>decision_span</code> when the response detectors had no text to read</td>
+</tr>
+</tbody>
+</table>
 <h3 id="streaming-latency">Streaming Latency<a class="headerlink" href="#streaming-latency" title="Permanent link">&para;</a></h3>
 <p>Emitted <strong>only on streamed calls</strong>. On a non-streamed call these attributes are
 absent, not zero.</p>
@@ -2228,7 +2357,7 @@ reason the GenAI token attributes are dual-emitted, and removed at 2.0:</p>
 <td><code>gen_ai.client.token.usage</code></td>
 <td>Counter</td>
 <td>tokens</td>
-<td>Token usage (prompt/completion)</td>
+<td>Token usage, labelled <code>token_type</code> (<code>prompt</code>/<code>completion</code>). No longer defined by the conventions; see <a href="#token-usage-metrics">Token usage metrics</a></td>
 </tr>
 <tr>
 <td><code>gen_ai.client.operation.duration</code></td>
@@ -2274,6 +2403,88 @@ reason the GenAI token attributes are dual-emitted, and removed at 2.0:</p>
 </tr>
 </tbody>
 </table>
+<h3 id="token-usage-metrics">Token Usage Metrics<a class="headerlink" href="#token-usage-metrics" title="Permanent link">&para;</a></h3>
+<p><a href="https://github.com/open-telemetry/semantic-conventions-genai/pull/374">semantic-conventions-genai#374</a>
+replaced the <code>gen_ai.client.token.usage</code> histogram and its <code>gen_ai.token.type</code> attribute with
+these instruments. They are recorded for every inference call whose provider reported usage.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Type</th>
+<th>Unit</th>
+<th>Records</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gen_ai.client.inference.usage.input_tokens</code></td>
+<td>Counter</td>
+<td><code>{token}</code></td>
+<td>Input tokens, cached ones included</td>
+</tr>
+<tr>
+<td><code>gen_ai.client.inference.usage.output_tokens</code></td>
+<td>Counter</td>
+<td><code>{token}</code></td>
+<td>Output tokens, reasoning ones included</td>
+</tr>
+<tr>
+<td><code>gen_ai.client.inference.usage.cache_read.input_tokens</code></td>
+<td>Counter</td>
+<td><code>{token}</code></td>
+<td>Input tokens served from the provider's cache. Part of <code>input_tokens</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.client.inference.usage.cache_write.input_tokens</code></td>
+<td>Counter</td>
+<td><code>{token}</code></td>
+<td>Input tokens written to the provider's cache. Part of <code>input_tokens</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.client.inference.usage.reasoning.output_tokens</code></td>
+<td>Counter</td>
+<td><code>{token}</code></td>
+<td>Output tokens spent on reasoning. Part of <code>output_tokens</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.client.inference.operation.input_tokens</code></td>
+<td>Histogram</td>
+<td><code>{token}</code></td>
+<td>One call's input tokens</td>
+</tr>
+<tr>
+<td><code>gen_ai.client.inference.operation.output_tokens</code></td>
+<td>Histogram</td>
+<td><code>{token}</code></td>
+<td>One call's output tokens</td>
+</tr>
+</tbody>
+</table>
+<p>Attributes, each only when the span has it: <code>gen_ai.operation.name</code>, <code>gen_ai.provider.name</code>
+(read from <code>gen_ai.system</code> when only that is set), <code>gen_ai.request.model</code>, <code>gen_ai.response.model</code>,
+<code>server.address</code>, <code>server.port</code>. The counters also carry <code>gen_ai.token.modality</code>; the histograms do
+not, because percentiles taken per modality do not add up to a call.</p>
+<ul>
+<li><strong>Modality.</strong> Where the provider breaks usage down (<code>text</code>, <code>image</code>, <code>audio</code>), each part is counted
+  under its modality and whatever the breakdown leaves over is counted under <code>unknown</code>, so the
+  modalities of one counter always add up to its total. Usage with no breakdown is all <code>unknown</code>.</li>
+<li><strong>Zero and missing counts record nothing on the counters</strong>, as
+  <a href="https://github.com/open-telemetry/semantic-conventions-genai/pull/602">semantic-conventions-genai#602</a>
+  proposes: a call with no cache activity adds no <code>cache_read</code> point. The histograms record one value per
+  call whenever usage was reported, zero included.</li>
+<li><strong>Agent runs.</strong> When a framework span (an agent, crew, graph or workflow run) is the one that
+  accounts a run's tokens, they are added to the counters but not to the histograms: a run's total is
+  not the size of any one model call.</li>
+<li><strong>Cached input is counted as input.</strong> Anthropic reports <code>input_tokens</code> without its cache reads and
+  writes; the input counter adds them back so that the cache counters stay subsets of it. The
+  <code>gen_ai.usage.input_tokens</code> span attribute is unchanged.</li>
+<li><strong>Not recorded:</strong> embeddings calls (the conventions are to give them their own instrument), token
+  counts this library estimated because the provider returned none (they stay on the span, marked
+  <code>gen_ai.usage.token_count_estimated</code>, and on <code>gen_ai.client.token.usage</code>), and failed calls.</li>
+</ul>
+<p><code>gen_ai.client.token.usage</code> is still recorded alongside these with its existing <code>token_type</code>
+label, so dashboards built on it keep working. It is removed at 2.0.</p>
 <h3 id="gpu-metrics">GPU Metrics<a class="headerlink" href="#gpu-metrics" title="Permanent link">&para;</a></h3>
 <p>See <a href="../../guides/gpu-metrics/">GPU Metrics Guide</a> for the complete list.</p>
 <h3 id="evaluation-metrics">Evaluation Metrics<a class="headerlink" href="#evaluation-metrics" title="Permanent link">&para;</a></h3>

@@ -988,6 +988,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#evaluation-outcomes-provenance-and-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation outcomes, provenance, and coverage
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Evaluation outcomes, provenance, and coverage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operation-surfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operation surfaces
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#all-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1630,6 +1658,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#evaluation-outcomes-provenance-and-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation outcomes, provenance, and coverage
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Evaluation outcomes, provenance, and coverage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operation-surfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operation surfaces
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#all-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1927,6 +1983,65 @@ hallucination) does not load torch or the toxicity model.</p>
 <li><code>genai.evaluation.&lt;detector&gt;.score</code> - Score distribution (histogram)</li>
 </ul>
 <p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument#evaluation-features-v10">README</a> for the complete list of span attributes.</p>
+<h2 id="evaluation-outcomes-provenance-and-coverage">Evaluation outcomes, provenance, and coverage<a class="headerlink" href="#evaluation-outcomes-provenance-and-coverage" title="Permanent link">&para;</a></h2>
+<p>Evaluation spans carry bounded outcome metadata so a missing verdict cannot be read as a
+successful check:</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Values / meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>evaluation.outcome</code></td>
+<td><code>completed</code>, <code>no_applicable_input</code>, <code>unsupported_operation</code>, <code>skipped</code>, or <code>error</code> for the detector suite</td>
+</tr>
+<tr>
+<td><code>evaluation.&lt;detector&gt;.outcome</code></td>
+<td>The same bounded values for <code>pii</code>, <code>toxicity</code>, <code>bias</code>, <code>prompt_injection</code>, <code>restricted_topics</code>, and <code>hallucination</code></td>
+</tr>
+<tr>
+<td><code>evaluation.content.outcomes</code></td>
+<td>A bounded list containing <code>captured</code>, <code>omitted</code>, <code>truncated</code>, <code>redacted</code>, <code>rejected</code>, or <code>error</code> as applicable</td>
+</tr>
+<tr>
+<td><code>evaluation.provenance.sdk.name</code> / <code>.version</code></td>
+<td>SDK identity and installed version</td>
+</tr>
+<tr>
+<td><code>evaluation.provenance.detector.&lt;name&gt;.implementation</code> / <code>.version</code></td>
+<td>Detector implementation identifier and SDK version</td>
+</tr>
+<tr>
+<td><code>evaluation.config.fingerprint</code></td>
+<td>SHA-256 of a normalized schema version and the enabled detector names; thresholds, custom values, credentials, and content are excluded</td>
+</tr>
+</tbody>
+</table>
+<p><code>completed</code> means that the detector ran on at least one applicable text input. It is not a
+claim that every part of the operation was captured, that detection is complete, or that a
+policy was enforced. <code>no_applicable_input</code> means the instrumentor did not provide usable text;
+<code>unsupported_operation</code> identifies operations such as embeddings, for which these text
+detectors do not apply; <code>skipped</code> records work bypassed by queue pressure or shutdown; and
+<code>error</code> records a detector failure. These attributes are additive and do not change detection,
+redaction, blocking, or content-capture behavior.</p>
+<h3 id="operation-surfaces">Operation surfaces<a class="headerlink" href="#operation-surfaces" title="Permanent link">&para;</a></h3>
+<p>The evaluation processor reads text supplied through GenAI prompt events
+(<code>gen_ai.prompt.*</code>), prompt attributes (<code>gen_ai.prompt</code>, <code>gen_ai.request.prompt</code>,
+<code>gen_ai.request.first_message</code>), OpenInference <code>llm.input_messages</code> / <code>llm.output_messages</code>,
+and common <code>input.value</code> / <code>output.value</code> attributes. It analyzes text that the SDK
+instrumentor can extract as a string. Input checks cover prompts; PII, toxicity, bias, and
+restricted-topic checks can also cover response text; prompt-injection checks cover prompts;
+hallucination checks cover responses.</p>
+<p>Streaming checks run after a supported stream finishes and its instrumentor has assembled
+text. A stream that is abandoned, closed before text is available, or whose instrumentor does
+not expose text may have no applicable input or be skipped. Embedding vectors, image/audio
+payloads, and other non-text content are not evaluated by these detectors. Only content
+actually present on the span can be reported as captured; no outcome field contains source
+text. The reported outcome is instrumentation evidence, not proof of complete capture or
+runtime enforcement. Blocking is enforced only by the separate pre-call policy hook.</p>
 <h2 id="all-examples">All Examples<a class="headerlink" href="#all-examples" title="Permanent link">&para;</a></h2>
 <p>Browse all evaluation examples in the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples">examples/ directory</a>.</p>
 
