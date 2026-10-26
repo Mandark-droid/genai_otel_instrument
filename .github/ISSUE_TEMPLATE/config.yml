@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Mandark-droid/genai_otel_instrument/security/advisories/new
+    about: Report vulnerabilities privately; do not file them as public issues.
+  - name: Documentation and usage questions
+    url: https://github.com/Mandark-droid/genai_otel_instrument/discussions
+    about: Ask general usage questions or discuss ideas with the community.

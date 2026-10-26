@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest an instrumentation, telemetry, or cost-tracking improvement.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: Search existing issues and discussions before submitting a new request.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem should this solve?
+      description: Describe the user need or workflow that is currently unsupported.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to see?
+      description: Describe the proposed behavior or instrumentation.
+    validations:
+      required: true
+  - type: textarea
+    id: affected-sdks
+    attributes:
+      label: Affected providers, SDKs, or frameworks
+      description: Include package names, versions, and links to relevant APIs if known.
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Mention any existing workaround or alternative design.
+    validations:
+      required: false

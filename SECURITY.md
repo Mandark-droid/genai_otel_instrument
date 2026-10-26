@@ -1,4 +1,20 @@
-# Security Assessment Report
+# Security Policy
+
+## Reporting a Vulnerability
+
+Please do not report security vulnerabilities in public issues or discussions.
+Use [GitHub's private vulnerability reporting](https://github.com/Mandark-droid/genai_otel_instrument/security/advisories/new)
+or email [Kshitij Thakkar](mailto:kshitijthakkar@rocketmail.com) with the subject
+`genai-otel-instrument security report`. Include the affected version, impact, and
+reproduction details; remove credentials and customer data from any proof of concept.
+Maintainers will coordinate follow-up and disclosure privately.
+
+## Supported Versions
+
+Security fixes are prepared for the latest released version. Users should upgrade
+to the latest release before reporting an issue that may already have been fixed.
+
+## Security Assessment Report
 
 Last updated: 2026-03-07
 
