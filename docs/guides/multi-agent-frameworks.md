@@ -1,6 +1,8 @@
 # Multi-Agent Frameworks
 
-TraceVerde instruments 9 multi-agent and LLM frameworks with complete trace hierarchy.
+TraceVerde instruments 13 multi-agent and LLM frameworks, including native OpenTelemetry
+frameworks and OpenInference integrations. Framework spans are connected to provider
+spans when the provider is also instrumented.
 
 ## CrewAI
 
@@ -467,6 +469,153 @@ spans are enriched when active, avoiding duplicate model/tool spans. The extra
 currently targets `strands-harness>=0.1.1` on Python 3.10+.
 
 See the [Strands Harness example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/strands_harness/example.py).
+
+## Anthropic Claude Agent SDK
+
+The Claude Agent SDK is distinct from Anthropic's Messages API client. This integration
+uses the maintained OpenInference adapter to trace `query()` and `ClaudeSDKClient` turns,
+tool hooks, and delegated subagents.
+
+```bash
+pip install 'genai-otel-instrument[claude-agent-sdk]'
+```
+
+```python
+import genai_otel
+
+genai_otel.instrument(
+    service_name="claude-agent-app",
+    enabled_instrumentors=["claude_agent_sdk"],
+    enable_content_capture=False,
+)
+
+import asyncio
+from claude_agent_sdk import ClaudeAgentOptions, query
+
+
+async def main():
+    async for message in query(
+        "List Python files in the current directory.",
+        options=ClaudeAgentOptions(allowed_tools=["Glob"]),
+    ):
+        if hasattr(message, "result"):
+            print(message.result)
+
+
+asyncio.run(main())
+```
+
+Agent and tool spans include SDK-reported token usage when present; the configured cost
+enricher prices those counts when the model is in the pricing catalog. The Claude Agent
+SDK runs the model through its own CLI process, so the ordinary Anthropic Messages
+instrumentor does not see its internal requests. The adapter's agent span carries usage;
+it does not claim separate LLM request spans. Do not enable a second Claude Agent SDK
+instrumentor alongside this integration.
+
+See the [Claude Agent SDK example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/claude_agent_sdk/example.py).
+
+## Strands Agents SDK
+
+This is the current `strands-agents` runtime, separate from the legacy Strands Harness
+integration above. Strands emits native OpenTelemetry agent, cycle, model, and tool spans
+through the configured global provider. The integration does not add a second wrapper
+span or a conversion processor.
+
+```bash
+pip install 'genai-otel-instrument[strands-agents]'
+```
+
+```python
+import genai_otel
+
+genai_otel.instrument(
+    service_name="strands-agent-app",
+    enabled_instrumentors=["strands_agents"],
+    enable_content_capture=False,
+)
+
+from strands import Agent
+
+agent = Agent()
+print(agent("In one sentence, what does OpenTelemetry do?"))
+```
+
+Model and token attributes on Strands' native LLM spans are available to the normal cost
+enrichment path. Call `genai_otel.instrument()` before importing Strands so its telemetry
+uses the configured global OpenTelemetry provider.
+
+See the [Strands Agents example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/strands_agents/example.py).
+
+## Microsoft Agent Framework
+
+Microsoft Agent Framework already emits GenAI traces, logs, and metrics through
+OpenTelemetry. The integration activates its native telemetry on TraceVerde's global
+provider; it does not patch the framework or configure a second exporter pipeline.
+
+```bash
+pip install 'genai-otel-instrument[microsoft-agent-framework]'
+```
+
+```python
+import asyncio
+
+import genai_otel
+
+genai_otel.instrument(
+    service_name="microsoft-agent-app",
+    enabled_instrumentors=["microsoft_agent_framework"],
+    enable_content_capture=False,
+)
+
+from agent_framework import Agent
+from agent_framework.openai import OpenAIChatClient
+
+
+async def main():
+    agent = Agent(
+        client=OpenAIChatClient(),
+        instructions="Answer in one concise sentence.",
+    )
+    print((await agent.run("What does OpenTelemetry do?")).text)
+
+
+asyncio.run(main())
+```
+
+Native GenAI model spans carry token counts and model identity for TraceVerde's cost
+enrichment. Sensitive prompt and tool content remains disabled by default. Configure
+exporters once through TraceVerde; do not also call the framework's
+`configure_otel_providers()`, which would compete for global providers.
+
+See the [Microsoft Agent Framework example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/microsoft_agent_framework/example.py).
+
+## Agno
+
+Agno runs are traced through the maintained OpenInference adapter. The integration
+captures agent and model activity, and the model spans' token usage is passed through the
+standard cost enrichment path.
+
+```bash
+pip install 'genai-otel-instrument[agno]'
+```
+
+```python
+import genai_otel
+
+genai_otel.instrument(
+    service_name="agno-agent-app",
+    enabled_instrumentors=["agno"],
+    enable_content_capture=False,
+)
+
+from agno.agent import Agent
+from agno.models.openai import OpenAIChat
+
+agent = Agent(model=OpenAIChat(id="gpt-4o-mini"), markdown=False)
+agent.print_response("In one sentence, what does OpenTelemetry do?")
+```
+
+See the [Agno example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/agno/example.py).
 
 ## Other Frameworks
 

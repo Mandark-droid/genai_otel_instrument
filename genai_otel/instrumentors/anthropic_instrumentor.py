@@ -6,6 +6,7 @@ relevant attributes such as model name, message count, and token usage.
 
 import logging
 import time
+from collections.abc import Mapping
 from typing import Any, Dict, Optional
 
 import wrapt
@@ -187,7 +188,14 @@ class _MeasuredAsyncStreamManager(_MeasuredStreamManagerBase):
 
 
 class AnthropicInstrumentor(BaseInstrumentor):
-    """Instrumentor for Anthropic Claude SDK"""
+    """Instrumentor for Anthropic Claude SDK.
+
+    Anthropic Python SDK 1.14+ emits native OTel spans by default. When those
+    are enabled on a client, leave its Messages methods untouched so the SDK
+    and this wrapper do not create duplicate request spans. Older SDKs and
+    clients that explicitly disable native tracing continue to use this
+    instrumentor's wrapper spans.
+    """
 
     MEDIA_PROVIDER = "anthropic"
 
@@ -310,6 +318,12 @@ class AnthropicInstrumentor(BaseInstrumentor):
                 claimed,
             )
             return
+        if self._native_otel_enabled(client):
+            logger.debug(
+                "Using Anthropic SDK native OpenTelemetry spans for this client; "
+                "skipping the genai_otel wrapper"
+            )
+            return
         if hasattr(client, "messages") and hasattr(client.messages, "create"):
             original_create = client.messages.create
             instrumented_create_method = self.create_span_wrapper(
@@ -320,6 +334,27 @@ class AnthropicInstrumentor(BaseInstrumentor):
 
         if hasattr(client, "messages") and hasattr(client.messages, "stream"):
             self._instrument_stream_method(client)
+
+    @staticmethod
+    def _native_otel_enabled(client) -> bool:
+        """Return whether this client has Anthropic's native tracing enabled.
+
+        The SDK exposes the resolved setting on ``client.open_telemetry``. A
+        missing property is expected on SDK versions before 1.14 and means the
+        custom wrapper remains responsible for tracing.
+        """
+        try:
+            option = getattr(client, "open_telemetry", None)
+        except Exception:  # noqa: BLE001 - detection must never break client creation
+            return False
+        if option is True:
+            return True
+        if not isinstance(option, Mapping):
+            return False
+        traces = option.get("traces", {})
+        if isinstance(traces, Mapping):
+            return traces.get("enabled", True) is not False
+        return traces is not False
 
     def _instrument_stream_method(self, client):
         """Wrap ``messages.stream()``, whose span has to outlive the call.

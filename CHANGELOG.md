@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.42.0] - 2026-10-26
+
+### Added
+
+- Add instrumentation integrations and examples for Anthropic Claude Agent SDK, Strands
+  Agents, Microsoft Agent Framework, and Agno. Token usage flows through cost enrichment
+  where the frameworks expose model and usage attributes.
+
+### Changed
+
+- Add Python 3.13 to the CI and release matrices, exercise Python 3.14 as a support
+  candidate, and add a non-blocking Python 3.15 prerelease canary. Python 3.14 remains a
+  candidate until hosted matrix results pass; Python 3.15 is not declared supported.
+
+### Fixed
+
+- Avoid duplicate Anthropic Messages spans when native SDK OpenTelemetry tracing is
+  enabled. Preserve the custom wrapper when native SDK tracing is disabled or unavailable.
+- Split native Anthropic cached input tokens from standard input before cost enrichment,
+  so cache reads and writes use their respective pricing rates.
+
 ## [1.41.0] - 2026-10-26
 
 ### Added

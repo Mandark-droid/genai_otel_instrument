@@ -114,7 +114,7 @@ query access, and `DATABRICKS_MODEL` to the serving endpoint name. The instrumen
 also recognizes Databricks AI Gateway routes under `/ai-gateway/` and works with
 `databricks-openai` clients that use these endpoints. It records chat, completions,
 embeddings, and Responses API calls as `databricks.*` spans with
-`gen_ai.provider.name=databricks`. See the complete [Databricks example](../../examples/databricks/example.py).
+`gen_ai.provider.name=databricks`. See the complete [Databricks example](https://github.com/Mandark-droid/genai_otel_instrument/blob/main/examples/databricks/example.py).
 
 The native Databricks SDK is supported too:
 
@@ -130,7 +130,7 @@ result = workspace.serving_endpoints.query(
     messages=[ChatMessage(role=ChatMessageRole.USER, content="Hello")],
 )
 ```
-See the complete [native SDK example](../../examples/databricks/sdk_example.py).
+See the complete [native SDK example](https://github.com/Mandark-droid/genai_otel_instrument/blob/main/examples/databricks/sdk_example.py).
 
 MLflow deployment clients are supported as well. The `[databricks]` extra includes
 `mlflow-skinny` for this path. Calls to `predict` and `predict_stream` on
@@ -150,7 +150,7 @@ response = client.predict(
 )
 ```
 
-See the [MLflow example](../../examples/databricks/mlflow_example.py). `ChatDatabricks`
+See the [MLflow example](https://github.com/Mandark-droid/genai_otel_instrument/blob/main/examples/databricks/mlflow_example.py). `ChatDatabricks`
 from `databricks-langchain` is also covered when its underlying client uses a
 Databricks serving-endpoint or AI Gateway URL; the Databricks client span is emitted
 under any framework span produced by LangChain.
@@ -541,6 +541,13 @@ otherwise dominate span size. See the
 for the full attribute list.
 
 ## Quick Example: Anthropic
+
+Anthropic Python SDK 1.14.0 and later emits native OpenTelemetry request spans by
+default. When those spans are enabled on a client, TraceVerde leaves that client's
+Messages methods unwrapped, avoiding duplicate request spans while applying its usual
+cost enrichment to the native GenAI usage attributes. If you set
+`open_telemetry=False` on the client (or `ANTHROPIC_OPEN_TELEMETRY=false` before client
+creation), TraceVerde uses its own Messages wrapper instead.
 
 ```python
 import genai_otel

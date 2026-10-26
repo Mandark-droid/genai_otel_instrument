@@ -2,13 +2,13 @@
 
 **The most comprehensive OpenTelemetry auto-instrumentation library for LLM/GenAI applications.**
 
-TraceVerde provides production-ready, zero-code instrumentation for GenAI applications. Install, set two environment variables, and get complete observability across 28 LLM providers, 9 multi-agent frameworks, and 20+ MCP tools.
+TraceVerde provides production-ready, zero-code instrumentation for GenAI applications. Install, set two environment variables, and get complete observability across 28 LLM providers, 13 multi-agent frameworks, and 20+ MCP tools.
 
 ## Key Features
 
 - **Zero-Code Setup** - Just install and set env vars, or add one line of code
 - **28 LLM Providers** - OpenAI, Databricks, Anthropic, Google AI, AWS Bedrock, Azure, Cohere, Mistral, Together AI, Groq, Ollama, xAI, TypeSafe AI / Jev, and more
-- **9 Multi-Agent Frameworks** - CrewAI, LangGraph, Google ADK, Antigravity, AutoGen, OpenAI Agents SDK, Pydantic AI, Haystack, DSPy
+- **13 Multi-Agent Frameworks** - CrewAI, LangGraph, Google ADK, Antigravity, AutoGen, OpenAI Agents SDK, Pydantic AI, Anthropic Claude Agent SDK, Strands Agents, Microsoft Agent Framework, Agno, and more
 - **Automatic Cost Tracking** - 1,700+ model pricing database with per-request cost breakdown
 - **GPU Metrics** - Real-time NVIDIA and AMD GPU monitoring (utilization, memory, temperature, power)
 - **MCP Tool Instrumentation** - Databases, caches, vector DBs, message queues, object storage

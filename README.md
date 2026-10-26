@@ -135,7 +135,7 @@ Rules
 |---------|-----------|---------|----------------------|----------|---------|-----------------|--------------|
 | Zero-code setup | Yes | Yes | Yes | SDK required | SDK required | SDK / auto (OpenInference) | SDK required |
 | LLM providers | 28 | 25+ | 15+ | Via integrations | Via integrations | Via integrations | Via integrations |
-| Multi-agent frameworks | 9 (CrewAI, LangGraph, ADK, Antigravity, AutoGen, OpenAI Agents, Pydantic AI, etc.) | Limited | Limited | Limited | Limited | Limited | Limited |
+| Multi-agent frameworks | 13 (CrewAI, LangGraph, ADK, AutoGen, Claude Agent SDK, Strands Agents, Microsoft Agent Framework, Agno, etc.) | Limited | Limited | Limited | Limited | Limited | Limited |
 | Cost tracking | Automatic (1,700+ models) | Manual config | Manual config | Manual config | Yes | Yes | Yes |
 | GPU metrics (NVIDIA + AMD) | Yes | No | No | No | No | No | No |
 | MCP tool instrumentation | Yes (databases, caches, vector DBs, queues) | Limited | Limited | No | No | No | No |
@@ -159,8 +159,8 @@ for OpenAI, SDK, and MLflow code.
 
 [See all providers with examples >>](https://mandark-droid.github.io/genai_otel_instrument/guides/llm-providers/)
 
-### Multi-Agent Frameworks (8)
-CrewAI, LangGraph, Google ADK, AutoGen, AutoGen AgentChat, OpenAI Agents SDK, Pydantic AI, AWS Bedrock Agents
+### Multi-Agent Frameworks (13)
+CrewAI, LangGraph, Google ADK, AutoGen, AutoGen AgentChat, OpenAI Agents SDK, Pydantic AI, AWS Bedrock Agents, Anthropic Claude Agent SDK, Strands Agents, Microsoft Agent Framework, Agno, and Antigravity
 
 [See all frameworks with examples >>](https://mandark-droid.github.io/genai_otel_instrument/guides/multi-agent-frameworks/)
 

@@ -179,6 +179,52 @@ class TestAnthropicInstrumentor(unittest.TestCase):
         # Verify create_span_wrapper was NOT called
         instrumentor.create_span_wrapper.assert_not_called()
 
+    def test_instrument_client_skips_wrapper_when_native_otel_is_enabled(self):
+        """The v1.14+ SDK's native request span must not be duplicated."""
+        instrumentor = AnthropicInstrumentor()
+        original_create = MagicMock()
+        client = MagicMock()
+        client.open_telemetry = {"traces": {"enabled": True}}
+        client.messages.create = original_create
+        instrumentor.create_span_wrapper = MagicMock()
+
+        instrumentor._instrument_client(client)
+
+        self.assertIs(client.messages.create, original_create)
+        instrumentor.create_span_wrapper.assert_not_called()
+
+    def test_instrument_client_uses_wrapper_when_native_otel_is_disabled(self):
+        """An explicit native opt-out leaves the TraceVerde wrapper active."""
+        instrumentor = AnthropicInstrumentor()
+        original_create = MagicMock()
+        wrapped_create = MagicMock()
+        client = MagicMock()
+        client.open_telemetry = False
+        client.messages.create = original_create
+        instrumentor.create_span_wrapper = MagicMock(return_value=lambda original: wrapped_create)
+
+        instrumentor._instrument_client(client)
+
+        self.assertIs(client.messages.create, wrapped_create)
+        instrumentor.create_span_wrapper.assert_called_once_with(
+            span_name="anthropic.messages.create",
+            extract_attributes=instrumentor._extract_anthropic_attributes,
+        )
+
+    def test_native_otel_option_with_traces_disabled_uses_wrapper(self):
+        """A per-client traces opt-out also keeps the custom wrapper enabled."""
+        instrumentor = AnthropicInstrumentor()
+        client = MagicMock()
+        client.open_telemetry = {"traces": {"enabled": False}}
+
+        self.assertFalse(instrumentor._native_otel_enabled(client))
+
+    def test_client_without_native_otel_setting_uses_wrapper(self):
+        """SDK versions before v1.14 have no native tracing option."""
+        client = MagicMock(spec=[])
+
+        self.assertFalse(AnthropicInstrumentor._native_otel_enabled(client))
+
     def test_extract_anthropic_attributes(self):
         """Test that _extract_anthropic_attributes extracts correct attributes."""
         instrumentor = AnthropicInstrumentor()

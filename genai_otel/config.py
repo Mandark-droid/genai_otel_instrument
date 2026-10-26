@@ -27,7 +27,8 @@ logger = logging.getLogger(__name__)
 # Users can enable it when using OTLP gRPC exporters by setting:
 # OTEL_EXPORTER_OTLP_PROTOCOL=grpc and GENAI_ENABLED_INSTRUMENTORS="...,hyperbolic"
 #
-# Note: "smolagents", "litellm", and TypeSafe require Python >= 3.10
+# Note: "smolagents", "litellm", TypeSafe, and the new agent SDK adapters
+# require Python >= 3.10 (the current OpenInference adapters support through 3.14).
 # They are only added to the default list if Python version is compatible.
 DEFAULT_INSTRUMENTORS = [
     "openai",
@@ -83,7 +84,17 @@ OPT_IN_INSTRUMENTORS = ["litellm_latency", "strands", "antigravity"]
 # 1. smolagents - instruments the agent framework
 # 2. litellm - instruments the LLM calls made by agents
 if sys.version_info >= (3, 10):
-    DEFAULT_INSTRUMENTORS.extend(["smolagents", "litellm", "typesafe"])
+    DEFAULT_INSTRUMENTORS.extend(
+        [
+            "smolagents",
+            "litellm",
+            "typesafe",
+            "claude_agent_sdk",
+            "agno",
+            "microsoft_agent_framework",
+            "strands_agents",
+        ]
+    )
 
 
 # Cross-library env var controlling whether prompt/response content is recorded.

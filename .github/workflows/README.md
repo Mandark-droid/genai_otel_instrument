@@ -13,7 +13,8 @@ This directory contains GitHub Actions workflows for automated testing, validati
 **Jobs:**
 
 #### `test` job
-- **Matrix:** Runs on Ubuntu, macOS, and Windows with Python 3.8-3.12
+- **Matrix:** Runs on Ubuntu, macOS, and Windows with Python 3.9-3.14
+- **Prerelease canary:** A non-blocking Ubuntu job probes prerelease Python 3.15
 - **Steps:**
   1. Lint with pylint
   2. Check formatting with black
@@ -23,7 +24,7 @@ This directory contains GitHub Actions workflows for automated testing, validati
   6. Upload coverage to Codecov
 
 #### `build-and-install-test` job
-- **Matrix:** Runs on Ubuntu and Windows with Python 3.9 and 3.12
+- **Matrix:** Runs on Ubuntu and Windows with Python 3.9, 3.12, 3.13, and 3.14
 - **Purpose:** Validates that the package can be built and installed correctly
 - **Steps:**
   1. Build the package using `python -m build`
@@ -65,7 +66,7 @@ This directory contains GitHub Actions workflows for automated testing, validati
 
 **Purpose:** Comprehensive validation before creating a release (mimics `scripts/test_release.sh`)
 
-**Matrix:** Runs on Ubuntu, Windows, and macOS with Python 3.9 and 3.12
+**Matrix:** Runs on Ubuntu, Windows, and macOS with Python 3.9, 3.12, 3.13, and 3.14
 
 **Steps:**
 1. Display environment information

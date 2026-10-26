@@ -37,7 +37,7 @@ extra, which includes the OpenAI-compatible client and Databricks Python SDK:
 pip install "genai-otel-instrument[databricks]"
 ```
 
-See the [Databricks provider example](../../examples/databricks/example.py) for
+See the [Databricks provider example](https://github.com/Mandark-droid/genai_otel_instrument/blob/main/examples/databricks/example.py) for
 environment variables and setup.
 
 ```bash
@@ -70,6 +70,10 @@ pip install genai-otel-instrument[langgraph]
 pip install genai-otel-instrument[google-adk]
 pip install genai-otel-instrument[autogen-agentchat]
 pip install 'genai-otel-instrument[strands]'   # Strands Harness (Python 3.10+)
+pip install 'genai-otel-instrument[claude-agent-sdk]'  # Anthropic Claude Agent SDK (Python 3.10+)
+pip install 'genai-otel-instrument[strands-agents]'  # Strands Agents SDK (Python 3.10+)
+pip install 'genai-otel-instrument[microsoft-agent-framework]'  # Microsoft Agent Framework (Python 3.10+)
+pip install 'genai-otel-instrument[agno]'  # Agno (Python 3.10+)
 pip install 'genai-otel-instrument[antigravity]'  # Google Antigravity SDK (Python 3.10+)
 ```
 
@@ -83,7 +87,9 @@ unless this integration is enabled.
 pip install genai-otel-instrument[openinference]
 ```
 
-Includes LiteLLM, Smolagents, and MCP instrumentation via OpenInference.
+Includes LiteLLM, Smolagents, and MCP instrumentation via OpenInference. The Claude
+Agent SDK and Agno extras install their corresponding OpenInference integrations, which
+currently target Python 3.10–3.14. Strands Agents uses the framework's native GenAI spans.
 
 ### TypeSafe AI / Jev (Python 3.10+)
 

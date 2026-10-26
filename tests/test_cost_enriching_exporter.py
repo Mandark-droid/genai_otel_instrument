@@ -196,6 +196,36 @@ class TestCostEnrichingSpanExporter(unittest.TestCase):
             call_type="chat",
         )
 
+    def test_enrich_span_with_anthropic_native_cache_usage(self):
+        """Native SDK input totals are split into standard and cache tokens."""
+        self.mock_calculator.calculate_granular_cost.return_value = {"total": 0.05}
+        exporter = CostEnrichingSpanExporter(self.mock_exporter, self.mock_calculator)
+        span = self._create_span(
+            attributes={
+                "gen_ai.provider.name": "anthropic",
+                "gen_ai.request.model": "claude-sonnet-4-5",
+                "gen_ai.usage.input_tokens": 100,
+                "gen_ai.usage.output_tokens": 20,
+                "gen_ai.usage.cache_read.input_tokens": 30,
+                "gen_ai.usage.cache_write.input_tokens": 10,
+                "gen_ai.operation.name": "chat",
+            }
+        )
+
+        exporter._enrich_span(span)
+
+        self.mock_calculator.calculate_granular_cost.assert_called_once_with(
+            model="claude-sonnet-4-5",
+            usage={
+                "prompt_tokens": 60,
+                "completion_tokens": 20,
+                "total_tokens": 120,
+                "cache_read_input_tokens": 30,
+                "cache_creation_input_tokens": 10,
+            },
+            call_type="chat",
+        )
+
     def test_enrich_span_with_embedding_call_type(self):
         """Test enriching span with embedding operation."""
         self.mock_calculator.calculate_granular_cost.return_value = {"total": 0.01}

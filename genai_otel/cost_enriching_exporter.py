@@ -38,6 +38,11 @@ class CostEnrichingSpanExporter(SpanExporter):
         """
         self.wrapped_exporter = wrapped_exporter
         self.cost_calculator = cost_calculator or CostCalculator()
+        # Agent frameworks may report aggregate run usage on an AGENT span as
+        # well as per-call usage on child model spans. Remember model usage by
+        # trace so the agent aggregate doesn't get priced a second time when
+        # parent and child batches are exported separately.
+        self._traces_with_model_usage = set()
         logger.info(
             "CostEnrichingSpanExporter initialized, wrapping %s",
             type(wrapped_exporter).__name__,
@@ -53,11 +58,32 @@ class CostEnrichingSpanExporter(SpanExporter):
             SpanExportResult from the wrapped exporter.
         """
         try:
-            # Enrich spans with cost attributes
+            # Discover LLM usage before enriching: an agent span can end after
+            # its model children and may be exported in the same batch or a later
+            # batch. Price the model calls and leave the aggregate agent span's
+            # token counts visible without duplicating cost.
+            batch_traces_with_model_usage = {
+                span.context.trace_id
+                for span in spans
+                if span.context is not None
+                and self._has_usage(span.attributes)
+                and self._is_model_span(span.attributes)
+                and self._has_model(span.attributes)
+            }
+            self._traces_with_model_usage.update(batch_traces_with_model_usage)
+
             enriched_spans = []
             for span in spans:
-                enriched_span = self._enrich_span(span)
+                attributes = span.attributes or {}
+                trace_id = span.context.trace_id if span.context is not None else None
+                skip_aggregate_cost = self._is_agent_span(attributes) and (
+                    trace_id in batch_traces_with_model_usage
+                    or trace_id in self._traces_with_model_usage
+                )
+                enriched_span = self._enrich_span(span, skip_cost=skip_aggregate_cost)
                 enriched_spans.append(enriched_span)
+                if span.parent is None and trace_id is not None:
+                    self._traces_with_model_usage.discard(trace_id)
 
             # Export to wrapped exporter
             return self.wrapped_exporter.export(enriched_spans)
@@ -66,7 +92,51 @@ class CostEnrichingSpanExporter(SpanExporter):
             logger.error("Failed to export spans: %s", e, exc_info=True)
             return SpanExportResult.FAILURE
 
-    def _enrich_span(self, span: ReadableSpan) -> ReadableSpan:
+    @staticmethod
+    def _has_usage(attributes) -> bool:
+        if not attributes:
+            return False
+        return bool(
+            attributes.get("gen_ai.usage.input_tokens")
+            or attributes.get("gen_ai.usage.prompt_tokens")
+            or attributes.get("llm.token_count.prompt")
+            or attributes.get("decision.token_count.input")
+            or attributes.get("gen_ai.usage.output_tokens")
+            or attributes.get("gen_ai.usage.completion_tokens")
+            or attributes.get("llm.token_count.completion")
+            or attributes.get("decision.token_count.output")
+        )
+
+    @staticmethod
+    def _is_model_span(attributes) -> bool:
+        span_kind = str(attributes.get("openinference.span.kind", "")).upper()
+        operation = str(attributes.get("gen_ai.operation.name", "")).lower()
+        return span_kind in {"LLM", "EMBEDDING"} or operation in {
+            "chat",
+            "completion",
+            "text_generation",
+            "image_generation",
+            "embedding",
+        }
+
+    @staticmethod
+    def _has_model(attributes) -> bool:
+        if not attributes:
+            return False
+        return bool(
+            attributes.get("gen_ai.request.model")
+            or attributes.get("llm.model_name")
+            or attributes.get("embedding.model_name")
+            or attributes.get("decision.model_name")
+        )
+
+    @staticmethod
+    def _is_agent_span(attributes) -> bool:
+        span_kind = str(attributes.get("openinference.span.kind", "")).upper()
+        operation = str(attributes.get("gen_ai.operation.name", "")).lower()
+        return span_kind == "AGENT" or operation == "invoke_agent"
+
+    def _enrich_span(self, span: ReadableSpan, skip_cost: bool = False) -> ReadableSpan:
         """Enrich a span with cost attributes if applicable.
 
         Args:
@@ -81,6 +151,9 @@ class CostEnrichingSpanExporter(SpanExporter):
                 return span
 
             attributes = dict(span.attributes)  # Make a mutable copy
+
+            if skip_cost:
+                return span
 
             # Check for model name - support both GenAI and OpenInference conventions
             model = (
@@ -115,6 +188,24 @@ class CostEnrichingSpanExporter(SpanExporter):
                 or attributes.get("llm.token_count.completion")  # OpenInference
                 or attributes.get("decision.token_count.output")  # OpenInference DECISION
                 or 0
+            )
+
+            # Anthropic SDK v1.14+ reports input_tokens with cache reads and
+            # writes included. The calculator prices those separately, so
+            # remove them from the standard prompt bucket before adding their
+            # dedicated cache rates.
+            cache_read_tokens = (
+                attributes.get("gen_ai.usage.cache_read.input_tokens")
+                or attributes.get("cache_read_input_tokens")
+                or 0
+            )
+            cache_write_tokens = (
+                attributes.get("gen_ai.usage.cache_write.input_tokens")
+                or attributes.get("cache_creation_input_tokens")
+                or 0
+            )
+            prompt_tokens = max(
+                int(prompt_tokens) - int(cache_read_tokens) - int(cache_write_tokens), 0
             )
 
             # Skip if no tokens recorded
@@ -152,8 +243,17 @@ class CostEnrichingSpanExporter(SpanExporter):
             usage = {
                 "prompt_tokens": int(prompt_tokens),
                 "completion_tokens": int(completion_tokens),
-                "total_tokens": int(prompt_tokens) + int(completion_tokens),
+                "total_tokens": (
+                    int(prompt_tokens)
+                    + int(cache_read_tokens)
+                    + int(cache_write_tokens)
+                    + int(completion_tokens)
+                ),
             }
+            if cache_read_tokens:
+                usage["cache_read_input_tokens"] = int(cache_read_tokens)
+            if cache_write_tokens:
+                usage["cache_creation_input_tokens"] = int(cache_write_tokens)
 
             cost_info = self.cost_calculator.calculate_granular_cost(
                 model=str(model),

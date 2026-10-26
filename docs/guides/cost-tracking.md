@@ -212,11 +212,21 @@ Custom prices merge with defaults. If you provide pricing for an existing model,
 
 ## OpenInference Cost Enrichment
 
-When using OpenInference instrumentors (LiteLLM, Smolagents, MCP), cost tracking is automatically applied via `CostEnrichmentSpanProcessor`. It reads OpenInference semantic conventions and adds cost attributes:
+When using OpenInference instrumentors (LiteLLM, Smolagents, MCP, Claude Agent SDK, or Agno), cost tracking is automatically applied via the cost enrichment exporter. It reads OpenInference semantic conventions and adds cost attributes:
 
 - `llm.model_name` -> model lookup
 - `llm.token_count.prompt` / `llm.token_count.completion` -> cost calculation
 - `openinference.span.kind` -> call type (LLM, EMBEDDING, etc.)
+
+Claude Agent SDK records model and token usage on its agent span when reported by the
+SDK; Agno records usage on its model spans. Strands Agents and Microsoft Agent Framework
+emit native GenAI spans handled by the regular cost path. A cost is only reported when
+usage and a model price are available; unknown models are not invented or estimated.
+
+For frameworks that put aggregate token usage on an agent span and per-call usage on
+child model spans, TraceVerde prices the model-call spans and leaves the aggregate token
+counts visible without adding the same cost again on the agent span. Claude Agent SDK's
+agent span remains billable when it is the only span with usage for that run.
 
 ## Disable Cost Tracking
 

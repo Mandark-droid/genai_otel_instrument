@@ -88,6 +88,7 @@ try:
         LlamaCppInstrumentor,
         LlamaIndexInstrumentor,
         MistralAIInstrumentor,
+        MicrosoftAgentFrameworkInstrumentor,
         OllamaInstrumentor,
         OpenAIInstrumentor,
         OpenAIAgentsInstrumentor,
@@ -100,6 +101,7 @@ try:
         SarvamAIInstrumentor,
         SentenceTransformersInstrumentor,
         StrandsHarnessInstrumentor,
+        StrandsAgentsInstrumentor,
         TogetherAIInstrumentor,
         TypeSafeInstrumentor,
         VertexAIInstrumentor,
@@ -137,6 +139,7 @@ except ImportError:
         LlamaCppInstrumentor,
         LlamaIndexInstrumentor,
         MistralAIInstrumentor,
+        MicrosoftAgentFrameworkInstrumentor,
         OllamaInstrumentor,
         OpenAIInstrumentor,
         OpenAIAgentsInstrumentor,
@@ -149,6 +152,7 @@ except ImportError:
         SarvamAIInstrumentor,
         SentenceTransformersInstrumentor,
         StrandsHarnessInstrumentor,
+        StrandsAgentsInstrumentor,
         TogetherAIInstrumentor,
         TypeSafeInstrumentor,
         VertexAIInstrumentor,
@@ -167,7 +171,7 @@ OPENINFERENCE_AVAILABLE = None  # Tri-state: None=not checked, True/False=result
 
 # Shipped in DEFAULT_INSTRUMENTORS but only resolvable once OpenInference is
 # importable. Absent on a default install, which is expected, not a misconfiguration.
-_OPENINFERENCE_OPTIONAL = frozenset({"smolagents", "litellm", "mcp"})
+_OPENINFERENCE_OPTIONAL = frozenset({"smolagents", "litellm", "mcp", "claude_agent_sdk", "agno"})
 
 # Re-entrancy guard to prevent double-instrumentation
 _INSTRUMENTATION_INITIALIZED = False
@@ -182,23 +186,26 @@ def _check_openinference():
     global OPENINFERENCE_AVAILABLE
     if OPENINFERENCE_AVAILABLE is not None:
         return OPENINFERENCE_AVAILABLE
-    try:
-        from openinference.instrumentation.litellm import LiteLLMInstrumentor  # noqa: E402
-        from openinference.instrumentation.mcp import MCPInstrumentor  # noqa: E402
-        from openinference.instrumentation.smolagents import (  # noqa: E402
-            SmolagentsInstrumentor,
-        )
-
-        INSTRUMENTORS.update(
-            {
-                "smolagents": SmolagentsInstrumentor,
-                "litellm": LiteLLMInstrumentor,
-                "mcp": MCPInstrumentor,
-            }
-        )
-        OPENINFERENCE_AVAILABLE = True
-    except ImportError:
-        OPENINFERENCE_AVAILABLE = False
+    integrations = (
+        ("smolagents", "openinference.instrumentation.smolagents", "SmolagentsInstrumentor"),
+        ("litellm", "openinference.instrumentation.litellm", "LiteLLMInstrumentor"),
+        ("mcp", "openinference.instrumentation.mcp", "MCPInstrumentor"),
+        (
+            "claude_agent_sdk",
+            "openinference.instrumentation.claude_agent_sdk",
+            "ClaudeAgentSDKInstrumentor",
+        ),
+        ("agno", "openinference.instrumentation.agno", "AgnoInstrumentor"),
+    )
+    available = False
+    for name, module_name, class_name in integrations:
+        try:
+            module = __import__(module_name, fromlist=[class_name])
+            INSTRUMENTORS[name] = getattr(module, class_name)
+            available = True
+        except ImportError:
+            continue
+    OPENINFERENCE_AVAILABLE = available
     return OPENINFERENCE_AVAILABLE
 
 
@@ -211,6 +218,10 @@ INSTRUMENTORS = {
     "openrouter": OpenRouterInstrumentor,  # OpenRouter unified API aggregator
     "cometapi": CometAPIInstrumentor,  # CometAPI all-in-one API aggregator (500+ models)
     "anthropic": AnthropicInstrumentor,
+    "claude_agent_sdk": None,  # OpenInference Claude Agent SDK integration (lazy)
+    "agno": None,  # OpenInference Agno integration (lazy)
+    "microsoft_agent_framework": MicrosoftAgentFrameworkInstrumentor,
+    "strands_agents": StrandsAgentsInstrumentor,  # Current Strands Agents SDK
     "google.generativeai": GoogleAIInstrumentor,
     "google_adk": GoogleADKInstrumentor,  # Google Agent Development Kit
     "boto3": AWSBedrockInstrumentor,
@@ -258,7 +269,7 @@ INSTRUMENTORS = {
     "mcp_client": MCPClientInstrumentor,
 }
 
-# OpenInference instrumentors (smolagents, litellm, mcp) are added to INSTRUMENTORS
+# OpenInference instrumentors are added to INSTRUMENTORS
 # lazily via _check_openinference() called in setup_auto_instrumentation()
 
 
@@ -454,7 +465,7 @@ def setup_auto_instrumentation(config: OTelConfig):
         return
     logger.info("Starting auto-instrumentation setup...")
 
-    # Lazily check and register OpenInference instrumentors (smolagents, litellm, mcp)
+    # Lazily check and register OpenInference-backed framework instrumentors.
     # This defers the heavy litellm import (~10s) to instrumentation time, not package import.
     _check_openinference()
 
@@ -704,12 +715,28 @@ def setup_auto_instrumentation(config: OTelConfig):
 
     # OpenInference instrumentors that use different API (no config parameter)
     # Only include if OpenInference is available (Python >= 3.10)
-    OPENINFERENCE_INSTRUMENTORS = (
-        {"smolagents", "mcp", "litellm"} if OPENINFERENCE_AVAILABLE else set()
-    )
+    OPENINFERENCE_INSTRUMENTORS = {
+        "smolagents",
+        "mcp",
+        "litellm",
+        "claude_agent_sdk",
+        "agno",
+    }
 
     # Auto-instrument LLM libraries based on the configuration
     for name in config.enabled_instrumentors:
+        if name in _OPENINFERENCE_OPTIONAL:
+            _check_openinference()
+            if INSTRUMENTORS.get(name) is None:
+                logger.debug("Instrumentor '%s' needs its OpenInference package; skipping.", name)
+                continue
+        if name in {"microsoft_agent_framework", "strands_agents"}:
+            sdk_module = "agent_framework" if name == "microsoft_agent_framework" else "strands"
+            from importlib.util import find_spec
+
+            if find_spec(sdk_module) is None:
+                logger.debug("Instrumentor '%s' SDK is not installed; skipping.", name)
+                continue
         if name in INSTRUMENTORS:
             try:
                 instrumentor_class = INSTRUMENTORS[name]
@@ -717,7 +744,12 @@ def setup_auto_instrumentation(config: OTelConfig):
 
                 # OpenInference instrumentors don't take config parameter
                 if name in OPENINFERENCE_INSTRUMENTORS:
-                    instrumentor.instrument()
+                    if name == "claude_agent_sdk":
+                        instrumentor.instrument(tracer_provider=tracer_provider)
+                    elif name == "agno":
+                        instrumentor.instrument(tracer_provider=tracer_provider)
+                    else:
+                        instrumentor.instrument()
                 else:
                     instrumentor.instrument(config=config)
 
@@ -727,8 +759,8 @@ def setup_auto_instrumentation(config: OTelConfig):
                 if config.fail_on_error:
                     raise
         else:
-            # smolagents/litellm/mcp ship in DEFAULT_INSTRUMENTORS but resolve
-            # only when OpenInference is importable (Python 3.10+ plus the extra).
+            # Optional OpenInference integrations resolve only when their extra is
+            # installed (Python 3.10+ for the currently published adapters).
             # On a default install they are simply absent, and calling that a
             # warning made a clean first run look like the user had misconfigured
             # something. Only warn for a name the user actually asked for.

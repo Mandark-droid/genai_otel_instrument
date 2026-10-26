@@ -1,8 +1,10 @@
 """Custom SpanProcessor to enrich OpenInference spans with cost tracking.
 
-This processor adds cost attributes to spans created by OpenInference instrumentors
-(smolagents, litellm, mcp) by extracting token usage and model information from
-existing span attributes and calculating costs using our CostCalculator.
+This processor enriches spans created by OpenInference instrumentors (Smolagents,
+LiteLLM, MCP, Claude Agent SDK, and Agno) by extracting token usage and model
+information from existing span attributes and calculating costs using our
+CostCalculator. Native GenAI spans from Strands and Microsoft Agent Framework use the
+same cost enrichment exporter.
 
 Supports both OpenTelemetry GenAI and OpenInference semantic conventions:
 - GenAI: gen_ai.request.model, gen_ai.usage.{prompt_tokens,completion_tokens}
@@ -24,7 +26,7 @@ class CostEnrichmentSpanProcessor(SpanProcessor):
     """Enriches spans with cost tracking attributes.
 
     This processor:
-    1. Identifies spans from OpenInference instrumentors (smolagents, litellm, mcp)
+    1. Identifies spans from OpenInference instrumentors
     2. Extracts model name and token usage from span attributes
     3. Calculates cost using CostCalculator
     4. Adds cost attributes (gen_ai.usage.cost.total, etc.) to the span
@@ -92,6 +94,24 @@ class CostEnrichmentSpanProcessor(SpanProcessor):
                 or 0
             )
 
+            # Anthropic SDK v1.14+ reports input_tokens with cache reads and
+            # writes included. The calculator prices those separately, so
+            # remove them from the standard prompt bucket before adding their
+            # dedicated cache rates.
+            cache_read_tokens = (
+                attributes.get("gen_ai.usage.cache_read.input_tokens")
+                or attributes.get("cache_read_input_tokens")
+                or 0
+            )
+            cache_write_tokens = (
+                attributes.get("gen_ai.usage.cache_write.input_tokens")
+                or attributes.get("cache_creation_input_tokens")
+                or 0
+            )
+            prompt_tokens = max(
+                int(prompt_tokens) - int(cache_read_tokens) - int(cache_write_tokens), 0
+            )
+
             # Skip if no tokens recorded
             if prompt_tokens == 0 and completion_tokens == 0:
                 return
@@ -132,8 +152,17 @@ class CostEnrichmentSpanProcessor(SpanProcessor):
             usage = {
                 "prompt_tokens": int(prompt_tokens),
                 "completion_tokens": int(completion_tokens),
-                "total_tokens": int(prompt_tokens) + int(completion_tokens),
+                "total_tokens": (
+                    int(prompt_tokens)
+                    + int(cache_read_tokens)
+                    + int(cache_write_tokens)
+                    + int(completion_tokens)
+                ),
             }
+            if cache_read_tokens:
+                usage["cache_read_input_tokens"] = int(cache_read_tokens)
+            if cache_write_tokens:
+                usage["cache_creation_input_tokens"] = int(cache_write_tokens)
 
             # Use calculate_granular_cost to get detailed breakdown
             cost_info = self.cost_calculator.calculate_granular_cost(

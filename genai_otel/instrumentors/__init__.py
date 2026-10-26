@@ -38,6 +38,10 @@ from .litellm_latency_instrumentor import LiteLLMLatencyInstrumentor
 from .llamacpp_instrumentor import LlamaCppInstrumentor
 from .llamaindex_instrumentor import LlamaIndexInstrumentor
 from .mistralai_instrumentor import MistralAIInstrumentor
+from .native_agent_instrumentors import (
+    MicrosoftAgentFrameworkInstrumentor,
+    StrandsAgentsInstrumentor,
+)
 from .ollama_instrumentor import OllamaInstrumentor
 from .openai_agents_instrumentor import OpenAIAgentsInstrumentor
 
@@ -101,5 +105,7 @@ __all__ = [
     "SentenceTransformersInstrumentor",
     "TypeSafeInstrumentor",
     "StrandsHarnessInstrumentor",
+    "MicrosoftAgentFrameworkInstrumentor",
+    "StrandsAgentsInstrumentor",
     "XAIInstrumentor",
 ]

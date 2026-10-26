@@ -143,6 +143,39 @@ class TestCostEnrichmentSpanProcessor(unittest.TestCase):
             # is done by CostEnrichingSpanExporter at export time
             mock_span.set_attribute.assert_not_called()
 
+    def test_on_end_with_anthropic_native_cache_usage(self):
+        """Native SDK input totals are split into standard and cache tokens."""
+        mock_span = MagicMock(spec=Span)
+        mock_span.name = "anthropic.messages.create"
+        mock_span.attributes = {
+            "gen_ai.request.model": "claude-sonnet-4-5",
+            "gen_ai.provider.name": "anthropic",
+            "gen_ai.usage.input_tokens": 100,
+            "gen_ai.usage.output_tokens": 20,
+            "gen_ai.usage.cache_read.input_tokens": 30,
+            "gen_ai.usage.cache_write.input_tokens": 10,
+            "gen_ai.operation.name": "chat",
+        }
+
+        with patch.object(
+            self.processor.cost_calculator,
+            "calculate_granular_cost",
+            return_value={"total": 0.01},
+        ) as mock_calc:
+            self.processor.on_end(mock_span)
+
+        mock_calc.assert_called_once_with(
+            model="claude-sonnet-4-5",
+            usage={
+                "prompt_tokens": 60,
+                "completion_tokens": 20,
+                "total_tokens": 120,
+                "cache_read_input_tokens": 30,
+                "cache_creation_input_tokens": 10,
+            },
+            call_type="chat",
+        )
+
     def test_on_end_with_embedding_operation(self):
         """Test on_end with embedding operation."""
         mock_span = MagicMock(spec=Span)

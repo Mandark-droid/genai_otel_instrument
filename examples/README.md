@@ -48,6 +48,10 @@ That's it! No code changes needed in your application logic.
 - **[langchain/](langchain/)** - LangChain framework
 - **[llamaindex/](llamaindex/)** - LlamaIndex framework
 - **[huggingface/](huggingface/)** - HuggingFace Transformers
+- **[claude_agent_sdk/](claude_agent_sdk/)** - Anthropic Claude Agent SDK
+- **[strands_agents/](strands_agents/)** - Strands Agents SDK
+- **[microsoft_agent_framework/](microsoft_agent_framework/)** - Microsoft Agent Framework
+- **[agno/](agno/)** - Agno agent framework
 
 ### Evaluation & Safety Features
 
@@ -77,6 +81,12 @@ pip install genai-otel-instrument[openai]
 
 # TypeSafe AI / Jev (Python 3.10+)
 pip install 'genai-otel-instrument[typesafe]'
+
+# Agent SDKs (Python 3.10+)
+pip install 'genai-otel-instrument[claude-agent-sdk]'
+pip install 'genai-otel-instrument[strands-agents]'
+pip install 'genai-otel-instrument[microsoft-agent-framework]'
+pip install 'genai-otel-instrument[agno]'
 
 # xAI Grok (Python 3.10+)
 pip install 'genai-otel-instrument[xai]'

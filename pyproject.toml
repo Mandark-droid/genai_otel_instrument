@@ -74,6 +74,24 @@ openinference = [
     "litellm>=1.0.0,!=1.82.7,!=1.82.8,!=1.107.0"
 ]
 
+# Agent SDK integrations (Python >= 3.10). These extras install the upstream
+# framework and its maintained OpenTelemetry/OpenInference instrumentation.
+claude-agent-sdk = [
+    "claude-agent-sdk>=0.1.0; python_version >= '3.10'",
+    "openinference-instrumentation-claude-agent-sdk>=0.1.22,<1.0.0; python_version >= '3.10' and python_version < '3.15'",
+]
+agno = [
+    "agno>=1.0.0,<2.0.0; python_version >= '3.10'",
+    "openinference-instrumentation-agno>=1.0.0,<2.0.0; python_version >= '3.10' and python_version < '3.15'",
+]
+microsoft-agent-framework = [
+    "agent-framework-core>=1.23.0,<2.0.0; python_version >= '3.10'",
+    "agent-framework-openai>=1.17.0,<2.0.0; python_version >= '3.10'",
+]
+strands-agents = [
+    "strands-agents>=1.0.0; python_version >= '3.10'",
+]
+
 # Native TypeSafe System One / Jev instrumentation (Python >= 3.10).
 typesafe = ["typesafe-sdk>=0.6.0; python_version >= '3.10'"]
 
@@ -327,6 +345,13 @@ all = [
     "instructor>=1.0.0",
     "pydantic-ai>=0.0.1",
     "google-cloud-aiplatform>=1.0.0",
+    "claude-agent-sdk>=0.1.0; python_version >= '3.10'",
+    "openinference-instrumentation-claude-agent-sdk>=0.1.22,<1.0.0; python_version >= '3.10' and python_version < '3.15'",
+    "agno>=1.0.0,<2.0.0; python_version >= '3.10'",
+    "openinference-instrumentation-agno>=1.0.0,<2.0.0; python_version >= '3.10' and python_version < '3.15'",
+    "agent-framework-core>=1.23.0,<2.0.0; python_version >= '3.10'",
+    "agent-framework-openai>=1.17.0,<2.0.0; python_version >= '3.10'",
+    "strands-agents>=1.0.0; python_version >= '3.10'",
     "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
     "opentelemetry-instrumentation-redis>=0.41b0",
     "opentelemetry-instrumentation-pymongo>=0.41b0",

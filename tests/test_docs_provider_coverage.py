@@ -35,6 +35,7 @@ NON_PROVIDER_KEYS = {
     "autogen",
     "autogen_agentchat",
     "bedrock_agents",
+    "claude_agent_sdk",
     "crewai",
     "dspy",
     "google_adk",
@@ -44,11 +45,14 @@ NON_PROVIDER_KEYS = {
     "langchain",
     "langgraph",
     "litellm_latency",
+    "agno",
     "llama_index",
     "mcp_client",
     "openai_agents",
     "pydantic_ai",
     "strands",
+    "strands_agents",
+    "microsoft_agent_framework",
 }
 
 # Registry key -> the Provider cell in the llm-providers.md table.

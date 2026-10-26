@@ -26,7 +26,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.9", "3.12"]
+        # Keep release validation aligned with the regular test matrix for all
+        # currently supported versions and the 3.14 support candidate.
+        python-version: ["3.9", "3.12", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@v4
