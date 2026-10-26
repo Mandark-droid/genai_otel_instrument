@@ -2259,7 +2259,7 @@ query access, and <code>DATABRICKS_MODEL</code> to the serving endpoint name. Th
 also recognizes Databricks AI Gateway routes under <code>/ai-gateway/</code> and works with
 <code>databricks-openai</code> clients that use these endpoints. It records chat, completions,
 embeddings, and Responses API calls as <code>databricks.*</code> spans with
-<code>gen_ai.provider.name=databricks</code>. See the complete <a href="../../examples/databricks/example.py">Databricks example</a>.</p>
+<code>gen_ai.provider.name=databricks</code>. See the complete <a href="https://github.com/Mandark-droid/genai_otel_instrument/blob/main/examples/databricks/example.py">Databricks example</a>.</p>
 <p>The native Databricks SDK is supported too:</p>
 <p><div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">databricks.sdk</span><span class="w"> </span><span class="kn">import</span> <span class="n">WorkspaceClient</span>
@@ -2272,7 +2272,7 @@ embeddings, and Responses API calls as <code>databricks.*</code> spans with
 <a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[</span><span class="n">ChatMessage</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="n">ChatMessageRole</span><span class="o">.</span><span class="n">USER</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">&quot;Hello&quot;</span><span class="p">)],</span>
 <a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">)</span>
 </code></pre></div>
-See the complete <a href="../../examples/databricks/sdk_example.py">native SDK example</a>.</p>
+See the complete <a href="https://github.com/Mandark-droid/genai_otel_instrument/blob/main/examples/databricks/sdk_example.py">native SDK example</a>.</p>
 <p>MLflow deployment clients are supported as well. The <code>[databricks]</code> extra includes
 <code>mlflow-skinny</code> for this path. Calls to <code>predict</code> and <code>predict_stream</code> on
 <code>get_deploy_client("databricks")</code> are recorded as Databricks spans; streaming spans
@@ -2288,7 +2288,7 @@ deployment targets are left to their own provider instrumentation.</p>
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">inputs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;messages&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Hello&quot;</span><span class="p">}]},</span>
 <a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="p">)</span>
 </code></pre></div>
-<p>See the <a href="../../examples/databricks/mlflow_example.py">MLflow example</a>. <code>ChatDatabricks</code>
+<p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/blob/main/examples/databricks/mlflow_example.py">MLflow example</a>. <code>ChatDatabricks</code>
 from <code>databricks-langchain</code> is also covered when its underlying client uses a
 Databricks serving-endpoint or AI Gateway URL; the Databricks client span is emitted
 under any framework span produced by LangChain.</p>
@@ -2847,6 +2847,12 @@ otherwise dominate span size. See the
 <a href="../../reference/semantic-conventions/#embeddings">semantic conventions reference</a>
 for the full attribute list.</p>
 <h2 id="quick-example-anthropic">Quick Example: Anthropic<a class="headerlink" href="#quick-example-anthropic" title="Permanent link">&para;</a></h2>
+<p>Anthropic Python SDK 1.14.0 and later emits native OpenTelemetry request spans by
+default. When those spans are enabled on a client, TraceVerde leaves that client's
+Messages methods unwrapped, avoiding duplicate request spans while applying its usual
+cost enrichment to the native GenAI usage attributes. If you set
+<code>open_telemetry=False</code> on the client (or <code>ANTHROPIC_OPEN_TELEMETRY=false</code> before client
+creation), TraceVerde uses its own Messages wrapper instead.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
 <a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
 <a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>

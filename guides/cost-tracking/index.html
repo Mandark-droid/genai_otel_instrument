@@ -1933,12 +1933,20 @@ and the recorded cost would then depend on which aggregator was indexed first.</
 <li><strong>Audio</strong>: Price per 1k characters (TTS) or per second (STT)</li>
 </ul>
 <h2 id="openinference-cost-enrichment">OpenInference Cost Enrichment<a class="headerlink" href="#openinference-cost-enrichment" title="Permanent link">&para;</a></h2>
-<p>When using OpenInference instrumentors (LiteLLM, Smolagents, MCP), cost tracking is automatically applied via <code>CostEnrichmentSpanProcessor</code>. It reads OpenInference semantic conventions and adds cost attributes:</p>
+<p>When using OpenInference instrumentors (LiteLLM, Smolagents, MCP, Claude Agent SDK, or Agno), cost tracking is automatically applied via the cost enrichment exporter. It reads OpenInference semantic conventions and adds cost attributes:</p>
 <ul>
 <li><code>llm.model_name</code> -&gt; model lookup</li>
 <li><code>llm.token_count.prompt</code> / <code>llm.token_count.completion</code> -&gt; cost calculation</li>
 <li><code>openinference.span.kind</code> -&gt; call type (LLM, EMBEDDING, etc.)</li>
 </ul>
+<p>Claude Agent SDK records model and token usage on its agent span when reported by the
+SDK; Agno records usage on its model spans. Strands Agents and Microsoft Agent Framework
+emit native GenAI spans handled by the regular cost path. A cost is only reported when
+usage and a model price are available; unknown models are not invented or estimated.</p>
+<p>For frameworks that put aggregate token usage on an agent span and per-call usage on
+child model spans, TraceVerde prices the model-call spans and leaves the aggregate token
+counts visible without adding the same cost again on the agent span. Claude Agent SDK's
+agent span remains billable when it is the only span with usage for that run.</p>
 <h2 id="disable-cost-tracking">Disable Cost Tracking<a class="headerlink" href="#disable-cost-tracking" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_COST_TRACKING</span><span class="o">=</span><span class="nb">false</span>
 </code></pre></div>

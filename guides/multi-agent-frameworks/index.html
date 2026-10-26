@@ -826,6 +826,50 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#anthropic-claude-agent-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anthropic Claude Agent SDK
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strands-agents-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strands Agents SDK
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#microsoft-agent-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microsoft Agent Framework
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agno" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agno
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#other-frameworks" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1541,6 +1585,50 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#anthropic-claude-agent-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anthropic Claude Agent SDK
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strands-agents-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strands Agents SDK
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#microsoft-agent-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microsoft Agent Framework
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agno" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agno
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#other-frameworks" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1583,7 +1671,9 @@
 
 
 <h1 id="multi-agent-frameworks">Multi-Agent Frameworks<a class="headerlink" href="#multi-agent-frameworks" title="Permanent link">&para;</a></h1>
-<p>TraceVerde instruments 9 multi-agent and LLM frameworks with complete trace hierarchy.</p>
+<p>TraceVerde instruments 13 multi-agent and LLM frameworks, including native OpenTelemetry
+frameworks and OpenInference integrations. Framework spans are connected to provider
+spans when the provider is also instrumented.</p>
 <h2 id="crewai">CrewAI<a class="headerlink" href="#crewai" title="Permanent link">&para;</a></h2>
 <p>Span hierarchy: Crew -&gt; Task -&gt; Agent -&gt; LLM calls, in one trace per kickoff.
 Verified against CrewAI 1.15.27 and 1.14.4.</p>
@@ -1997,6 +2087,122 @@ unless the existing GenAI content-capture setting is enabled. Provider-level
 spans are enriched when active, avoiding duplicate model/tool spans. The extra
 currently targets <code>strands-harness&gt;=0.1.1</code> on Python 3.10+.</p>
 <p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/strands_harness/example.py">Strands Harness example</a>.</p>
+<h2 id="anthropic-claude-agent-sdk">Anthropic Claude Agent SDK<a class="headerlink" href="#anthropic-claude-agent-sdk" title="Permanent link">&para;</a></h2>
+<p>The Claude Agent SDK is distinct from Anthropic's Messages API client. This integration
+uses the maintained OpenInference adapter to trace <code>query()</code> and <code>ClaudeSDKClient</code> turns,
+tool hooks, and delegated subagents.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[claude-agent-sdk]&#39;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;claude-agent-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;claude_agent_sdk&quot;</span><span class="p">],</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    <span class="n">enable_content_capture</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="p">)</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="kn">from</span><span class="w"> </span><span class="nn">claude_agent_sdk</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClaudeAgentOptions</span><span class="p">,</span> <span class="n">query</span>
+<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>
+<a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a>
+<a id="__codelineno-17-13" name="__codelineno-17-13" href="#__codelineno-17-13"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+<a id="__codelineno-17-14" name="__codelineno-17-14" href="#__codelineno-17-14"></a>    <span class="k">async</span> <span class="k">for</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">query</span><span class="p">(</span>
+<a id="__codelineno-17-15" name="__codelineno-17-15" href="#__codelineno-17-15"></a>        <span class="s2">&quot;List Python files in the current directory.&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-16" name="__codelineno-17-16" href="#__codelineno-17-16"></a>        <span class="n">options</span><span class="o">=</span><span class="n">ClaudeAgentOptions</span><span class="p">(</span><span class="n">allowed_tools</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Glob&quot;</span><span class="p">]),</span>
+<a id="__codelineno-17-17" name="__codelineno-17-17" href="#__codelineno-17-17"></a>    <span class="p">):</span>
+<a id="__codelineno-17-18" name="__codelineno-17-18" href="#__codelineno-17-18"></a>        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s2">&quot;result&quot;</span><span class="p">):</span>
+<a id="__codelineno-17-19" name="__codelineno-17-19" href="#__codelineno-17-19"></a>            <span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
+<a id="__codelineno-17-20" name="__codelineno-17-20" href="#__codelineno-17-20"></a>
+<a id="__codelineno-17-21" name="__codelineno-17-21" href="#__codelineno-17-21"></a>
+<a id="__codelineno-17-22" name="__codelineno-17-22" href="#__codelineno-17-22"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</code></pre></div>
+<p>Agent and tool spans include SDK-reported token usage when present; the configured cost
+enricher prices those counts when the model is in the pricing catalog. The Claude Agent
+SDK runs the model through its own CLI process, so the ordinary Anthropic Messages
+instrumentor does not see its internal requests. The adapter's agent span carries usage;
+it does not claim separate LLM request spans. Do not enable a second Claude Agent SDK
+instrumentor alongside this integration.</p>
+<p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/claude_agent_sdk/example.py">Claude Agent SDK example</a>.</p>
+<h2 id="strands-agents-sdk">Strands Agents SDK<a class="headerlink" href="#strands-agents-sdk" title="Permanent link">&para;</a></h2>
+<p>This is the current <code>strands-agents</code> runtime, separate from the legacy Strands Harness
+integration above. Strands emits native OpenTelemetry agent, cycle, model, and tool spans
+through the configured global provider. The integration does not add a second wrapper
+span or a conversion processor.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[strands-agents]&#39;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;strands-agent-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;strands_agents&quot;</span><span class="p">],</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>    <span class="n">enable_content_capture</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="p">)</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">strands</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>
+<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="n">agent</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">()</span>
+<a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a><span class="nb">print</span><span class="p">(</span><span class="n">agent</span><span class="p">(</span><span class="s2">&quot;In one sentence, what does OpenTelemetry do?&quot;</span><span class="p">))</span>
+</code></pre></div>
+<p>Model and token attributes on Strands' native LLM spans are available to the normal cost
+enrichment path. Call <code>genai_otel.instrument()</code> before importing Strands so its telemetry
+uses the configured global OpenTelemetry provider.</p>
+<p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/strands_agents/example.py">Strands Agents example</a>.</p>
+<h2 id="microsoft-agent-framework">Microsoft Agent Framework<a class="headerlink" href="#microsoft-agent-framework" title="Permanent link">&para;</a></h2>
+<p>Microsoft Agent Framework already emits GenAI traces, logs, and metrics through
+OpenTelemetry. The integration activates its native telemetry on TraceVerde's global
+provider; it does not patch the framework or configure a second exporter pipeline.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[microsoft-agent-framework]&#39;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;microsoft-agent-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;microsoft_agent_framework&quot;</span><span class="p">],</span>
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>    <span class="n">enable_content_capture</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="p">)</span>
+<a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>
+<a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agent_framework</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span>
+<a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agent_framework.openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIChatClient</span>
+<a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a>
+<a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a>
+<a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+<a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a>    <span class="n">agent</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">(</span>
+<a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a>        <span class="n">client</span><span class="o">=</span><span class="n">OpenAIChatClient</span><span class="p">(),</span>
+<a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a>        <span class="n">instructions</span><span class="o">=</span><span class="s2">&quot;Answer in one concise sentence.&quot;</span><span class="p">,</span>
+<a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a>    <span class="p">)</span>
+<a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a>    <span class="nb">print</span><span class="p">((</span><span class="k">await</span> <span class="n">agent</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;What does OpenTelemetry do?&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+<a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a>
+<a id="__codelineno-21-22" name="__codelineno-21-22" href="#__codelineno-21-22"></a>
+<a id="__codelineno-21-23" name="__codelineno-21-23" href="#__codelineno-21-23"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</code></pre></div>
+<p>Native GenAI model spans carry token counts and model identity for TraceVerde's cost
+enrichment. Sensitive prompt and tool content remains disabled by default. Configure
+exporters once through TraceVerde; do not also call the framework's
+<code>configure_otel_providers()</code>, which would compete for global providers.</p>
+<p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/microsoft_agent_framework/example.py">Microsoft Agent Framework example</a>.</p>
+<h2 id="agno">Agno<a class="headerlink" href="#agno" title="Permanent link">&para;</a></h2>
+<p>Agno runs are traced through the maintained OpenInference adapter. The integration
+captures agent and model activity, and the model spans' token usage is passed through the
+standard cost enrichment path.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[agno]&#39;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>    <span class="n">service_name</span><span class="o">=</span><span class="s2">&quot;agno-agent-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>    <span class="n">enabled_instrumentors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;agno&quot;</span><span class="p">],</span>
+<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>    <span class="n">enable_content_capture</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="p">)</span>
+<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>
+<a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agno.agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span>
+<a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agno.models.openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIChat</span>
+<a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>
+<a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a><span class="n">agent</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">OpenAIChat</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">),</span> <span class="n">markdown</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a><span class="n">agent</span><span class="o">.</span><span class="n">print_response</span><span class="p">(</span><span class="s2">&quot;In one sentence, what does OpenTelemetry do?&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/agno/example.py">Agno example</a>.</p>
 <h2 id="other-frameworks">Other Frameworks<a class="headerlink" href="#other-frameworks" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

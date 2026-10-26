@@ -1640,7 +1640,7 @@ configuration and the redactor / store backends.</p>
 extra, which includes the OpenAI-compatible client and Databricks Python SDK:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;genai-otel-instrument[databricks]&quot;</span>
 </code></pre></div>
-<p>See the <a href="../../examples/databricks/example.py">Databricks provider example</a> for
+<p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/blob/main/examples/databricks/example.py">Databricks provider example</a> for
 environment variables and setup.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Individual providers</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openai<span class="o">]</span>
@@ -1668,7 +1668,11 @@ environment variables and setup.</p>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>google-adk<span class="o">]</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>autogen-agentchat<span class="o">]</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[strands]&#39;</span><span class="w">   </span><span class="c1"># Strands Harness (Python 3.10+)</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[antigravity]&#39;</span><span class="w">  </span><span class="c1"># Google Antigravity SDK (Python 3.10+)</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[claude-agent-sdk]&#39;</span><span class="w">  </span><span class="c1"># Anthropic Claude Agent SDK (Python 3.10+)</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[strands-agents]&#39;</span><span class="w">  </span><span class="c1"># Strands Agents SDK (Python 3.10+)</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[microsoft-agent-framework]&#39;</span><span class="w">  </span><span class="c1"># Microsoft Agent Framework (Python 3.10+)</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[agno]&#39;</span><span class="w">  </span><span class="c1"># Agno (Python 3.10+)</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[antigravity]&#39;</span><span class="w">  </span><span class="c1"># Google Antigravity SDK (Python 3.10+)</span>
 </code></pre></div>
 <p>Strands Harness is opt-in. Enable it explicitly with
 <code>enabled_instrumentors=["strands"]</code>; the base package does not import Strands
@@ -1676,7 +1680,9 @@ unless this integration is enabled.</p>
 <h3 id="openinference-python-310">OpenInference (Python 3.10+)<a class="headerlink" href="#openinference-python-310" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openinference<span class="o">]</span>
 </code></pre></div>
-<p>Includes LiteLLM, Smolagents, and MCP instrumentation via OpenInference.</p>
+<p>Includes LiteLLM, Smolagents, and MCP instrumentation via OpenInference. The Claude
+Agent SDK and Agno extras install their corresponding OpenInference integrations, which
+currently target Python 3.10–3.14. Strands Agents uses the framework's native GenAI spans.</p>
 <h3 id="typesafe-ai-jev-python-310">TypeSafe AI / Jev (Python 3.10+)<a class="headerlink" href="#typesafe-ai-jev-python-310" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[typesafe]&#39;</span>
 </code></pre></div>
