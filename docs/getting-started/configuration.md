@@ -561,12 +561,12 @@ Capture image/audio/document content parts on spans. See the
 | Env var | Default | Notes |
 |---|---|---|
 | `GENAI_OTEL_MEDIA_CAPTURE_MODE` | `off` | `off` \| `reference_only` \| `full` |
-| `GENAI_OTEL_MEDIA_STORE` | `none` | `none` \| `filesystem` \| `s3` \| `minio` \| `http` |
-| `GENAI_OTEL_MEDIA_STORE_ENDPOINT` | — | URL or local path |
+| `GENAI_OTEL_MEDIA_STORE` | `none` | `none` \| `filesystem` \| `s3` \| `minio` \| `seaweed` \| `http` |
+| `GENAI_OTEL_MEDIA_STORE_ENDPOINT` | — | URL or local path; required for SeaweedFS and should point to its S3 gateway |
 | `GENAI_OTEL_MEDIA_STORE_BUCKET` | `genai-otel-media` | |
 | `GENAI_OTEL_MEDIA_STORE_PREFIX` | `traces/{date}/{trace_id}/` | template |
-| `GENAI_OTEL_MEDIA_STORE_ACCESS_KEY` | — | for s3/minio |
-| `GENAI_OTEL_MEDIA_STORE_SECRET_KEY` | — | for s3/minio |
+| `GENAI_OTEL_MEDIA_STORE_ACCESS_KEY` | — | for s3/minio/seaweed |
+| `GENAI_OTEL_MEDIA_STORE_SECRET_KEY` | — | for s3/minio/seaweed |
 | `GENAI_OTEL_MEDIA_MAX_BYTES` | `10485760` (10 MiB) | per-blob cap |
 | `GENAI_OTEL_MEDIA_ALLOWED_MODALITIES` | `image,audio,video,document` | comma-separated |
 | `GENAI_OTEL_MEDIA_REDACTOR` | — | dotted path to callable applied before upload |

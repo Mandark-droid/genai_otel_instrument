@@ -1,4 +1,4 @@
-"""S3 / MinIO media store. Requires the `multimodal-s3` extra (boto3)."""
+"""S3-compatible media store for AWS S3, MinIO, SeaweedFS, and others."""
 
 from __future__ import annotations
 
@@ -24,11 +24,13 @@ def _strip_userinfo(url: str) -> str:
 
 
 class S3MinioStore:
-    """Uploads to any S3-compatible object store (AWS S3, MinIO, Ceph, etc.).
+    """Uploads to any S3-compatible object store (AWS S3, MinIO, SeaweedFS, Ceph, etc.).
 
     Configures via constructor args or env-var fallback:
         AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
     For MinIO, set `endpoint` to e.g. `https://minio.internal:9000`.
+    For SeaweedFS, set its S3 gateway endpoint (usually port 8333) and use
+    path-style addressing.
     """
 
     def __init__(
@@ -39,6 +41,8 @@ class S3MinioStore:
         access_key: Optional[str] = None,
         secret_key: Optional[str] = None,
         region: str = "us-east-1",
+        addressing_style: str = "auto",
+        create_bucket_if_missing: bool = True,
         require_https: bool = False,
     ) -> None:
         if require_https and endpoint and endpoint.lower().startswith("http://"):
@@ -60,7 +64,10 @@ class S3MinioStore:
         client_kwargs = {
             "service_name": "s3",
             "region_name": region,
-            "config": Config(signature_version="s3v4"),
+            "config": Config(
+                signature_version="s3v4",
+                s3={"addressing_style": addressing_style},
+            ),
         }
         if endpoint:
             client_kwargs["endpoint_url"] = endpoint
@@ -69,12 +76,13 @@ class S3MinioStore:
             client_kwargs["aws_secret_access_key"] = secret_key
         self._client = boto3.client(**client_kwargs)
 
-        # Best-effort bucket creation (idempotent)
-        try:
-            self._client.create_bucket(Bucket=bucket)
-        except Exception as e:  # noqa: BLE001
-            # BucketAlreadyOwnedByYou / BucketAlreadyExists are expected
-            logger.debug("create_bucket: %s", e)
+        if create_bucket_if_missing:
+            # Best-effort bucket creation (idempotent)
+            try:
+                self._client.create_bucket(Bucket=bucket)
+            except Exception as e:  # noqa: BLE001
+                # BucketAlreadyOwnedByYou / BucketAlreadyExists are expected
+                logger.debug("create_bucket: %s", e)
 
     def put(self, data: bytes, *, key: str, mime_type: str) -> str:
         self._client.put_object(

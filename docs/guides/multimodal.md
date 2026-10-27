@@ -28,6 +28,22 @@ export GENAI_OTEL_MEDIA_STORE_ACCESS_KEY=...
 export GENAI_OTEL_MEDIA_STORE_SECRET_KEY=...
 ```
 
+For an on-premises SeaweedFS S3 gateway, select the `seaweed` store name. The
+SDK uses path-style S3 addressing for this backend; set the endpoint to the
+gateway, commonly port `8333`, and ensure the bucket exists and the credentials
+can write objects to it.
+
+```bash
+export GENAI_OTEL_MEDIA_STORE=seaweed
+export GENAI_OTEL_MEDIA_STORE_ENDPOINT=https://seaweed-s3.example.internal:8333
+export GENAI_OTEL_MEDIA_STORE_BUCKET=genai-otel-media
+export GENAI_OTEL_MEDIA_STORE_ACCESS_KEY=...
+export GENAI_OTEL_MEDIA_STORE_SECRET_KEY=...
+```
+
+The same boto3 instrumentation also emits nested S3 client spans for uploads
+performed by the media store.
+
 ```python
 from genai_otel import instrument
 instrument()
@@ -56,7 +72,7 @@ Set via `GENAI_OTEL_MEDIA_STORE`:
 |---|---|
 | `none` (default) | No offload. Works with `capture_mode=reference_only`. |
 | `filesystem` | Local directory. `MEDIA_STORE_ENDPOINT` is the root path. |
-| `s3` / `minio` | S3-compatible object storage. Requires the `multimodal-s3` extra. |
+| `s3` / `minio` / `seaweed` | S3-compatible object storage. Requires the `multimodal-s3` extra. `seaweed` selects path-style addressing for a SeaweedFS S3 gateway. |
 | `http` | PUTs to a configured base URL (self-hosted ingest gateways). |
 
 Per-blob size is capped by `GENAI_OTEL_MEDIA_MAX_BYTES` (default 10 MiB). Oversized blobs are
@@ -123,12 +139,12 @@ output, TTS responses).
 | Env var | Default | Notes |
 |---|---|---|
 | `GENAI_OTEL_MEDIA_CAPTURE_MODE` | `off` | `off` \| `reference_only` \| `full` |
-| `GENAI_OTEL_MEDIA_STORE` | `none` | `none` \| `filesystem` \| `s3` \| `minio` \| `http` |
-| `GENAI_OTEL_MEDIA_STORE_ENDPOINT` | — | URL or local path |
+| `GENAI_OTEL_MEDIA_STORE` | `none` | `none` \| `filesystem` \| `s3` \| `minio` \| `seaweed` \| `http` |
+| `GENAI_OTEL_MEDIA_STORE_ENDPOINT` | — | URL or local path; required for SeaweedFS and should point to its S3 gateway |
 | `GENAI_OTEL_MEDIA_STORE_BUCKET` | `genai-otel-media` | |
 | `GENAI_OTEL_MEDIA_STORE_PREFIX` | `traces/{date}/{trace_id}/` | template |
-| `GENAI_OTEL_MEDIA_STORE_ACCESS_KEY` | — | for s3/minio |
-| `GENAI_OTEL_MEDIA_STORE_SECRET_KEY` | — | for s3/minio |
+| `GENAI_OTEL_MEDIA_STORE_ACCESS_KEY` | — | for s3/minio/seaweed |
+| `GENAI_OTEL_MEDIA_STORE_SECRET_KEY` | — | for s3/minio/seaweed |
 | `GENAI_OTEL_MEDIA_MAX_BYTES` | `10485760` | per-blob size cap |
 | `GENAI_OTEL_MEDIA_ALLOWED_MODALITIES` | `image,audio,video,document` | comma-separated |
 | `GENAI_OTEL_MEDIA_REDACTOR` | — | dotted path to callable |

@@ -35,14 +35,22 @@ def get_store(config: Any) -> Optional[MediaStore]:
             root=getattr(config, "media_store_endpoint", None) or "./genai-otel-media",
             bucket=getattr(config, "media_store_bucket", "genai-otel-media"),
         )
-    if backend in ("s3", "minio"):
+    if backend in ("s3", "minio", "seaweed"):
         from .s3_minio import S3MinioStore
 
+        endpoint = getattr(config, "media_store_endpoint", None)
+        if backend == "seaweed" and not endpoint:
+            raise ValueError(
+                "SeaweedFS media store requires GENAI_OTEL_MEDIA_STORE_ENDPOINT "
+                "pointing to the SeaweedFS S3 gateway"
+            )
         return S3MinioStore(
-            endpoint=getattr(config, "media_store_endpoint", None),
+            endpoint=endpoint,
             bucket=getattr(config, "media_store_bucket", "genai-otel-media"),
             access_key=getattr(config, "media_store_access_key", None),
             secret_key=getattr(config, "media_store_secret_key", None),
+            addressing_style="path" if backend == "seaweed" else "auto",
+            create_bucket_if_missing=backend != "seaweed",
             require_https=require_https,
         )
     if backend == "http":
