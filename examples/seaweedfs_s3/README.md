@@ -18,6 +18,10 @@ export GENAI_OTEL_MEDIA_STORE_SECRET_KEY=your-secret-key
 python examples/seaweedfs_s3/example.py
 ```
 
+The example also accepts `endpoint`, `access_key`, `secret_key`, and `bucket`
+from the repository's `.env` file, for environments that already use those
+variable names.
+
 The bucket must already exist. Use HTTPS for production and keep the credentials
 in your deployment's secret manager. The example uses the SDK's `seaweed` media
 offload backend to upload a small temporary object, then reads and deletes it
