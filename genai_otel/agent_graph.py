@@ -53,8 +53,19 @@ def _span_id(span) -> Optional[int]:
 
 
 def _node_id(attributes) -> Optional[str]:
-    """The span's graph node, or None when the span is not an agent."""
-    for key in (GRAPH_NODE_ID, AGENT_NAME, "gen_ai.agent.name"):
+    """The span's graph node, or None when the span is not an agent.
+
+    An explicit ``graph.node.id`` always makes a node. Otherwise an agent name does,
+    unless the span declares a kind other than AGENT: a CrewAI task names the agent
+    that runs it, but it is a step, and the agent span inside it is the node.
+    """
+    explicit = attributes.get(GRAPH_NODE_ID)
+    if explicit:
+        return str(explicit)
+    kind = attributes.get(OPENINFERENCE_SPAN_KIND)
+    if kind and str(kind).upper() != "AGENT":
+        return None
+    for key in (AGENT_NAME, "gen_ai.agent.name"):
         value = attributes.get(key)
         if value:
             return str(value)

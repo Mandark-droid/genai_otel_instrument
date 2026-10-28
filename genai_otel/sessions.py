@@ -210,6 +210,16 @@ def current_user_id(ctx: Optional[otel_context.Context] = None) -> Optional[str]
     return _from_context(_USER_KEY, _OPENINFERENCE_USER_KEY, ctx)
 
 
+def span_session_id(ctx: Optional[otel_context.Context] = None) -> Optional[str]:
+    """The ``session.id`` already on the current span, if any.
+
+    An instrumentor resolving a session for a new span checks this before it
+    generates one, so a call made inside a session keeps it.
+    """
+    session_id, _ = _parent_ids(ctx)
+    return session_id
+
+
 def _inbound(key: str, ctx: Optional[otel_context.Context]) -> Optional[str]:
     if key not in _accept_keys:
         return None

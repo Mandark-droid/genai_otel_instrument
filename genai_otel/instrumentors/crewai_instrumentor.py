@@ -36,7 +36,7 @@ from opentelemetry.trace import Status, StatusCode
 
 from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
-from ..sessions import current_session_id, inbound_session_id
+from ..sessions import current_session_id, inbound_session_id, span_session_id
 from .base import BaseInstrumentor, _context_with_usage_holder, content_capture_on
 
 logger = logging.getLogger(__name__)
@@ -646,6 +646,10 @@ class CrewAIInstrumentor(BaseInstrumentor):
                 # attribute in v0.x). Cross-framework attribution per
                 # semantic-conventions-genai#91 uses role as the canonical name.
                 attrs["gen_ai.agent.name"] = str(instance.agent.role)
+            if self._graph_node_enabled():
+                # A task is a step, not an agent: the agent execution span inside it
+                # is the agent graph node, so the task must not become one as well.
+                attrs["openinference.span.kind"] = "CHAIN"
 
             # Extract task ID if available
             if hasattr(instance, "id"):
@@ -727,6 +731,10 @@ class CrewAIInstrumentor(BaseInstrumentor):
 
         return attrs
 
+    def _graph_node_enabled(self) -> bool:
+        """Whether the agent graph keys are written (GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES)."""
+        return bool(getattr(self.config, "enable_agent_graph_attributes", True))
+
     def _extract_crew_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Extract attributes from Crew.kickoff() call.
 
@@ -743,6 +751,14 @@ class CrewAIInstrumentor(BaseInstrumentor):
         # Core attributes
         attrs["gen_ai.system"] = "crewai"
         attrs["gen_ai.operation.name"] = "crew.execution"
+        if self._graph_node_enabled():
+            # The kickoff is the root of the agent graph; its agents hang beneath
+            # it, and two crews in one trace stay two graphs.
+            crew_name = getattr(instance, "name", None)
+            attrs["graph.node.id"] = (
+                str(crew_name) if isinstance(crew_name, str) and crew_name else "crew"
+            )
+            attrs["openinference.span.kind"] = "CHAIN"
 
         # Extract LLM model from agents for cost enrichment.
         # agent.llm can be a string (model name) or a BaseLLM/LLM object with .model attr.
@@ -876,8 +892,11 @@ class CrewAIInstrumentor(BaseInstrumentor):
             except Exception as e:
                 logger.debug("Failed to extract session ID via extractor: %s", e)
 
-        # Priority 4: a session an upstream service sent, when accepted. It ranks
-        # above the crew id, which CrewAI generates rather than the application.
+        # Priority 4: the session already on the enclosing span, then one an
+        # upstream service sent, when accepted. Both rank above the crew id, which
+        # CrewAI generates rather than the application.
+        if not session_id:
+            session_id = span_session_id()
         if not session_id:
             session_id = inbound_session_id()
 
