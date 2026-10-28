@@ -11,6 +11,11 @@ class TestMCPInstrumentorManager(unittest.TestCase):
     def setUp(self):
         # Enable HTTP instrumentation for tests that expect it
         self.config = OTelConfig(enable_http_instrumentation=True)
+        # boto3 is not a dev dependency, so stop the S3 instrumentor from patching a
+        # real botocore on machines that have it, which skews the summary counts.
+        s3_patcher = patch("genai_otel.mcp_instrumentors.manager.S3Instrumentor")
+        s3_patcher.start().return_value.instrument.return_value = False
+        self.addCleanup(s3_patcher.stop)
 
     def test_init(self):
         """Test that manager initializes correctly"""

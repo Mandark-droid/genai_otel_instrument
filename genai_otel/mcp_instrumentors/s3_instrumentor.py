@@ -64,7 +64,14 @@ class S3Instrumentor:
             endpoint = getattr(getattr(client, "meta", None), "endpoint_url", None)
             safe_address = _safe_server_address(endpoint)
             span_name = f"s3.{operation_name}"
-            with tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT) as span:
+            # The SDK's automatic exception handling would copy the error message
+            # onto the span; the except block below records the type only.
+            with tracer.start_as_current_span(
+                span_name,
+                kind=SpanKind.CLIENT,
+                record_exception=False,
+                set_status_on_exception=False,
+            ) as span:
                 span.set_attribute("db.system", "s3")
                 span.set_attribute("db.operation", operation_name)
                 if safe_address:

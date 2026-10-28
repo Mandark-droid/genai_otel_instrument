@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.0] - 2026-10-28
+
 ### Added
 
 - Sessions can cross service boundaries as W3C baggage, opt-in on each side. A
@@ -15,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to carry the user. An accepted id ranks below every session the service resolves
   itself, is validated, and is not forwarded further unless the service also sends it.
   With neither setting, propagation is unchanged (TraceContext only).
+- A warning is logged at the first span when session baggage is configured but the
+  global propagator was replaced after `instrument()`, since the replacement forwards
+  inbound session ids unfiltered or drops them.
+
+### Fixed
+
+- Keep S3 error messages off spans. A failed S3 call now records only the exception type
+  in the span status and `error.type`, as intended; previously the SDK also copied the
+  full error text into the status and an `exception` event.
 
 ## [1.45.0] - 2026-10-28
 
