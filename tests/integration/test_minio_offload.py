@@ -2,10 +2,10 @@
 
 Skipped unless GENAI_OTEL_MEDIA_STORE_ENDPOINT, _ACCESS_KEY, _SECRET_KEY are set.
 
-For the TraceVerse VM:
-    export GENAI_OTEL_MEDIA_STORE_ENDPOINT=http://192.168.206.129:9000
-    export GENAI_OTEL_MEDIA_STORE_ACCESS_KEY=<from VM .env>
-    export GENAI_OTEL_MEDIA_STORE_SECRET_KEY=<from VM .env>
+For example:
+    export GENAI_OTEL_MEDIA_STORE_ENDPOINT=http://localhost:9000
+    export GENAI_OTEL_MEDIA_STORE_ACCESS_KEY=<from your .env>
+    export GENAI_OTEL_MEDIA_STORE_SECRET_KEY=<from your .env>
     pytest tests/integration/test_minio_offload.py -v
 """
 

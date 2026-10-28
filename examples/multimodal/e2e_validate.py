@@ -1,7 +1,7 @@
 """End-to-end validation of the multimodal pipeline.
 
 Drives a synthetic OpenAI-shaped multimodal request through the instrumentor,
-uploads bytes to MinIO, ships the span to the TraceVerse OTel collector, then
+uploads bytes to MinIO, ships the span to an OTel collector, then
 asserts the trace landed in OpenSearch and the blob is in MinIO.
 
 No LLM API key required.
@@ -26,13 +26,14 @@ import os
 import sys
 import time
 
-VM = "192.168.206.129"
+# Host running the collector, MinIO and OpenSearch.
+VM = os.environ.get("GENAI_OTEL_E2E_HOST", "localhost")
 COLLECTOR_HTTP = f"http://{VM}:4318"
 MINIO_ENDPOINT = f"http://{VM}:9000"
 OPENSEARCH = f"http://{VM}:9200"
 BUCKET = "genai-otel-media-e2e"
 
-# Defaults so the script runs out-of-the-box on the dev VM
+# Defaults so the script runs out-of-the-box against GENAI_OTEL_E2E_HOST
 os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", COLLECTOR_HTTP)
 os.environ.setdefault("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
 os.environ.setdefault("OTEL_SERVICE_NAME", "genai-otel-multimodal-e2e")

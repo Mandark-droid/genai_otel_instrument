@@ -115,7 +115,7 @@ def test_collect_metrics_success(poller, mock_server_metrics):
         # Note: We can't easily verify the exact call args because requests.get is mocked globally
 
         # The engine's KV-cache entries are replaced in one call, so an unloaded model
-        # disappears (SDK_ADDITIONS section 12), and the capacity is labelled as engine's.
+        # disappears, and the capacity is labelled as engine's.
         mock_server_metrics.replace_engine_kv_cache_usage.assert_called_once()
         usage = mock_server_metrics.replace_engine_kv_cache_usage.call_args[0][0]
         assert set(usage) == {"llama2:latest", "mistral:latest"}

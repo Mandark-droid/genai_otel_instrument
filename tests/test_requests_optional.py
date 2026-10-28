@@ -4,8 +4,8 @@
 server-metrics poller imported it at module import time. The Ollama instrumentor imports
 the poller, `auto_instrument` imports the instrumentors, so `import genai_otel` raised
 `ModuleNotFoundError: requests` and an application without `requests` got no
-instrumentation at all. Found on the TraceVerse session-aggregator, which ran without
-self-monitoring for two weeks because of it.
+instrumentation at all. Found on a service that ran without self-monitoring for two
+weeks because of it.
 
 Each check runs in a subprocess so blocking `requests` cannot leak into other tests.
 """

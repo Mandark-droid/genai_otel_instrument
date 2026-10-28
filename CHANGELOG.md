@@ -617,7 +617,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `response.failed`, including reasoning and cached tokens.
 - **Anthropic, Azure OpenAI, Groq and Mistral spans named no operation.** They set no
   `gen_ai.operation.name`, which the OTel GenAI conventions require and which backends use to
-  tell one model call from a framework or tool span: TraceVerse counted none of these calls as
+  tell one model call from a framework or tool span: a backend counted none of these calls as
   model requests. Chat calls now set `chat`, Mistral embeddings `embeddings`.
 - **Only the first instrumentor constructed recorded metrics.** The shared token, cost,
   latency and error instruments were stored on whichever instrumentor SUBCLASS was
@@ -2890,8 +2890,8 @@ first-party vendor pricing always wins on conflict.
 - **`genai_otel.cost_estimation` module — public API for token/cost estimation
   in multimodal calls.** Exports `estimate_pipeline_usage`, `estimate_chat_usage`,
   `count_images`, `audio_seconds`, `coerce_text`, `result_text`. Designed to be
-  imported by external custom providers (e.g. tracesense / chaos-lab providers
-  that bypass `transformers.pipeline` and the standard `ollama` entry points).
+  imported by external custom providers (for example, providers that bypass
+  `transformers.pipeline` and the standard `ollama` entry points).
 - **Token / cost estimation for multimodal calls that omit usage data.**
   - `BaseInstrumentor._estimate_usage(result, request_kwargs)` hook (default
     returns `None`). When `_extract_usage` returns nothing, this fallback

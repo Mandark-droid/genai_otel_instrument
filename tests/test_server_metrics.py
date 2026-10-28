@@ -269,8 +269,8 @@ def _points(reader, name):
 
 
 def test_engine_samples_are_labelled_and_kept_apart(meter_provider):
-    """SDK_ADDITIONS section 12: a poller's reading says it came from the engine and
-    never overwrites what the application set (TraceVerse stores them apart)."""
+    """A poller's reading says it came from the engine and never overwrites what
+    the application set, so a backend can store the two apart."""
     provider, reader = meter_provider
     collector = ServerMetricsCollector(provider.get_meter("test"))
     collector.set_requests_waiting(1)

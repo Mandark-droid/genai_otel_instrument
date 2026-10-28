@@ -574,7 +574,7 @@ class HuggingFaceInstrumentor(BaseInstrumentor):
         usage attributes + cost. No-op when nothing can be estimated.
 
         Delegates the actual estimation to ``genai_otel.cost_estimation`` so
-        external callers (e.g. tracesense's custom providers that bypass
+        external callers (e.g. custom providers that bypass
         ``transformers.pipeline``) can reuse the same logic.
         """
         from .. import cost_estimation as _ce  # local import keeps deps lazy

@@ -194,7 +194,7 @@ research_crew = Crew(
 
 # Execute with custom inputs and an app-level session_id.
 # When session_id is passed in inputs, the instrumentor uses it as
-# session.id on all crew/task/agent spans for TraceVerse aggregation.
+# session.id on all crew/task/agent spans, grouping them into one session.
 # If omitted, the instrumentor auto-generates a UUID per kickoff.
 inputs = {"topic": "Quantum Computing Applications", "session_id": "user-abc-session-001"}
 print(f"Researching topic: {inputs['topic']}")

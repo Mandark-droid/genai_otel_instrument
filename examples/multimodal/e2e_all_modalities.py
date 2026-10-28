@@ -15,7 +15,7 @@ Run:
     python examples/multimodal/e2e_all_modalities.py
 
 Output: per-modality status + a summary of MinIO objects under
-http://192.168.206.129:9000/genai-otel-media/traces/<today>/.
+http://<host>:9000/genai-otel-media/traces/<today>/.
 """
 
 from __future__ import annotations
@@ -27,7 +27,8 @@ import sys
 import time
 from datetime import datetime, timezone
 
-VM = "192.168.206.129"
+# Host running the collector and MinIO.
+VM = os.environ.get("GENAI_OTEL_E2E_HOST", "localhost")
 COLLECTOR_HTTP = f"http://{VM}:4318"
 MINIO_ENDPOINT = f"http://{VM}:9000"
 BUCKET = "genai-otel-media"

@@ -56,8 +56,8 @@ must match the payload: image inputs emit `type=image`, audio inputs emit `type=
 - **`full`**: redact (if configured) → upload to store → emit URI. Bytes never appear in
   span attributes.
 
-## Verifying with TraceVerse / OTLP collector
+## Verifying with an OTLP collector
 
-When `media_capture_mode=full` and `media_store=minio` point at the TraceVerse VM
-(`http://192.168.206.129:9000`), spans will reference uploaded blobs by their MinIO URL
-and the TraceVerse UI's multimodal renderers can fetch them via signed URLs.
+When `media_capture_mode=full` and `media_store=minio` point at a MinIO instance
+(for example `http://localhost:9000`), spans will reference uploaded blobs by their MinIO URL
+and a UI with multimodal renderers can fetch them via signed URLs.

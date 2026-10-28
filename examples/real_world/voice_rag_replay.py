@@ -1,18 +1,18 @@
-"""Replay one real TraceSense banking voice-RAG turn through this package.
+"""Replay one real banking voice-RAG turn through this package.
 
-This offline example uses an actual WAV recording and the TraceSense
-knowledge-base corpus. It emits speech-to-text, local embedding, retrieval,
+This offline example uses an actual WAV recording and a knowledge-base
+corpus. It emits speech-to-text, local embedding, retrieval,
 and grounded-answer spans without requiring paid LLM credentials. The audio
 content part is emitted only on the speech span and must be typed as ``audio``.
 
 Example::
 
     python examples/real_world/voice_rag_replay.py \
-      --audio REDACTED-PATH/apps/tracesense/data/samples/audio/audio_001_account_balance.wav \
-      --corpus REDACTED-PATH/apps/tracesense/data/kb_corpus.py \
+      --audio <path-to>/account_balance.wav \
+      --corpus <path-to>/kb_corpus.py \
       --transcript "Please check my account balance and recent transactions."
 
-The corpus loader accepts TraceSense ``kb_corpus.py`` or JSONL records with a
+The corpus loader accepts a ``kb_corpus.py`` module or JSONL records with a
 ``text`` field and optional ``passage_id``/``title`` fields.
 """
 
@@ -123,7 +123,7 @@ def run(audio_path: Path, corpus_path: Path, transcript: str, endpoint: str) -> 
     provider = TracerProvider(
         resource=Resource.create(
             {
-                "service.name": "tracesense-voice-rag-real-world",
+                "service.name": "voice-rag-real-world",
                 "deployment.environment": "validation",
             }
         )
@@ -140,13 +140,13 @@ def run(audio_path: Path, corpus_path: Path, transcript: str, endpoint: str) -> 
     media.config = config
     media._instrumented = True
 
-    with tracer.start_as_current_span("tracesense.voice_rag.turn") as turn:
+    with tracer.start_as_current_span("voice_rag.turn") as turn:
         turn.set_attribute("rag.mode", "real_world_offline_replay")
         turn.set_attribute("rag.corpus.id", corpus_path.stem)
         turn.set_attribute("rag.input.audio.filename", audio_path.name)
         turn.set_attribute("rag.input.audio.bytes", len(audio_bytes))
 
-        with tracer.start_as_current_span("tracesense.speech_to_text") as speech:
+        with tracer.start_as_current_span("voice_rag.speech_to_text") as speech:
             speech.set_attribute("gen_ai.system", "openai-compatible")
             speech.set_attribute("gen_ai.request.model", "voice-replay-transcript")
             speech.set_attribute("gen_ai.operation.name", "speech_to_text")
@@ -210,7 +210,7 @@ def run(audio_path: Path, corpus_path: Path, transcript: str, endpoint: str) -> 
             if hits
             else "I could not find verified information in the support knowledge base."
         )
-        with tracer.start_as_current_span("tracesense.grounded_answer") as answer_span:
+        with tracer.start_as_current_span("voice_rag.grounded_answer") as answer_span:
             answer_span.set_attribute("gen_ai.operation.name", "chat")
             answer_span.set_attribute("gen_ai.response.text", answer[:1000])
             answer_span.set_attribute("rag.answer.refused", not bool(hits))
@@ -221,7 +221,7 @@ def run(audio_path: Path, corpus_path: Path, transcript: str, endpoint: str) -> 
     provider.force_flush(timeout_millis=15000)
     provider.shutdown()
     spans = memory_exporter.get_finished_spans()
-    speech_span = next(span for span in spans if span.name == "tracesense.speech_to_text")
+    speech_span = next(span for span in spans if span.name == "voice_rag.speech_to_text")
     media_type = speech_span.attributes.get("gen_ai.prompt.0.content.1.type")
     if media_type != "audio":
         raise AssertionError(f"Expected audio content type, got {media_type!r}")
@@ -239,7 +239,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--audio", required=True, type=Path, help="Path to a real WAV recording")
     parser.add_argument(
-        "--corpus", required=True, type=Path, help="TraceSense kb_corpus.py or JSONL corpus"
+        "--corpus", required=True, type=Path, help="kb_corpus.py module or JSONL corpus"
     )
     parser.add_argument(
         "--transcript", required=True, help="Transcript from the real voice recording"

@@ -688,7 +688,7 @@ class LangGraphInstrumentor(BaseInstrumentor):
             except Exception as e:
                 logger.debug("Failed to extract config: %s", e)
 
-        # --- Session ID extraction (required for TraceVerse session aggregation) ---
+        # --- Session ID extraction (backends group traces into sessions by it) ---
         session_id = None
 
         # Priority 1: App-provided session_id in input state

@@ -308,7 +308,7 @@ class OllamaServerMetricsPoller:
                 )
 
             # Replace, not merge: a model Ollama has unloaded must disappear rather than
-            # keep its last value (SDK_ADDITIONS section 12).
+            # keep its last value.
             server_metrics.replace_engine_kv_cache_usage(engine_kv)
 
             # Log aggregate metrics

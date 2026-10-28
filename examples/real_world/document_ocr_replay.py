@@ -1,6 +1,6 @@
-"""Replay one real TraceSense document-extraction turn through this package.
+"""Replay one real document-extraction turn through this package.
 
-The input is a real PDF or image from the TraceVerse Chaos Lab.  This is an
+The input is a real PDF or image from a lab fixture set.  This is an
 offline telemetry replay: it validates the document content-part shape and
 the OCR workflow hierarchy without pretending that a local fallback is a
 provider-backed OCR result.
@@ -74,7 +74,7 @@ def run(document_path: Path, endpoint: str | None, export: bool) -> dict[str, An
     provider = TracerProvider(
         resource=Resource.create(
             {
-                "service.name": "tracesense-document-ocr-real-world",
+                "service.name": "document-ocr-real-world",
                 "deployment.environment": "validation",
             }
         )
@@ -92,18 +92,18 @@ def run(document_path: Path, endpoint: str | None, export: bool) -> dict[str, An
     modality, content_part = _media_shape(data, mime_type)
     extracted_text = _document_text(document_path)
 
-    with tracer.start_as_current_span("tracesense.document_ocr.workflow") as root:
-        root.set_attribute("document.workflow", "tracesense.extract_document")
+    with tracer.start_as_current_span("document_ocr.workflow") as root:
+        root.set_attribute("document.workflow", "document_ocr.extract_document")
         root.set_attribute("document.input.filename", document_path.name)
         root.set_attribute("document.input.mime_type", mime_type)
         root.set_attribute("document.input.bytes", len(data))
 
-        with tracer.start_as_current_span("tracesense.document.ingest") as ingest:
+        with tracer.start_as_current_span("document_ocr.ingest") as ingest:
             ingest.set_attribute("document.modality", modality)
             ingest.set_attribute("document.pages", extracted_text.count("\f") + 1)
             ingest.set_attribute("document.text_chars", len(extracted_text))
 
-        with tracer.start_as_current_span("tracesense.document.ocr") as ocr:
+        with tracer.start_as_current_span("document_ocr.ocr") as ocr:
             ocr.set_attribute("gen_ai.system", "ollama-compatible")
             ocr.set_attribute("gen_ai.request.model", "gemma-4-E2B-it")
             ocr.set_attribute("gen_ai.operation.name", "document_extraction")
@@ -127,7 +127,7 @@ def run(document_path: Path, endpoint: str | None, export: bool) -> dict[str, An
             )
             ocr.set_attribute("document.ocr.extracted_text_chars", len(extracted_text))
 
-        with tracer.start_as_current_span("tracesense.document.validation") as validation:
+        with tracer.start_as_current_span("document_ocr.validation") as validation:
             validation.set_attribute("document.validation.input_read", True)
             validation.set_attribute("document.validation.provider_result", False)
             validation.set_attribute("document.validation.replay_only", True)
@@ -137,7 +137,7 @@ def run(document_path: Path, endpoint: str | None, export: bool) -> dict[str, An
     provider.force_flush(timeout_millis=15000)
     provider.shutdown()
     spans = memory_exporter.get_finished_spans()
-    ocr_span = next(span for span in spans if span.name == "tracesense.document.ocr")
+    ocr_span = next(span for span in spans if span.name == "document_ocr.ocr")
     emitted_type = ocr_span.attributes.get("gen_ai.prompt.0.content.1.type")
     emitted_mime = ocr_span.attributes.get("gen_ai.prompt.0.content.1.media_mime_type")
     expected_type = "document" if mime_type == "application/pdf" else "image"
