@@ -36,7 +36,7 @@ from opentelemetry.trace import Status, StatusCode
 
 from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
-from ..sessions import current_session_id, inbound_session_id
+from ..sessions import current_session_id, inbound_session_id, span_session_id
 from .base import BaseInstrumentor, _context_with_usage_holder, content_capture_on
 
 logger = logging.getLogger(__name__)
@@ -892,8 +892,11 @@ class CrewAIInstrumentor(BaseInstrumentor):
             except Exception as e:
                 logger.debug("Failed to extract session ID via extractor: %s", e)
 
-        # Priority 4: a session an upstream service sent, when accepted. It ranks
-        # above the crew id, which CrewAI generates rather than the application.
+        # Priority 4: the session already on the enclosing span, then one an
+        # upstream service sent, when accepted. Both rank above the crew id, which
+        # CrewAI generates rather than the application.
+        if not session_id:
+            session_id = span_session_id()
         if not session_id:
             session_id = inbound_session_id()
 

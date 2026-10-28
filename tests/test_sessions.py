@@ -625,3 +625,37 @@ def test_no_warning_when_ours_is_installed_or_baggage_is_off(baggage_config):
     ):
         os.environ.pop("OTEL_PROPAGATORS", None)
         assert warn_if_propagator_replaced() is False
+
+
+def test_calls_inside_a_session_reuse_it_instead_of_generating_one(setup):
+    """Regression: a chat model called inside a LangGraph node generated a fresh UUID
+    and overwrote the session.id its span had inherited, so one run carried two
+    sessions."""
+    from genai_otel.instrumentors.crewai_instrumentor import CrewAIInstrumentor
+    from genai_otel.instrumentors.langchain_instrumentor import LangChainInstrumentor
+    from genai_otel.instrumentors.langgraph_instrumentor import LangGraphInstrumentor
+
+    tracer, _ = setup
+    chain = LangChainInstrumentor()
+    chain.config = OTelConfig()
+    graph = LangGraphInstrumentor()
+    graph.config = OTelConfig()
+    crew_instrumentor = CrewAIInstrumentor()
+    crew_instrumentor.config = OTelConfig()
+    crew = types.SimpleNamespace(id="crew-uuid", agents=[], tasks=[])
+
+    with tracer.start_as_current_span("graph", attributes={"session.id": "run-1"}):
+        with tracer.start_as_current_span("node"):
+            assert chain._resolve_session_id(None, ({},), {}) == "run-1"
+            assert graph._extract_graph_attributes(object(), ({},), {}, None)["session.id"] == (
+                "run-1"
+            )
+            assert crew_instrumentor._extract_crew_attributes(crew, (), {})["session.id"] == (
+                "run-1"
+            )
+            # An id the call passes itself still wins.
+            assert chain._resolve_session_id(None, ({},), {"session_id": "call"}) == "call"
+
+    # Outside any session, each falls back as before.
+    assert chain._resolve_session_id(None, ({},), {}) not in (None, "run-1")
+    assert crew_instrumentor._extract_crew_attributes(crew, (), {})["session.id"] == "crew-uuid"

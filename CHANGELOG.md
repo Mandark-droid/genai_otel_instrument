@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   agent, parented to the crew. The task span keeps `gen_ai.agent.name` and is marked
   `CHAIN`. Generally, a span that declares a kind other than `AGENT` and sets no
   `graph.node.id` is no longer an agent graph node.
+- A LangChain chat model, chain or agent called inside a session without an explicit
+  session id generated a fresh UUID and overwrote the `session.id` its span had
+  inherited, so one LangGraph run carried two sessions. LangChain, LangGraph and CrewAI
+  now reuse the session already on the enclosing span before generating one.
 
 ## [1.46.0] - 2026-10-28
 

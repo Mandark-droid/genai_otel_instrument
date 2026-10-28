@@ -11,7 +11,7 @@ import uuid
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
-from ..sessions import current_session_id, inbound_session_id
+from ..sessions import current_session_id, inbound_session_id, span_session_id
 from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
@@ -81,8 +81,9 @@ class LangChainInstrumentor(BaseInstrumentor):
         2. Input dict session_id / session.id (first positional arg)
         3. An enclosing genai_otel.session() block
         4. OTelConfig.session_id_extractor callable
-        5. A session an upstream service sent, when accepted
-        6. Auto-generate UUID
+        5. The session already on the enclosing span
+        6. A session an upstream service sent, when accepted
+        7. Auto-generate UUID
 
         Returns:
             str: The resolved session ID.
@@ -109,11 +110,17 @@ class LangChainInstrumentor(BaseInstrumentor):
             except Exception as e:
                 logger.debug("Failed to extract session ID via extractor: %s", e)
 
-        # Priority 5: a session an upstream service sent, when accepted
+        # Priority 5: the session already on the enclosing span. A chat model
+        # called inside a LangGraph node or an agent belongs to that session; a
+        # fresh UUID here overwrote the one the span had inherited.
+        if not session_id:
+            session_id = span_session_id()
+
+        # Priority 6: a session an upstream service sent, when accepted
         if not session_id:
             session_id = inbound_session_id()
 
-        # Priority 6: Auto-generate UUID
+        # Priority 7: Auto-generate UUID
         if not session_id:
             session_id = str(uuid.uuid4())
 
