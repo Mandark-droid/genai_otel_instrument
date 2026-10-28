@@ -30,6 +30,7 @@ from .minio_instrumentor import MinIOInstrumentor
 from .opensearch_instrumentor import OpenSearchInstrumentor
 from .rabbitmq_instrumentor import RabbitMQInstrumentor
 from .redis_instrumentor import RedisInstrumentor
+from .s3_instrumentor import S3Instrumentor
 from .timescaledb_instrumentor import TimescaleDBInstrumentor
 from .vector_db_instrumentor import VectorDBInstrumentor
 
@@ -212,6 +213,22 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
         except Exception as e:
             failure_count += 1
             logger.error("[ERROR] Failed to instrument MinIO: %s", e, exc_info=True)
+            if fail_on_error:
+                raise
+
+        # boto3 S3 API instrumentation (SeaweedFS, AWS S3, and compatible stores)
+        try:
+            logger.info("Instrumenting S3-compatible object storage")
+            s3_instrumentor = S3Instrumentor(self.config)
+            if s3_instrumentor.instrument():
+                success_count += 1
+                logger.info("[OK] S3-compatible object storage instrumentation enabled")
+        except ImportError as e:
+            failure_count += 1
+            logger.debug("[SKIP] S3 instrumentation skipped due to missing dependency: %s", e)
+        except Exception as e:
+            failure_count += 1
+            logger.error("[ERROR] Failed to instrument S3-compatible storage: %s", e, exc_info=True)
             if fail_on_error:
                 raise
 

@@ -701,7 +701,7 @@ class OTelConfig:
     )
     media_store: str = field(
         default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_STORE", "none")
-    )  # none | filesystem | s3 | minio | http
+    )  # none | filesystem | s3 | minio | seaweed | http
     media_store_endpoint: Optional[str] = field(
         default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_STORE_ENDPOINT")
     )

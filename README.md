@@ -166,7 +166,7 @@ CrewAI, LangGraph, Google ADK, AutoGen, AutoGen AgentChat, OpenAI Agents SDK, Py
 
 ### MCP Tools (20+)
 **Databases:** PostgreSQL, MySQL, MongoDB, SQLAlchemy, TimescaleDB, OpenSearch, Elasticsearch, FalkorDB
-**Caching:** Redis | **Queues:** Kafka, RabbitMQ | **Storage:** MinIO
+**Caching:** Redis | **Queues:** Kafka, RabbitMQ | **Storage:** MinIO, SeaweedFS (S3 API)
 **Vector DBs:** Pinecone, Weaviate, Qdrant, ChromaDB, Milvus, FAISS, LanceDB
 
 [See all MCP tools >>](https://mandark-droid.github.io/genai_otel_instrument/guides/mcp-tools/)
@@ -264,7 +264,7 @@ First-class capture of image, audio, video, and document content parts on
 OpenAI, Anthropic, Google Gemini, and Groq spans, and of the audio on Sarvam and
 ElevenLabs speech calls (the audio sent for transcription, the audio text-to-speech
 returns; the transcript and spoken text follow content capture). Bytes are offloaded
-to your configured object store (MinIO / S3 / filesystem / HTTP) and referenced from
+to your configured object store (MinIO / SeaweedFS / S3 / filesystem / HTTP) and referenced from
 spans by URI — they never appear inline in span attributes.
 
 ```bash
@@ -277,6 +277,10 @@ export GENAI_OTEL_MEDIA_STORE_SECRET_KEY=...
 # Optional: plug in a redactor before upload
 export GENAI_OTEL_MEDIA_REDACTOR=genai_otel.media.redactors.face_blur
 ```
+
+For SeaweedFS, set `GENAI_OTEL_MEDIA_STORE=seaweed` and point
+`GENAI_OTEL_MEDIA_STORE_ENDPOINT` at its S3 gateway (commonly port 8333). The SDK
+uses path-style addressing; create the bucket before running the application.
 
 Spans get two co-emitted representations of the same multimodal content:
 

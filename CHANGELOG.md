@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Trace boto3 S3 API operations, including calls to SeaweedFS S3 gateways, and add a
+  runnable SeaweedFS instrumentation example. The multimodal media offload store also
+  accepts `GENAI_OTEL_MEDIA_STORE=seaweed` and uses path-style addressing.
+
 ## [1.42.0] - 2026-10-26
 
 ### Added

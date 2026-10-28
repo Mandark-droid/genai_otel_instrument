@@ -152,6 +152,46 @@ response = client.chat.completions.create(
 | Tool | Operations Traced | Install |
 |------|-------------------|---------|
 | MinIO (S3-compatible) | Put, get, list objects | `[object-storage]` |
+| SeaweedFS S3 gateway (boto3) | S3 API operations, including put, get, list, and delete | `[aws]` |
+
+SeaweedFS exposes the AWS S3 API through its S3 gateway. The SDK traces boto3 S3
+API calls regardless of whether the endpoint is SeaweedFS, AWS S3, or another
+S3-compatible service. No SeaweedFS-specific Python client is required.
+
+```bash
+pip install 'genai-otel-instrument[aws]'
+```
+
+```python
+import os
+import boto3
+from botocore.config import Config
+from genai_otel import instrument
+
+instrument()  # enable MCP/object-storage instrumentation before creating clients
+
+s3 = boto3.client(
+    "s3",
+    endpoint_url="https://seaweed-s3.example.internal:8333",
+    region_name="us-east-1",
+    aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+    aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+    config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+)
+s3.put_object(Bucket="agent-artifacts", Key="sessions/output.json", Body=b"{}")
+s3.get_object(Bucket="agent-artifacts", Key="sessions/output.json")
+```
+
+Configure the endpoint and credentials for your SeaweedFS deployment. SeaweedFS
+supports S3 Signature Version 4 and documents its S3 gateway credentials in its
+[S3 API guide](https://github.com/seaweedfs/seaweedfs/wiki/Amazon-S3-API). The
+example uses path-style addressing, which works with a gateway that has not been
+configured for virtual-hosted bucket domains. Spans record the operation, bucket,
+object key, and endpoint hostname; they do not record credentials, request bodies,
+or object contents. For `GetObject`, the span measures the S3 API request through
+response creation; later reads from the returned streaming body happen outside it.
+See the [runnable SDK example](../../examples/seaweedfs_s3/) for direct S3 tracing
+and the multimodal offload store together.
 
 ## HTTP/REST APIs
 

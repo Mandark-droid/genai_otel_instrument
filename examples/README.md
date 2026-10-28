@@ -42,6 +42,7 @@ That's it! No code changes needed in your application logic.
 - **[vertexai/](vertexai/)** - Google Cloud Vertex AI
 - **[xai_sdk/](xai_sdk/)** - xAI Grok chat, image/video generation, and voice TTS REST
 - **[typesafe/](typesafe/)** - TypeSafe AI / Jev structured decisions
+- **[seaweedfs_s3/](seaweedfs_s3/)** - SeaweedFS S3 gateway operation tracing with boto3
 
 ### Frameworks
 

@@ -18,7 +18,7 @@ pip install 'genai-otel-instrument[multimodal]'
 pip install 'genai-otel-instrument[multimodal-images]'   # Pillow (EXIF stripping)
 pip install 'genai-otel-instrument[multimodal-pdf]'      # pypdf (PDF redaction)
 pip install 'genai-otel-instrument[multimodal-faces]'    # opencv (face blur)
-pip install 'genai-otel-instrument[multimodal-s3]'       # boto3 (S3/MinIO offload)
+pip install 'genai-otel-instrument[multimodal-s3]'       # boto3 (S3/MinIO/SeaweedFS offload)
 ```
 
 See the [Multimodal Observability guide](../guides/multimodal.md) for capture-mode
