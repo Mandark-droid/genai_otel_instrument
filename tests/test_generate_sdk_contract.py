@@ -45,6 +45,9 @@ def _generate(out_dir: Path) -> None:
     completed = subprocess.run(
         [sys.executable, str(GENERATOR), "--out", str(out_dir)],
         cwd=str(REPO_ROOT),
+        # The generator reads nothing. Inheriting stdin fails on Windows when the
+        # test runner itself has none ("WinError 6: The handle is invalid").
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         timeout=600,
@@ -151,7 +154,7 @@ def test_cost_vectors_cover_the_pricing_table(contract_dir):
     pricing = json.loads((REPO_ROOT / "genai_otel" / "llm_pricing.json").read_text("utf-8"))
     # Keys that differ only by case collapse to one entry in the calculator's
     # index, so coverage is checked case-insensitively.
-    for category in ("chat", "embeddings", "images", "audio", "speech_to_text"):
+    for category in ("chat", "embeddings", "images", "audio", "speech_to_text", "decision"):
         resolved = {
             v["resolved_key"].lower()
             for v in vectors
@@ -181,6 +184,57 @@ def test_cost_vectors_pin_the_boundary_cases(contract_dir):
     assert all(v["resolved_key"] != "o1" for v in by_model["Sao10K/L3-8B-Stheno-v3.2"])
     # A dated snapshot routes to its family, not to a shorter sibling.
     assert by_model["gpt-5.5-mini-2026-04-01"][0]["resolved_key"] == "gpt-5.5-mini"
+
+
+def test_speech_to_text_and_decision_are_priced(contract_dir):
+    document = _load(contract_dir, "cost_vectors.json")
+    assert {"speech_to_text", "decision"} <= set(document["supported_call_types"])
+    vectors = document["vectors"]
+    stt = [v for v in vectors if v["kind"] == "table" and v["call_type"] == "speech_to_text"]
+    # Priced since 1.32 (some entries are free, so not every cost is above 0).
+    assert stt and all(v["priced"] for v in stt) and any(v["cost"] > 0 for v in stt)
+    # Usage carrying "seconds" is billed from the audio table.
+    by_seconds = [
+        v for v in vectors if v["call_type"] == "speech_to_text" and "seconds" in v["usage"]
+    ]
+    assert by_seconds and all(v["resolved_category"] == "audio" for v in by_seconds)
+    # A decision model is never priced from the chat table.
+    gpt4o = [v for v in vectors if v["call_type"] == "decision" and v["model"] == "gpt-4o"]
+    assert gpt4o and all(v["priced"] is False and v["cost"] == 0.0 for v in gpt4o)
+
+
+def test_session_and_agent_graph_surface(contract_dir):
+    variables = {v["env"]: v for v in _load(contract_dir, "config.json")["variables"]}
+    for env in ("GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES", "GENAI_ENABLE_SESSION_PROPAGATION"):
+        assert variables[env]["default"] is True
+    keys = variables["GENAI_SESSION_BAGGAGE_KEYS"]
+    assert keys["default"] == []
+    cases = {c["raw"]: c["parsed"] for c in keys["cases"]}
+    # Only session.id and user.id are carried, in that order, whatever was asked.
+    assert cases["user.id,session.id"] == ["session.id", "user.id"]
+    assert cases["session.id,gen_ai.conversation.id"] == ["session.id"]
+
+    semconv = _load(contract_dir, "semconv.json")
+    attributes = {a["name"] for a in semconv["attributes"]}
+    for name in (
+        "agent.name",
+        "graph.node.id",
+        "graph.node.parent_id",
+        "graph.node.name",
+        "graph.node.display_name",
+        "openinference.span.kind",
+        "langgraph.node",
+        "langgraph.step",
+        "langgraph.triggers",
+        "session.id",
+        "user.id",
+        "gen_ai.conversation.id",
+    ):
+        assert name in attributes, f"{name} missing from semconv.json"
+    span_names = {s["name"] for s in semconv["span_names"]}
+    # Named through a helper, not at the span call: the scan has to follow it.
+    assert "langgraph.node.{name}" in span_names
+    assert "aws.bedrock.converse_stream" in span_names
 
 
 def test_eval_vectors_cover_every_detector(contract_dir):

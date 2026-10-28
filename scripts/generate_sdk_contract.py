@@ -311,12 +311,53 @@ _ATTR_NAME = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$")
 _ATTR_SETTERS = ("set_attribute", "safe_set_attribute", "setdefault")
 
 
+def _loop_bound_values(node: ast.AST) -> List[ast.AST]:
+    """The literal values a loop variable takes, when it is bound by a literal ``for``.
+
+    ``for source, key in (("input_tokens", "llm.token_count.prompt"), ...):
+    attrs[key] = ...`` names its attributes in the loop's tuple, not at the
+    assignment (typesafe_instrumentor since 1.38).
+    """
+    if not isinstance(node, ast.Name):
+        return []
+    current = getattr(node, "_parent", None)
+    while current is not None and not isinstance(
+        current, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)
+    ):
+        if isinstance(current, (ast.For, ast.AsyncFor)) and isinstance(
+            current.iter, (ast.Tuple, ast.List)
+        ):
+            target = current.target
+            if isinstance(target, ast.Name) and target.id == node.id:
+                return list(current.iter.elts)
+            if isinstance(target, ast.Tuple):
+                for i, elt in enumerate(target.elts):
+                    if isinstance(elt, ast.Name) and elt.id == node.id:
+                        return [
+                            item.elts[i]
+                            for item in current.iter.elts
+                            if isinstance(item, ast.Tuple) and len(item.elts) > i
+                        ]
+        current = getattr(current, "_parent", None)
+    return []
+
+
+def _is_host_table(node: ast.Dict) -> bool:
+    """A dict keyed by host names (decision.py's _PROVIDER_HOSTS), not by attributes."""
+    parent = getattr(node, "_parent", None)
+    return isinstance(parent, ast.Assign) and any(
+        isinstance(t, ast.Name) and "HOST" in t.id.upper() for t in parent.targets
+    )
+
+
 def scan_attribute_names(index: SourceIndex, skip: set) -> Dict[str, Dict[str, Any]]:
     found: Dict[str, Dict[str, Any]] = {}
 
     def note(node: ast.AST, rel: str, via: str) -> None:
         resolved = index.resolve(node, rel)
         if not resolved:
+            for value in _loop_bound_values(node):
+                note(value, rel, via)
             return
         name, template = resolved
         if template:
@@ -337,7 +378,7 @@ def scan_attribute_names(index: SourceIndex, skip: set) -> Dict[str, Dict[str, A
                 called = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
                 if called in _ATTR_SETTERS and node.args:
                     note(node.args[0], rel, "set_attribute_call")
-            elif isinstance(node, ast.Dict):
+            elif isinstance(node, ast.Dict) and not _is_host_table(node):
                 for key in node.keys:
                     if key is not None:
                         note(key, rel, "dict_key")
@@ -349,28 +390,195 @@ def scan_attribute_names(index: SourceIndex, skip: set) -> Dict[str, Dict[str, A
     return found
 
 
+_SPAN_STARTERS = ("create_span_wrapper", "start_span", "start_as_current_span")
+_FUNCTION_DEFS = (ast.FunctionDef, ast.AsyncFunctionDef)
+
+
+def _ancestors(node: ast.AST) -> Iterator[ast.AST]:
+    current = getattr(node, "_parent", None)
+    while current is not None:
+        yield current
+        current = getattr(current, "_parent", None)
+
+
+def _params(func: ast.AST) -> List[str]:
+    args = func.args  # type: ignore[attr-defined]
+    return [a.arg for a in args.posonlyargs + args.args + args.kwonlyargs]
+
+
 def scan_span_names(index: SourceIndex) -> List[Dict[str, Any]]:
+    """Span names, from literal arguments of the span starters.
+
+    After 1.30 several instrumentors hand the name to a helper first (bedrock's
+    _wrap_event_stream, pydantic-ai's _AgentRunSpan, decision.py's
+    _traced_decision, LangGraph's _trace_stream, and LangGraph's node spans, whose
+    name is returned by _node_span). So a name that is a parameter of the
+    enclosing function, an attribute set from one in __init__, or unpacked from a
+    method's returned tuple is followed back to the literals callers pass: in
+    every module when the helper's name is defined once in the package, else in
+    its own module only.
+    """
     found: Dict[str, Dict[str, Any]] = {}
+    helpers: List[Tuple[str, ast.AST, str, str]] = []
+    seen_helpers: set = set()
+
+    def record(resolved: Tuple[str, bool], rel: str, via: str) -> None:
+        entry = found.setdefault(
+            resolved[0], {"modules": set(), "via": set(), "template": resolved[1]}
+        )
+        entry["modules"].add(rel)
+        entry["via"].add(via)
+
+    def add_helper(rel: str, func: ast.AST, param: str, via: str) -> None:
+        key = (rel, id(func), param)
+        if key not in seen_helpers:
+            seen_helpers.add(key)
+            helpers.append((rel, func, param, via))
+
+    def functions_named(rel: str, name: str) -> List[ast.AST]:
+        return [
+            n
+            for n in ast.walk(index.trees[rel])
+            if isinstance(n, _FUNCTION_DEFS) and n.name == name
+        ]
+
+    def returned(rel: str, call: ast.AST, position: int, depth: int) -> List[ast.AST]:
+        """Element ``position`` of the tuples the called method returns."""
+        if depth > 3 or not isinstance(call, ast.Call):
+            return []
+        func = call.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+        out: List[ast.AST] = []
+        for definition in functions_named(rel, name) if name else []:
+            for node in ast.walk(definition):
+                if not isinstance(node, ast.Return) or node.value is None:
+                    continue
+                if isinstance(node.value, ast.Tuple) and len(node.value.elts) > position:
+                    out.append(node.value.elts[position])
+                elif isinstance(node.value, ast.Call):
+                    out.extend(returned(rel, node.value, position, depth + 1))
+        return out
+
+    def unpacked(rel: str, name: ast.Name) -> List[ast.AST]:
+        """Sources of ``name`` when it is unpacked from a call's tuple: x, y = self.f()."""
+        for scope in _ancestors(name):
+            if not isinstance(scope, _FUNCTION_DEFS):
+                continue
+            for node in ast.walk(scope):
+                if not (isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Tuple)):
+                    continue
+                elts = node.targets[0].elts
+                for i, elt in enumerate(elts):
+                    if not (isinstance(elt, ast.Name) and elt.id == name.id):
+                        continue
+                    value = node.value
+                    if isinstance(value, ast.Name):
+                        # prepared = self._prepare(...); span_name, attrs = prepared
+                        for assign in ast.walk(scope):
+                            if (
+                                isinstance(assign, ast.Assign)
+                                and isinstance(assign.targets[0], ast.Name)
+                                and assign.targets[0].id == value.id
+                            ):
+                                return returned(rel, assign.value, i, 0)
+                    return returned(rel, value, i, 0)
+        return []
+
+    def trace(expr: ast.AST, rel: str, via: str) -> None:
+        resolved = index.resolve(expr, rel)
+        if resolved:
+            record(resolved, rel, via)
+            return
+        if isinstance(expr, ast.Name):
+            for scope in _ancestors(expr):
+                if isinstance(scope, _FUNCTION_DEFS) and expr.id in _params(scope):
+                    add_helper(rel, scope, expr.id, via)
+                    return
+            for source in unpacked(rel, expr):
+                trace(source, rel, via)
+        elif (
+            isinstance(expr, ast.Attribute)
+            and isinstance(expr.value, ast.Name)
+            and expr.value.id == "self"
+        ):
+            cls = next((a for a in _ancestors(expr) if isinstance(a, ast.ClassDef)), None)
+            for node in ast.walk(cls) if cls is not None else ():
+                if (
+                    isinstance(node, ast.Assign)
+                    and isinstance(node.targets[0], ast.Attribute)
+                    and node.targets[0].attr == expr.attr
+                    and isinstance(node.value, ast.Name)
+                ):
+                    method = next(
+                        (a for a in _ancestors(node) if isinstance(a, _FUNCTION_DEFS)), None
+                    )
+                    if method is not None and node.value.id in _params(method):
+                        add_helper(rel, method, node.value.id, via)
+
     for rel, tree in index.trees.items():
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
             func = node.func
             called = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
-            if called not in ("create_span_wrapper", "start_span", "start_as_current_span"):
+            if called not in _SPAN_STARTERS:
                 continue
             target: Optional[ast.AST] = node.args[0] if node.args else None
             for keyword in node.keywords:
                 if keyword.arg in ("span_name", "name"):
                     target = keyword.value
-            resolved = index.resolve(target, rel) if target is not None else None
-            if not resolved:
+            if target is not None:
+                trace(target, rel, called)
+
+    # How many times each function / class name is defined across the package. A
+    # helper defined once (decision.py's _traced_decision, called from
+    # typesafe_instrumentor.py) is followed into every module; a name defined more
+    # than once only within its own module, so same-named helpers do not mix.
+    definitions: Dict[str, int] = {}
+    for tree in index.trees.values():
+        for node in ast.walk(tree):
+            if isinstance(node, _FUNCTION_DEFS + (ast.ClassDef,)):
+                definitions[node.name] = definitions.get(node.name, 0) + 1
+
+    # Follow each helper parameter to the arguments its callers pass, until no
+    # new helper turns up.
+    while helpers:
+        rel, func, param, via = helpers.pop()
+        params = _params(func)
+        position = params.index(param)
+        bound = 1 if params and params[0] in ("self", "cls") else 0
+        callee = func.name  # type: ignore[attr-defined]
+        if callee == "__init__":
+            cls = next((a for a in _ancestors(func) if isinstance(a, ast.ClassDef)), None)
+            if cls is None:
                 continue
-            entry = found.setdefault(
-                resolved[0], {"modules": set(), "via": set(), "template": resolved[1]}
-            )
-            entry["modules"].add(rel)
-            entry["via"].add(called)
+            callee = cls.name
+        modules = list(index.trees) if definitions.get(callee) == 1 else [rel]
+        calls = [
+            (module, node)
+            for module in modules
+            for node in ast.walk(index.trees[module])
+            if isinstance(node, ast.Call)
+        ]
+        for caller_rel, node in calls:
+            name = node.func.attr if isinstance(node.func, ast.Attribute) else None
+            name = name or getattr(node.func, "id", None)
+            if name != callee:
+                continue
+            arg: Optional[ast.AST] = None
+            for keyword in node.keywords:
+                if keyword.arg == param:
+                    arg = keyword.value
+            # self is bound when a method is called on an object, and always for
+            # a constructor call.
+            is_constructor = callee != func.name  # type: ignore[attr-defined]
+            via_object = isinstance(node.func, ast.Attribute) or is_constructor
+            index_in_call = position - (bound if via_object else 0)
+            if arg is None and 0 <= index_in_call < len(node.args):
+                arg = node.args[index_in_call]
+            if arg is not None and not isinstance(arg, ast.Starred):
+                trace(arg, caller_rel, via)
+
     return [
         {
             "name": name,
@@ -774,6 +982,29 @@ def build_engine_latency_section() -> Dict[str, Any]:
     }
 
 
+def _openinference_integrations() -> Dict[str, Dict[str, str]]:
+    """The (name, module, class) table ``_check_openinference`` imports from, via ast.
+
+    Empty for versions without the table, where every entry is a real class.
+    """
+    tree = ast.parse((PACKAGE_DIR / "auto_instrument.py").read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.FunctionDef) and node.name == "_check_openinference"):
+            continue
+        for stmt in ast.walk(node):
+            if (
+                isinstance(stmt, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "integrations" for t in stmt.targets)
+                and isinstance(stmt.value, ast.Tuple)
+            ):
+                table = {}
+                for row in stmt.value.elts:
+                    name, module, class_name = (ast.literal_eval(e) for e in row.elts)
+                    table[name] = {"module": module, "class": class_name}
+                return table
+    return {}
+
+
 def build_semconv(runtime: "Runtime", metric_names: set) -> Dict[str, Any]:
     from genai_otel import auto_instrument
     from genai_otel import config as config_mod
@@ -796,6 +1027,10 @@ def build_semconv(runtime: "Runtime", metric_names: set) -> Dict[str, Any]:
     instrumentor_ids = set(auto_instrument.INSTRUMENTORS)
     scanned = scan_attribute_names(runtime.index, skip=instrumentor_ids)
     for value in constants.values():
+        # Since 1.37 SemanticConvention also holds attribute VALUES
+        # (TOKEN_MODALITY_UNKNOWN = "unknown"). A dotless value is not a name.
+        if "." not in value:
+            continue
         if value not in metric_names and value not in scanned:
             scanned[value] = {"modules": set(), "via": set(), "template": "{" in value}
     for record in emission:
@@ -855,15 +1090,22 @@ def build_semconv(runtime: "Runtime", metric_names: set) -> Dict[str, Any]:
     with scrubbed_env():
         default_instrumentors = list(config_mod._get_enabled_instrumentors())
         default_opt_in = config_mod.OTelConfig().semconv_stability_opt_in
-    instrumentors = [
-        {
+    # OpenInference integrations are registered lazily: their INSTRUMENTORS entry
+    # holds a class only when that package is installed here. Their class names
+    # come from the integration table in source instead, so the output does not
+    # depend on the generating virtualenv.
+    openinference = _openinference_integrations()
+    instrumentors = []
+    for name, cls in sorted(auto_instrument.INSTRUMENTORS.items()):
+        entry = {
             "id": name,
-            "class": cls.__name__,
+            "class": openinference[name]["class"] if name in openinference else cls.__name__,
             "default": name in default_instrumentors,
             "opt_in": name in config_mod.OPT_IN_INSTRUMENTORS,
         }
-        for name, cls in sorted(auto_instrument.INSTRUMENTORS.items())
-    ]
+        if name in openinference:
+            entry["openinference_module"] = openinference[name]["module"]
+        instrumentors.append(entry)
     registered = set(auto_instrument.INSTRUMENTORS)
 
     mcp_classes = {}
@@ -1437,6 +1679,22 @@ def otel_config_env_fields(index: SourceIndex) -> Dict[str, List[str]]:
     tree = index.trees[rel]
     functions = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
 
+    def env_param_position(func: ast.FunctionDef) -> Optional[int]:
+        # Since 1.36 some fields read through a helper that takes the variable's
+        # name as an argument (_number_from_env("GENAI_EVALUATION_QUEUE_SIZE", ...),
+        # _characters_from_env(...)). Which parameter is passed to os.getenv?
+        params = [a.arg for a in func.args.args]
+        for child in ast.walk(func):
+            if (
+                isinstance(child, ast.Call)
+                and dotted_name(child.func) in ("os.getenv", "os.environ.get")
+                and child.args
+                and isinstance(child.args[0], ast.Name)
+                and child.args[0].id in params
+            ):
+                return params.index(child.args[0].id)
+        return None
+
     def env_names(node: ast.AST, seen: Optional[set] = None) -> List[str]:
         seen = set() if seen is None else seen
         names: List[str] = []
@@ -1448,6 +1706,16 @@ def otel_config_env_fields(index: SourceIndex) -> Dict[str, List[str]]:
                 resolved = index.resolve(child.args[0], rel)
                 if resolved:
                     names.append(resolved[0])
+            elif (
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Name)
+                and child.func.id in functions
+            ):
+                position = env_param_position(functions[child.func.id])
+                if position is not None and len(child.args) > position:
+                    resolved = index.resolve(child.args[position], rel)
+                    if resolved and not resolved[1]:
+                        names.append(resolved[0])
             elif isinstance(child, ast.Name) and child.id in functions and child.id not in seen:
                 seen.add(child.id)
                 names.extend(env_names(functions[child.id], seen))
@@ -1561,6 +1829,47 @@ _EXTRA_CASES = {
     "GENAI_METRICS_PROFILE": ["standard", "FULL", "minimal", "verbose", ""],
     "GENAI_PII_MODE": ["detect", "redact", "block", "BLOCK", "mask", ""],
 }
+# Session baggage keys (1.46): only session.id and user.id are accepted, matched
+# exactly after strip(), returned in that fixed order. The generic list cases name
+# instrumentors and would all parse to [].
+_BAGGAGE_KEY_CASES = [
+    "session.id",
+    "user.id",
+    "session.id,user.id",
+    "user.id,session.id",
+    " user.id , session.id ",
+    "session.id,,session.id",
+    "Session.Id",
+    "session.id,gen_ai.conversation.id",
+    "nonexistent",
+    "",
+]
+_EXTRA_CASES["GENAI_SESSION_BAGGAGE_KEYS"] = _BAGGAGE_KEY_CASES
+_EXTRA_CASES["GENAI_SESSION_BAGGAGE_ACCEPT"] = _BAGGAGE_KEY_CASES
+# Evaluation settings (1.36+). The mode is an enum normalised by __post_init__,
+# the torch thread count defaults to None (so would get string cases), and the
+# shutdown timeout has a cap the generic float cases do not reach.
+_EXTRA_CASES["GENAI_EVALUATION_MODE"] = [
+    "background",
+    "inline",
+    "INLINE",
+    " inline ",
+    "sync",
+    "",
+]
+_EXTRA_CASES["GENAI_TOXICITY_TORCH_THREADS"] = ["4", "1", "0", "-2", " 3 ", "1.5", "", "abc"]
+_EXTRA_CASES["GENAI_EVALUATION_SHUTDOWN_TIMEOUT"] = [
+    "0.25",
+    "0",
+    "-0.5",
+    " 2 ",
+    "3600",
+    "7200",
+    "nan",
+    "inf",
+    "",
+    "abc",
+]
 
 
 def build_config(runtime: Runtime) -> Dict[str, Any]:
@@ -1751,8 +2060,35 @@ _CALL_TYPE_CATEGORY = {
     "embedding": "embeddings",
     "image": "images",
     "audio": "audio",
+    # calculate_cost prices both of these (speech_to_text since 1.32, decision since
+    # 1.38). speech_to_text bills its own table per 1,000 prompt/completion tokens,
+    # EXCEPT that usage carrying "seconds" is billed from the audio table instead
+    # (see _resolved_cost_category).
+    "speech_to_text": "speech_to_text",
+    # Decision models are priced from the decision section only, matched anchored
+    # at the start of the id, and never fall back to the chat table.
+    "decision": "decision",
 }
 _CHAT_USAGE = {"prompt_tokens": 1000, "completion_tokens": 500}
+_DECISION_CACHE_USAGE = {
+    "prompt_tokens": 1000,
+    "completion_tokens": 500,
+    "cache_read_input_tokens": 300,
+    "cache_creation_input_tokens": 200,
+}
+
+
+def _resolved_cost_category(call_type: str, usage: Dict[str, Any]) -> Optional[str]:
+    """The pricing section calculate_cost reads for this call.
+
+    speech_to_text is the one call type whose section depends on the usage: a
+    duration ("seconds") is billed from the unit-aware audio table.
+    """
+    if call_type == "speech_to_text" and "seconds" in usage:
+        return "audio"
+    return _CALL_TYPE_CATEGORY.get(call_type)
+
+
 _TEST_USAGE = {"prompt_tokens": 1000, "completion_tokens": 1000}
 _GRANULAR_USAGE = {
     "prompt_tokens": 1200,
@@ -1875,7 +2211,7 @@ def build_cost_vectors(runtime: Runtime) -> Dict[str, Any]:
             if custom_pricing_json is not None
             else default_calculator
         )
-        resolved_category = category or _CALL_TYPE_CATEGORY.get(call_type)
+        resolved_category = category or _resolved_cost_category(call_type, usage)
         resolved_key = (
             calculator._normalize_model_name(model, resolved_category)
             if resolved_category
@@ -1935,17 +2271,11 @@ def build_cost_vectors(runtime: Runtime) -> Dict[str, Any]:
         for usage in _audio_usages(entry, CostCalculator.AUDIO_UNITS):
             add("table", model, "audio", usage)
     for model in pricing["speech_to_text"]:
-        add(
-            "table",
-            model,
-            "speech_to_text",
-            {"prompt_tokens": 1000, "completion_tokens": 0},
-            category="speech_to_text",
-            note=(
-                "The speech_to_text table exists but CostCalculator.calculate_cost has no "
-                "branch for call_type 'speech_to_text', so the result is 0.0."
-            ),
-        )
+        add("table", model, "speech_to_text", _CHAT_USAGE)
+    for model, entry in pricing["decision"].items():
+        add("table", model, "decision", _CHAT_USAGE)
+        if any(k in entry for k in ("cacheReadPrice", "cacheWritePrice")):
+            add("table_granular", model, "decision", _DECISION_CACHE_USAGE)
 
     # 2. Models named in the pricing regression tests.
     seen_regression: Dict[str, Dict[str, Any]] = {}
@@ -2070,6 +2400,60 @@ def build_cost_vectors(runtime: Runtime) -> Dict[str, Any]:
         ("openai/whisper-1", "audio", {"seconds": 90}, "provider prefix"),
         ("acme-voice-model", "audio", {"seconds": 90}, "unknown audio model"),
         ("cartesia/sonic-2", "audio", {"tokens": 1500}, "legacy bare-number entry, unusable unit"),
+        (
+            "nvidia/parakeet-tdt-0.6b-v2",
+            "speech_to_text",
+            {"prompt_tokens": 1000},
+            "speech_to_text: prompt tokens only",
+        ),
+        (
+            "nvidia/parakeet-tdt-0.6b-v2",
+            "speech_to_text",
+            {"seconds": 90},
+            "'seconds' in usage bills from the audio table, which has no entry for this model",
+        ),
+        (
+            "whisper-1",
+            "speech_to_text",
+            {"seconds": 90},
+            "'seconds' in usage bills from the audio table's per_second entry",
+        ),
+        (
+            "whisper-1",
+            "speech_to_text",
+            {"seconds": 90, "prompt_tokens": 1000},
+            "'seconds' wins over token counts",
+        ),
+        ("openai/whisper-1", "speech_to_text", {"seconds": 90}, "provider prefix, audio table"),
+        ("acme-asr-model", "speech_to_text", _CHAT_USAGE, "unknown speech_to_text model"),
+        ("gpt-6-luna", "decision", _DECISION_CACHE_USAGE, "cache reads/writes priced at 0"),
+        ("d1", "decision", _DECISION_CACHE_USAGE, "no cache prices: cached input billed as input"),
+        (
+            "gpt-6-luna",
+            "decision",
+            {"prompt_tokens": 100, "cache_read_input_tokens": 300},
+            "cached tokens are capped at prompt_tokens",
+        ),
+        ("openai/gpt-6-luna", "decision", _CHAT_USAGE, "vendor prefix 'openai/' is stripped"),
+        ("liquid/d1", "decision", _CHAT_USAGE, "vendor prefix 'liquid/' is stripped"),
+        ("LiquidAI/D1-Ultra", "decision", _CHAT_USAGE, "vendor prefix, case-insensitive"),
+        ("typesafe/jev", "decision", _CHAT_USAGE, "vendor prefix 'typesafe/' is stripped"),
+        (
+            "autotrust/JEV-27B",
+            "decision",
+            _CHAT_USAGE,
+            "unknown prefix is not stripped and matching is anchored at the start: unpriced",
+        ),
+        ("d1-ultra-2026-01-01", "decision", _CHAT_USAGE, "dated variant; longest key first"),
+        ("d1x", "decision", _CHAT_USAGE, "key followed by an alphanumeric does not match"),
+        ("acme/d1", "decision", _CHAT_USAGE, "key not at the start of the id does not match"),
+        (
+            "gpt-4o",
+            "decision",
+            _CHAT_USAGE,
+            "a chat-only model is unpriced as a decision: never priced from the chat table",
+        ),
+        ("gpt-6-luna", "chat", _CHAT_USAGE, "the same name as a chat call uses the chat table"),
         ("gpt-4o", "rerank", _CHAT_USAGE, "unknown call_type"),
         ("gpt-4o", "", _CHAT_USAGE, "empty call_type"),
     ]
@@ -2084,6 +2468,7 @@ def build_cost_vectors(runtime: Runtime) -> Dict[str, Any]:
             },
             "embeddings": {"acme-embed": 0.00005},
             "speech_to_text": {"acme-asr": {"promptPrice": 0.1, "completionPrice": 0.1}},
+            "decision": {"acme-decider": {"promptPrice": 0.001, "completionPrice": 0.0}},
         },
         sort_keys=True,
     )
@@ -2098,6 +2483,7 @@ def build_cost_vectors(runtime: Runtime) -> Dict[str, Any]:
             {"prompt_tokens": 1000},
             "speech_to_text is not an accepted custom category, so this entry is dropped",
         ),
+        ("acme-decider", "decision", _CHAT_USAGE, "custom decision entry: input-only price"),
     ):
         add(
             "custom_pricing",
@@ -2106,7 +2492,6 @@ def build_cost_vectors(runtime: Runtime) -> Dict[str, Any]:
             usage,
             note=note,
             custom_pricing_json=custom,
-            category="speech_to_text" if call_type == "speech_to_text" else None,
         )
     for bad in ("{not json", "[1, 2]", "{}"):
         add(
@@ -2144,11 +2529,19 @@ def build_cost_vectors(runtime: Runtime) -> Dict[str, Any]:
             for v in vectors
         ):
             raise ContractError(f"no table entry priced under call_type {call_type!r}")
-    if any(v["call_type"] == "speech_to_text" and v["cost"] != 0.0 for v in vectors):
-        raise ContractError("calculate_cost now prices speech_to_text; update the generator")
+    # Until 1.32 calculate_cost had no speech_to_text branch and every such vector
+    # cost 0.0. It now has one, plus a decision branch. Pin the call-type set to the
+    # library's own map so a further call type cannot go unrecorded.
+    if dict(getattr(CostCalculator, "CALL_TYPE_SECTION", {})) != _CALL_TYPE_CATEGORY:
+        raise ContractError("CostCalculator.CALL_TYPE_SECTION changed; update the generator")
+    # The seconds -> audio routing is this generator's reading of calculate_cost too.
+    for v in vectors:
+        if v["call_type"] == "speech_to_text" and "seconds" in v["usage"]:
+            if v["cost"] != default_calculator.calculate_cost(v["model"], v["usage"], "audio"):
+                raise ContractError("speech_to_text no longer bills seconds from the audio table")
 
     accepted_custom = []
-    for category in ("chat", "embeddings", "images", "audio", "speech_to_text"):
+    for category in ("chat", "embeddings", "images", "audio", "speech_to_text", "decision"):
         probe = CostCalculator(json.dumps({category: {"contract-probe-model": 1.0}}))
         if "contract-probe-model" in probe.pricing_data.get(category, {}):
             accepted_custom.append(category)
@@ -2183,7 +2576,14 @@ def build_cost_vectors(runtime: Runtime) -> Dict[str, Any]:
                 unit: {"usage_key": usage_key, "divisor": divisor}
                 for unit, (usage_key, divisor) in CostCalculator.AUDIO_UNITS.items()
             },
+            "speech_to_text": "promptPrice/completionPrice are USD per 1,000 tokens; usage "
+            "containing 'seconds' is billed from the audio table instead",
+            "decision": "promptPrice/completionPrice/cacheReadPrice/cacheWritePrice are USD "
+            "per 1,000 tokens; cached input is billed at cacheReadPrice/cacheWritePrice only "
+            "when the entry defines them, otherwise as input",
         },
+        # Vendor prefixes stripped from a decision model id before lookup.
+        "decision_vendor_prefixes": list(CostCalculator.DECISION_VENDOR_PREFIXES),
         "supported_call_types": sorted(_CALL_TYPE_CATEGORY),
         "call_type_to_pricing_category": _CALL_TYPE_CATEGORY,
         "metadata_keys": sorted(CostCalculator.METADATA_KEYS),
@@ -2510,7 +2910,16 @@ def build_eval_vectors(runtime: Runtime) -> Dict[str, Any]:
     from genai_otel.evaluation.span_processor import EvaluationSpanProcessor
     from genai_otel.instrumentors.base import BaseInstrumentor
 
-    if toxicity_detector.Detoxify is not None or toxicity_detector.discovery is not None:
+    # From 1.36 the backends are imported lazily: the module attributes hold a
+    # not-yet-imported marker until an accessor resolves them, so ask the accessor.
+    def _toxicity_backend(accessor: str, attribute: str) -> Any:
+        resolve = getattr(toxicity_detector, accessor, None)
+        return resolve() if callable(resolve) else getattr(toxicity_detector, attribute, None)
+
+    if (
+        _toxicity_backend("_detoxify_class", "Detoxify") is not None
+        or _toxicity_backend("_perspective_discovery", "discovery") is not None
+    ):
         raise ContractError("toxicity ML backends were importable; the no-ML path is not forced")
 
     vectors: List[Dict[str, Any]] = []
@@ -2831,39 +3240,66 @@ def build_eval_rules(runtime: Runtime) -> Dict[str, Any]:
         "hallucination": otel.hallucination_threshold,
     }
 
-    # PII fallback patterns live as locals inside _fallback_detection.
+    # PII fallback patterns live as locals inside _scan_patterns (since 1.36; they
+    # were one `if PIIEntityType.X in entity_types:` block each in
+    # _fallback_detection before). Each `*_pattern = r"..."` local is listed in
+    # order in a `generic` tuple of (PIIEntityType.X, <pattern local>, score).
     pii_rel = "genai_otel/evaluation/pii_detector.py"
-    fallback = index.function(pii_rel, "PIIDetector._fallback_detection")
+    scan = index.function(pii_rel, "PIIDetector._scan_patterns")
+    pattern_locals = {
+        name: value
+        for name, value in literal_assignments(scan).items()
+        if name.endswith("_pattern") and isinstance(value, str)
+    }
     fallback_patterns = []
-    for stmt in fallback.body:
-        if not isinstance(stmt, ast.If):
+    for node in ast.walk(scan):
+        if not (
+            isinstance(node, ast.Assign)
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id == "generic"
+            and isinstance(node.value, ast.Tuple)
+        ):
             continue
-        test = stmt.test
-        if not (isinstance(test, ast.Compare) and isinstance(test.left, ast.Attribute)):
-            continue
-        regex = score = None
-        for node in ast.walk(stmt):
-            if (
-                isinstance(node, ast.Assign)
-                and isinstance(node.targets[0], ast.Name)
-                and node.targets[0].id.endswith("_pattern")
+        for elt in node.value.elts:
+            if not (
+                isinstance(elt, ast.Tuple)
+                and len(elt.elts) == 3
+                and isinstance(elt.elts[0], ast.Attribute)
+                and isinstance(elt.elts[1], ast.Name)
+                and elt.elts[1].id in pattern_locals
             ):
-                regex = ast.literal_eval(node.value)
-            if isinstance(node, ast.Dict):
-                for key, value in zip(node.keys, node.values):
-                    if isinstance(key, ast.Constant) and key.value == "score":
-                        score = ast.literal_eval(value)
-        if regex is None or score is None:
-            raise ContractError(f"PII fallback block for {test.left.attr} not understood")
-        fallback_patterns.append({"entity_type": test.left.attr, "regex": regex, "score": score})
+                raise ContractError(f"PII fallback entry not understood: {ast.dump(elt)}")
+            fallback_patterns.append(
+                {
+                    "entity_type": elt.elts[0].attr,
+                    "regex": pattern_locals[elt.elts[1].id],
+                    "score": ast.literal_eval(elt.elts[2]),
+                }
+            )
     if len(fallback_patterns) < 5:
         raise ContractError("PII fallback patterns were not extracted")
     for entry in fallback_patterns:
         entry.update(_pattern_list([entry["regex"]], "none")[0])
+    # Since 1.36 EMAIL_ADDRESS and IN_UPI are not searched with re.finditer but by
+    # _AddressSearch, which looks outwards from each "@" and documents that it
+    # gives the same matches. The algorithm below says re.finditer; prove the two
+    # agree on every PII vector text rather than trust the docstring.
+    from genai_otel.evaluation.pii_detector import _address_spans
+
+    for entry in fallback_patterns:
+        if entry["entity_type"] not in ("EMAIL_ADDRESS", "IN_UPI"):
+            continue
+        for text, _overrides in _PII_TEXTS:
+            if _address_spans(entry["regex"], text) != [
+                m.span() for m in re.finditer(entry["regex"], text)
+            ]:
+                raise ContractError(f"{entry['entity_type']}: address search != re.finditer")
 
     tox_rel = "genai_otel/evaluation/toxicity_detector.py"
+    # Since 1.36 the Perspective request is built in _ask_perspective, which
+    # _detect_with_perspective calls (falling back to Detoxify when it returns None).
     perspective_map = literal_assignments(
-        index.function(tox_rel, "ToxicityDetector._detect_with_perspective")
+        index.function(tox_rel, "ToxicityDetector._ask_perspective")
     )["category_mapping"]
     detoxify_map = literal_assignments(
         index.function(tox_rel, "ToxicityDetector._detect_with_detoxify")
@@ -2898,6 +3334,43 @@ def build_eval_rules(runtime: Runtime) -> Dict[str, Any]:
         if not hall_inline[method]:
             raise ContractError(f"hallucination {method}: no inline rule data found")
 
+    # Since 1.36 the subject/number regex of the two contradiction checks is no
+    # longer a local `number_pattern` but a module-level compiled expression, run
+    # by _find_pairs (which documents that it finds what .findall finds). Read
+    # the pattern at runtime under the old key, after confirming each method
+    # still uses the helper it is attributed to, and that _find_pairs agrees
+    # with findall on every hallucination vector text.
+    from genai_otel.evaluation import hallucination_detector as hall_mod
+
+    for method, helper, compiled, at_word in (
+        (
+            "_check_internal_contradiction",
+            "_subject_numbers",
+            hall_mod._SUBJECT_NUMBER,
+            hall_mod._SUBJECT_NUMBER_AT_WORD,
+        ),
+        (
+            "_check_context_contradiction",
+            "_subject_numbers_in_context",
+            hall_mod._SUBJECT_NUMBER_IN_CONTEXT,
+            hall_mod._SUBJECT_NUMBER_IN_CONTEXT_AT_WORD,
+        ),
+    ):
+        func = index.function(hall_rel, f"HallucinationDetector.{method}")
+        if (
+            not any(isinstance(n, ast.Attribute) and n.attr == helper for n in ast.walk(func))
+            or "number_pattern" in hall_inline[method]
+        ):
+            raise ContractError(f"hallucination {method}: number pattern not understood")
+        for text, context, _overrides in _HALLUCINATION_TEXTS:
+            for sample in (text, context or ""):
+                sample = sample.lower()
+                if hall_mod.HallucinationDetector._find_pairs(
+                    compiled, at_word, sample
+                ) != compiled.findall(sample):
+                    raise ContractError(f"hallucination {method}: _find_pairs != findall")
+        hall_inline[method]["number_pattern"] = compiled.pattern
+
     def keyed(patterns: Dict[str, Dict[str, List[str]]], flags: str) -> Dict[str, Any]:
         return {
             name: {
@@ -2910,7 +3383,8 @@ def build_eval_rules(runtime: Runtime) -> Dict[str, Any]:
     detectors = {
         "pii": {
             "rule_based": True,
-            "rule_based_path": "PIIDetector._fallback_detection (used when Presidio is absent)",
+            "rule_based_path": "PIIDetector._fallback_detection -> _scan_patterns "
+            "(used when Presidio is absent)",
             "ml_backend": "Microsoft Presidio (presidio-analyzer + spaCy en_core_web_lg)",
             "fallback_patterns": fallback_patterns,
             "fallback_pattern_order": [p["entity_type"] for p in fallback_patterns],
@@ -3087,7 +3561,9 @@ def build_eval_rules(runtime: Runtime) -> Dict[str, Any]:
             "attributes and dataclass instances of the imported library). PII fallback regexes, "
             "scoring constants, the toxicity category maps, the bias substitutions and "
             "hallucination `inline_rule_data` are STATIC (read with ast from literals inside "
-            "the detector methods, because they are locals). `algorithm` is prose written by "
+            "the detector methods, because they are locals), except the two "
+            "`number_pattern`s, read at runtime from module-level compiled regexes. "
+            "`algorithm` is prose written by "
             "hand from the source; eval_vectors.json is what verifies a port, not the prose."
         ),
         "regex_dialect": {
@@ -3200,6 +3676,7 @@ library really produced zero.
   "agent_operation_markers": [str],    // substrings of gen_ai.operation.name that mark an agent invocation
   "instrumentors": {
     "accepted": [{"id": str, "class": str, "default": bool, "opt_in": bool}],  // ids valid in GENAI_ENABLED_INSTRUMENTORS
+                                       // + "openinference_module": str, for OpenInference integrations only
     "default_order": [str],            // order is significant
     "default_ids_without_a_registered_class": [str],
     "opt_in": [str],
@@ -3322,6 +3799,7 @@ combine; `env` values of `null` were unset.
 {
   "units": {...}, "supported_call_types": [str], "call_type_to_pricing_category": {str: str},
   "metadata_keys": [str], "accepted_custom_pricing_categories": [str],
+  "decision_vendor_prefixes": [str],
   "local_model_price_tiers": [{"param_count_billions": float, "price": {"promptPrice": float, "completionPrice": float}}],
   "case_insensitive_key_collisions": [{"category": str, "lowercase": str, "keys": [str], "resolves_to": str}],
   "vectors": [
@@ -3359,9 +3837,18 @@ returns `0.0`, not `null`. Use `priced` to tell the two apart:
   attribute. `priced: true, cost: 0.0` means the price applied and the result
   was zero (free model, zero tokens, or a usage/unit mismatch - see `note`).
 
-`pricing_source` is the library's own answer and has a known quirk: it looks the
-`call_type` up as a pricing-table section name, so for `embedding`, `image` and
-unknown call types it consults the **chat** table. Do not derive `priced` from it.
+`pricing_source` is the library's own answer and has known quirks. It maps
+`call_type` to a section with `call_type_to_pricing_category`, but an unmapped
+call type is looked up as a section name itself, falling back to the **chat**
+table (so `embeddings`, plural, reads the embeddings table although
+`calculate_cost` does not price it). For `speech_to_text` it always reads the
+speech_to_text table, even when usage with `seconds` was billed from the audio
+table. Do not derive `priced` from it.
+
+`resolved_category` is the section `calculate_cost` actually read: `audio` for a
+`speech_to_text` call whose usage has `seconds`. `decision` models are resolved
+from the start of the id only (after stripping one of `decision_vendor_prefixes`)
+and never from the chat table.
 
 ---
 
