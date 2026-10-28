@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.0] - 2026-10-28
+
+### Added
+
+- Sessions can cross service boundaries as W3C baggage, opt-in on each side. A
+  service with `GENAI_SESSION_BAGGAGE_KEYS=session.id` sends the id from
+  `genai_otel.session()` with every instrumented outbound call (HTTP, MCP); a service
+  with `GENAI_SESSION_BAGGAGE_ACCEPT=session.id` tags its spans with it. Add `user.id`
+  to carry the user. An accepted id ranks below every session the service resolves
+  itself, is validated, and is not forwarded further unless the service also sends it.
+  With neither setting, propagation is unchanged (TraceContext only).
+- A warning is logged at the first span when session baggage is configured but the
+  global propagator was replaced after `instrument()`, since the replacement forwards
+  inbound session ids unfiltered or drops them.
+
+### Fixed
+
+- Keep S3 error messages off spans. A failed S3 call now records only the exception type
+  in the span status and `error.type`, as intended; previously the SDK also copied the
+  full error text into the status and an `exception` event.
+
 ## [1.45.0] - 2026-10-28
 
 ### Added
@@ -596,7 +617,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `response.failed`, including reasoning and cached tokens.
 - **Anthropic, Azure OpenAI, Groq and Mistral spans named no operation.** They set no
   `gen_ai.operation.name`, which the OTel GenAI conventions require and which backends use to
-  tell one model call from a framework or tool span: TraceVerse counted none of these calls as
+  tell one model call from a framework or tool span: a backend counted none of these calls as
   model requests. Chat calls now set `chat`, Mistral embeddings `embeddings`.
 - **Only the first instrumentor constructed recorded metrics.** The shared token, cost,
   latency and error instruments were stored on whichever instrumentor SUBCLASS was
@@ -2869,8 +2890,8 @@ first-party vendor pricing always wins on conflict.
 - **`genai_otel.cost_estimation` module — public API for token/cost estimation
   in multimodal calls.** Exports `estimate_pipeline_usage`, `estimate_chat_usage`,
   `count_images`, `audio_seconds`, `coerce_text`, `result_text`. Designed to be
-  imported by external custom providers (e.g. tracesense / chaos-lab providers
-  that bypass `transformers.pipeline` and the standard `ollama` entry points).
+  imported by external custom providers (for example, providers that bypass
+  `transformers.pipeline` and the standard `ollama` entry points).
 - **Token / cost estimation for multimodal calls that omit usage data.**
   - `BaseInstrumentor._estimate_usage(result, request_kwargs)` hook (default
     returns `None`). When `_extract_usage` returns nothing, this fallback

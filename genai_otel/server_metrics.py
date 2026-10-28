@@ -8,9 +8,9 @@ import logging
 import threading
 from typing import Callable, Dict, List, Optional
 
-# Whose queue a sample describes (the cross-SDK contract, SDK_ADDITIONS section 12).
+# Whose queue a sample describes.
 # "engine": a poller read it from the serving engine; "client": the in-flight count of
-# this library's own calls. TraceVerse stores the two apart (migration 177).
+# this library's own calls. A backend can then store the two apart.
 ENGINE = "engine"
 CLIENT = "client"
 _SOURCE_KEY = "server_metrics_source"
@@ -144,8 +144,7 @@ class ServerMetricsCollector:
     def replace_engine_kv_cache_usage(self, usage_by_model: Dict[str, float]):
         """Replace every engine KV-cache entry with what the engine reports now.
 
-        A model the engine has unloaded disappears instead of keeping its last value
-        (SDK_ADDITIONS section 12).
+        A model the engine has unloaded disappears instead of keeping its last value.
         """
         with self._lock:
             self._engine_kv_cache_usage = {

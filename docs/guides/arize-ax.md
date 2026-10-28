@@ -265,6 +265,10 @@ that is the config `thread_id`; for CrewAI, the crew id or `inputs={"session_id"
 Existing `openinference.instrumentation.using_session()` blocks work too, without
 TraceVerde depending on OpenInference.
 
+When a turn calls other services (an MCP server, an internal API), the session can
+go with it as W3C baggage, so their spans land in the same Arize session. Both sides
+opt in; see [Across services](../getting-started/configuration.md#across-services).
+
 ## Verifying a trace landed
 
 ```bash

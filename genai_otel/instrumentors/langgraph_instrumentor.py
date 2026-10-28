@@ -30,7 +30,7 @@ from opentelemetry.trace import Status, StatusCode
 from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
 from ..server_metrics import get_server_metrics
-from ..sessions import current_session_id
+from ..sessions import current_session_id, inbound_session_id
 from .base import BaseInstrumentor, strip_content_attributes
 
 logger = logging.getLogger(__name__)
@@ -688,7 +688,7 @@ class LangGraphInstrumentor(BaseInstrumentor):
             except Exception as e:
                 logger.debug("Failed to extract config: %s", e)
 
-        # --- Session ID extraction (required for TraceVerse session aggregation) ---
+        # --- Session ID extraction (backends group traces into sessions by it) ---
         session_id = None
 
         # Priority 1: App-provided session_id in input state
@@ -712,7 +712,11 @@ class LangGraphInstrumentor(BaseInstrumentor):
             except Exception as e:
                 logger.debug("Failed to extract session ID via extractor: %s", e)
 
-        # Priority 5: Auto-generate a new UUID for this invocation
+        # Priority 5: a session an upstream service sent, when accepted
+        if not session_id:
+            session_id = inbound_session_id()
+
+        # Priority 6: Auto-generate a new UUID for this invocation
         if not session_id:
             session_id = str(uuid.uuid4())
 

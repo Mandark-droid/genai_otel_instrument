@@ -25,10 +25,10 @@ override per-call by passing kwargs):
     IMAGE_TOKEN_ESTIMATE = 256       # Qwen-VL / llava floor
     AUDIO_TOKENS_PER_SECOND = 50     # ~Whisper rate
 
-Designed to be importable from outside `genai_otel_instrument` (e.g. the
-traceverse-chaos-lab `tracesense` providers that bypass the standard
-`transformers.pipeline` and `ollama` entry points and so do not benefit
-from the instrumentors' built-in estimation paths).
+Designed to be importable from outside `genai_otel_instrument` (e.g. custom
+providers that bypass the standard `transformers.pipeline` and `ollama` entry
+points and so do not benefit from the instrumentors' built-in estimation
+paths).
 """
 
 from __future__ import annotations

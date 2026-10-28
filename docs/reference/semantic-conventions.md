@@ -239,6 +239,9 @@ its parent span, so a session resolved on a framework span reaches every span
 beneath it. A span that already carries a key keeps it. Disable with
 `GENAI_ENABLE_SESSION_PROPAGATION=false`.
 
+Between services the ids can travel as W3C baggage under the same keys, when the
+caller sets `GENAI_SESSION_BAGGAGE_KEYS` and the callee `GENAI_SESSION_BAGGAGE_ACCEPT`.
+
 ### Resource Attributes
 
 Every resource attribute is a name from the OpenTelemetry registry. They
