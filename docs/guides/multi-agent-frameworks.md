@@ -149,7 +149,7 @@ result = graph.invoke(
     {"question": "Capital of France? One word."},
     {"configurable": {"thread_id": "user-42"}},
 )
-# langgraph.graph.invoke -> openai.chat.completion
+# langgraph.graph.invoke -> langgraph.node.answer -> openai.chat.completion
 ```
 
 **How it hooks in.** TraceVerde wraps four methods on the `langgraph.pregel.Pregel` class
@@ -158,10 +158,14 @@ handler and registers no callbacks. Every runnable graph is a `Pregel`, so each 
 produces one span however the graph was built: a compiled `StateGraph`,
 `create_react_agent`, `langchain.agents.create_agent`, a `with_config()` copy, a
 functional-API `@entrypoint`, a subgraph (nested under its parent's span), or a graph
-compiled before `instrument()` was called.
+compiled before `instrument()` was called. Each node execution gets a span too: the
+instrumentor wraps `run_with_retry` / `arun_with_retry`, the functions LangGraph runs
+every node task through. Those are LangGraph internals; on a version that moves them,
+node spans are skipped and graph spans are unaffected.
 
 **Span types:** `langgraph.graph.invoke`, `langgraph.graph.ainvoke`,
-`langgraph.graph.stream`, `langgraph.graph.astream`.
+`langgraph.graph.stream`, `langgraph.graph.astream`, and `langgraph.node.<name>` per
+node execution.
 
 **What to expect:**
 
@@ -170,8 +174,16 @@ compiled before `instrument()` was called.
   and `langgraph.recursion_limit` are recorded when present in the config.
 - Graph spans carry the graph's shape (`langgraph.node_count`, `langgraph.nodes`,
   `langgraph.edge_count`, `langgraph.channels`) and the input and output keys.
-- Nodes and tools have no span of their own. LLM spans, tokens and cost come from the
-  provider instrumentor enabled alongside (`openai` above); graph spans carry no token
+- Node spans carry `langgraph.node`, `langgraph.step` and `langgraph.triggers`, and the
+  node's LLM and tool calls nest beneath them. A node that raises is marked as an error;
+  one that pauses with `interrupt()` is not, and carries `langgraph.node.interrupted`.
+  `__start__` gets no span.
+- For the Arize AX agent graph, node spans also carry `graph.node.id` (the node name),
+  `metadata` (`{"langgraph_node", "langgraph_step"}`) and `openinference.span.kind=CHAIN`,
+  and the graph span is the root node, named after the graph (`compile(name=...)`,
+  default `LangGraph`). See [Arize AX](arize-ax.md#agent-graph).
+- Tools have no span of their own. LLM spans, tokens and cost come from the provider
+  instrumentor enabled alongside (`openai` above); graph and node spans carry no token
   usage, so nothing is counted twice.
 - A stream span starts at the first chunk and ends when the stream is exhausted, closed
   or abandoned. A stream that is never iterated produces no span.

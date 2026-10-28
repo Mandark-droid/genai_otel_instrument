@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.44.0] - 2026-10-28
+
+### Added
+
+- Agent spans now carry the OpenInference agent graph attributes that Arize AX and
+  Phoenix use for the agent graph and trajectory views: `agent.name`, `graph.node.id`,
+  `graph.node.name`, `graph.node.display_name`, `graph.node.parent_id` (the nearest
+  enclosing agent) and `openinference.span.kind=AGENT`. They are derived from
+  `gen_ai.agent.name` and never overwrite a value a span already has. Disable with
+  `GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES=false`.
+- LangGraph node executions get spans of their own (`langgraph.node.<name>`), with
+  `langgraph.node`, `langgraph.step` and `langgraph.triggers`; the node's LLM and tool
+  calls nest beneath them. For the Arize agent graph they also carry `graph.node.id`,
+  `metadata.langgraph_node` / `langgraph_step` and span kind `CHAIN`, and the graph run
+  span is the root node, named after the graph. A node paused by `interrupt()` is not
+  marked as an error.
+
+### Changed
+
+- The LangChain agent span sets its attributes at span start, and the CrewAI agent
+  execution span now carries `gen_ai.agent.name` (the agent role, matching the task span).
+
 ## [1.43.0] - 2026-10-28
 
 ### Added

@@ -22,6 +22,7 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
+from .agent_graph import AgentGraphSpanProcessor
 from .config import EVALUATION_MODE_INLINE, OTelConfig
 from .cost_calculator import CostCalculator
 from .cost_enrichment_processor import CostEnrichmentSpanProcessor
@@ -530,6 +531,12 @@ def setup_auto_instrumentation(config: OTelConfig):
         tracer_provider.add_span_processor(UsageHolderSpanProcessor())
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to add usage holder processor: %s", e, exc_info=True)
+
+    if config.enable_agent_graph_attributes:
+        try:
+            tracer_provider.add_span_processor(AgentGraphSpanProcessor())
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Failed to add agent graph processor: %s", e, exc_info=True)
 
     # Add cost enrichment processor for custom instrumentors (OpenAI, Ollama, etc.)
     # These instrumentors set cost attributes directly, so processor is mainly for logging

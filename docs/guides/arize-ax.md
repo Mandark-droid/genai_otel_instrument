@@ -113,7 +113,7 @@ ingestion. Sending nothing but `gen_ai.*`, a chat completion span arrives with:
 
 | Arize field | Derived from |
 |---|---|
-| `openinference.span.kind = LLM` | inferred; TraceVerde never sends a span kind |
+| `openinference.span.kind = LLM` | inferred; TraceVerde sends a span kind only on agent spans (`AGENT`, see [Agent graph](#agent-graph)) |
 | `llm.provider`, `llm.system` | `gen_ai.system` |
 | `llm.model_name` | `gen_ai.request.model` |
 | `llm.finish_reason` | `gen_ai.response.finish_reason` |
@@ -123,7 +123,9 @@ ingestion. Sending nothing but `gen_ai.*`, a chat completion span arrives with:
 
 All original `gen_ai.*` attributes are preserved alongside the normalised
 fields, so the same span remains portable to any other OTLP backend. Nothing is
-lost in the direction of Arize, and nothing is Arize-shaped on the way out.
+lost in the direction of Arize. The one Arize-shaped addition is the set of
+agent graph attributes below, written alongside `gen_ai.agent.name` rather than
+in its place.
 
 ## Token counts must use the current conventions
 
@@ -199,6 +201,50 @@ The embedding spans carry `gen_ai.request.input_count`,
 the embeddings table. The embedded text is attached as `embedding.text` only
 when `GENAI_ENABLE_CONTENT_CAPTURE=true`; retrieval inputs routinely contain
 user data, so it is off by default.
+
+## Agent graph
+
+Arize draws the agent graph and agent path from `graph.node.id`, which is
+required, and `graph.node.parent_id`, which is optional: without it Arize infers
+the parent from the span tree. `graph.node.display_name` labels the node. Every
+span that names an agent through `gen_ai.agent.name` also gets:
+
+| Attribute | Value |
+|---|---|
+| `agent.name` | the agent name |
+| `graph.node.id` | the agent name, so repeat runs of one agent are one node |
+| `graph.node.name`, `graph.node.display_name` | the agent name, as the node label |
+| `graph.node.parent_id` | the nearest enclosing agent; left unset on a root agent |
+| `openinference.span.kind` | `AGENT` |
+
+The parent is found through the span tree, so an LLM or tool span between two
+agents does not break the link. An agent nested inside a span of the same agent
+(a CrewAI task and the agent running it, an AutoGen run and its `on_messages`)
+stays one node instead of becoming its own parent. LLM, tool and transport spans
+are left unannotated.
+
+This covers CrewAI, AutoGen, AutoGen AgentChat, Google ADK, LangChain agents,
+OpenAI Agents, Pydantic AI and Strands.
+
+LangGraph graphs map node for node. Each node execution is a span carrying
+`metadata.langgraph_node` / `metadata.langgraph_step` (what Arize reads for
+LangGraph) and `graph.node.id` = the node name, with span kind `CHAIN`. The graph
+run is the root node, named after the graph (`compile(name="orchestrator")`,
+default `LangGraph`). A node that runs more than once, as in a loop, keeps one id,
+and a subgraph's nodes hang under the node that called it.
+
+A span that already carries any of these keys keeps its own value, so
+OpenInference instrumentors and hand-set attributes win.
+
+To annotate your own agent code, pass the name when the span starts. Attributes
+set after the span starts are too late for the graph:
+
+```python
+with tracer.start_as_current_span("triage", attributes={"gen_ai.agent.name": "triage"}):
+    ...
+```
+
+Set `GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES=false` to turn the extra attributes off.
 
 ## Verifying a trace landed
 

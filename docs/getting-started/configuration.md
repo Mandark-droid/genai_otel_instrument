@@ -32,6 +32,7 @@ certificate file that signed the endpoint. The exporter appends the signal path
 | `GENAI_ENABLE_GPU_METRICS` | `true` | GPU utilization, memory, temperature, power metrics |
 | `GENAI_ENABLE_MCP_INSTRUMENTATION` | `true` | Database, cache, vector DB, queue instrumentation |
 | `GENAI_ENABLE_HTTP_INSTRUMENTATION` | `false` | HTTP/API instrumentation (disabled to avoid OTLP conflicts) |
+| `GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES` | `true` | Add `agent.name` and `graph.node.*` to agent spans for the Arize AX / Phoenix agent graph |
 | `GENAI_ENABLE_CO2_TRACKING` | `false` | CO2 emissions tracking from GPU power consumption |
 | `GENAI_ENABLE_CONTENT_CAPTURE` | `false` | Capture prompt/response content as span events |
 
