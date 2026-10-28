@@ -67,6 +67,10 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
                 )
 
                 # HTTPx is safe to instrument
+                if HTTPXClientInstrumentor is None:
+                    # Raised so the skip below logs it as a missing dependency; calling
+                    # None raised TypeError, which was logged as a failure instead.
+                    raise ImportError("opentelemetry-instrumentation-httpx is not installed")
                 HTTPXClientInstrumentor().instrument()
                 api_instrumentor = APIInstrumentor(self.config)
                 api_instrumentor.instrument(self.config)
