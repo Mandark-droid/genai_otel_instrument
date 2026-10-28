@@ -1675,7 +1675,9 @@
 frameworks and OpenInference integrations. Framework spans are connected to provider
 spans when the provider is also instrumented.</p>
 <h2 id="crewai">CrewAI<a class="headerlink" href="#crewai" title="Permanent link">&para;</a></h2>
-<p>Span hierarchy: Crew -&gt; Task -&gt; Agent -&gt; LLM calls, in one trace per kickoff.
+<p>Span hierarchy: Crew -&gt; Task -&gt; Agent -&gt; LLM calls, in one trace per kickoff. For the
+Arize AX agent graph the crew span is the root node and each agent execution a node
+beneath it; see <a href="../arize-ax/#agent-graph">Arize AX</a>.
 Verified against CrewAI 1.15.27 and 1.14.4.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>crewai<span class="o">]</span>
 </code></pre></div>
@@ -1753,7 +1755,9 @@ tracer provider, in which case no TraceVerde span is exported (a warning is logg
   LLM span beneath it did, and then for that kickoff alone. Batch runs that overlap in
   time (<code>kickoff_for_each_async</code>) share their LLM's counters, so in that case each crew
   span can include usage from the others.</li>
-<li><code>session.id</code> is the crew's id, or <code>inputs={"session_id": ...}</code> when you pass one.</li>
+<li><code>session.id</code> is <code>inputs={"session_id": ...}</code> when you pass one, else the enclosing
+  <code>genai_otel.session()</code> block, else the crew's id. Every task, agent, LLM and tool span
+  of the kickoff carries it.</li>
 <li>Tool calls have no span of their own; they appear as <code>llm.tools</code> and tool-call
   attributes on the LLM span.</li>
 <li>A task with <code>output_pydantic</code> goes through the OpenAI SDK's <code>parse</code> call, which is not
@@ -1805,7 +1809,7 @@ tracer provider, in which case no TraceVerde span is exported (a warning is logg
 <a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a>    <span class="p">{</span><span class="s2">&quot;question&quot;</span><span class="p">:</span> <span class="s2">&quot;Capital of France? One word.&quot;</span><span class="p">},</span>
 <a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a>    <span class="p">{</span><span class="s2">&quot;configurable&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;thread_id&quot;</span><span class="p">:</span> <span class="s2">&quot;user-42&quot;</span><span class="p">}},</span>
 <a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a><span class="p">)</span>
-<a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a><span class="c1"># langgraph.graph.invoke -&gt; openai.chat.completion</span>
+<a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a><span class="c1"># langgraph.graph.invoke -&gt; langgraph.node.answer -&gt; openai.chat.completion</span>
 </code></pre></div>
 <p><strong>How it hooks in.</strong> TraceVerde wraps four methods on the <code>langgraph.pregel.Pregel</code> class
 with <code>wrapt</code>: <code>invoke</code>, <code>ainvoke</code>, <code>stream</code> and <code>astream</code>. It is not a LangChain callback
@@ -1813,18 +1817,31 @@ handler and registers no callbacks. Every runnable graph is a <code>Pregel</code
 produces one span however the graph was built: a compiled <code>StateGraph</code>,
 <code>create_react_agent</code>, <code>langchain.agents.create_agent</code>, a <code>with_config()</code> copy, a
 functional-API <code>@entrypoint</code>, a subgraph (nested under its parent's span), or a graph
-compiled before <code>instrument()</code> was called.</p>
+compiled before <code>instrument()</code> was called. Each node execution gets a span too: the
+instrumentor wraps <code>run_with_retry</code> / <code>arun_with_retry</code>, the functions LangGraph runs
+every node task through. Those are LangGraph internals; on a version that moves them,
+node spans are skipped and graph spans are unaffected.</p>
 <p><strong>Span types:</strong> <code>langgraph.graph.invoke</code>, <code>langgraph.graph.ainvoke</code>,
-<code>langgraph.graph.stream</code>, <code>langgraph.graph.astream</code>.</p>
+<code>langgraph.graph.stream</code>, <code>langgraph.graph.astream</code>, and <code>langgraph.node.&lt;name&gt;</code> per
+node execution.</p>
 <p><strong>What to expect:</strong></p>
 <ul>
-<li><code>session.id</code>, <code>langgraph.session.id</code> and <code>gen_ai.conversation.id</code> are the config
-  <code>thread_id</code> when you pass one, otherwise a random id per run. <code>langgraph.thread_id</code>
+<li><code>session.id</code>, <code>langgraph.session.id</code> and <code>gen_ai.conversation.id</code> are a <code>session_id</code>
+  in the input state, else the enclosing <code>genai_otel.session()</code> block, else the config
+  <code>thread_id</code>, otherwise a random id per run. Node, LLM and tool spans inherit it. <code>langgraph.thread_id</code>
   and <code>langgraph.recursion_limit</code> are recorded when present in the config.</li>
 <li>Graph spans carry the graph's shape (<code>langgraph.node_count</code>, <code>langgraph.nodes</code>,
   <code>langgraph.edge_count</code>, <code>langgraph.channels</code>) and the input and output keys.</li>
-<li>Nodes and tools have no span of their own. LLM spans, tokens and cost come from the
-  provider instrumentor enabled alongside (<code>openai</code> above); graph spans carry no token
+<li>Node spans carry <code>langgraph.node</code>, <code>langgraph.step</code> and <code>langgraph.triggers</code>, and the
+  node's LLM and tool calls nest beneath them. A node that raises is marked as an error;
+  one that pauses with <code>interrupt()</code> is not, and carries <code>langgraph.node.interrupted</code>.
+  <code>__start__</code> gets no span.</li>
+<li>For the Arize AX agent graph, node spans also carry <code>graph.node.id</code> (the node name),
+  <code>metadata</code> (<code>{"langgraph_node", "langgraph_step"}</code>) and <code>openinference.span.kind=CHAIN</code>,
+  and the graph span is the root node, named after the graph (<code>compile(name=...)</code>,
+  default <code>LangGraph</code>). See <a href="../arize-ax/#agent-graph">Arize AX</a>.</li>
+<li>Tools have no span of their own. LLM spans, tokens and cost come from the provider
+  instrumentor enabled alongside (<code>openai</code> above); graph and node spans carry no token
   usage, so nothing is counted twice.</li>
 <li>A stream span starts at the first chunk and ends when the stream is exhausted, closed
   or abandoned. A stream that is never iterated produces no span.</li>

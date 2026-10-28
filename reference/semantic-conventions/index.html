@@ -1201,6 +1201,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#agent-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#session-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1580,6 +1591,17 @@
     <span class="md-ellipsis">
       
         Streaming Latency
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Graph
       
     </span>
   </a>
@@ -2192,6 +2214,98 @@ down every average it enters.</p>
 </ul>
 <p>Report a missing attribute as "not measured" rather than substituting zero.</p>
 </div>
+<h3 id="agent-graph">Agent Graph<a class="headerlink" href="#agent-graph" title="Permanent link">&para;</a></h3>
+<p>Added to every span that carries <code>gen_ai.agent.name</code>, so OpenInference backends
+(Arize AX, Phoenix) can draw the agent graph. Keys a span already carries are
+kept. Disable with <code>GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES=false</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agent.name</code></td>
+<td>string</td>
+<td>Agent name, copied from <code>gen_ai.agent.name</code></td>
+</tr>
+<tr>
+<td><code>graph.node.id</code></td>
+<td>string</td>
+<td>Graph node; the agent name, so repeat runs share one node</td>
+</tr>
+<tr>
+<td><code>graph.node.name</code></td>
+<td>string</td>
+<td>Node label (OpenInference spelling)</td>
+</tr>
+<tr>
+<td><code>graph.node.display_name</code></td>
+<td>string</td>
+<td>Node label (Arize AX spelling)</td>
+</tr>
+<tr>
+<td><code>graph.node.parent_id</code></td>
+<td>string</td>
+<td>Node of the nearest enclosing agent; unset on a root agent</td>
+</tr>
+<tr>
+<td><code>openinference.span.kind</code></td>
+<td>string</td>
+<td><code>AGENT</code></td>
+</tr>
+</tbody>
+</table>
+<p>LangGraph node spans (<code>langgraph.node.&lt;name&gt;</code>) carry:</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>langgraph.node</code></td>
+<td>string</td>
+<td>Node name</td>
+</tr>
+<tr>
+<td><code>langgraph.step</code></td>
+<td>int</td>
+<td>Superstep the node ran in</td>
+</tr>
+<tr>
+<td><code>langgraph.triggers</code></td>
+<td>string[]</td>
+<td>Channels that triggered the node</td>
+</tr>
+<tr>
+<td><code>langgraph.node.interrupted</code></td>
+<td>bool</td>
+<td>Set when the node paused with <code>interrupt()</code></td>
+</tr>
+<tr>
+<td><code>graph.node.id</code></td>
+<td>string</td>
+<td>Node name (agent graph attributes enabled)</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>string</td>
+<td>JSON <code>{"langgraph_node", "langgraph_step"}</code>, the OpenInference key Arize reads for LangGraph</td>
+</tr>
+<tr>
+<td><code>openinference.span.kind</code></td>
+<td>string</td>
+<td><code>CHAIN</code> (also on the graph run span, whose <code>graph.node.id</code> is the graph name)</td>
+</tr>
+</tbody>
+</table>
 <h3 id="session-tracking">Session Tracking<a class="headerlink" href="#session-tracking" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -2205,7 +2319,12 @@ down every average it enters.</p>
 <tr>
 <td><code>session.id</code></td>
 <td>string</td>
-<td>Session identifier</td>
+<td>Session identifier; groups a conversation's traces into one session</td>
+</tr>
+<tr>
+<td><code>gen_ai.conversation.id</code></td>
+<td>string</td>
+<td>Same value as <code>session.id</code> (OTel GenAI spelling)</td>
 </tr>
 <tr>
 <td><code>user.id</code></td>
@@ -2214,6 +2333,12 @@ down every average it enters.</p>
 </tr>
 </tbody>
 </table>
+<p>Every span gets these from the enclosing <code>genai_otel.session()</code> block, or else from
+its parent span, so a session resolved on a framework span reaches every span
+beneath it. A span that already carries a key keeps it. Disable with
+<code>GENAI_ENABLE_SESSION_PROPAGATION=false</code>.</p>
+<p>Between services the ids can travel as W3C baggage under the same keys, when the
+caller sets <code>GENAI_SESSION_BAGGAGE_KEYS</code> and the callee <code>GENAI_SESSION_BAGGAGE_ACCEPT</code>.</p>
 <h3 id="resource-attributes">Resource Attributes<a class="headerlink" href="#resource-attributes" title="Permanent link">&para;</a></h3>
 <p>Every resource attribute is a name from the OpenTelemetry registry. They
 identify <em>where</em> a span came from, which is what makes it possible to separate

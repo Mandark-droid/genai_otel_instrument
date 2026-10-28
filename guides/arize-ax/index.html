@@ -1000,6 +1000,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#agent-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verifying-a-trace-landed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1497,6 +1519,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#agent-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verifying-a-trace-landed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1646,7 +1690,7 @@ ingestion. Sending nothing but <code>gen_ai.*</code>, a chat completion span arr
 <tbody>
 <tr>
 <td><code>openinference.span.kind = LLM</code></td>
-<td>inferred; TraceVerde never sends a span kind</td>
+<td>inferred; TraceVerde sends a span kind only on agent spans (<code>AGENT</code>, see <a href="#agent-graph">Agent graph</a>)</td>
 </tr>
 <tr>
 <td><code>llm.provider</code>, <code>llm.system</code></td>
@@ -1676,7 +1720,9 @@ ingestion. Sending nothing but <code>gen_ai.*</code>, a chat completion span arr
 </table>
 <p>All original <code>gen_ai.*</code> attributes are preserved alongside the normalised
 fields, so the same span remains portable to any other OTLP backend. Nothing is
-lost in the direction of Arize, and nothing is Arize-shaped on the way out.</p>
+lost in the direction of Arize. The one Arize-shaped addition is the set of
+agent graph attributes below, written alongside <code>gen_ai.agent.name</code> rather than
+in its place.</p>
 <h2 id="token-counts-must-use-the-current-conventions">Token counts must use the current conventions<a class="headerlink" href="#token-counts-must-use-the-current-conventions" title="Permanent link">&para;</a></h2>
 <p>Arize reads <code>gen_ai.usage.input_tokens</code> / <code>gen_ai.usage.output_tokens</code> - the
 names introduced when semantic conventions v1.27.0 renamed <code>prompt_tokens</code> and
@@ -1734,11 +1780,89 @@ trace:</p>
 the embeddings table. The embedded text is attached as <code>embedding.text</code> only
 when <code>GENAI_ENABLE_CONTENT_CAPTURE=true</code>; retrieval inputs routinely contain
 user data, so it is off by default.</p>
+<h2 id="agent-graph">Agent graph<a class="headerlink" href="#agent-graph" title="Permanent link">&para;</a></h2>
+<p>Arize draws the agent graph and agent path from <code>graph.node.id</code>, which is
+required, and <code>graph.node.parent_id</code>, which is optional: without it Arize infers
+the parent from the span tree. <code>graph.node.display_name</code> labels the node. Every
+span that names an agent through <code>gen_ai.agent.name</code> also gets:</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agent.name</code></td>
+<td>the agent name</td>
+</tr>
+<tr>
+<td><code>graph.node.id</code></td>
+<td>the agent name, so repeat runs of one agent are one node</td>
+</tr>
+<tr>
+<td><code>graph.node.name</code>, <code>graph.node.display_name</code></td>
+<td>the agent name, as the node label</td>
+</tr>
+<tr>
+<td><code>graph.node.parent_id</code></td>
+<td>the nearest enclosing agent; left unset on a root agent</td>
+</tr>
+<tr>
+<td><code>openinference.span.kind</code></td>
+<td><code>AGENT</code></td>
+</tr>
+</tbody>
+</table>
+<p>The parent is found through the span tree, so an LLM or tool span between two
+agents does not break the link. An agent nested inside a span of the same agent
+(an AutoGen run and its <code>on_messages</code>) stays one node instead of becoming its own
+parent. A span that declares a kind other than <code>AGENT</code> and sets no <code>graph.node.id</code>
+is not a node, even when it names an agent. LLM, tool and transport spans are left
+unannotated.</p>
+<p>This covers CrewAI, AutoGen, AutoGen AgentChat, Google ADK, LangChain agents,
+OpenAI Agents, Pydantic AI and Strands.</p>
+<p>A CrewAI kickoff is the root node, named after the crew (<code>Crew(name=...)</code>, default
+<code>crew</code>), with span kind <code>CHAIN</code>. Each agent execution is a node beneath it. The task
+span names the agent that runs it but is a step (<code>CHAIN</code>), so each agent run appears
+once, and two crews in one trace stay two graphs.</p>
+<p>LangGraph graphs map node for node. Each node execution is a span carrying
+<code>metadata.langgraph_node</code> / <code>metadata.langgraph_step</code> (what Arize reads for
+LangGraph) and <code>graph.node.id</code> = the node name, with span kind <code>CHAIN</code>. The graph
+run is the root node, named after the graph (<code>compile(name="orchestrator")</code>,
+default <code>LangGraph</code>). A node that runs more than once, as in a loop, keeps one id,
+and a subgraph's nodes hang under the node that called it.</p>
+<p>A span that already carries any of these keys keeps its own value, so
+OpenInference instrumentors and hand-set attributes win.</p>
+<p>To annotate your own agent code, pass the name when the span starts. Attributes
+set after the span starts are too late for the graph:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">with</span> <span class="n">tracer</span><span class="o">.</span><span class="n">start_as_current_span</span><span class="p">(</span><span class="s2">&quot;triage&quot;</span><span class="p">,</span> <span class="n">attributes</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;gen_ai.agent.name&quot;</span><span class="p">:</span> <span class="s2">&quot;triage&quot;</span><span class="p">}):</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="o">...</span>
+</code></pre></div>
+<p>Set <code>GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES=false</code> to turn the extra attributes off.</p>
+<h2 id="sessions">Sessions<a class="headerlink" href="#sessions" title="Permanent link">&para;</a></h2>
+<p>Arize groups traces into sessions by <code>session.id</code>. Wrap each turn of a conversation
+in <code>genai_otel.session()</code>, with the same id for every turn:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="k">with</span> <span class="n">genai_otel</span><span class="o">.</span><span class="n">session</span><span class="p">(</span><span class="n">conversation_id</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">reply</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+</code></pre></div>
+<p>Every span in the block carries <code>session.id</code>, <code>gen_ai.conversation.id</code> and
+<code>user.id</code>: the graph, each node, and the LLM and tool calls inside them. Without a
+block, a session the framework resolves is passed down the same way. For LangGraph
+that is the config <code>thread_id</code>; for CrewAI, the crew id or <code>inputs={"session_id": ...}</code>.
+Existing <code>openinference.instrumentation.using_session()</code> blocks work too, without
+TraceVerde depending on OpenInference.</p>
+<p>When a turn calls other services (an MCP server, an internal API), the session can
+go with it as W3C baggage, so their spans land in the same Arize session. Both sides
+opt in; see <a href="../../getting-started/configuration/#across-services">Across services</a>.</p>
 <h2 id="verifying-a-trace-landed">Verifying a trace landed<a class="headerlink" href="#verifying-a-trace-landed" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>pip<span class="w"> </span>install<span class="w"> </span>arize-ax-cli
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>ax<span class="w"> </span>profiles<span class="w"> </span>create<span class="w"> </span>--api-key<span class="w"> </span><span class="nv">$ARIZE_API_KEY</span><span class="w"> </span>--auth-method<span class="w"> </span>api-key
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>ax<span class="w"> </span>projects<span class="w"> </span>list<span class="w"> </span>-l<span class="w"> </span><span class="m">100</span><span class="w"> </span>-o<span class="w"> </span>json
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>ax<span class="w"> </span>spans<span class="w"> </span><span class="nb">export</span><span class="w"> </span>&lt;project-id&gt;<span class="w"> </span>--trace-id<span class="w"> </span>&lt;trace-id&gt;<span class="w"> </span>--output-dir<span class="w"> </span>.arize-tmp-traces
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>pip<span class="w"> </span>install<span class="w"> </span>arize-ax-cli
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>ax<span class="w"> </span>profiles<span class="w"> </span>create<span class="w"> </span>--api-key<span class="w"> </span><span class="nv">$ARIZE_API_KEY</span><span class="w"> </span>--auth-method<span class="w"> </span>api-key
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>ax<span class="w"> </span>projects<span class="w"> </span>list<span class="w"> </span>-l<span class="w"> </span><span class="m">100</span><span class="w"> </span>-o<span class="w"> </span>json
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>ax<span class="w"> </span>spans<span class="w"> </span><span class="nb">export</span><span class="w"> </span>&lt;project-id&gt;<span class="w"> </span>--trace-id<span class="w"> </span>&lt;trace-id&gt;<span class="w"> </span>--output-dir<span class="w"> </span>.arize-tmp-traces
 </code></pre></div>
 <p>Trace-ID lookups are immediately consistent once ingested. If a trace is
 missing, check that the exporter flushed, that the endpoint region matches your

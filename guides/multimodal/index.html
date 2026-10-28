@@ -1515,11 +1515,23 @@ pluggable offload pipeline so binary content lives in your object store, not in 
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_ACCESS_KEY</span><span class="o">=</span>...
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_SECRET_KEY</span><span class="o">=</span>...
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">genai_otel</span><span class="w"> </span><span class="kn">import</span> <span class="n">instrument</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">instrument</span><span class="p">()</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Any subsequent OpenAI / Anthropic / Gemini / Groq call with multimodal content</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># automatically emits content-part attributes and uploads bytes to MinIO.</span>
+<p>For an on-premises SeaweedFS S3 gateway, select the <code>seaweed</code> store name. The
+SDK uses path-style S3 addressing for this backend; set the endpoint to the
+gateway, commonly port <code>8333</code>, and ensure the bucket exists and the credentials
+can write objects to it.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE</span><span class="o">=</span>seaweed
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_ENDPOINT</span><span class="o">=</span>https://seaweed-s3.example.internal:8333
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_BUCKET</span><span class="o">=</span>genai-otel-media
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_ACCESS_KEY</span><span class="o">=</span>...
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_SECRET_KEY</span><span class="o">=</span>...
+</code></pre></div>
+<p>The same boto3 instrumentation also emits nested S3 client spans for uploads
+performed by the media store.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">genai_otel</span><span class="w"> </span><span class="kn">import</span> <span class="n">instrument</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Any subsequent OpenAI / Anthropic / Gemini / Groq call with multimodal content</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># automatically emits content-part attributes and uploads bytes to MinIO.</span>
 </code></pre></div>
 <h2 id="capture-modes">Capture modes<a class="headerlink" href="#capture-modes" title="Permanent link">&para;</a></h2>
 <table>
@@ -1566,8 +1578,8 @@ Production deployments that want full traceability + UI rendering use <code>full
 <td>Local directory. <code>MEDIA_STORE_ENDPOINT</code> is the root path.</td>
 </tr>
 <tr>
-<td><code>s3</code> / <code>minio</code></td>
-<td>S3-compatible object storage. Requires the <code>multimodal-s3</code> extra.</td>
+<td><code>s3</code> / <code>minio</code> / <code>seaweed</code></td>
+<td>S3-compatible object storage. Requires the <code>multimodal-s3</code> extra. <code>seaweed</code> selects path-style addressing for a SeaweedFS S3 gateway.</td>
 </tr>
 <tr>
 <td><code>http</code></td>
@@ -1585,15 +1597,15 @@ recorded with <code>gen_ai.media.stripped_reason="size_exceeded"</code> and the 
 <li><code>genai_otel.media.redactors.pdf_pii_redact</code> — regex-based PII removal in PDFs. Requires <code>pypdf</code>.</li>
 </ul>
 <p>Plug one in:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_REDACTOR</span><span class="o">=</span>genai_otel.media.redactors.face_blur
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_REDACTOR</span><span class="o">=</span>genai_otel.media.redactors.face_blur
 </code></pre></div>
 <p>Or write your own:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">my_redactor</span><span class="p">(</span><span class="n">modality</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mime_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">if</span> <span class="n">modality</span> <span class="o">==</span> <span class="s2">&quot;image&quot;</span><span class="p">:</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="k">return</span> <span class="n">strip_pii_from_image</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="k">return</span> <span class="n">data</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">my_redactor</span><span class="p">(</span><span class="n">modality</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mime_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="k">if</span> <span class="n">modality</span> <span class="o">==</span> <span class="s2">&quot;image&quot;</span><span class="p">:</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        <span class="k">return</span> <span class="n">strip_pii_from_image</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="k">return</span> <span class="n">data</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_REDACTOR</span><span class="o">=</span>mypkg.my_redactor
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_REDACTOR</span><span class="o">=</span>mypkg.my_redactor
 </code></pre></div>
 <p>If the redactor raises, the bytes are dropped and <code>stripped_reason=redactor_error</code> is recorded —
 fail-closed, never fail-open with unredacted bytes.</p>
@@ -1696,12 +1708,12 @@ output, TTS responses).</p>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_STORE</code></td>
 <td><code>none</code></td>
-<td><code>none</code> | <code>filesystem</code> | <code>s3</code> | <code>minio</code> | <code>http</code></td>
+<td><code>none</code> | <code>filesystem</code> | <code>s3</code> | <code>minio</code> | <code>seaweed</code> | <code>http</code></td>
 </tr>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_STORE_ENDPOINT</code></td>
 <td>—</td>
-<td>URL or local path</td>
+<td>URL or local path; required for SeaweedFS and should point to its S3 gateway</td>
 </tr>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_STORE_BUCKET</code></td>
@@ -1716,12 +1728,12 @@ output, TTS responses).</p>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_STORE_ACCESS_KEY</code></td>
 <td>—</td>
-<td>for s3/minio</td>
+<td>for s3/minio/seaweed</td>
 </tr>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_STORE_SECRET_KEY</code></td>
 <td>—</td>
-<td>for s3/minio</td>
+<td>for s3/minio/seaweed</td>
 </tr>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_MAX_BYTES</code></td>

@@ -947,6 +947,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#reproduce-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproduce it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-it-is-measured" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1404,6 +1415,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#reproduce-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproduce it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-it-is-measured" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1530,7 +1552,20 @@
 
 <h1 id="benchmarks">Benchmarks<a class="headerlink" href="#benchmarks" title="Permanent link">&para;</a></h1>
 <p>How much time TraceVerde adds to an LLM call, how that compares with other tracing
-SDKs, and what the evaluation detectors cost on top.</p>
+SDKs, and what the evaluation detectors cost on top. Every figure on this page comes
+from a tool that is in the repository, so you can run it and get your own.</p>
+<h2 id="reproduce-it">Reproduce it<a class="headerlink" href="#reproduce-it" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Mandark-droid/genai_otel_instrument
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>genai_otel_instrument/benchmarks/competitive
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python<span class="w"> </span>run_benchmark.py<span class="w"> </span>--quick<span class="w">        </span><span class="c1"># the SDK comparison, a couple of minutes</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>python<span class="w"> </span>run_eval_benchmark.py<span class="w"> </span>--quick<span class="w">   </span><span class="c1"># TraceVerde&#39;s evaluation detectors</span>
+</code></pre></div>
+<p>You need Python and, ideally, <a href="https://docs.astral.sh/uv/"><code>uv</code></a>. The tool creates one
+virtual environment per library from pinned requirement files, runs the scenarios and
+writes raw JSON and Markdown tables. It needs no API keys and no accounts, and makes no
+network calls beyond installing packages. Its
+<a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/benchmarks/competitive">README</a>
+describes every flag, what each configuration records, and how to add a library.</p>
 <h2 id="how-it-is-measured">How it is measured<a class="headerlink" href="#how-it-is-measured" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>A real SDK call, no network.</strong> Each library instruments the real <code>openai</code> Python SDK,
@@ -1911,7 +1946,7 @@ pattern-based ones on a latency-critical path.</p>
 <h2 id="reading-these-numbers">Reading these numbers<a class="headerlink" href="#reading-these-numbers" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>One machine, one SDK.</strong> Results on Linux, on fewer cores or with another provider's
-  SDK will differ. Measure where your application runs.</li>
+  SDK will differ. Run the tool where your application runs.</li>
 <li><strong>A fake server.</strong> Nothing here measures export, network or a collector.</li>
 <li><strong>Configuration decides more than the library does.</strong> What an SDK records by default
   changes its cost more than which SDK it is. Compare like with like.</li>

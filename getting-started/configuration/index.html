@@ -876,6 +876,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Session and User Tracking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#across-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Across services
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2080,6 +2097,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Session and User Tracking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#across-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Across services
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2200,6 +2234,26 @@ certificate file that signed the endpoint. The exporter appends the signal path
 <td><code>GENAI_ENABLE_HTTP_INSTRUMENTATION</code></td>
 <td><code>false</code></td>
 <td>HTTP/API instrumentation (disabled to avoid OTLP conflicts)</td>
+</tr>
+<tr>
+<td><code>GENAI_ENABLE_SESSION_PROPAGATION</code></td>
+<td><code>true</code></td>
+<td>Copy <code>session.id</code> / <code>user.id</code> from a <code>genai_otel.session()</code> block or the parent span onto every span</td>
+</tr>
+<tr>
+<td><code>GENAI_SESSION_BAGGAGE_KEYS</code></td>
+<td>(none)</td>
+<td>Which of <code>session.id</code>, <code>user.id</code> this service sends to the services it calls, as W3C baggage</td>
+</tr>
+<tr>
+<td><code>GENAI_SESSION_BAGGAGE_ACCEPT</code></td>
+<td>(none)</td>
+<td>Which of <code>session.id</code>, <code>user.id</code> this service accepts from inbound baggage. Only where callers are trusted</td>
+</tr>
+<tr>
+<td><code>GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES</code></td>
+<td><code>true</code></td>
+<td>Add <code>agent.name</code> and <code>graph.node.*</code> to agent spans for the Arize AX / Phoenix agent graph</td>
 </tr>
 <tr>
 <td><code>GENAI_ENABLE_CO2_TRACKING</code></td>
@@ -3213,12 +3267,12 @@ for per-call overhead numbers and the measurement tooling.</p>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_STORE</code></td>
 <td><code>none</code></td>
-<td><code>none</code> | <code>filesystem</code> | <code>s3</code> | <code>minio</code> | <code>http</code></td>
+<td><code>none</code> | <code>filesystem</code> | <code>s3</code> | <code>minio</code> | <code>seaweed</code> | <code>http</code></td>
 </tr>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_STORE_ENDPOINT</code></td>
 <td>—</td>
-<td>URL or local path</td>
+<td>URL or local path; required for SeaweedFS and should point to its S3 gateway</td>
 </tr>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_STORE_BUCKET</code></td>
@@ -3233,12 +3287,12 @@ for per-call overhead numbers and the measurement tooling.</p>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_STORE_ACCESS_KEY</code></td>
 <td>—</td>
-<td>for s3/minio</td>
+<td>for s3/minio/seaweed</td>
 </tr>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_STORE_SECRET_KEY</code></td>
 <td>—</td>
-<td>for s3/minio</td>
+<td>for s3/minio/seaweed</td>
 </tr>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_MAX_BYTES</code></td>
@@ -3259,11 +3313,77 @@ for per-call overhead numbers and the measurement tooling.</p>
 </table>
 <p>The default <code>off</code> keeps text-only behaviour byte-identical with pre-1.0.0.</p>
 <h2 id="session-and-user-tracking">Session and User Tracking<a class="headerlink" href="#session-and-user-tracking" title="Permanent link">&para;</a></h2>
-<p>For programmatic session/user tracking, provide extractor callables:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="n">session_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;session_id&quot;</span><span class="p">),</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">user_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">),</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="p">)</span>
+<p>Wrap each conversation turn in <code>genai_otel.session()</code>. Every span started inside the
+block, auto-instrumented LLM spans included, gets <code>session.id</code>,
+<code>gen_ai.conversation.id</code> and <code>user.id</code>. Use one id per conversation, the same for
+every turn:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="k">with</span> <span class="n">genai_otel</span><span class="o">.</span><span class="n">session</span><span class="p">(</span><span class="n">conversation_id</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="n">reply</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+</code></pre></div>
+<p>It follows the OpenTelemetry context, so it works in async code and across
+<code>asyncio.gather</code>. A thread pool needs the context copied
+(<code>contextvars.copy_context().run(...)</code>), as with any OpenTelemetry context.</p>
+<p>Spans with no block of their own inherit the session from their parent span. A
+session a framework resolves (a LangGraph <code>thread_id</code>, a CrewAI crew id) therefore
+reaches the nodes, LLM calls and tools beneath it without any code. OpenInference's
+<code>using_session()</code> / <code>using_user()</code> are honoured the same way, so existing code that
+uses them keeps working.</p>
+<h3 id="across-services">Across services<a class="headerlink" href="#across-services" title="Permanent link">&para;</a></h3>
+<p>A session can follow a call into other services as W3C baggage, so their spans
+join the same session. It is off unless each side opts in, because baggage is sent
+with every instrumented outbound call (third-party APIs included) and inbound
+baggage is whatever the caller chose to send:</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Setting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The caller, which opens <code>genai_otel.session()</code></td>
+<td><code>GENAI_SESSION_BAGGAGE_KEYS=session.id</code></td>
+</tr>
+<tr>
+<td>An internal service it calls</td>
+<td><code>GENAI_SESSION_BAGGAGE_ACCEPT=session.id</code></td>
+</tr>
+<tr>
+<td>A service that does both</td>
+<td>both settings</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Add <code>user.id</code> to either list to carry the user as well.</li>
+<li>Never set <code>GENAI_SESSION_BAGGAGE_ACCEPT</code> on a service that browsers or other
+  untrusted clients call directly: anyone could choose which session its spans join.</li>
+<li>An accepted session ranks below every session the service resolves itself (a
+  <code>session()</code> block, a LangGraph <code>thread_id</code>, an extractor). Values over 256
+  characters or with control characters are dropped.</li>
+<li>Ids a service accepted are not passed on to the services and APIs it calls unless
+  it also sends them. Other baggage is propagated untouched.</li>
+<li>The receiving service's inbound requests must be instrumented, for example with
+  <code>opentelemetry-instrumentation-fastapi</code>, so the incoming headers are read.</li>
+<li>With neither setting, <code>instrument()</code> installs the TraceContext propagator only, as
+  before. When <code>OTEL_PROPAGATORS</code> is set it is left as configured; the stock <code>baggage</code>
+  propagator it may name does not apply these limits.</li>
+<li>Do not call <code>set_global_textmap()</code> after <code>instrument()</code>. It replaces the session
+  propagator: with stock W3C baggage, inbound ids are forwarded unfiltered; with
+  trace context alone, no session crosses. A warning is logged at the first span when
+  this happens. To compose your own, include
+  <code>genai_otel.sessions.SessionBaggagePropagator</code> instead of <code>W3CBaggagePropagator</code>.</li>
+</ul>
+<p>For programmatic session/user tracking per call, provide extractor callables:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">(</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">session_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;session_id&quot;</span><span class="p">),</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">user_id_extractor</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">),</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="p">)</span>
 </code></pre></div>
 <p>CrewAI, LangGraph, and LangChain have built-in automatic session ID propagation. See the <a href="../../guides/multi-agent-frameworks/">Multi-Agent Frameworks guide</a> for details.</p>
 
