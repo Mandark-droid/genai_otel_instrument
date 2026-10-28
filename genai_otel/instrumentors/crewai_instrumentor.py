@@ -36,7 +36,7 @@ from opentelemetry.trace import Status, StatusCode
 
 from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
-from ..sessions import current_session_id
+from ..sessions import current_session_id, inbound_session_id
 from .base import BaseInstrumentor, _context_with_usage_holder, content_capture_on
 
 logger = logging.getLogger(__name__)
@@ -876,11 +876,16 @@ class CrewAIInstrumentor(BaseInstrumentor):
             except Exception as e:
                 logger.debug("Failed to extract session ID via extractor: %s", e)
 
-        # Priority 4: Crew instance ID (CrewAI assigns a UUID to each Crew)
+        # Priority 4: a session an upstream service sent, when accepted. It ranks
+        # above the crew id, which CrewAI generates rather than the application.
+        if not session_id:
+            session_id = inbound_session_id()
+
+        # Priority 5: Crew instance ID (CrewAI assigns a UUID to each Crew)
         if not session_id and hasattr(instance, "id"):
             session_id = str(instance.id)
 
-        # Priority 5: Auto-generate a new UUID for this kickoff
+        # Priority 6: Auto-generate a new UUID for this kickoff
         if not session_id:
             session_id = str(uuid.uuid4())
 

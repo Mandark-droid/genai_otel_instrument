@@ -347,12 +347,19 @@ class OTelConfig:
         default_factory=lambda: os.getenv("GENAI_ENABLE_SESSION_PROPAGATION", "true").lower()
         == "true"
     )
-    # Which of session.id / user.id travel between services as W3C baggage.
-    # Baggage reaches every outbound call, third-party APIs included, so user.id
-    # is opt-in. An empty value sends and accepts neither.
+    # Which of session.id / user.id this service sends to the services it calls,
+    # as W3C baggage. Baggage reaches every outbound call, third-party APIs
+    # included, so nothing is sent unless named here.
     session_baggage_keys: List[str] = field(
         default_factory=lambda: list(
             _parse_session_baggage_keys(os.getenv("GENAI_SESSION_BAGGAGE_KEYS"))
+        )
+    )
+    # Which of them this service accepts from inbound baggage. Inbound baggage is
+    # whatever the caller sent, so name ids here only where callers are trusted.
+    session_baggage_accept: List[str] = field(
+        default_factory=lambda: list(
+            _parse_session_baggage_keys(os.getenv("GENAI_SESSION_BAGGAGE_ACCEPT"))
         )
     )
     # Add fail_on_error configuration

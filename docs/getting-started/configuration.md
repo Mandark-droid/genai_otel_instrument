@@ -33,7 +33,8 @@ certificate file that signed the endpoint. The exporter appends the signal path
 | `GENAI_ENABLE_MCP_INSTRUMENTATION` | `true` | Database, cache, vector DB, queue instrumentation |
 | `GENAI_ENABLE_HTTP_INSTRUMENTATION` | `false` | HTTP/API instrumentation (disabled to avoid OTLP conflicts) |
 | `GENAI_ENABLE_SESSION_PROPAGATION` | `true` | Copy `session.id` / `user.id` from a `genai_otel.session()` block or the parent span onto every span |
-| `GENAI_SESSION_BAGGAGE_KEYS` | `session.id` | Which of `session.id`, `user.id` travel between services as W3C baggage, in both directions; empty for none |
+| `GENAI_SESSION_BAGGAGE_KEYS` | (none) | Which of `session.id`, `user.id` this service sends to the services it calls, as W3C baggage |
+| `GENAI_SESSION_BAGGAGE_ACCEPT` | (none) | Which of `session.id`, `user.id` this service accepts from inbound baggage. Only where callers are trusted |
 | `GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES` | `true` | Add `agent.name` and `graph.node.*` to agent spans for the Arize AX / Phoenix agent graph |
 | `GENAI_ENABLE_CO2_TRACKING` | `false` | CO2 emissions tracking from GPU power consumption |
 | `GENAI_ENABLE_CONTENT_CAPTURE` | `false` | Capture prompt/response content as span events |
@@ -604,16 +605,30 @@ uses them keeps working.
 
 ### Across services
 
-The session travels to the services a block calls as W3C baggage, so their spans
-join the same session. Each service needs genai-otel-instrument and the baggage
-propagator (installed by `instrument()` unless `OTEL_PROPAGATORS` is set, in which
-case include `baggage`), and its inbound requests must be instrumented, for example
-with `opentelemetry-instrumentation-fastapi`, so the incoming headers are read.
+A session can follow a call into other services as W3C baggage, so their spans
+join the same session. It is off unless each side opts in, because baggage is sent
+with every instrumented outbound call (third-party APIs included) and inbound
+baggage is whatever the caller chose to send:
 
-Baggage is sent with every instrumented outbound call, third-party APIs included, so
-only `session.id` crosses by default. Set `GENAI_SESSION_BAGGAGE_KEYS=session.id,user.id`
-on both sides to carry the user too, or leave it empty to keep both in-process. The
-same setting decides which keys a service accepts from inbound baggage.
+| Service | Setting |
+|---|---|
+| The caller, which opens `genai_otel.session()` | `GENAI_SESSION_BAGGAGE_KEYS=session.id` |
+| An internal service it calls | `GENAI_SESSION_BAGGAGE_ACCEPT=session.id` |
+| A service that does both | both settings |
+
+- Add `user.id` to either list to carry the user as well.
+- Never set `GENAI_SESSION_BAGGAGE_ACCEPT` on a service that browsers or other
+  untrusted clients call directly: anyone could choose which session its spans join.
+- An accepted session ranks below every session the service resolves itself (a
+  `session()` block, a LangGraph `thread_id`, an extractor). Values over 256
+  characters or with control characters are dropped.
+- Ids a service accepted are not passed on to the services and APIs it calls unless
+  it also sends them. Other baggage is propagated untouched.
+- The receiving service's inbound requests must be instrumented, for example with
+  `opentelemetry-instrumentation-fastapi`, so the incoming headers are read.
+- With neither setting, `instrument()` installs the TraceContext propagator only, as
+  before. When `OTEL_PROPAGATORS` is set it is left as configured; the stock `baggage`
+  propagator it may name does not apply these limits.
 
 For programmatic session/user tracking per call, provide extractor callables:
 

@@ -24,7 +24,12 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
 from .agent_graph import AgentGraphSpanProcessor
-from .sessions import SessionSpanProcessor, configure_baggage
+from .sessions import (
+    SessionBaggagePropagator,
+    SessionSpanProcessor,
+    baggage_enabled,
+    configure_baggage,
+)
 from .config import EVALUATION_MODE_INLINE, OTelConfig
 from .cost_calculator import CostCalculator
 from .cost_enrichment_processor import CostEnrichmentSpanProcessor
@@ -455,23 +460,31 @@ def _evaluate_inline_under_another_provider(config: OTelConfig) -> None:
     )
 
 
-def _install_propagators() -> None:
-    """Install the W3C TraceContext and Baggage propagators, the OpenTelemetry default.
+def _install_propagators(config: OTelConfig) -> None:
+    """Install W3C TraceContext, plus session baggage when a service opts in.
 
-    Baggage carries session.id between services (see genai_otel.sessions).
+    Baggage carries session.id between services (see genai_otel.sessions); it is
+    installed only when GENAI_SESSION_BAGGAGE_KEYS or _ACCEPT names an id, so a
+    service that does not opt in propagates exactly what it did before.
     OTEL_PROPAGATORS, when set, already configured the global propagator at import,
     and that choice is left alone.
     """
+    if config.enable_session_propagation:
+        configure_baggage(config.session_baggage_keys, config.session_baggage_accept)
+    else:
+        configure_baggage()
     if os.getenv("OTEL_PROPAGATORS"):
         return
-    from opentelemetry.baggage.propagation import W3CBaggagePropagator
     from opentelemetry.propagate import set_global_textmap
     from opentelemetry.propagators.composite import CompositePropagator
     from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-    set_global_textmap(
-        CompositePropagator([TraceContextTextMapPropagator(), W3CBaggagePropagator()])
-    )
+    if baggage_enabled():
+        set_global_textmap(
+            CompositePropagator([TraceContextTextMapPropagator(), SessionBaggagePropagator()])
+        )
+    else:
+        set_global_textmap(TraceContextTextMapPropagator())
 
 
 def setup_auto_instrumentation(config: OTelConfig):
@@ -536,7 +549,7 @@ def setup_auto_instrumentation(config: OTelConfig):
         _base.register_evaluation_exit_hook()
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to register the evaluation exit hook: %s", e, exc_info=True)
-    _install_propagators()
+    _install_propagators(config)
 
     # Registered first, so every span has its usage holder before any wrapper
     # reads it. This is what lets a framework span leave the tokens and cost to
@@ -550,7 +563,6 @@ def setup_auto_instrumentation(config: OTelConfig):
 
     if config.enable_session_propagation:
         try:
-            configure_baggage(config.session_baggage_keys)
             tracer_provider.add_span_processor(SessionSpanProcessor())
         except Exception as e:  # noqa: BLE001
             logger.warning("Failed to add session processor: %s", e, exc_info=True)
