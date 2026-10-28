@@ -335,6 +335,12 @@ class OTelConfig:
         default_factory=lambda: os.getenv("GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES", "true").lower()
         == "true"
     )
+    # Copies session.id / user.id from a genai_otel.session() block, or from the
+    # parent span, onto every span that lacks them.
+    enable_session_propagation: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_SESSION_PROPAGATION", "true").lower()
+        == "true"
+    )
     # Add fail_on_error configuration
     fail_on_error: bool = field(
         default_factory=lambda: os.getenv("GENAI_FAIL_ON_ERROR", "false").lower() == "true"

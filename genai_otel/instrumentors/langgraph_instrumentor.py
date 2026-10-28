@@ -30,6 +30,7 @@ from opentelemetry.trace import Status, StatusCode
 from ..agent_budget import extract_budget_attributes
 from ..config import OTelConfig
 from ..server_metrics import get_server_metrics
+from ..sessions import current_session_id
 from .base import BaseInstrumentor, strip_content_attributes
 
 logger = logging.getLogger(__name__)
@@ -694,20 +695,24 @@ class LangGraphInstrumentor(BaseInstrumentor):
         if isinstance(input_state, dict):
             session_id = input_state.get("session_id") or input_state.get("session.id")
 
-        # Priority 2: LangGraph thread_id from config (native session concept)
+        # Priority 2: an enclosing genai_otel.session() block
+        if not session_id:
+            session_id = current_session_id()
+
+        # Priority 3: LangGraph thread_id from config (native session concept)
         if not session_id and config and isinstance(config, dict):
             configurable = config.get("configurable", {})
             if isinstance(configurable, dict):
                 session_id = configurable.get("thread_id")
 
-        # Priority 3: OTelConfig.session_id_extractor callable
+        # Priority 4: OTelConfig.session_id_extractor callable
         if not session_id and self.config and self.config.session_id_extractor:
             try:
                 session_id = self.config.session_id_extractor(instance, args, kwargs)
             except Exception as e:
                 logger.debug("Failed to extract session ID via extractor: %s", e)
 
-        # Priority 4: Auto-generate a new UUID for this invocation
+        # Priority 5: Auto-generate a new UUID for this invocation
         if not session_id:
             session_id = str(uuid.uuid4())
 

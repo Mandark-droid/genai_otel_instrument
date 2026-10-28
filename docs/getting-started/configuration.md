@@ -32,6 +32,7 @@ certificate file that signed the endpoint. The exporter appends the signal path
 | `GENAI_ENABLE_GPU_METRICS` | `true` | GPU utilization, memory, temperature, power metrics |
 | `GENAI_ENABLE_MCP_INSTRUMENTATION` | `true` | Database, cache, vector DB, queue instrumentation |
 | `GENAI_ENABLE_HTTP_INSTRUMENTATION` | `false` | HTTP/API instrumentation (disabled to avoid OTLP conflicts) |
+| `GENAI_ENABLE_SESSION_PROPAGATION` | `true` | Copy `session.id` / `user.id` from a `genai_otel.session()` block or the parent span onto every span |
 | `GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES` | `true` | Add `agent.name` and `graph.node.*` to agent spans for the Arize AX / Phoenix agent graph |
 | `GENAI_ENABLE_CO2_TRACKING` | `false` | CO2 emissions tracking from GPU power consumption |
 | `GENAI_ENABLE_CONTENT_CAPTURE` | `false` | Capture prompt/response content as span events |
@@ -576,7 +577,31 @@ The default `off` keeps text-only behaviour byte-identical with pre-1.0.0.
 
 ## Session and User Tracking
 
-For programmatic session/user tracking, provide extractor callables:
+Wrap each conversation turn in `genai_otel.session()`. Every span started inside the
+block, auto-instrumented LLM spans included, gets `session.id`,
+`gen_ai.conversation.id` and `user.id`. Use one id per conversation, the same for
+every turn:
+
+```python
+import genai_otel
+
+genai_otel.instrument()
+
+with genai_otel.session(conversation_id, user_id=user.id):
+    reply = graph.invoke(state)
+```
+
+It follows the OpenTelemetry context, so it works in async code and across
+`asyncio.gather`. A thread pool needs the context copied
+(`contextvars.copy_context().run(...)`), as with any OpenTelemetry context.
+
+Spans with no block of their own inherit the session from their parent span. A
+session a framework resolves (a LangGraph `thread_id`, a CrewAI crew id) therefore
+reaches the nodes, LLM calls and tools beneath it without any code. OpenInference's
+`using_session()` / `using_user()` are honoured the same way, so existing code that
+uses them keeps working.
+
+For programmatic session/user tracking per call, provide extractor callables:
 
 ```python
 genai_otel.instrument(

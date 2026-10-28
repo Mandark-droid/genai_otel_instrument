@@ -35,6 +35,7 @@ _LAZY_IMPORTS = {
     "setup_auto_instrumentation": (".auto_instrument", "setup_auto_instrumentation"),
     "uninstrument": (".auto_instrument", "uninstrument"),
     "flush_telemetry": (".auto_instrument", "flush_telemetry"),
+    "session": (".sessions", "session"),
     # Configuration
     "OTelConfig": (".config", "OTelConfig"),
     # Utilities
@@ -146,6 +147,7 @@ __all__ = [
     "instrument",
     "uninstrument",
     "flush_telemetry",
+    "session",
     "setup_auto_instrumentation",
     # Configuration
     "OTelConfig",
