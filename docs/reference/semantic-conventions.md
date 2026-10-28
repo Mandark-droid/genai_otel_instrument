@@ -230,8 +230,14 @@ LangGraph node spans (`langgraph.node.<name>`) carry:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `session.id` | string | Session identifier |
+| `session.id` | string | Session identifier; groups a conversation's traces into one session |
+| `gen_ai.conversation.id` | string | Same value as `session.id` (OTel GenAI spelling) |
 | `user.id` | string | User identifier |
+
+Every span gets these from the enclosing `genai_otel.session()` block, or else from
+its parent span, so a session resolved on a framework span reaches every span
+beneath it. A span that already carries a key keeps it. Disable with
+`GENAI_ENABLE_SESSION_PROPAGATION=false`.
 
 ### Resource Attributes
 

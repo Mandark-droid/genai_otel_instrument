@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `genai_otel.session(session_id, user_id=None)`: every span started in the block,
+  auto-instrumented LLM spans included, carries `session.id`, `gen_ai.conversation.id`
+  and `user.id`, so a conversation's traces group into one session in Arize AX and
+  other backends. Spans without a session of their own now inherit it from their parent
+  span, so the session LangGraph derives from `thread_id`, or CrewAI from the crew, reaches
+  every node, LLM and tool span. OpenInference `using_session()` / `using_user()` blocks
+  are honoured without depending on OpenInference. Disable propagation with
+  `GENAI_ENABLE_SESSION_PROPAGATION=false`.
+
+### Changed
+
+- LangGraph, CrewAI and LangChain prefer an enclosing `genai_otel.session()` over their
+  fallback session ids (`thread_id`, crew id, generated UUID). An id passed in the call's
+  own input still wins.
+
 ## [1.44.0] - 2026-10-28
 
 ### Added

@@ -90,7 +90,9 @@ tracer provider, in which case no TraceVerde span is exported (a warning is logg
   LLM span beneath it did, and then for that kickoff alone. Batch runs that overlap in
   time (`kickoff_for_each_async`) share their LLM's counters, so in that case each crew
   span can include usage from the others.
-- `session.id` is the crew's id, or `inputs={"session_id": ...}` when you pass one.
+- `session.id` is `inputs={"session_id": ...}` when you pass one, else the enclosing
+  `genai_otel.session()` block, else the crew's id. Every task, agent, LLM and tool span
+  of the kickoff carries it.
 - Tool calls have no span of their own; they appear as `llm.tools` and tool-call
   attributes on the LLM span.
 - A task with `output_pydantic` goes through the OpenAI SDK's `parse` call, which is not
@@ -169,8 +171,9 @@ node execution.
 
 **What to expect:**
 
-- `session.id`, `langgraph.session.id` and `gen_ai.conversation.id` are the config
-  `thread_id` when you pass one, otherwise a random id per run. `langgraph.thread_id`
+- `session.id`, `langgraph.session.id` and `gen_ai.conversation.id` are a `session_id`
+  in the input state, else the enclosing `genai_otel.session()` block, else the config
+  `thread_id`, otherwise a random id per run. Node, LLM and tool spans inherit it. `langgraph.thread_id`
   and `langgraph.recursion_limit` are recorded when present in the config.
 - Graph spans carry the graph's shape (`langgraph.node_count`, `langgraph.nodes`,
   `langgraph.edge_count`, `langgraph.channels`) and the input and output keys.

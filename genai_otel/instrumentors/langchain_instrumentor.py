@@ -11,6 +11,7 @@ import uuid
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
+from ..sessions import current_session_id
 from .base import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
@@ -78,8 +79,9 @@ class LangChainInstrumentor(BaseInstrumentor):
         Priority:
         1. kwargs session_id / session.id
         2. Input dict session_id / session.id (first positional arg)
-        3. OTelConfig.session_id_extractor callable
-        4. Auto-generate UUID
+        3. An enclosing genai_otel.session() block
+        4. OTelConfig.session_id_extractor callable
+        5. Auto-generate UUID
 
         Returns:
             str: The resolved session ID.
@@ -95,14 +97,18 @@ class LangChainInstrumentor(BaseInstrumentor):
             if isinstance(first_arg, dict):
                 session_id = first_arg.get("session_id") or first_arg.get("session.id")
 
-        # Priority 3: OTelConfig.session_id_extractor callable
+        # Priority 3: an enclosing genai_otel.session() block
+        if not session_id:
+            session_id = current_session_id()
+
+        # Priority 4: OTelConfig.session_id_extractor callable
         if not session_id and self.config and self.config.session_id_extractor:
             try:
                 session_id = self.config.session_id_extractor(instance, args, kwargs)
             except Exception as e:
                 logger.debug("Failed to extract session ID via extractor: %s", e)
 
-        # Priority 4: Auto-generate UUID
+        # Priority 5: Auto-generate UUID
         if not session_id:
             session_id = str(uuid.uuid4())
 

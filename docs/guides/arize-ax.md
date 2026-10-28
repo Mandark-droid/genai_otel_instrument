@@ -246,6 +246,25 @@ with tracer.start_as_current_span("triage", attributes={"gen_ai.agent.name": "tr
 
 Set `GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES=false` to turn the extra attributes off.
 
+## Sessions
+
+Arize groups traces into sessions by `session.id`. Wrap each turn of a conversation
+in `genai_otel.session()`, with the same id for every turn:
+
+```python
+import genai_otel
+
+with genai_otel.session(conversation_id, user_id=user.id):
+    reply = graph.invoke(state)
+```
+
+Every span in the block carries `session.id`, `gen_ai.conversation.id` and
+`user.id`: the graph, each node, and the LLM and tool calls inside them. Without a
+block, a session the framework resolves is passed down the same way. For LangGraph
+that is the config `thread_id`; for CrewAI, the crew id or `inputs={"session_id": ...}`.
+Existing `openinference.instrumentation.using_session()` blocks work too, without
+TraceVerde depending on OpenInference.
+
 ## Verifying a trace landed
 
 ```bash
