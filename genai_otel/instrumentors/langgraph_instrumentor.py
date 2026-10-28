@@ -6,12 +6,18 @@ entrypoint. This instrumentor wraps the four run methods of that class (``invoke
 ``stream``, ``ainvoke``, ``astream``), so each graph run is one span, and whatever its
 nodes call (LLM clients, tools, other graphs) is traced beneath it.
 
-Nodes, edges and checkpoints get no spans of their own. The graph's structure is
-recorded as attributes on the run span.
+Each node execution also gets a span, by wrapping the function LangGraph runs every
+node task through (``run_with_retry`` / ``arun_with_retry``), so the node's LLM and
+tool calls nest beneath it. Node spans carry ``metadata.langgraph_node`` /
+``langgraph_step`` and ``graph.node.id``, which Arize AX reads for its agent graph,
+with the run span as the graph's root node. Edges and checkpoints get no spans of
+their own; the graph's structure is recorded as attributes on the run span.
 """
 
 import contextvars
+import importlib
 import importlib.util
+import json
 import logging
 import sys
 import uuid
@@ -39,6 +45,10 @@ _INNER_STREAM: contextvars.ContextVar = contextvars.ContextVar(
 # Set on the Pregel class once its run methods are wrapped, so a second instrumentor
 # instance cannot stack another layer of wrappers, and spans, on top.
 _WRAPPED_FLAG = "_genai_otel_langgraph_wrapped"
+
+# Where PregelRunner looks up the per-node run functions: ``_runner`` from 0.6 / 1.x,
+# ``runner`` before. The runner imports them by name, so they are replaced there.
+_NODE_RUNNER_MODULES = ("langgraph.pregel._runner", "langgraph.pregel.runner")
 
 
 def _module_available(name: str) -> bool:
@@ -163,6 +173,8 @@ class LangGraphInstrumentor(BaseInstrumentor):
                         )
                 setattr(Pregel, _WRAPPED_FLAG, True)
 
+            self._wrap_node_runner(wrapt)
+
             global _ACTIVE
             _ACTIVE = self
             self._instrumented = True
@@ -172,6 +184,135 @@ class LangGraphInstrumentor(BaseInstrumentor):
             logger.error("Failed to instrument LangGraph: %s", e, exc_info=True)
             if config.fail_on_error:
                 raise
+
+    @staticmethod
+    def _wrap_node_runner(wrapt) -> None:
+        """Wrap the functions PregelRunner runs each node task through.
+
+        These are LangGraph internals, so a version that moved them loses node spans
+        and nothing else.
+        """
+        for module_name in _NODE_RUNNER_MODULES:
+            try:
+                if not _module_available(module_name):
+                    continue
+                module = importlib.import_module(module_name)
+            except Exception as e:  # noqa: BLE001
+                logger.debug("Could not import %s: %s", module_name, e)
+                continue
+            if not hasattr(module, "run_with_retry"):
+                continue
+            if vars(module).get(_WRAPPED_FLAG):
+                return
+            for name, method_name in (
+                ("run_with_retry", "_run_node"),
+                ("arun_with_retry", "_arun_node"),
+            ):
+                original = getattr(module, name, None)
+                if original is not None:
+                    setattr(
+                        module,
+                        name,
+                        wrapt.FunctionWrapper(original, _dispatch_to_active(method_name)),
+                    )
+            setattr(module, _WRAPPED_FLAG, True)
+            return
+        logger.debug("LangGraph node runner not found, nodes get no spans of their own")
+
+    def _graph_node_enabled(self) -> bool:
+        """Whether the Arize agent graph keys are written (GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES)."""
+        return bool(getattr(self.config, "enable_agent_graph_attributes", True))
+
+    def _node_span(self, task: Any) -> Optional[Tuple[str, Dict[str, Any]]]:
+        """Span name and start attributes for a node task, or None to leave it untraced."""
+        name = getattr(task, "name", None)
+        # __start__ writes the graph input into its channels; it is not a node.
+        if not isinstance(name, str) or not name or name.startswith("__"):
+            return None
+        metadata = {}
+        task_config = getattr(task, "config", None)
+        if isinstance(task_config, dict) and isinstance(task_config.get("metadata"), dict):
+            metadata = task_config["metadata"]
+        step = metadata.get("langgraph_step")
+
+        attrs: Dict[str, Any] = {"langgraph.node": name}
+        if isinstance(step, int):
+            attrs["langgraph.step"] = step
+        triggers = getattr(task, "triggers", None)
+        if isinstance(triggers, (list, tuple)) and triggers:
+            attrs["langgraph.triggers"] = [str(t) for t in triggers[:10]]
+        if self._graph_node_enabled():
+            attrs["graph.node.id"] = name
+            attrs["openinference.span.kind"] = "CHAIN"
+            # OpenInference's metadata attribute, which Arize reads LangGraph
+            # nodes from. Only the node keys: the run metadata can hold user data.
+            node_metadata: Dict[str, Any] = {"langgraph_node": name}
+            if isinstance(step, int):
+                node_metadata["langgraph_step"] = step
+            attrs["metadata"] = json.dumps(node_metadata)
+        return f"langgraph.node.{name}", attrs
+
+    def _prepare_node_span(self, args: Any, kwargs: Any):
+        if not self._instrumented:
+            return None
+        try:
+            task = args[0] if args else kwargs.get("task")
+            return self._node_span(task)
+        except Exception as e:  # noqa: BLE001 - tracing must never cost the node its run
+            logger.debug("Failed to prepare LangGraph node span: %s", e)
+            return None
+
+    @staticmethod
+    def _record_node_error(span, error: Exception) -> None:
+        try:
+            from langgraph.errors import GraphBubbleUp
+
+            # interrupt() and Command(graph=PARENT) travel as exceptions; they are
+            # control flow, not failures.
+            if isinstance(error, GraphBubbleUp):
+                span.set_attribute("langgraph.node.interrupted", True)
+                return
+        except ImportError:
+            pass
+        try:
+            span.set_status(Status(StatusCode.ERROR, type(error).__name__))
+            span.record_exception(error)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Failed to record LangGraph node error: %s", e)
+
+    def _run_node(self, wrapped, instance, args, kwargs):
+        """Run one node task inside a span of its own."""
+        prepared = self._prepare_node_span(args, kwargs)
+        if prepared is None:
+            return wrapped(*args, **kwargs)
+        span_name, attrs = prepared
+        with self.tracer.start_as_current_span(
+            span_name, attributes=attrs, record_exception=False, set_status_on_exception=False
+        ) as span:
+            try:
+                return wrapped(*args, **kwargs)
+            except Exception as e:
+                self._record_node_error(span, e)
+                raise
+
+    def _arun_node(self, wrapped, instance, args, kwargs):
+        """Async counterpart of ``_run_node``."""
+        prepared = self._prepare_node_span(args, kwargs)
+        if prepared is None:
+            return wrapped(*args, **kwargs)
+        span_name, attrs = prepared
+
+        async def _traced():
+            with self.tracer.start_as_current_span(
+                span_name, attributes=attrs, record_exception=False, set_status_on_exception=False
+            ) as span:
+                try:
+                    return await wrapped(*args, **kwargs)
+                except Exception as e:
+                    self._record_node_error(span, e)
+                    raise
+
+        return _traced()
 
     def _graph_attributes(self, instance: Any, args: Any, kwargs: Any) -> Dict[str, Any]:
         """Attributes for a run of ``instance``, whose StateGraph is its ``builder``."""
@@ -464,6 +605,13 @@ class LangGraphInstrumentor(BaseInstrumentor):
         # Core attributes
         attrs["gen_ai.system"] = "langgraph"
         attrs["gen_ai.operation.name"] = "graph.execution"
+        if self._graph_node_enabled():
+            # The run is the root node of the agent graph; its nodes hang beneath it.
+            graph_name = getattr(instance, "name", None)
+            attrs["graph.node.id"] = (
+                graph_name if isinstance(graph_name, str) and graph_name else "LangGraph"
+            )
+            attrs["openinference.span.kind"] = "CHAIN"
         # LangGraph carries recursion_limit in the run config dict.
         attrs.update(extract_budget_attributes(kwargs, config, instance))
 

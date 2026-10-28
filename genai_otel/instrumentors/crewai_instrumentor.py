@@ -693,6 +693,9 @@ class CrewAIInstrumentor(BaseInstrumentor):
             # Extract agent role
             if hasattr(instance, "role"):
                 attrs["crewai.agent.role"] = str(instance.role)
+                # Same canonical name as the task span (role), so the agent
+                # and the task it runs form one node in the agent graph.
+                attrs["gen_ai.agent.name"] = str(instance.role)
 
             # Extract agent goal
             if hasattr(instance, "goal"):

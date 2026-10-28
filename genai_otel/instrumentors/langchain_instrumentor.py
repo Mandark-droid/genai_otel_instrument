@@ -168,27 +168,30 @@ class LangChainInstrumentor(BaseInstrumentor):
             original_agent_call = AgentExecutor.__call__
 
             def wrapped_agent_call(instance, *args, **kwargs):
+                # Pre-call attribute extraction must never break the business
+                # call. In particular AgentExecutor.agent is a Runnable/agent
+                # object (not a dict), so calling .get() on it raised
+                # AttributeError straight into the host's agent invocation.
+                # The attributes go in at span start so AgentGraphSpanProcessor
+                # sees the agent name before any child span opens.
+                attributes = {}
+                try:
+                    agent_name = instrumentor_ref._extract_agent_name(instance)
+                    attributes["langchain.agent.name"] = agent_name
+                    # Cross-framework agent attribution per upstream proposal
+                    # semantic-conventions-genai#91.
+                    attributes["gen_ai.agent.name"] = agent_name
+                    session_id = instrumentor_ref._resolve_session_id(instance, args, kwargs)
+                    attributes["session.id"] = session_id
+                    attributes["langchain.session.id"] = session_id
+                    # Cross-framework conversation correlation per upstream
+                    # proposal semantic-conventions-genai#145.
+                    attributes["gen_ai.conversation.id"] = session_id
+                except Exception as e:
+                    logger.debug("Failed to set agent span attributes: %s", e)
                 with instrumentor_ref.tracer.start_as_current_span(
-                    "langchain.agent.execute"
-                ) as span:
-                    # Pre-call attribute extraction must never break the business
-                    # call. In particular AgentExecutor.agent is a Runnable/agent
-                    # object (not a dict), so calling .get() on it raised
-                    # AttributeError straight into the host's agent invocation.
-                    try:
-                        agent_name = instrumentor_ref._extract_agent_name(instance)
-                        span.set_attribute("langchain.agent.name", agent_name)
-                        # Cross-framework agent attribution per upstream proposal
-                        # semantic-conventions-genai#91.
-                        span.set_attribute("gen_ai.agent.name", agent_name)
-                        session_id = instrumentor_ref._resolve_session_id(instance, args, kwargs)
-                        span.set_attribute("session.id", session_id)
-                        span.set_attribute("langchain.session.id", session_id)
-                        # Cross-framework conversation correlation per upstream
-                        # proposal semantic-conventions-genai#145.
-                        span.set_attribute("gen_ai.conversation.id", session_id)
-                    except Exception as e:
-                        logger.debug("Failed to set agent span attributes: %s", e)
+                    "langchain.agent.execute", attributes=attributes
+                ):
                     result = original_agent_call(instance, *args, **kwargs)
                     return result
 

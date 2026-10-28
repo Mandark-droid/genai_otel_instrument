@@ -168,17 +168,19 @@ class TestAutoInstrumentation:
 
                         assert isinstance(batch_arg, CostEnrichingSpanExporter)
                         assert batch_arg.wrapped_exporter == mock_span_exporter_instance
-                        # Should add 3 processors: UsageHolderSpanProcessor (first, so every
+                        # Should add 4 processors: UsageHolderSpanProcessor (first, so every
                         # span has its usage holder before a wrapper reads it),
-                        # CostEnrichmentSpanProcessor and BatchSpanProcessor
-                        assert mock_tracer_provider_instance.add_span_processor.call_count == 3
+                        # AgentGraphSpanProcessor, CostEnrichmentSpanProcessor and
+                        # BatchSpanProcessor
+                        assert mock_tracer_provider_instance.add_span_processor.call_count == 4
+                        from genai_otel.agent_graph import AgentGraphSpanProcessor
                         from genai_otel.instrumentors.base import UsageHolderSpanProcessor
 
-                        first = mock_tracer_provider_instance.add_span_processor.call_args_list[0]
-                        assert isinstance(first[0][0], UsageHolderSpanProcessor)
-                        # Verify the BatchSpanProcessor was added (last call)
                         calls = mock_tracer_provider_instance.add_span_processor.call_args_list
-                        assert calls[2][0][0] == mock_span_processor_instance
+                        assert isinstance(calls[0][0][0], UsageHolderSpanProcessor)
+                        assert isinstance(calls[1][0][0], AgentGraphSpanProcessor)
+                        # Verify the BatchSpanProcessor was added (last call)
+                        assert calls[3][0][0] == mock_span_processor_instance
                         mock_otlp_metric_exporter.assert_called_once_with(
                             headers=config.headers,
                         )

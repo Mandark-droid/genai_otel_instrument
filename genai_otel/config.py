@@ -329,6 +329,12 @@ class OTelConfig:
         default_factory=lambda: os.getenv("GENAI_ENABLE_HTTP_INSTRUMENTATION", "false").lower()
         == "true"
     )
+    # Mirrors gen_ai.agent.name into the OpenInference agent.name / graph.node.*
+    # attributes that Arize AX and Phoenix build their agent graph from.
+    enable_agent_graph_attributes: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES", "true").lower()
+        == "true"
+    )
     # Add fail_on_error configuration
     fail_on_error: bool = field(
         default_factory=lambda: os.getenv("GENAI_FAIL_ON_ERROR", "false").lower() == "true"

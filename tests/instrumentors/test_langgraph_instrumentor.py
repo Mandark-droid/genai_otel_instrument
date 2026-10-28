@@ -1,5 +1,6 @@
 import asyncio
 import gc
+import json
 import sys
 import types
 import unittest
@@ -978,6 +979,393 @@ def test_not_instrumented_adds_no_spans(lg):
     assert asyncio.run(graph.ainvoke({"question": "q"}))["answer"] == "done"
     assert len(_run(graph, "astream")) == 2
     assert lg.names() == []
+
+
+# ---------------------------------------------------------------------------
+# Node spans. The node runner is a LangGraph internal, so its handling is tested
+# against stand-ins here and against the real library below when it is installed.
+# ---------------------------------------------------------------------------
+
+
+def _task(name="plan_node", step=1, triggers=("branch:to:plan_node",), config=None):
+    if config is None:
+        config = {"metadata": {"langgraph_step": step, "langgraph_node": name, "user": "x"}}
+    return types.SimpleNamespace(name=name, config=config, triggers=list(triggers))
+
+
+@pytest.fixture
+def node_tracing():
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    instrumentor = LangGraphInstrumentor()
+    instrumentor.tracer = provider.get_tracer("test")
+    instrumentor.config = OTelConfig()
+    instrumentor._instrumented = True
+    return instrumentor, exporter
+
+
+def test_node_span_attributes(node_tracing):
+    instrumentor, exporter = node_tracing
+    result = instrumentor._run_node(lambda task, policy: "ran", None, (_task(), None), {})
+
+    assert result == "ran"
+    (span,) = exporter.get_finished_spans()
+    assert span.name == "langgraph.node.plan_node"
+    attrs = span.attributes
+    assert attrs["langgraph.node"] == "plan_node"
+    assert attrs["langgraph.step"] == 1
+    assert list(attrs["langgraph.triggers"]) == ["branch:to:plan_node"]
+    assert attrs["graph.node.id"] == "plan_node"
+    assert attrs["openinference.span.kind"] == "CHAIN"
+    # Only the node keys reach the metadata attribute, not the run's own metadata.
+    assert json.loads(attrs["metadata"]) == {"langgraph_node": "plan_node", "langgraph_step": 1}
+
+
+def test_node_span_without_graph_attributes(node_tracing):
+    instrumentor, exporter = node_tracing
+    instrumentor.config = OTelConfig(enable_agent_graph_attributes=False)
+    instrumentor._run_node(lambda task, policy: None, None, (_task(), None), {})
+
+    attrs = exporter.get_finished_spans()[0].attributes
+    assert attrs["langgraph.node"] == "plan_node"
+    for key in ("graph.node.id", "openinference.span.kind", "metadata"):
+        assert key not in attrs
+
+
+def test_node_span_tolerates_missing_metadata(node_tracing):
+    instrumentor, exporter = node_tracing
+    task = types.SimpleNamespace(name="respond", config=None, triggers=None)
+    instrumentor._run_node(lambda task: None, None, (task,), {})
+
+    attrs = exporter.get_finished_spans()[0].attributes
+    assert "langgraph.step" not in attrs
+    assert "langgraph.triggers" not in attrs
+    assert json.loads(attrs["metadata"]) == {"langgraph_node": "respond"}
+
+
+@pytest.mark.parametrize("name", ["__start__", "", None])
+def test_internal_and_unnamed_tasks_get_no_span(node_tracing, name):
+    instrumentor, exporter = node_tracing
+    assert instrumentor._run_node(lambda task: "ok", None, (_task(name=name),), {}) == "ok"
+    assert exporter.get_finished_spans() == ()
+
+
+def test_node_task_passed_by_keyword(node_tracing):
+    instrumentor, exporter = node_tracing
+    instrumentor._run_node(lambda task=None: None, None, (), {"task": _task()})
+    assert exporter.get_finished_spans()[0].name == "langgraph.node.plan_node"
+
+
+def test_node_span_skipped_when_not_instrumented(node_tracing):
+    instrumentor, exporter = node_tracing
+    instrumentor._instrumented = False
+    assert instrumentor._run_node(lambda task: 1, None, (_task(),), {}) == 1
+    assert exporter.get_finished_spans() == ()
+
+
+def test_node_span_preparation_failure_still_runs_the_node(node_tracing):
+    instrumentor, exporter = node_tracing
+    with patch.object(instrumentor, "_node_span", side_effect=RuntimeError("boom")):
+        assert instrumentor._run_node(lambda task: 1, None, (_task(),), {}) == 1
+    assert exporter.get_finished_spans() == ()
+
+
+def test_node_error_is_recorded_and_raised(node_tracing):
+    instrumentor, exporter = node_tracing
+
+    def fail(task):
+        raise ValueError("node exploded")
+
+    with pytest.raises(ValueError):
+        instrumentor._run_node(fail, None, (_task(),), {})
+    (span,) = exporter.get_finished_spans()
+    assert span.status.status_code is StatusCode.ERROR
+    assert span.status.description == "ValueError"
+    assert span.events[0].name == "exception"
+
+
+def test_node_error_recording_failure_is_swallowed():
+    span = MagicMock()
+    span.set_status.side_effect = RuntimeError("boom")
+    LangGraphInstrumentor._record_node_error(span, ValueError("x"))
+
+
+def test_node_error_without_langgraph_errors_module():
+    span = MagicMock()
+    with patch.dict("sys.modules", {"langgraph.errors": None}):
+        LangGraphInstrumentor._record_node_error(span, ValueError("x"))
+    span.set_status.assert_called_once()
+
+
+def test_graph_bubble_up_is_not_an_error():
+    class GraphBubbleUp(Exception):
+        pass
+
+    class GraphInterrupt(GraphBubbleUp):
+        pass
+
+    errors = types.ModuleType("langgraph.errors")
+    errors.GraphBubbleUp = GraphBubbleUp
+    span = MagicMock()
+    with patch.dict("sys.modules", {"langgraph.errors": errors}):
+        LangGraphInstrumentor._record_node_error(span, GraphInterrupt())
+    span.set_status.assert_not_called()
+    span.set_attribute.assert_called_once_with("langgraph.node.interrupted", True)
+
+
+def test_async_node_span(node_tracing):
+    instrumentor, exporter = node_tracing
+
+    async def run(task, policy, stream=False):
+        await asyncio.sleep(0)
+        return "ran"
+
+    assert asyncio.run(instrumentor._arun_node(run, None, (_task(), None), {})) == "ran"
+    assert exporter.get_finished_spans()[0].name == "langgraph.node.plan_node"
+
+
+def test_async_node_error(node_tracing):
+    instrumentor, exporter = node_tracing
+
+    async def fail(task):
+        raise ValueError("node exploded")
+
+    with pytest.raises(ValueError):
+        asyncio.run(instrumentor._arun_node(fail, None, (_task(),), {}))
+    assert exporter.get_finished_spans()[0].status.status_code is StatusCode.ERROR
+
+
+def test_async_untraced_node_passes_through(node_tracing):
+    instrumentor, exporter = node_tracing
+
+    async def run(task):
+        return "ok"
+
+    assert asyncio.run(instrumentor._arun_node(run, None, (_task(name="__start__"),), {})) == "ok"
+    assert exporter.get_finished_spans() == ()
+
+
+def _fake_runner(name="langgraph.pregel._runner"):
+    module = types.ModuleType(name)
+    module.run_with_retry = lambda task, policy=None: "sync"
+
+    async def arun_with_retry(task, policy=None, stream=False):
+        return "async"
+
+    module.arun_with_retry = arun_with_retry
+    return module
+
+
+def test_wrap_node_runner_wraps_once():
+    import wrapt
+
+    module = _fake_runner()
+    with (
+        patch(
+            "genai_otel.instrumentors.langgraph_instrumentor._module_available", return_value=True
+        ),
+        patch("importlib.import_module", return_value=module),
+    ):
+        LangGraphInstrumentor._wrap_node_runner(wrapt)
+        wrapped = module.run_with_retry
+        LangGraphInstrumentor._wrap_node_runner(wrapt)
+
+    assert isinstance(wrapped, wrapt.FunctionWrapper)
+    assert module.run_with_retry is wrapped
+    assert isinstance(module.arun_with_retry, wrapt.FunctionWrapper)
+
+
+def test_wrap_node_runner_falls_back_to_older_module():
+    import wrapt
+
+    old = _fake_runner("langgraph.pregel.runner")
+
+    def available(name):
+        return name == "langgraph.pregel.runner"
+
+    with (
+        patch(
+            "genai_otel.instrumentors.langgraph_instrumentor._module_available",
+            side_effect=available,
+        ),
+        patch("importlib.import_module", return_value=old),
+    ):
+        LangGraphInstrumentor._wrap_node_runner(wrapt)
+    assert isinstance(old.run_with_retry, wrapt.FunctionWrapper)
+
+
+def test_wrap_node_runner_without_a_runner_is_a_no_op():
+    import wrapt
+
+    no_runner = types.ModuleType("langgraph.pregel._runner")
+    with (
+        patch(
+            "genai_otel.instrumentors.langgraph_instrumentor._module_available", return_value=True
+        ),
+        patch("importlib.import_module", side_effect=[ImportError("moved"), no_runner]),
+    ):
+        LangGraphInstrumentor._wrap_node_runner(wrapt)  # must not raise
+    assert not hasattr(no_runner, "run_with_retry")
+
+
+def test_graph_span_is_the_root_node():
+    instrumentor = LangGraphInstrumentor()
+    instrumentor.config = OTelConfig()
+    named = types.SimpleNamespace(name="orchestrator")
+    attrs = instrumentor._extract_graph_attributes(named, ({},), {}, None)
+    assert attrs["graph.node.id"] == "orchestrator"
+    assert attrs["openinference.span.kind"] == "CHAIN"
+
+    unnamed = instrumentor._extract_graph_attributes(object(), ({},), {}, None)
+    assert unnamed["graph.node.id"] == "LangGraph"
+
+    instrumentor.config = OTelConfig(enable_agent_graph_attributes=False)
+    disabled = instrumentor._extract_graph_attributes(named, ({},), {}, None)
+    assert "graph.node.id" not in disabled
+
+
+@pytest.fixture
+def real_langgraph():
+    """Real LangGraph, instrumented, with the agent graph processor in the pipeline."""
+    pytest.importorskip("langgraph.graph")
+    from genai_otel.agent_graph import AgentGraphSpanProcessor
+    from genai_otel.instrumentors import langgraph_instrumentor as module
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(AgentGraphSpanProcessor())
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    clean = otel_context.attach(otel_context.Context())
+    instrumentor = LangGraphInstrumentor()
+    instrumentor.tracer = provider.get_tracer("test")
+    instrumentor.instrument(OTelConfig())
+    try:
+        yield exporter
+    finally:
+        module._ACTIVE = None
+        otel_context.detach(clean)
+
+
+def _orchestrator():
+    from typing import TypedDict
+
+    from langgraph.graph import END, START, StateGraph
+
+    class State(TypedDict):
+        n: int
+
+    graph = StateGraph(State)
+    graph.add_node("plan_node", lambda s: {"n": 0})
+    graph.add_node("execute", lambda s: {"n": s["n"] + 1})
+    graph.add_node("validate", lambda s: {})
+    graph.add_node("respond", lambda s: {})
+    graph.add_edge(START, "plan_node")
+    graph.add_edge("plan_node", "execute")
+    graph.add_edge("execute", "validate")
+    graph.add_conditional_edges("validate", lambda s: "execute" if s["n"] < 2 else "respond")
+    graph.add_edge("respond", END)
+    return graph.compile(name="orchestrator")
+
+
+@pytest.mark.parametrize("how", ["invoke", "stream", "ainvoke"])
+def test_real_langgraph_nodes_form_the_agent_graph(real_langgraph, how):
+    app = _orchestrator()
+    if how == "invoke":
+        app.invoke({"n": 0})
+    elif how == "stream":
+        list(app.stream({"n": 0}))
+    else:
+        asyncio.run(app.ainvoke({"n": 0}))
+
+    spans = sorted(real_langgraph.get_finished_spans(), key=lambda s: s.start_time)
+    root = spans[0]
+    assert root.attributes["graph.node.id"] == "orchestrator"
+    assert "graph.node.parent_id" not in root.attributes
+
+    nodes = [s for s in spans if s.name.startswith("langgraph.node.")]
+    assert [s.attributes["graph.node.id"] for s in nodes] == [
+        "plan_node",
+        "execute",
+        "validate",
+        "execute",
+        "validate",
+        "respond",
+    ]
+    assert [s.attributes["langgraph.step"] for s in nodes] == [1, 2, 3, 4, 5, 6]
+    for node in nodes:
+        assert node.parent.span_id == root.context.span_id
+        assert node.attributes["graph.node.parent_id"] == "orchestrator"
+        assert (
+            json.loads(node.attributes["metadata"])["langgraph_node"]
+            == node.attributes["langgraph.node"]
+        )
+
+
+def test_real_langgraph_node_children_nest_under_the_node(real_langgraph):
+    from typing import TypedDict
+
+    from langgraph.graph import END, START, StateGraph
+
+    from genai_otel.instrumentors import langgraph_instrumentor as module
+
+    class State(TypedDict):
+        n: int
+
+    # Same provider as the node spans, standing in for an LLM call the node makes.
+    tracer = module._ACTIVE.tracer
+
+    def plan(state):
+        with tracer.start_as_current_span("llm.call"):
+            return {}
+
+    graph = StateGraph(State)
+    graph.add_node("plan", plan)
+    graph.add_edge(START, "plan")
+    graph.add_edge("plan", END)
+    graph.compile().invoke({"n": 0})
+
+    by_name = {s.name: s for s in real_langgraph.get_finished_spans()}
+    assert by_name["llm.call"].parent.span_id == by_name["langgraph.node.plan"].context.span_id
+
+
+def test_real_langgraph_failing_node_and_interrupt(real_langgraph):
+    from typing import TypedDict
+
+    from langgraph.checkpoint.memory import InMemorySaver
+    from langgraph.graph import END, START, StateGraph
+    from langgraph.types import interrupt
+
+    class State(TypedDict):
+        n: int
+
+    def boom(state):
+        raise ValueError("node exploded")
+
+    def ask(state):
+        interrupt("approve?")
+        return {}
+
+    failing = StateGraph(State)
+    failing.add_node("boom", boom)
+    failing.add_edge(START, "boom")
+    failing.add_edge("boom", END)
+    with pytest.raises(ValueError):
+        failing.compile().invoke({"n": 0})
+
+    paused = StateGraph(State)
+    paused.add_node("ask", ask)
+    paused.add_edge(START, "ask")
+    paused.add_edge("ask", END)
+    paused.compile(checkpointer=InMemorySaver()).invoke(
+        {"n": 0}, {"configurable": {"thread_id": "t1"}}
+    )
+
+    by_name = {s.name: s for s in real_langgraph.get_finished_spans()}
+    assert by_name["langgraph.node.boom"].status.status_code is StatusCode.ERROR
+    ask_span = by_name["langgraph.node.ask"]
+    assert ask_span.status.status_code is StatusCode.UNSET
+    assert ask_span.attributes["langgraph.node.interrupted"] is True
 
 
 if __name__ == "__main__":

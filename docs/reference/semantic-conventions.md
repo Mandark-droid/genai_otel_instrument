@@ -199,6 +199,33 @@ absent, not zero.
 
     Report a missing attribute as "not measured" rather than substituting zero.
 
+### Agent Graph
+
+Added to every span that carries `gen_ai.agent.name`, so OpenInference backends
+(Arize AX, Phoenix) can draw the agent graph. Keys a span already carries are
+kept. Disable with `GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES=false`.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `agent.name` | string | Agent name, copied from `gen_ai.agent.name` |
+| `graph.node.id` | string | Graph node; the agent name, so repeat runs share one node |
+| `graph.node.name` | string | Node label (OpenInference spelling) |
+| `graph.node.display_name` | string | Node label (Arize AX spelling) |
+| `graph.node.parent_id` | string | Node of the nearest enclosing agent; unset on a root agent |
+| `openinference.span.kind` | string | `AGENT` |
+
+LangGraph node spans (`langgraph.node.<name>`) carry:
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `langgraph.node` | string | Node name |
+| `langgraph.step` | int | Superstep the node ran in |
+| `langgraph.triggers` | string[] | Channels that triggered the node |
+| `langgraph.node.interrupted` | bool | Set when the node paused with `interrupt()` |
+| `graph.node.id` | string | Node name (agent graph attributes enabled) |
+| `metadata` | string | JSON `{"langgraph_node", "langgraph_step"}`, the OpenInference key Arize reads for LangGraph |
+| `openinference.span.kind` | string | `CHAIN` (also on the graph run span, whose `graph.node.id` is the graph name) |
+
 ### Session Tracking
 
 | Attribute | Type | Description |

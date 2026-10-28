@@ -205,11 +205,12 @@ class TestLangChainInstrumentor(unittest.TestCase):
             result = agent("input")
 
             # Verify span was created
-            instrumentor.tracer.start_as_current_span.assert_called_once_with(
-                "langchain.agent.execute"
-            )
-            calls = mock_span.set_attribute.call_args_list
-            attribute_dict = {call[0][0]: call[0][1] for call in calls}
+            instrumentor.tracer.start_as_current_span.assert_called_once()
+            span_call = instrumentor.tracer.start_as_current_span.call_args
+            self.assertEqual(span_call.args, ("langchain.agent.execute",))
+            # Passed at span start so the agent graph processor sees them.
+            attribute_dict = span_call.kwargs["attributes"]
+            self.assertEqual(attribute_dict["gen_ai.agent.name"], "test_agent")
             self.assertEqual(attribute_dict["langchain.agent.name"], "test_agent")
             self.assertIn("session.id", attribute_dict)
             self.assertIn("langchain.session.id", attribute_dict)
@@ -259,8 +260,9 @@ class TestLangChainInstrumentor(unittest.TestCase):
             result = agent("input")
 
             # Verify span was created with "unknown" agent name
-            calls = mock_span.set_attribute.call_args_list
-            attribute_dict = {call[0][0]: call[0][1] for call in calls}
+            attribute_dict = instrumentor.tracer.start_as_current_span.call_args.kwargs[
+                "attributes"
+            ]
             self.assertEqual(attribute_dict["langchain.agent.name"], "unknown")
             self.assertIn("session.id", attribute_dict)
 
@@ -686,8 +688,9 @@ class TestLangChainInstrumentor(unittest.TestCase):
             result = agent("input")
             self.assertEqual(result, {"result": "agent_output"})
 
-            calls = mock_span.set_attribute.call_args_list
-            attribute_dict = {call[0][0]: call[0][1] for call in calls}
+            attribute_dict = instrumentor.tracer.start_as_current_span.call_args.kwargs[
+                "attributes"
+            ]
             self.assertEqual(attribute_dict["langchain.agent.name"], "obj_agent")
 
     def test_wrapped_agent_call_object_agent_no_name(self):
@@ -730,9 +733,9 @@ class TestLangChainInstrumentor(unittest.TestCase):
 
             agent = MockAgentExecutor()
             self.assertEqual(agent("input"), "ok")
-            attribute_dict = {
-                call[0][0]: call[0][1] for call in mock_span.set_attribute.call_args_list
-            }
+            attribute_dict = instrumentor.tracer.start_as_current_span.call_args.kwargs[
+                "attributes"
+            ]
             self.assertEqual(attribute_dict["langchain.agent.name"], "unknown")
 
     def test_extract_agent_name_variants(self):
