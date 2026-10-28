@@ -517,6 +517,50 @@ class TestMCPInstrumentorManager(unittest.TestCase):
         self.assertTrue(any("HTTP/API instrumentation skipped" in call for call in debug_calls))
 
     @patch("genai_otel.mcp_instrumentors.manager.logger")
+    @patch("genai_otel.mcp_instrumentors.manager.HTTPXClientInstrumentor", None)
+    @patch("genai_otel.mcp_instrumentors.manager.APIInstrumentor")
+    @patch("genai_otel.mcp_instrumentors.manager.DatabaseInstrumentor")
+    @patch("genai_otel.mcp_instrumentors.manager.ElasticsearchInstrumentor")
+    @patch("genai_otel.mcp_instrumentors.manager.TimescaleDBInstrumentor")
+    @patch("genai_otel.mcp_instrumentors.manager.OpenSearchInstrumentor")
+    @patch("genai_otel.mcp_instrumentors.manager.RedisInstrumentor")
+    @patch("genai_otel.mcp_instrumentors.manager.KafkaInstrumentor")
+    @patch("genai_otel.mcp_instrumentors.manager.RabbitMQInstrumentor")
+    @patch("genai_otel.mcp_instrumentors.manager.VectorDBInstrumentor")
+    def test_http_skipped_when_httpx_instrumentation_is_not_installed(
+        self,
+        mock_vector_db,
+        mock_rabbitmq,
+        mock_kafka,
+        mock_redis,
+        mock_opensearch,
+        mock_timescaledb,
+        mock_elasticsearch,
+        mock_database,
+        mock_api,
+        mock_logger,
+    ):
+        """Regression: without opentelemetry-instrumentation-httpx the module-level
+        HTTPXClientInstrumentor is None, and calling it raised TypeError, which was
+        logged as an instrumentation failure instead of a skipped dependency."""
+        for mock in (
+            mock_database,
+            mock_timescaledb,
+            mock_rabbitmq,
+            mock_vector_db,
+        ):
+            mock.return_value.instrument.return_value = 1
+
+        manager = MCPInstrumentorManager(self.config)
+        manager.instrument_all()
+
+        debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
+        self.assertTrue(any("HTTP/API instrumentation skipped" in call for call in debug_calls))
+        error_calls = [str(call) for call in mock_logger.error.call_args_list]
+        self.assertFalse(any("HTTP" in call for call in error_calls))
+        mock_api.assert_not_called()
+
+    @patch("genai_otel.mcp_instrumentors.manager.logger")
     @patch("genai_otel.mcp_instrumentors.manager.HTTPXClientInstrumentor")
     @patch("genai_otel.mcp_instrumentors.manager.APIInstrumentor")
     @patch("genai_otel.mcp_instrumentors.manager.DatabaseInstrumentor")

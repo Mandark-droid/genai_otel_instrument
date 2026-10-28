@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   session id generated a fresh UUID and overwrote the `session.id` its span had
   inherited, so one LangGraph run carried two sessions. LangChain, LangGraph and CrewAI
   now reuse the session already on the enclosing span before generating one.
+- With HTTP instrumentation enabled and `opentelemetry-instrumentation-httpx` not
+  installed, setup raised `TypeError: 'NoneType' object is not callable` and logged it as
+  a failure. It is now skipped and logged as a missing dependency, like the others.
 
 ## [1.46.0] - 2026-10-28
 
