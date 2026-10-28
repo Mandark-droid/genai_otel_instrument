@@ -6,7 +6,9 @@ spans when the provider is also instrumented.
 
 ## CrewAI
 
-Span hierarchy: Crew -> Task -> Agent -> LLM calls, in one trace per kickoff.
+Span hierarchy: Crew -> Task -> Agent -> LLM calls, in one trace per kickoff. For the
+Arize AX agent graph the crew span is the root node and each agent execution a node
+beneath it; see [Arize AX](arize-ax.md#agent-graph).
 Verified against CrewAI 1.15.27 and 1.14.4.
 
 ```bash

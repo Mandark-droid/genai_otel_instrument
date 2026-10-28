@@ -1209,3 +1209,123 @@ class TestCrewAITelemetrySwitch(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------------------------------------------------------------------------
+# Agent graph: the crew is the root node, agents hang beneath it, tasks are steps.
+# ---------------------------------------------------------------------------
+
+
+def _graph_instrumentor(**config):
+    from genai_otel.config import OTelConfig
+    from genai_otel.instrumentors.crewai_instrumentor import CrewAIInstrumentor
+
+    instrumentor = CrewAIInstrumentor()
+    instrumentor.config = OTelConfig(**config)
+    return instrumentor
+
+
+def test_crew_span_is_the_graph_root():
+    import types
+
+    instrumentor = _graph_instrumentor()
+    named = types.SimpleNamespace(id="c1", name="research_crew", agents=[], tasks=[])
+    attrs = instrumentor._extract_crew_attributes(named, (), {})
+    assert attrs["graph.node.id"] == "research_crew"
+    assert attrs["openinference.span.kind"] == "CHAIN"
+
+    unnamed = types.SimpleNamespace(id="c2", agents=[], tasks=[])
+    assert instrumentor._extract_crew_attributes(unnamed, (), {})["graph.node.id"] == "crew"
+
+
+def test_task_span_is_a_step_not_a_node():
+    import types
+
+    instrumentor = _graph_instrumentor()
+    agent = types.SimpleNamespace(role="Researcher")
+    task = types.SimpleNamespace(description="d", expected_output="e", agent=agent)
+    attrs = instrumentor._extract_task_attributes(task, (), {})
+    assert attrs["gen_ai.agent.name"] == "Researcher"
+    assert attrs["openinference.span.kind"] == "CHAIN"
+    assert "graph.node.id" not in attrs
+
+
+def test_graph_keys_follow_the_agent_graph_flag():
+    import types
+
+    instrumentor = _graph_instrumentor(enable_agent_graph_attributes=False)
+    crew = types.SimpleNamespace(id="c1", name="research_crew", agents=[], tasks=[])
+    task = types.SimpleNamespace(
+        description="d", expected_output="e", agent=types.SimpleNamespace(role="R")
+    )
+    assert "graph.node.id" not in instrumentor._extract_crew_attributes(crew, (), {})
+    assert "openinference.span.kind" not in instrumentor._extract_task_attributes(task, (), {})
+
+
+def test_crew_task_agent_form_one_graph_through_the_wrappers():
+    """Real span wrappers and the agent graph processor: one node per agent, under the crew."""
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    from genai_otel.agent_graph import AgentGraphSpanProcessor
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(AgentGraphSpanProcessor())
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    instrumentor = _graph_instrumentor()
+    instrumentor.tracer = provider.get_tracer("test")
+    instrumentor._instrumented = True
+
+    crew_wrap = instrumentor.create_span_wrapper(
+        "crewai.crew.execution", extract_attributes=instrumentor._extract_crew_attributes
+    )
+    task_wrap = instrumentor.create_span_wrapper(
+        "crewai.task.execution", extract_attributes=instrumentor._extract_task_attributes
+    )
+    agent_wrap = instrumentor.create_span_wrapper(
+        "crewai.agent.execution", extract_attributes=instrumentor._extract_agent_attributes
+    )
+
+    class Agent:
+        def __init__(self, role):
+            self.role, self.goal, self.backstory = role, "g", "b"
+
+        @agent_wrap
+        def execute_task(self):
+            return "done"
+
+    class Task:
+        def __init__(self, agent):
+            self.agent, self.description, self.expected_output = agent, "d", "e"
+
+        @task_wrap
+        def execute_sync(self):
+            return self.agent.execute_task()
+
+    class Crew:
+        def __init__(self, tasks):
+            self.id, self.name, self.tasks, self.agents = "c1", "research_crew", tasks, []
+
+        @crew_wrap
+        def kickoff(self):
+            return [task.execute_sync() for task in self.tasks]
+
+    Crew([Task(Agent("Researcher")), Task(Agent("Writer"))]).kickoff()
+
+    spans = exporter.get_finished_spans()
+    nodes = {
+        (
+            span.name if span.name != "crewai.agent.execution" else span.attributes["graph.node.id"]
+        ): dict(span.attributes)
+        for span in spans
+        if "graph.node.id" in span.attributes
+    }
+    assert set(nodes) == {"crewai.crew.execution", "Researcher", "Writer"}
+    assert "graph.node.parent_id" not in nodes["crewai.crew.execution"]
+    assert nodes["Researcher"]["graph.node.parent_id"] == "research_crew"
+    assert nodes["Writer"]["graph.node.parent_id"] == "research_crew"
+    for span in spans:
+        if span.name == "crewai.task.execution":
+            assert "graph.node.id" not in span.attributes

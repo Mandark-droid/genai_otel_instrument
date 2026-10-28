@@ -264,3 +264,33 @@ def test_setup_skips_processor_when_disabled():
 
     added = [call.args[0] for call in provider.add_span_processor.call_args_list]
     assert not any(isinstance(p, AgentGraphSpanProcessor) for p in added)
+
+
+def test_span_declaring_a_non_agent_kind_is_not_a_node(setup):
+    # A CrewAI task names the agent that runs it but is a step, not an agent.
+    tracer, processor, spans = setup
+    with tracer.start_as_current_span("crew", attributes={"graph.node.id": "crew"}):
+        with tracer.start_as_current_span(
+            "task",
+            attributes={"gen_ai.agent.name": "researcher", "openinference.span.kind": "CHAIN"},
+        ):
+            with tracer.start_as_current_span("agent", attributes=_agent("researcher")):
+                pass
+
+    result = spans()
+    assert "graph.node.id" not in result["task"]
+    assert result["task"]["openinference.span.kind"] == "CHAIN"
+    assert result["agent"]["graph.node.id"] == "researcher"
+    assert result["agent"]["graph.node.parent_id"] == "crew"
+
+
+def test_explicit_node_id_makes_a_node_whatever_the_kind(setup):
+    tracer, _, spans = setup
+    with tracer.start_as_current_span(
+        "step", attributes={"graph.node.id": "plan", "openinference.span.kind": "CHAIN"}
+    ):
+        pass
+
+    attrs = spans()["step"]
+    assert attrs["graph.node.id"] == "plan"
+    assert attrs["openinference.span.kind"] == "CHAIN"

@@ -219,12 +219,18 @@ span that names an agent through `gen_ai.agent.name` also gets:
 
 The parent is found through the span tree, so an LLM or tool span between two
 agents does not break the link. An agent nested inside a span of the same agent
-(a CrewAI task and the agent running it, an AutoGen run and its `on_messages`)
-stays one node instead of becoming its own parent. LLM, tool and transport spans
-are left unannotated.
+(an AutoGen run and its `on_messages`) stays one node instead of becoming its own
+parent. A span that declares a kind other than `AGENT` and sets no `graph.node.id`
+is not a node, even when it names an agent. LLM, tool and transport spans are left
+unannotated.
 
 This covers CrewAI, AutoGen, AutoGen AgentChat, Google ADK, LangChain agents,
 OpenAI Agents, Pydantic AI and Strands.
+
+A CrewAI kickoff is the root node, named after the crew (`Crew(name=...)`, default
+`crew`), with span kind `CHAIN`. Each agent execution is a node beneath it. The task
+span names the agent that runs it but is a step (`CHAIN`), so each agent run appears
+once, and two crews in one trace stay two graphs.
 
 LangGraph graphs map node for node. Each node execution is a span carrying
 `metadata.langgraph_node` / `metadata.langgraph_step` (what Arize reads for
