@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.43.0] - 2026-10-28
+
 ### Added
 
 - Trace boto3 S3 API operations, including calls to SeaweedFS S3 gateways, and add a
@@ -4990,7 +4992,9 @@ This is the first public release of genai-otel-instrument, a comprehensive OpenT
 - Fixed tests for base/redis and auto instrument (a701603)
 - Updated `test_auto_instrument.py` assertions to match new OTLP exporter configuration (exporters now read endpoint from environment variables instead of direct parameters)
 
-[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.41.0...HEAD
+[Unreleased]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.43.0...HEAD
+[1.43.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.42.0...v1.43.0
+[1.42.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.41.0...v1.42.0
 [1.41.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.40.2...v1.41.0
 [1.34.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.33.0...v1.34.0
 [1.33.0]: https://github.com/Mandark-droid/genai_otel_instrument/compare/v1.32.0...v1.33.0
