@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Sessions cross service boundaries. `genai_otel.session()` puts `session.id` into W3C
+  baggage, so every instrumented outbound call (HTTP, MCP) carries it, and a receiving
+  service tags its spans with the same session. `GENAI_SESSION_BAGGAGE_KEYS` sets which
+  ids travel, in both directions: `session.id` by default; add `user.id` to carry the
+  user, or leave it empty to keep both in-process.
+
+### Changed
+
+- `instrument()` installs the W3C TraceContext and Baggage propagators, the
+  OpenTelemetry default, where it previously installed TraceContext only. When
+  `OTEL_PROPAGATORS` is set, the propagators it configures are left as they are.
+
 ## [1.45.0] - 2026-10-28
 
 ### Added

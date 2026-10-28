@@ -286,3 +286,163 @@ def test_langchain_prefers_the_session_block_over_a_generated_id():
             instrumentor._resolve_session_id(None, ({},), {"session_id": "from-call"})
             == "from-call"
         )
+
+
+# ---------------------------------------------------------------------------
+# Across services: W3C baggage.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def baggage_keys():
+    """Restore the module's baggage setting after a test changes it."""
+    from genai_otel import sessions
+
+    saved = sessions._baggage_keys
+    yield sessions.configure_baggage
+    sessions._baggage_keys = saved
+
+
+def _propagator():
+    from opentelemetry.baggage.propagation import W3CBaggagePropagator
+    from opentelemetry.propagators.composite import CompositePropagator
+    from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+
+    return CompositePropagator([TraceContextTextMapPropagator(), W3CBaggagePropagator()])
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        (None, ("session.id",)),
+        ("", ()),
+        (" user.id , session.id, bogus", ("session.id", "user.id")),
+        ("user.id", ("user.id",)),
+    ],
+)
+def test_parse_baggage_keys(raw, expected):
+    from genai_otel.sessions import parse_baggage_keys
+
+    assert parse_baggage_keys(raw) == expected
+
+
+def test_config_reads_baggage_keys():
+    with patch.dict(os.environ, {"GENAI_SESSION_BAGGAGE_KEYS": "session.id,user.id"}):
+        assert OTelConfig().session_baggage_keys == ["session.id", "user.id"]
+    with patch.dict(os.environ, {}, clear=False):
+        os.environ.pop("GENAI_SESSION_BAGGAGE_KEYS", None)
+        assert OTelConfig().session_baggage_keys == ["session.id"]
+
+
+def test_session_goes_out_as_baggage_but_user_is_opt_in(baggage_keys):
+    from opentelemetry import baggage
+
+    baggage_keys(["session.id"])
+    with session("conv-1", user_id="u-7"):
+        assert baggage.get_baggage("session.id") == "conv-1"
+        assert baggage.get_baggage("user.id") is None
+
+    baggage_keys(["session.id", "user.id"])
+    with session("conv-1", user_id="u-7"):
+        assert baggage.get_baggage("user.id") == "u-7"
+
+    baggage_keys([])
+    with session("conv-1", user_id="u-7"):
+        assert baggage.get_all() == {}
+
+
+def test_session_crosses_a_service_boundary(setup, baggage_keys):
+    """Caller injects, callee extracts: the callee's spans carry the session."""
+    tracer, spans = setup
+    baggage_keys(["session.id", "user.id"])
+    carrier = {}
+    with session("conv-1", user_id="u-7"):
+        with tracer.start_as_current_span("client"):
+            _propagator().inject(carrier)
+    assert "conv-1" in carrier["baggage"]
+
+    # The receiving service: a fresh context, rebuilt from the headers only.
+    server_ctx = _propagator().extract(carrier, context=otel_context.Context())
+    token = otel_context.attach(server_ctx)
+    try:
+        with tracer.start_as_current_span("server"):
+            with tracer.start_as_current_span("downstream_llm"):
+                pass
+    finally:
+        otel_context.detach(token)
+
+    result = spans()
+    for name in ("server", "downstream_llm"):
+        assert result[name]["session.id"] == "conv-1"
+        assert result[name]["gen_ai.conversation.id"] == "conv-1"
+        assert result[name]["user.id"] == "u-7"
+
+
+def test_inbound_baggage_outside_the_keys_is_ignored(setup, baggage_keys):
+    from opentelemetry import baggage
+
+    tracer, spans = setup
+    baggage_keys(["session.id"])
+    ctx = baggage.set_baggage("session.id", "conv-1", otel_context.Context())
+    ctx = baggage.set_baggage("user.id", "spoofed", ctx)
+    token = otel_context.attach(ctx)
+    try:
+        assert current_user_id() is None
+        with tracer.start_as_current_span("server"):
+            pass
+    finally:
+        otel_context.detach(token)
+
+    attrs = spans()["server"]
+    assert attrs["session.id"] == "conv-1"
+    assert "user.id" not in attrs
+
+    baggage_keys([])
+    token = otel_context.attach(ctx)
+    try:
+        assert current_session_id() is None
+    finally:
+        otel_context.detach(token)
+
+
+def test_local_session_block_wins_over_inbound_baggage(baggage_keys):
+    from opentelemetry import baggage
+
+    baggage_keys(["session.id"])
+    token = otel_context.attach(baggage.set_baggage("session.id", "upstream"))
+    try:
+        assert current_session_id() == "upstream"
+        with session("local"):
+            assert current_session_id() == "local"
+    finally:
+        otel_context.detach(token)
+
+
+def _install_propagators(environ):
+    """Run the propagator setup with ``environ``; return the patched set_global_textmap."""
+    from genai_otel.auto_instrument import _install_propagators as install
+
+    with (
+        patch.dict(os.environ, environ),
+        patch("opentelemetry.propagate.set_global_textmap") as set_textmap,
+    ):
+        if "OTEL_PROPAGATORS" not in environ:
+            os.environ.pop("OTEL_PROPAGATORS", None)
+        install()
+    return set_textmap
+
+
+def test_setup_installs_tracecontext_and_baggage_propagators():
+    from opentelemetry.baggage.propagation import W3CBaggagePropagator
+    from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+
+    set_textmap = _install_propagators({})
+    set_textmap.assert_called_once()
+    fields = set_textmap.call_args.args[0].fields
+    assert TraceContextTextMapPropagator().fields <= fields
+    assert W3CBaggagePropagator().fields <= fields
+
+
+def test_setup_respects_otel_propagators():
+    set_textmap = _install_propagators({"OTEL_PROPAGATORS": "tracecontext"})
+    set_textmap.assert_not_called()

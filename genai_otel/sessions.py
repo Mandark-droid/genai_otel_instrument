@@ -15,13 +15,21 @@ Two pieces close that gap:
   instrumentor resolves for a framework span (a LangGraph ``thread_id``, a CrewAI
   crew id) therefore reaches every span beneath it with no application code.
 
+Across services the ids travel as W3C baggage. ``session()`` puts them in the
+context's baggage, every instrumented outbound call (HTTP, MCP) carries it, and the
+receiving service's spans read it back. Only the keys in ``baggage_keys`` cross a
+process boundary in either direction: ``session.id`` by default, since baggage goes
+to every outbound call, third-party APIs included. ``user.id`` is opt-in.
+
 A key a span already carries is never overwritten.
 """
 
 import contextlib
 import logging
-from typing import Iterator, Optional, Tuple
+import os
+from typing import Iterable, Iterator, Optional, Tuple
 
+from opentelemetry import baggage
 from opentelemetry import context as otel_context
 from opentelemetry import trace
 from opentelemetry.sdk.trace import Span, SpanProcessor
@@ -41,6 +49,28 @@ _USER_KEY = otel_context.create_key("genai_otel.user.id")
 _OPENINFERENCE_SESSION_KEY = "session.id"
 _OPENINFERENCE_USER_KEY = "user.id"
 
+BAGGAGE_KEYS_ENV = "GENAI_SESSION_BAGGAGE_KEYS"
+_DEFAULT_BAGGAGE_KEYS = (SESSION_ID,)
+_SUPPORTED_BAGGAGE_KEYS = (SESSION_ID, USER_ID)
+
+
+def parse_baggage_keys(raw: Optional[str]) -> Tuple[str, ...]:
+    """The ``GENAI_SESSION_BAGGAGE_KEYS`` value as keys: unset means the default,
+    empty means none, and unknown names are ignored."""
+    if raw is None:
+        return _DEFAULT_BAGGAGE_KEYS
+    keys = [key.strip() for key in raw.split(",")]
+    return tuple(key for key in _SUPPORTED_BAGGAGE_KEYS if key in keys)
+
+
+_baggage_keys: Tuple[str, ...] = parse_baggage_keys(os.getenv(BAGGAGE_KEYS_ENV))
+
+
+def configure_baggage(keys: Iterable[str]) -> None:
+    """Set which of ``session.id`` / ``user.id`` cross service boundaries."""
+    global _baggage_keys
+    _baggage_keys = tuple(key for key in _SUPPORTED_BAGGAGE_KEYS if key in set(keys))
+
 
 @contextlib.contextmanager
 def session(session_id: str, user_id: Optional[str] = None) -> Iterator[None]:
@@ -51,11 +81,17 @@ def session(session_id: str, user_id: Optional[str] = None) -> Iterator[None]:
         with genai_otel.session(conversation_id, user_id=user.id):
             graph.invoke(state)
 
-    Works in sync and async code; the ids follow the OpenTelemetry context.
+    Works in sync and async code; the ids follow the OpenTelemetry context. The ids
+    named in ``GENAI_SESSION_BAGGAGE_KEYS`` also go out as baggage, so services this
+    block calls tag their spans with the same session.
     """
     ctx = otel_context.set_value(_SESSION_KEY, str(session_id))
+    if SESSION_ID in _baggage_keys:
+        ctx = baggage.set_baggage(SESSION_ID, str(session_id), ctx)
     if user_id is not None:
         ctx = otel_context.set_value(_USER_KEY, str(user_id), ctx)
+        if USER_ID in _baggage_keys:
+            ctx = baggage.set_baggage(USER_ID, str(user_id), ctx)
     token = otel_context.attach(ctx)
     try:
         yield
@@ -63,22 +99,23 @@ def session(session_id: str, user_id: Optional[str] = None) -> Iterator[None]:
         otel_context.detach(token)
 
 
-def _from_context(
-    key, openinference_key: str, ctx: Optional[otel_context.Context] = None
-) -> Optional[str]:
+def _from_context(key, plain_key: str, ctx: Optional[otel_context.Context] = None) -> Optional[str]:
     value = otel_context.get_value(key, ctx)
     if not value:
-        value = otel_context.get_value(openinference_key, ctx)
+        value = otel_context.get_value(plain_key, ctx)
+    if not value and plain_key in _baggage_keys:
+        # An upstream service's session() block, carried in by the request.
+        value = baggage.get_baggage(plain_key, ctx)
     return str(value) if value else None
 
 
 def current_session_id(ctx: Optional[otel_context.Context] = None) -> Optional[str]:
-    """The session declared by an enclosing ``session()`` block, if any."""
+    """The session of an enclosing ``session()`` block, here or upstream, if any."""
     return _from_context(_SESSION_KEY, _OPENINFERENCE_SESSION_KEY, ctx)
 
 
 def current_user_id(ctx: Optional[otel_context.Context] = None) -> Optional[str]:
-    """The user declared by an enclosing ``session()`` block, if any."""
+    """The user of an enclosing ``session()`` block, here or upstream, if any."""
     return _from_context(_USER_KEY, _OPENINFERENCE_USER_KEY, ctx)
 
 

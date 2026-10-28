@@ -276,6 +276,12 @@ def _positive_count(value: Any) -> Optional[int]:
     return value
 
 
+def _parse_session_baggage_keys(raw: Optional[str]) -> Tuple[str, ...]:
+    from .sessions import parse_baggage_keys
+
+    return parse_baggage_keys(raw)
+
+
 def _get_enabled_instrumentors() -> List[str]:
     """
     Gets the list of enabled instrumentors from the environment variable.
@@ -340,6 +346,14 @@ class OTelConfig:
     enable_session_propagation: bool = field(
         default_factory=lambda: os.getenv("GENAI_ENABLE_SESSION_PROPAGATION", "true").lower()
         == "true"
+    )
+    # Which of session.id / user.id travel between services as W3C baggage.
+    # Baggage reaches every outbound call, third-party APIs included, so user.id
+    # is opt-in. An empty value sends and accepts neither.
+    session_baggage_keys: List[str] = field(
+        default_factory=lambda: list(
+            _parse_session_baggage_keys(os.getenv("GENAI_SESSION_BAGGAGE_KEYS"))
+        )
     )
     # Add fail_on_error configuration
     fail_on_error: bool = field(

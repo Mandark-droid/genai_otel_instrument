@@ -33,6 +33,7 @@ certificate file that signed the endpoint. The exporter appends the signal path
 | `GENAI_ENABLE_MCP_INSTRUMENTATION` | `true` | Database, cache, vector DB, queue instrumentation |
 | `GENAI_ENABLE_HTTP_INSTRUMENTATION` | `false` | HTTP/API instrumentation (disabled to avoid OTLP conflicts) |
 | `GENAI_ENABLE_SESSION_PROPAGATION` | `true` | Copy `session.id` / `user.id` from a `genai_otel.session()` block or the parent span onto every span |
+| `GENAI_SESSION_BAGGAGE_KEYS` | `session.id` | Which of `session.id`, `user.id` travel between services as W3C baggage, in both directions; empty for none |
 | `GENAI_ENABLE_AGENT_GRAPH_ATTRIBUTES` | `true` | Add `agent.name` and `graph.node.*` to agent spans for the Arize AX / Phoenix agent graph |
 | `GENAI_ENABLE_CO2_TRACKING` | `false` | CO2 emissions tracking from GPU power consumption |
 | `GENAI_ENABLE_CONTENT_CAPTURE` | `false` | Capture prompt/response content as span events |
@@ -600,6 +601,19 @@ session a framework resolves (a LangGraph `thread_id`, a CrewAI crew id) therefo
 reaches the nodes, LLM calls and tools beneath it without any code. OpenInference's
 `using_session()` / `using_user()` are honoured the same way, so existing code that
 uses them keeps working.
+
+### Across services
+
+The session travels to the services a block calls as W3C baggage, so their spans
+join the same session. Each service needs genai-otel-instrument and the baggage
+propagator (installed by `instrument()` unless `OTEL_PROPAGATORS` is set, in which
+case include `baggage`), and its inbound requests must be instrumented, for example
+with `opentelemetry-instrumentation-fastapi`, so the incoming headers are read.
+
+Baggage is sent with every instrumented outbound call, third-party APIs included, so
+only `session.id` crosses by default. Set `GENAI_SESSION_BAGGAGE_KEYS=session.id,user.id`
+on both sides to carry the user too, or leave it empty to keep both in-process. The
+same setting decides which keys a service accepts from inbound baggage.
 
 For programmatic session/user tracking per call, provide extractor callables:
 
