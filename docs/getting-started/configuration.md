@@ -629,6 +629,11 @@ baggage is whatever the caller chose to send:
 - With neither setting, `instrument()` installs the TraceContext propagator only, as
   before. When `OTEL_PROPAGATORS` is set it is left as configured; the stock `baggage`
   propagator it may name does not apply these limits.
+- Do not call `set_global_textmap()` after `instrument()`. It replaces the session
+  propagator: with stock W3C baggage, inbound ids are forwarded unfiltered; with
+  trace context alone, no session crosses. A warning is logged at the first span when
+  this happens. To compose your own, include
+  `genai_otel.sessions.SessionBaggagePropagator` instead of `W3CBaggagePropagator`.
 
 For programmatic session/user tracking per call, provide extractor callables:
 

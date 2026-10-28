@@ -581,3 +581,47 @@ def test_setup_turns_baggage_off_with_session_propagation(baggage_config):
         os.environ.pop("OTEL_PROPAGATORS", None)
         install(config)
     assert sessions._send_keys == ()
+
+
+def test_warns_once_when_the_propagator_is_replaced(baggage_config):
+    # An application that calls set_global_textmap() after instrument() silently
+    # replaces the filtering propagator.
+    from opentelemetry.baggage.propagation import W3CBaggagePropagator
+    from opentelemetry.propagators.composite import CompositePropagator
+    from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+
+    stock = CompositePropagator([TraceContextTextMapPropagator(), W3CBaggagePropagator()])
+    baggage_config(send=["session.id"])
+    with (
+        patch.dict(os.environ, {}),
+        patch("opentelemetry.propagate.get_global_textmap", return_value=stock),
+        patch("genai_otel.sessions.logger") as log,
+    ):
+        os.environ.pop("OTEL_PROPAGATORS", None)
+        processor = SessionSpanProcessor()
+        for _ in range(3):
+            processor.on_start(MagicMock(attributes={}))
+    log.warning.assert_called_once()
+
+
+def test_no_warning_when_ours_is_installed_or_baggage_is_off(baggage_config):
+    from genai_otel.sessions import warn_if_propagator_replaced
+
+    with (
+        patch.dict(os.environ, {}),
+        patch("opentelemetry.propagate.get_global_textmap", return_value=_propagator()),
+    ):
+        os.environ.pop("OTEL_PROPAGATORS", None)
+        baggage_config(send=["session.id"])
+        assert warn_if_propagator_replaced() is False
+        baggage_config()
+        assert warn_if_propagator_replaced() is False
+    baggage_config(send=["session.id"])
+    with patch.dict(os.environ, {"OTEL_PROPAGATORS": "tracecontext,baggage"}):
+        assert warn_if_propagator_replaced() is False
+    with (
+        patch.dict(os.environ, {}),
+        patch("opentelemetry.propagate.get_global_textmap", side_effect=RuntimeError("boom")),
+    ):
+        os.environ.pop("OTEL_PROPAGATORS", None)
+        assert warn_if_propagator_replaced() is False

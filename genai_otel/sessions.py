@@ -243,10 +243,50 @@ def _parent_ids(parent_context) -> Tuple[Optional[str], Optional[str]]:
     )
 
 
+def _session_propagator_installed() -> bool:
+    from opentelemetry import propagate
+
+    textmap = propagate.get_global_textmap()
+    propagators = getattr(textmap, "_propagators", None) or [textmap]
+    return any(isinstance(p, SessionBaggagePropagator) for p in propagators)
+
+
+def warn_if_propagator_replaced() -> bool:
+    """Log once when session baggage is configured but our propagator is not global.
+
+    Code that calls ``set_global_textmap`` after ``instrument()`` replaces it. With
+    stock W3C baggage in its place, any inbound ``session.id`` / ``user.id`` is
+    forwarded on unfiltered; with trace context alone, no session crosses at all.
+    Returns whether it warned.
+    """
+    if not baggage_enabled() or os.getenv("OTEL_PROPAGATORS"):
+        return False
+    try:
+        if _session_propagator_installed():
+            return False
+    except Exception:  # noqa: BLE001 - a diagnostic must never break a span
+        return False
+    logger.warning(
+        "GENAI_SESSION_BAGGAGE_KEYS/_ACCEPT is set, but the global propagator was "
+        "replaced after genai_otel.instrument(). session.id / user.id baggage is not "
+        "filtered and may not cross at all. Remove the later set_global_textmap() call, "
+        "or include genai_otel.sessions.SessionBaggagePropagator in it."
+    )
+    return True
+
+
 class SessionSpanProcessor(SpanProcessor):
     """Give every span the session and user of its ``session()`` block or parent."""
 
+    def __init__(self) -> None:
+        # Checked at the first span rather than at setup: an application that
+        # overrides the propagator does so right after instrument() returns.
+        self._propagator_checked = False
+
     def on_start(self, span: Span, parent_context: Optional[otel_context.Context] = None) -> None:
+        if not self._propagator_checked:
+            self._propagator_checked = True
+            warn_if_propagator_replaced()
         try:
             attributes = span.attributes or {}
             has_session = SESSION_ID in attributes
