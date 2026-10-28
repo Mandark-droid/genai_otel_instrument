@@ -1,0 +1,14 @@
+# Pinned versions used for the opik environment.
+# Only the library under test, the OpenAI SDK, OpenTelemetry and the packages that sit on the
+# measured call path are pinned; everything else resolves normally. The full resolved set is
+# recorded in every result file.
+
+anyio==4.15.1
+httpcore==1.0.9
+httpx==0.28.1
+litellm==1.105.0
+openai==2.54.0
+opik==2.2.96
+pydantic-core==2.50.0
+pydantic==2.14.0
+tokenizers==0.23.3

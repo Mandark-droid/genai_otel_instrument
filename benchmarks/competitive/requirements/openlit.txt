@@ -1,0 +1,39 @@
+# Pinned versions used for the openlit environment.
+# Only the library under test, the OpenAI SDK, OpenTelemetry and the packages that sit on the
+# measured call path are pinned; everything else resolves normally. The full resolved set is
+# recorded in every result file.
+
+anyio==4.15.1
+httpcore==1.0.9
+httpx==0.28.1
+openai==2.54.0
+openlit==1.45.0
+opentelemetry-api==1.45.1
+opentelemetry-exporter-http-transport==0.66b1
+opentelemetry-exporter-otlp-common==0.66b1
+opentelemetry-exporter-otlp-proto-common==1.45.1
+opentelemetry-exporter-otlp-proto-grpc==1.45.1
+opentelemetry-exporter-otlp-proto-http==1.45.1
+opentelemetry-exporter-otlp==1.45.1
+opentelemetry-instrumentation-aiohttp-client==0.66b1
+opentelemetry-instrumentation-asgi==0.66b1
+opentelemetry-instrumentation-django==0.66b1
+opentelemetry-instrumentation-falcon==0.66b1
+opentelemetry-instrumentation-fastapi==0.66b1
+opentelemetry-instrumentation-flask==0.66b1
+opentelemetry-instrumentation-httpx==0.66b1
+opentelemetry-instrumentation-pyramid==0.66b1
+opentelemetry-instrumentation-requests==0.66b1
+opentelemetry-instrumentation-starlette==0.66b1
+opentelemetry-instrumentation-tornado==0.66b1
+opentelemetry-instrumentation-urllib3==0.66b1
+opentelemetry-instrumentation-urllib==0.66b1
+opentelemetry-instrumentation-wsgi==0.66b1
+opentelemetry-instrumentation==0.66b1
+opentelemetry-proto==1.45.1
+opentelemetry-sdk==1.45.1
+opentelemetry-semantic-conventions==0.66b1
+opentelemetry-util-http==0.66b1
+pydantic-core==2.50.0
+pydantic==2.14.0
+wrapt==2.5.0

@@ -1,0 +1,35 @@
+# Pinned versions used for the traceverde-eval environment.
+# Only the library under test, the OpenAI SDK, OpenTelemetry and the packages that sit on the
+# measured call path are pinned; everything else resolves normally. The full resolved set is
+# recorded in every result file.
+
+anyio==4.15.1
+detoxify==0.5.2
+genai-otel-instrument[evaluation]==1.35.0
+httpcore==1.0.9
+httpx==0.28.1
+numpy==2.4.6
+openai==2.54.0
+opentelemetry-api==1.45.1
+opentelemetry-exporter-http-transport==0.66b1
+opentelemetry-exporter-otlp-common==0.66b1
+opentelemetry-exporter-otlp-proto-common==1.45.1
+opentelemetry-exporter-otlp-proto-grpc==1.45.1
+opentelemetry-exporter-otlp-proto-http==1.45.1
+opentelemetry-exporter-otlp==1.45.1
+opentelemetry-instrumentation==0.66b1
+opentelemetry-proto==1.45.1
+opentelemetry-sdk==1.45.1
+opentelemetry-semantic-conventions==0.66b1
+presidio-analyzer==2.2.364
+presidio-anonymizer==2.2.364
+pydantic-core==2.50.1
+pydantic==2.14.1
+sentencepiece==0.2.2
+spacy==3.8.16
+thinc==8.3.13
+tokenizers==0.23.3
+torch==2.14.1
+transformers==5.19.0
+wrapt==2.5.0
+en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
