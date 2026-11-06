@@ -64,6 +64,8 @@ from 30 to 2, and names priced right rose from 369 to 388.
   unchanged.
 
 
+## [1.46.2] - 2026-11-06
+
 November 2026 pricing sweep: models released since the 2026-10-03 sweep, image and speech
 models, and existing entries that billed the wrong price. Prices were read on each vendor's
 own pricing page on 2026-11-06; models.dev was used only to find new releases. Every new
