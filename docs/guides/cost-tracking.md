@@ -132,7 +132,7 @@ add it via `custom_pricing_json` or open an issue.
 
 ## Supported Providers
 
-The pricing file carries **1550+ chat models**, covering roughly 83% of the
+The pricing file carries **1600+ chat models**, covering roughly 83% of the
 priced catalogue on models.dev. Coverage is deliberately limited to first-party
 providers and the major clouds that resell under their own SKUs — gateway and
 router listings are excluded, because they re-price the same underlying model
@@ -140,21 +140,21 @@ and the recorded cost would then depend on which aggregator was indexed first.
 
 | Provider | Models | Pricing Type |
 |----------|--------|--------------|
-| OpenAI | GPT-6 Astra/Luna/Sol/6.1 Sol, GPT-5.5 series, GPT-4o, GPT-4 Turbo, o1/o3, embeddings (50+) | Per token (prompt/completion) |
-| Anthropic | Claude Opus 5.5, Claude Sonnet 5.5, Claude Fable 5.1, Claude Opus 5, Claude Sonnet 5, Claude 3.5/3 series (20+) | Per token + cache pricing |
-| Google AI | Gemini 3.8 Flash, Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.5 Flash / Flash Lite, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (35+) | Per token |
+| OpenAI | GPT-6 Astra/Luna/Sol, GPT-6.1 Sol/Terra, GPT Image 2.6/2.5/2/1.5/1 Mini, GPT-Live 1, gpt-realtime-2.1, gpt-transcribe, GPT-5.5 series, GPT-4o, GPT-4 Turbo, o1/o3, embeddings (50+) | Per token (prompt/completion) |
+| Anthropic | Claude Opus 5.5, Claude Sonnet 5.5, Claude Haiku 5.5, Claude Fable 5.1, Claude Opus 5, Claude Sonnet 5, Claude 3.5/3 series (20+) | Per token + cache pricing |
+| Google AI | Gemini 4 Argon, Nano Banana 2.1, Gemini 3.8 Flash / Flash TTS / Live, Gemini 3.5 Transcribe, Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.5 Flash / Flash Lite, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (35+) | Per token |
 | AWS Bedrock | Titan, Claude, Llama, Mistral (25+) | Per token |
 | Azure OpenAI | Same as OpenAI | Per token |
 | Cohere | Command A/R/R+, North Mini Code, Embed v4/v3, rerankers (15+) | Per token |
-| Mistral AI | Large/Medium/Small, Mixtral, embeddings (20+) | Per token |
-| Moonshot AI | Kimi K3, Kimi K2.7 Code, K2.6, K2.5, Kimi Latest (20+) | Per token + cache pricing |
-| Alibaba / Qwen | Qwen3.8-Max, Qwen3.8 Omni Flash, Qwen3.8 Flash, Qwen3.8 27B, Qwen3.7 Flash/Max, Qwen3.6 series (40+) | Per token |
+| Mistral AI | Large 4/Medium/Small, Mixtral, Voxtral 3 transcription and TTS, embeddings (25+) | Per token |
+| Moonshot AI | Kimi K3.1 Pro / Highspeed, Kimi K3, Kimi K2.7 Code, K2.6, K2.5, Kimi Latest (20+) | Per token + cache pricing |
+| Alibaba / Qwen | Qwen3.8-Max Prime, Qwen3.8-Max, Qwen-Image 2.1 Pro, Qwen3.8 Omni Flash, Qwen3.8 Flash, Qwen3.8 27B, Qwen3.7 Flash/Max, Qwen3.6 series (40+) | Per token |
 | Thinking Machines | Inkling, Inkling Small | Per token |
 | Xiaomi | MiMo V2.6 Flash/Pro/UltraSpeed, MiMo V2.5 Pro/UltraSpeed, MiMo V2 Flash/Omni/Pro (9+) | Per token + cache pricing |
-| Zhipu / Z.AI | GLM-5.3, GLM-5.3-FlashX, GLM-5.3-Flash, GLM-5.2, GLM-5.1, GLM-5 series | Per token + cache pricing |
-| Meituan | LongCat-2.0, LongCat Flash Chat | Per token (cache free) |
+| Zhipu / Z.AI | GLM-5.3 Prime, GLM-5.3, GLM-5.3-FlashX, GLM-5.3-Flash, GLM-5.2, GLM-5.1, GLM-5 series | Per token + cache pricing |
+| Meituan | LongCat-2.5, LongCat-2.0, LongCat Flash Chat | Per token (cache free) |
 | Sakana AI | Sakana Namazu, Fugu Ultra | Per token + cache pricing |
-| Nvidia | Nemotron 3 Ultra, Nemotron 4/Nano/Super (15+) | Per token |
+| Nvidia | Nemotron 3.5 Super / Lightning, Nemotron 3 Ultra, Nemotron 4/Nano/Super (15+) | Per token |
 | Together AI | DeepSeek-R1, Llama 3.x, Qwen (25+) | Per token |
 | Groq | Llama 3.x, Mixtral, Gemma (20+) | Per token |
 | Ollama | All local models | Token tracking (free) |
@@ -164,20 +164,28 @@ and the recorded cost would then depend on which aggregator was indexed first.
 | Sarvam AI | sarvam-m, Saarika, Bulbul (12+) | Per token |
 | Voyage AI | voyage-4/3.5/3 series (15+) | Per token |
 | Jina AI | jina-embeddings-v3, jina-clip-v2 (5+) | Per token |
-| Deepgram | Nova-3/2, Aura, Whisper (20+) | Per second/character |
-| AssemblyAI | Universal-3, slam-1 (5+) | Per second |
-| ElevenLabs | Multilingual v2, Turbo v2 (8+) | Per character |
+| Deepgram | Nova-3/2, Aura-2/1, Whisper Large (20+) | Per second/character |
+| AssemblyAI | Universal-3.6 Pro (streaming), Universal-3.5 Pro, Universal-Streaming, slam-1 (8+) | Per second |
+| ElevenLabs | v4 / v4 Turbo, v3 / v3 Conversational, Flash v2.5, Multilingual v2, Scribe v2, Realtime v1 (15+) | Per character; STT and Realtime per second |
 | IBM Granite | Chat, vision, embeddings (10+) | Per token |
-| DeepSeek | V3, R1, VL (15+) | Per token |
+| DeepSeek | V4 Pro, V4.1 Flash, V3, R1, VL (15+) | Per token (off-peak rate; peak hours bill 2x) |
 | Qwen/Alibaba | Qwen 3.5, VL, embeddings (25+) | Per token |
 | xAI | Grok text, image/video generation, and voice APIs | Provider-reported request cost; TTS per character; STT per audio second when duration is returned |
 | Upstage | Solar Pro 4, Solar Pro 2, Solar Mini | Per token |
+| Meta | Muse Wonder 1.0, Muse Spark Open, Muse Spark 1.x, Muse Glimmer | Per token + cache pricing |
+| MiniMax | MiniMax M3.1 Flash, MiniMax M3 / Highspeed | Per token |
+| Inception | Mercury 3, Mercury 2.5, Mercury Voice, Mercury Decide (decisions) | Per token + cache pricing |
+| Microsoft (Foundry) | MAI-Image 2.6 / Flash, MAI-Voice 2.1 / Flash, MAI-Transcribe 2 / Streaming | Per token, per character, per second |
+| Black Forest Labs | FLUX 3 Image / Klein, FLUX.2 pro/flex/max/klein | Per image by resolution; per megapixel |
+| Speechmatics | Standard, Enhanced, Melia, Oak, Linden | Per second |
+| Cartesia | Sonic 3.6, Sonic 2, Ink 2 | Per character (credit plan rate); per second |
 
 ## Special Pricing
 
 - **Reasoning tokens**: OpenAI o1/o3 series have separate pricing for reasoning tokens
 - **Cache pricing**: Anthropic prompt caching costs (read/write rates)
 - **Batch pricing**: Some providers offer discounted batch pricing
+- **Tiered and scheduled prices**: Claude Haiku 5.5 (above 100K prompt tokens), GPT-6.x (above 272K), DeepSeek (peak hours) and introductory prices (Gemini 4 Argon to 2026-11-30, Gemini 3.8 TTS to 2026-12-31) are stored at the base or current rate; each entry's `note` states the other rates
 - **Hardware pricing**: Replicate charges per second of GPU/CPU time
 
 ## Custom Model Pricing

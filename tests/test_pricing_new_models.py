@@ -479,7 +479,8 @@ def test_unknown_model_is_not_flagged(calc):
 # is what let 42 entries sit at per-minute against a per-second contract.
 AUDIO_UNIT_CASES = [
     ("elevenlabs/scribe_v1", {"seconds": 3600}, 0.21996, "per_second"),
-    ("eleven_multilingual_v2", {"characters": 1000}, 0.10, "per_1k_chars"),
+    # $0.08 since ElevenLabs cut v2 Multilingual from $0.10 (checked 2026-11-06).
+    ("eleven_multilingual_v2", {"characters": 1000}, 0.08, "per_1k_chars"),
     ("deepgram/nova-3", {"seconds": 60}, 0.0077, "per_second"),
     ("deepgram/aura-asteria-en", {"characters": 1000}, 0.015, "per_1k_chars"),
     ("assemblyai/best", {"seconds": 3600}, 0.21, "per_second"),
@@ -919,6 +920,8 @@ TIER_THRESHOLDS = [
     ("gpt-5-5", 272000),
     ("gpt-5-4", 272000),
     ("qwen3-7-plus", 256000),
+    ("gpt-6.1-terra", 272000),
+    ("claude-haiku-5-5", 100000),
 ]
 
 
@@ -1062,6 +1065,231 @@ def test_september_2026_snapshot_alias_routing(calc, requested, expected_key):
 def test_digitalocean_openai_dashed_ids_keep_base_price(
     calc, model, prompt_price, completion_price
 ):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["prompt"] == pytest.approx(prompt_price)
+    assert costs["completion"] == pytest.approx(completion_price)
+
+
+# --- November 2026 sweep -------------------------------------------------------
+# New releases since the Oct 3 sweep, and existing ids that billed the wrong
+# price. Vendor pricing pages are the source; models.dev only found the models.
+NOVEMBER_2026_MODELS = [
+    # Anthropic Claude Haiku 5.5 (2026-10-07): base tier (prompts up to 100K).
+    ("claude-haiku-5-5", 0.0001, 0.0005),
+    ("claude-haiku-5.5", 0.0001, 0.0005),
+    ("anthropic.claude-haiku-5-5", 0.0001, 0.0005),
+    ("global.anthropic.claude-haiku-5-5", 0.0001, 0.0005),
+    ("us.anthropic.claude-haiku-5-5", 0.00011, 0.00055),
+    ("eu.anthropic.claude-haiku-5-5", 0.00011, 0.00055),
+    # Bedrock's un-prefixed and global Opus 5.5 ids billed Opus 5's $5/$25.
+    ("anthropic.claude-opus-5-5", 0.004, 0.02),
+    ("global.anthropic.claude-opus-5-5", 0.004, 0.02),
+    ("claude-opus-5-5-fast", 0.008, 0.04),
+    # OpenAI GPT-6.1 Terra (2026-10-26).
+    ("gpt-6.1-terra", 0.001, 0.005),
+    ("gpt-6-1-terra", 0.001, 0.005),
+    ("global.openai.gpt-6.1-terra", 0.001, 0.005),
+    ("us.openai.gpt-6.1-terra", 0.0011, 0.0055),
+    # DigitalOcean's dashed id carries the base rate, not Bedrock's premium.
+    ("openai-gpt-6-1-terra", 0.001, 0.005),
+    # Google Gemini 4 Argon (2026-10-13), introductory price to 2026-11-30.
+    ("gemini-4-argon", 0.002, 0.01),
+    ("vertex_ai/gemini-4-argon", 0.002, 0.01),
+    # Mistral Large 4 (2026-10-06) billed the old mistral-large $2/$6.
+    ("mistral-large-4", 0.0007, 0.0021),
+    ("mistralai/mistral-large-4-0", 0.0007, 0.0021),
+    ("mistral-large-latest", 0.0007, 0.0021),
+    # Moonshot Kimi K3.1 Pro (2026-10-23) billed kimi-k3's $3/$15.
+    ("kimi-k3.1-pro", 0.002, 0.01),
+    ("moonshotai/kimi-k3.1-pro", 0.002, 0.01),
+    ("kimi-k3.1-pro-highspeed", 0.004, 0.02),
+    # MiniMax M3.1 Flash (2026-10-19) billed MiniMax-M3's price.
+    ("MiniMax-M3.1-Flash", 0.00015, 0.0006),
+    ("minimax/minimax-m3.1-flash", 0.00015, 0.0006),
+    # DeepSeek: V4 Pro's July promotion ended; Flash 1017 keeps the Flash price.
+    ("deepseek-v4-pro", 0.00066, 0.00198),
+    ("deepseek-flash", 0.00015, 0.0006),
+    ("DeepSeek-V4.1-Flash-1017", 0.00015, 0.0006),
+    ("DeepSeek-V4.1-Flash-1017-Fast", 0.0006, 0.0024),
+    ("deepseek-ai/DeepSeek-V4.1-Flash-1017-Fast", 0.0006, 0.0024),
+    # Inception Mercury 3 (launch discount), Mercury 2.5, Mercury Voice.
+    ("mercury-3", 0.0001, 0.00035),
+    ("inception/mercury-2.5", 0.0002, 0.00075),
+    ("mercury-voice", 0.0002, 0.00075),
+    # Meta Muse Wonder 1.0 and Muse Spark Open.
+    ("muse-wonder-1.0", 0.004, 0.02),
+    ("meta/muse-wonder", 0.004, 0.02),
+    ("Muse-Spark-Open-816B-A42B", 0.00125, 0.00425),
+    # Meituan LongCat-2.5 billed longcat-2's $0.75/$2.95.
+    ("longcat-2.5", 0.0003, 0.0012),
+    ("LongCat-2.5-Preview", 0.0003, 0.0012),
+    # Open-weight releases at the OpenRouter rate.
+    ("tencent/hy4", 0.000417, 0.0012505),
+    ("nvidia/nemotron-3.5-super-vl-120b-a12b", 0.00015, 0.0005),
+    ("reflection/beam-1.0-501b-a23b", 0.0003, 0.001),
+    ("inclusionai/ling-3.1-flash", 0.000075, 0.000225),
+    ("liquid/lfm-2.5-24b-a2b", 0.00005, 0.0007),
+    # "Prime" tiers billed their base model at half the price.
+    ("z-ai/glm-5.3-prime", 0.0028, 0.0088),
+    ("qwen/qwen3.8-max-prime", 0.004, 0.012),
+]
+
+
+@pytest.mark.parametrize("model,prompt_price,completion_price", NOVEMBER_2026_MODELS)
+def test_november_2026_models_priced(calc, model, prompt_price, completion_price):
+    usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["prompt"] == pytest.approx(prompt_price)
+    assert costs["completion"] == pytest.approx(completion_price)
+    assert costs["total"] == pytest.approx(prompt_price + completion_price)
+
+
+@pytest.mark.parametrize(
+    "model,cache_read,cache_write",
+    [
+        ("claude-haiku-5-5", 0.00001, 0.000125),
+        ("us.anthropic.claude-haiku-5-5", 0.000011, 0.0001375),
+        ("anthropic.claude-opus-5-5", 0.0002, 0.005),
+        ("gpt-6.1-terra", 0.00005, 0.00125),
+        ("kimi-k3.1-pro", 0.0002, 0.002),
+        ("kimi-k3.1-pro-highspeed", 0.0002, 0.004),
+        ("qwen3.8-max-prime", 0.0005, 0.005),
+    ],
+)
+def test_november_2026_cache_rates(calc, model, cache_read, cache_write):
+    entry = calc.pricing_data["chat"][calc._normalize_model_name(model, "chat")]
+    assert entry["cacheReadPrice"] == pytest.approx(cache_read)
+    assert entry["cacheWritePrice"] == pytest.approx(cache_write)
+
+
+@pytest.mark.parametrize(
+    "requested,expected_key",
+    [
+        # A longer key of an OLDER model must not win over the new family.
+        ("anthropic.claude-opus-5-5", "anthropic.claude-opus-5-5"),
+        ("bedrock/global.anthropic.claude-opus-5-5", "global.anthropic.claude-opus-5-5"),
+        ("mistralai/mistral-large-4-0", "mistral-large-4-0"),
+        ("moonshotai/kimi-k3.1-pro-highspeed", "moonshotai/kimi-k3.1-pro-highspeed"),
+        # moonshotai/Kimi-K3 is longer than kimi-k3.1-pro and contained in it.
+        ("moonshotai/kimi-k3.1-pro", "moonshotai/kimi-k3.1-pro"),
+        ("MiniMax-M3.1-Flash", "MiniMax-M3.1-Flash"),
+        ("LongCat-2.5-Preview", "longcat-2.5"),
+        ("z-ai/glm-5.3-prime", "glm-5.3-prime"),
+        ("qwen/qwen3.8-max-prime", "qwen3.8-max-prime"),
+        ("inception/mercury-2.5", "mercury-2.5"),
+        # A regional Bedrock profile must not collapse onto the global rate.
+        ("bedrock/us.anthropic.claude-haiku-5-5", "us.anthropic.claude-haiku-5-5"),
+        ("bedrock/us.openai.gpt-6.1-terra", "us.openai.gpt-6.1-terra"),
+    ],
+)
+def test_november_2026_alias_routing(calc, requested, expected_key):
+    assert calc._normalize_model_name(requested, "chat") == expected_key
+
+
+def test_kimi_k3_cache_read_is_the_vendor_rate(calc):
+    # moonshotai/Kimi-K3 stored the $3/1M input price as its cache-read price;
+    # Moonshot charges $0.30/1M for a cache hit, as the kimi-k3 key already had.
+    for key in ("kimi-k3", "moonshotai/Kimi-K3"):
+        assert calc.pricing_data["chat"][key]["cacheReadPrice"] == pytest.approx(0.0003)
+
+
+def test_mercury_decide_is_a_decision_price(calc):
+    usage = {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000}
+    assert calc.calculate_cost("mercury-decide", usage, "decision") == pytest.approx(0.02)
+    assert calc.pricing_source("mercury-decide", "decision") == "table"
+
+
+# Image models priced per image: (model, usage, expected USD).
+NOVEMBER_2026_IMAGES = [
+    # OpenAI's table: gpt-image-2 portrait/landscape cost LESS than square.
+    ("gpt-image-2", {"quality": "high", "size": "1024x1024"}, 0.211),
+    ("gpt-image-2", {"quality": "high", "size": "1536x1024"}, 0.165),
+    ("gpt-image-2", {"quality": "low", "size": "1024x1536"}, 0.005),
+    # GPT Image 2.5/2.6 publish no per-image table and resolve to gpt-image-2.
+    ("gpt-image-2.6-sunburst", {"quality": "medium", "size": "1024x1536"}, 0.041),
+    # GPT Image 1 Mini and 1.5 resolved to gpt-image-1 before.
+    ("gpt-image-1-mini", {"quality": "low", "size": "1024x1024"}, 0.005),
+    ("gpt-image-1-mini", {"quality": "high", "size": "1536x1024"}, 0.052),
+    ("gpt-image-1.5", {"quality": "high", "size": "1024x1024"}, 0.133),
+    ("gpt-image-1", {"quality": "high", "size": "1024x1024"}, 0.167),
+    # Nano Banana 2.1 resolved to nano-banana-2 ($0.067 at 1K) before.
+    ("gemini-nano-banana-2.1", {"quality": "standard", "size": "1024x1024"}, 0.0336),
+    ("gemini-nano-banana-2.1", {"quality": "batch", "size": "4096x4096"}, 0.0567),
+    ("nano-banana-2", {"quality": "standard", "size": "1024x1024"}, 0.067),
+    ("flux-3-image", {"quality": "standard", "size": "2048x2048"}, 0.10),
+    ("flux-3-image-klein", {"quality": "standard", "size": "1024x1024"}, 0.009),
+    # Flat per-image prices bill whatever the size.
+    ("qwen-image-2.1-pro", {"size": "1328x1328"}, 0.035333),
+    ("grok-imagine-image", {}, 0.02),
+    ("black-forest-labs/FLUX.2-flex", {"quality": "standard", "width": 1000, "height": 1000}, 0.05),
+]
+
+
+@pytest.mark.parametrize("model,usage,expected", NOVEMBER_2026_IMAGES)
+def test_november_2026_image_prices(calc, model, usage, expected):
+    assert calc.calculate_cost(model, dict(usage), "image") == pytest.approx(expected)
+
+
+# Audio models: (model, usage, expected USD). One minute of audio, 1M characters
+# or 1M tokens, so the expected value reads as the vendor's published rate.
+MINUTE, MILLION_CHARS, MILLION_TOKENS = (
+    {"seconds": 60},
+    {"characters": 1_000_000},
+    {"tokens": 1_000_000},
+)
+NOVEMBER_2026_AUDIO = [
+    ("gpt-live-1", MINUTE, 0.05),
+    ("gpt-transcribe", MINUTE, 0.0045),
+    ("gpt-realtime-whisper", MINUTE, 0.017),
+    ("gpt-realtime-translate", MINUTE, 0.034),
+    ("gpt-realtime-2.1", MILLION_TOKENS, 32.0),
+    ("gpt-realtime-2.1-mini", MILLION_TOKENS, 10.0),
+    ("gpt-4o-mini-tts", MILLION_TOKENS, 12.0),
+    ("gemini-3.8-flash-tts", MILLION_TOKENS, 9.0),
+    ("gemini-3.8-flash-lite-tts", MILLION_TOKENS, 6.0),
+    ("gemini-2.5-flash-preview-tts", MILLION_TOKENS, 10.0),
+    ("gemini-2.5-pro-preview-tts", MILLION_TOKENS, 20.0),
+    ("gemini-3.5-transcribe", MINUTE, 0.005),
+    ("gemini-3.8-live", MILLION_TOKENS, 3.0),
+    ("grok-voice-3.0", MINUTE, 0.08),
+    ("MAI-Voice-2.1", MILLION_CHARS, 22.0),
+    ("MAI-Voice-2.1-Flash", MILLION_CHARS, 15.0),
+    ("MAI-Transcribe-2", {"seconds": 3600}, 0.10),
+    ("voxtral-mini-transcribe-3-0", MINUTE, 0.0035),
+    ("voxtral-mini-tts-3-0", MILLION_CHARS, 13.0),
+    ("eleven_v4", MILLION_CHARS, 80.0),
+    ("eleven_v4_turbo", MILLION_CHARS, 40.0),
+    ("eleven_v3_conversational", MILLION_CHARS, 40.0),
+    ("eleven_multilingual_v2", MILLION_CHARS, 80.0),
+    ("eleven_turbo_v2", MILLION_CHARS, 40.0),
+    ("scribe_v2_medical", {"seconds": 3600}, 0.22),
+    ("scribe_v2_realtime", {"seconds": 3600}, 0.39),
+    ("universal-3-6-pro", {"seconds": 3600}, 0.45),
+    ("assemblyai/universal-3-5-pro", {"seconds": 3600}, 0.21),
+    ("speechmatics/standard", {"seconds": 3600}, 0.45),
+    ("speechmatics/linden", {"seconds": 3600}, 0.30),
+    ("deepgram/whisper-large", MINUTE, 0.0048),
+]
+
+
+@pytest.mark.parametrize("model,usage,expected", NOVEMBER_2026_AUDIO)
+def test_november_2026_audio_prices(calc, model, usage, expected):
+    assert calc.calculate_cost(model, dict(usage), "audio") == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "model,prompt_price,completion_price",
+    [
+        ("gpt-image-2.6-sunburst", 0.005, 0.03),
+        ("gpt-image-2.6-flare", 0.005, 0.03),
+        ("gpt-image-2.5-sunburst", 0.005, 0.03),
+        ("gpt-image-1-mini", 0.002, 0.008),
+        ("MAI-Image-2.6", 0.005, 0.038),
+        ("mai-image-2.6-flash", 0.00175, 0.019),
+    ],
+)
+def test_november_2026_image_token_prices(calc, model, prompt_price, completion_price):
     usage = {"prompt_tokens": 1000, "completion_tokens": 1000}
     costs = calc.calculate_granular_cost(model, usage, "chat")
     assert costs["prompt"] == pytest.approx(prompt_price)

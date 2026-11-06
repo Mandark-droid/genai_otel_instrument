@@ -403,20 +403,20 @@
     "gpt-image-2": {
       "low": {
         "1024x1024": 0.006,
-        "1024x1536": 0.009,
-        "1536x1024": 0.009
+        "1024x1536": 0.005,
+        "1536x1024": 0.005
       },
       "medium": {
         "1024x1024": 0.053,
-        "1024x1536": 0.08,
-        "1536x1024": 0.08
+        "1024x1536": 0.041,
+        "1536x1024": 0.041
       },
       "high": {
         "1024x1024": 0.211,
-        "1024x1536": 0.317,
-        "1536x1024": 0.317
+        "1024x1536": 0.165,
+        "1536x1024": 0.165
       },
-      "note": "OpenAI gpt-image-2 (2026). Per-image prices for 1024x1024 are sourced; portrait/landscape derived from token-output ratio."
+      "note": "OpenAI gpt-image-2, per image by quality and size, from OpenAI's table: portrait and landscape cost LESS than square (the earlier values were derived from a token ratio and were about 1.9x too high). GPT Image 2.5/2.6 have no per-image table and resolve here. Source: developers.openai.com/api/docs/guides/image-generation (output cost table)"
     },
     "gpt-image-1": {
       "low": {
@@ -450,9 +450,9 @@
     },
     "black-forest-labs/FLUX.2-flex": {
       "standard": {
-        "1000000": 0.06
+        "1000000": 0.05
       },
-      "note": "FLUX.2 [flex]: $0.06 base per ~1MP output."
+      "note": "FLUX.2 [flex]: $0.05 for the first MP and $0.05 per additional MP (was $0.06). Source: bfl.ai/pricing"
     },
     "black-forest-labs/FLUX.2-klein-4b": {
       "standard": {
@@ -464,7 +464,7 @@
       "standard": {
         "1000000": 0.015
       },
-      "note": "FLUX.2 [klein] 9B: first MP $0.015, additional MP $0.001."
+      "note": "FLUX.2 [klein] 9B: first MP $0.015, additional MP $0.002. The per-megapixel schema bills every MP at the first-MP rate, so outputs above 1 MP are overstated. Source: bfl.ai/pricing"
     },
     "black-forest-labs/FLUX.2-dev": {
       "standard": {
@@ -494,7 +494,100 @@
       "standard": {
         "per_image": 0.04
       }
-    }
+    },
+    "gemini-nano-banana-2.1": {
+      "standard": {
+        "1024x1024": 0.0336,
+        "2048x2048": 0.0504,
+        "4096x4096": 0.113
+      },
+      "batch": {
+        "1024x1024": 0.0168,
+        "2048x2048": 0.0252,
+        "4096x4096": 0.0567
+      },
+      "note": "Google Nano Banana 2.1 (gemini-nano-banana-2.1, released 2026-10-06) - input $1.50/1M, text and thinking output $7.50/1M, image output $30/1M = $0.0336 per 1K, $0.0504 per 2K, $0.113 per 4K image; batch half. 1K/2K/4K are stored as the square sizes. Without this key the id resolved to nano-banana-2 and billed about 2x. Source: aistudio.google.com/docs/pricing"
+    },
+    "nano-banana-2.1": {
+      "standard": {
+        "1024x1024": 0.0336,
+        "2048x2048": 0.0504,
+        "4096x4096": 0.113
+      },
+      "batch": {
+        "1024x1024": 0.0168,
+        "2048x2048": 0.0252,
+        "4096x4096": 0.0567
+      },
+      "note": "Google Nano Banana 2.1 (gemini-nano-banana-2.1, released 2026-10-06) - input $1.50/1M, text and thinking output $7.50/1M, image output $30/1M = $0.0336 per 1K, $0.0504 per 2K, $0.113 per 4K image; batch half. 1K/2K/4K are stored as the square sizes. Without this key the id resolved to nano-banana-2 and billed about 2x. Source: aistudio.google.com/docs/pricing"
+    },
+    "gemini-3.1-flash-lite-image": {
+      "standard": {
+        "1024x1024": 0.0336
+      },
+      "batch": {
+        "1024x1024": 0.0168
+      },
+      "note": "Google Gemini 3.1 Flash Lite Image - $0.0336 per 1K image, batch $0.0168. Source: aistudio.google.com/docs/pricing"
+    },
+    "gpt-image-1.5": {
+      "low": {
+        "1024x1024": 0.009,
+        "1024x1536": 0.013,
+        "1536x1024": 0.013
+      },
+      "medium": {
+        "1024x1024": 0.034,
+        "1024x1536": 0.05,
+        "1536x1024": 0.05
+      },
+      "high": {
+        "1024x1024": 0.133,
+        "1024x1536": 0.2,
+        "1536x1024": 0.2
+      },
+      "note": "OpenAI GPT Image 1.5, per image by quality and size. Without this key the id resolved to gpt-image-1. Source: developers.openai.com/api/docs/guides/image-generation (output cost table)"
+    },
+    "gpt-image-1-mini": {
+      "low": {
+        "1024x1024": 0.005,
+        "1024x1536": 0.006,
+        "1536x1024": 0.006
+      },
+      "medium": {
+        "1024x1024": 0.011,
+        "1024x1536": 0.015,
+        "1536x1024": 0.015
+      },
+      "high": {
+        "1024x1024": 0.036,
+        "1024x1536": 0.052,
+        "1536x1024": 0.052
+      },
+      "note": "OpenAI GPT Image 1 Mini, per image by quality and size. Without this key the id resolved to gpt-image-1 and billed 2-5x. Source: developers.openai.com/api/docs/guides/image-generation (output cost table)"
+    },
+    "flux-3-image": {
+      "standard": {
+        "768x768": 0.041,
+        "1024x1024": 0.048,
+        "1536x1536": 0.07,
+        "2048x2048": 0.1,
+        "4096x4096": 0.607
+      },
+      "note": "Black Forest Labs FLUX 3 Image (released 2026-10-05) - per image by resolution tier: 768x768, 1K, 1.5K, 2K, 4K = $0.041, $0.048, $0.07, $0.1, $0.607. The tiers are stored under the square sizes; BFL bills a request at the smallest tier with enough pixels, so a non-square size is not matched here. Edits cost the same. Source: bfl.ai/pricing"
+    },
+    "flux-3-image-klein": {
+      "standard": {
+        "768x768": 0.008,
+        "1024x1024": 0.009,
+        "1536x1536": 0.011,
+        "2048x2048": 0.014,
+        "4096x4096": 0.036
+      },
+      "note": "Black Forest Labs FLUX 3 Image Klein (released 2026-10-15) - per image by resolution tier: 768x768, 1K, 1.5K, 2K, 4K = $0.008, $0.009, $0.011, $0.014, $0.036. The tiers are stored under the square sizes; BFL bills a request at the smallest tier with enough pixels, so a non-square size is not matched here. Edits cost the same. Source: bfl.ai/pricing"
+    },
+    "qwen-image-2.1-pro": 0.035333,
+    "grok-imagine-image": 0.02
   },
   "audio": {
     "xai-tts": {
@@ -516,7 +609,8 @@
       "per_1k_chars": 0.03
     },
     "eleven_multilingual_v2": {
-      "per_1k_chars": 0.1
+      "per_1k_chars": 0.08,
+      "note": "ElevenLabs v2 Multilingual - $0.08 per 1K characters (was $0.10). Source: elevenlabs.io/pricing/api"
     },
     "eleven_multilingual_v1": {
       "per_1k_chars": 0.1
@@ -528,7 +622,8 @@
       "per_1k_chars": 0.1
     },
     "eleven_turbo_v2": {
-      "per_1k_chars": 0.05
+      "per_1k_chars": 0.04,
+      "note": "ElevenLabs Turbo v2 (deprecated for Flash v2) - $0.04 per 1K characters (was $0.05). Source: elevenlabs.io/pricing/api"
     },
     "eleven_english_sts_v2": {
       "per_1k_chars": 0.24
@@ -639,13 +734,15 @@
       "per_second": 7.167e-05
     },
     "deepgram/whisper": {
-      "per_second": 0.0001
+      "per_second": 8e-05,
+      "note": "Deepgram Whisper Large, pre-recorded - $0.0048/min (was $0.006/min). Source: deepgram.com/pricing"
     },
     "deepgram/whisper-base": {
       "per_second": 0.0001
     },
     "deepgram/whisper-large": {
-      "per_second": 0.0001
+      "per_second": 8e-05,
+      "note": "Deepgram Whisper Large, pre-recorded - $0.0048/min (was $0.006/min). Source: deepgram.com/pricing"
     },
     "deepgram/whisper-medium": {
       "per_second": 0.0001
@@ -663,13 +760,16 @@
       "per_second": 6.11e-05
     },
     "gemini-2.5-pro-preview-tts": {
-      "per_1k_tokens": 0.00125
+      "per_1k_tokens": 0.02,
+      "note": "Google Gemini 2.5 Pro Preview TTS - audio output $20/1M (stored), text input $1/1M. Was 0.00125 per 1K, 16x low. Source: aistudio.google.com/docs/pricing"
     },
     "gemini/gemini-2.5-flash-preview-tts": {
-      "per_1k_tokens": 0.00015
+      "per_1k_tokens": 0.01,
+      "note": "Google Gemini 2.5 Flash Preview TTS - audio output $10/1M (stored), text input $0.50/1M. Source: aistudio.google.com/docs/pricing"
     },
     "gemini/gemini-2.5-pro-preview-tts": {
-      "per_1k_tokens": 0.00125
+      "per_1k_tokens": 0.02,
+      "note": "Google Gemini 2.5 Pro Preview TTS - audio output $20/1M (stored), text input $1/1M. Source: aistudio.google.com/docs/pricing"
     },
     "gpt-4o-audio-preview": {
       "per_1k_tokens": 0.0025
@@ -693,7 +793,8 @@
       "per_1k_tokens": 0.00125
     },
     "gpt-4o-mini-tts": {
-      "per_1k_tokens": 0.0025
+      "per_1k_tokens": 0.012,
+      "note": "OpenAI gpt-4o-mini-tts - audio output $12/1M (stored), text input $0.60/1M. Was 0.0025 per 1K. Source: developers.openai.com/api/docs/pricing"
     },
     "gpt-4o-transcribe": {
       "per_1k_tokens": 0.0025
@@ -723,7 +824,8 @@
       "per_second": 0.0001
     },
     "gemini-2.5-flash-preview-tts": {
-      "per_1k_tokens": 0.00015
+      "per_1k_tokens": 0.01,
+      "note": "Google Gemini 2.5 Flash Preview TTS - audio output $10/1M (stored), text input $0.50/1M. Was 0.00015 per 1K, which matched neither rate. Source: aistudio.google.com/docs/pricing"
     },
     "gemini-2.5-pro-tts": {
       "per_1k_tokens": 0.00125
@@ -824,7 +926,8 @@
     },
     "hume/evi-2": 0.07,
     "speechmatics/standard": {
-      "per_1k_chars": 0.0117
+      "per_second": 0.000125,
+      "note": "Speechmatics Standard STT - $0.45/hr batch and real-time. It was stored as $0.0117 per 1K characters, a TTS unit on a transcription tier. Speechmatics TTS is $0.011 per 1K characters. Source: speechmatics.com/pricing (pay as you go)"
     },
     "playht/Play3.0-mini": 0.03,
     "playht/PlayDialog": 0.05,
@@ -851,6 +954,214 @@
     "sarvam/bulbul:v2": {
       "per_1k_chars": 0.031579,
       "note": "Sarvam Bulbul v2 TTS: the published TTS rate, INR 3.00 per 1,000 characters (the pricing page states one TTS rate for all versions), checked 2026-10-08; converted at INR 95/USD"
+    },
+    "gpt-live-1": {
+      "per_second": 0.000833333333,
+      "note": "OpenAI GPT-Live 1 (GA 2026-09-10) - $0.05 per minute, billed per second; backend model and tool usage are billed separately. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-realtime-2.1": {
+      "per_1k_tokens": 0.032,
+      "note": "OpenAI gpt-realtime-2.1 - audio input $32/1M (stored, as for gpt-realtime), audio output $64/1M, cached audio $0.40/1M; text $4 in / $24 out. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-realtime-2": {
+      "per_1k_tokens": 0.032,
+      "note": "OpenAI gpt-realtime-2 - audio input $32/1M (stored), output $64/1M, cached $0.40/1M; text $4 in / $24 out. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-realtime-1.5": {
+      "per_1k_tokens": 0.032,
+      "note": "OpenAI gpt-realtime-1.5 - audio input $32/1M (stored), output $64/1M; text $4 in / $16 out. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-realtime-2.1-mini": {
+      "per_1k_tokens": 0.01,
+      "note": "OpenAI gpt-realtime-2.1-mini - audio input $10/1M (stored), output $20/1M, cached $0.30/1M. Without this key it billed gpt-realtime's 3.2x rate. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-audio": {
+      "per_1k_tokens": 0.032,
+      "note": "OpenAI gpt-audio - audio input $32/1M (stored), output $64/1M. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-audio-1.5": {
+      "per_1k_tokens": 0.032,
+      "note": "OpenAI gpt-audio-1.5 - audio input $32/1M (stored), output $64/1M. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-audio-mini": {
+      "per_1k_tokens": 0.01,
+      "note": "OpenAI gpt-audio-mini - audio input $10/1M (stored), output $20/1M. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-transcribe": {
+      "per_second": 7.5e-05,
+      "note": "OpenAI gpt-transcribe - $0.0045 per minute. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-live-transcribe": {
+      "per_second": 0.000283333333,
+      "note": "OpenAI gpt-live-transcribe - $0.017 per minute. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-realtime-whisper": {
+      "per_second": 0.000283333333,
+      "note": "OpenAI gpt-realtime-whisper - $0.017 per minute. Without this key it resolved to gpt-realtime's token rate. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-realtime-translate": {
+      "per_second": 0.000566666667,
+      "note": "OpenAI gpt-realtime-translate - $0.034 per minute. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gemini-3.8-flash-tts": {
+      "per_1k_tokens": 0.009,
+      "note": "Google Gemini 3.8 Flash TTS (2026-09-22) - audio output $9/1M (stored), text input $0.50/1M, through 2026-12-31; from 2027-01-01 $18 / $1.00. Source: aistudio.google.com/docs/pricing"
+    },
+    "gemini-3.8-flash-lite-tts": {
+      "per_1k_tokens": 0.006,
+      "note": "Google Gemini 3.8 Flash-Lite TTS (2026-09-22) - audio output $6/1M (stored), text input $0.50/1M, through 2026-12-31; from 2027-01-01 $12 / $1.00. Source: aistudio.google.com/docs/pricing"
+    },
+    "gemini-3.1-flash-tts-preview": {
+      "per_1k_tokens": 0.02,
+      "note": "Google Gemini 3.1 Flash TTS Preview - audio output $20/1M (stored), text input $1/1M. Source: aistudio.google.com/docs/pricing"
+    },
+    "gemini-3.5-transcribe": {
+      "per_second": 8.3333333e-05,
+      "note": "Google Gemini 3.5 Transcribe (2026-08-26) - audio input $0.003/min + text output about $0.002/min = $0.005/min ($2 / $12 per 1M). Source: aistudio.google.com/docs/pricing"
+    },
+    "gemini-3.5-transcribe-live": {
+      "per_second": 0.00015,
+      "note": "Google Gemini 3.5 Transcribe Live (2026-08-26) - audio input $0.005/min + text output about $0.004/min = $0.009/min. Source: aistudio.google.com/docs/pricing"
+    },
+    "gemini-3.8-live": {
+      "per_1k_tokens": 0.003,
+      "note": "Google Gemini 3.8 Live (2026-09-15, also Live Extended Thinking) - audio input $3/1M ($0.005/min, stored, as for gpt-realtime), audio output $12/1M ($0.018/min), text $0.75 in / $4.50 out. Source: aistudio.google.com/docs/pricing"
+    },
+    "grok-voice-3.0": {
+      "per_second": 0.001333333333,
+      "note": "xAI Grok Voice 3.0 speech-to-speech - $0.08 per minute ($4.80/hr), plus $0.004 per text input. Source: docs.x.ai/developers/pricing"
+    },
+    "grok-voice-latest": {
+      "per_second": 0.001333333333,
+      "note": "xAI grok-voice-latest, now Grok Voice 3.0 - $0.08 per minute. Source: docs.x.ai/developers/pricing"
+    },
+    "MAI-Voice-2.1": {
+      "per_1k_chars": 0.022,
+      "note": "Microsoft MAI-Voice-2.1 (2026-10-01) - $22 per 1M characters. Source: techcommunity.microsoft.com/blog/azure-ai-foundry-blog/build-expressive-voice-experiences-with-new-mai-models-in-microsoft-foundry/4524637"
+    },
+    "MAI-Voice-2.1-Flash": {
+      "per_1k_chars": 0.015,
+      "note": "Microsoft MAI-Voice-2.1 Flash (2026-10-01) - $15 per 1M characters. Source: techcommunity.microsoft.com/blog/azure-ai-foundry-blog/build-expressive-voice-experiences-with-new-mai-models-in-microsoft-foundry/4524637"
+    },
+    "MAI-Transcribe-2": {
+      "per_second": 2.7777778e-05,
+      "note": "Microsoft MAI-Transcribe-2 (2026-09-03) - $0.10 per hour, a launch price through 2026-12-31; no later price is published. Source: techcommunity.microsoft.com/blog/azure-ai-foundry-blog/4550972"
+    },
+    "MAI-Transcribe-2-Streaming": {
+      "per_second": 0.00015,
+      "note": "Microsoft MAI-Transcribe-2-Streaming (2026-10-01) - $0.54 per hour, introductory through 2026. Source: techcommunity.microsoft.com/blog/azure-ai-foundry-blog/build-expressive-voice-experiences-with-new-mai-models-in-microsoft-foundry/4524637"
+    },
+    "voxtral-mini-transcribe-3-0": {
+      "per_second": 5.8333333e-05,
+      "note": "Mistral Voxtral Mini Transcribe 3 (2026-10-20) - $0.0035/min, cached $0.00035/min. Source: docs.mistral.ai/inference/pricing; ids are the docs.mistral.ai model slugs"
+    },
+    "voxtral-small-transcribe-3-0": {
+      "per_second": 6.6666667e-05,
+      "note": "Mistral Voxtral Small Transcribe 3 (2026-10-20) - $0.004/min, cached $0.0004/min. Source: docs.mistral.ai/inference/pricing; ids are the docs.mistral.ai model slugs"
+    },
+    "voxtral-mini-transcribe-realtime-3-0": {
+      "per_second": 0.000133333333,
+      "note": "Mistral Voxtral Mini Transcribe Realtime 3 (2026-10-20) - $0.008/min. Source: docs.mistral.ai/inference/pricing; ids are the docs.mistral.ai model slugs"
+    },
+    "voxtral-mini-tts-3-0": {
+      "per_1k_chars": 0.013,
+      "note": "Mistral Voxtral TTS 3 (2026-10-20) - $13 per 1M characters, cached $1.3 per 1M. Source: docs.mistral.ai/inference/pricing; ids are the docs.mistral.ai model slugs"
+    },
+    "eleven_v4": {
+      "per_1k_chars": 0.08,
+      "note": "ElevenLabs v4 - $0.08 per 1K characters. Source: elevenlabs.io/pricing/api"
+    },
+    "eleven_v4_turbo": {
+      "per_1k_chars": 0.04,
+      "note": "ElevenLabs v4 Turbo - $0.04 per 1K characters. Source: elevenlabs.io/pricing/api"
+    },
+    "eleven_v3": {
+      "per_1k_chars": 0.08,
+      "note": "ElevenLabs v3 - $0.08 per 1K characters. Source: elevenlabs.io/pricing/api"
+    },
+    "eleven_v3_conversational": {
+      "per_1k_chars": 0.04,
+      "note": "ElevenLabs v3 Conversational - $0.04 per 1K characters. Source: elevenlabs.io/pricing/api"
+    },
+    "eleven_flash_v2": {
+      "per_1k_chars": 0.04,
+      "note": "ElevenLabs Flash v2 - $0.04 per 1K characters (Flash / Turbo). Source: elevenlabs.io/pricing/api"
+    },
+    "eleven_flash_v2_5": {
+      "per_1k_chars": 0.04,
+      "note": "ElevenLabs Flash v2.5 - $0.04 per 1K characters (Flash / Turbo). Source: elevenlabs.io/pricing/api"
+    },
+    "eleven_realtime_v1_mini": {
+      "per_second": 0.001333333333,
+      "note": "ElevenLabs Realtime v1 Mini - $0.08 per minute plus LLM usage ($0.20 in / $6 out per 1M). Source: elevenlabs.io/pricing/api"
+    },
+    "eleven_realtime_v1_max": {
+      "per_second": 0.001333333333,
+      "note": "ElevenLabs Realtime v1 Max - $0.08 per minute plus LLM usage ($1.80 in / $9 out per 1M). Source: elevenlabs.io/pricing/api"
+    },
+    "scribe_v2": {
+      "per_second": 6.1111111e-05,
+      "note": "ElevenLabs Scribe v2 (also scribe_v2_medical) - $0.22 per hour. Source: elevenlabs.io/pricing/api"
+    },
+    "elevenlabs/scribe_v2": {
+      "per_second": 6.1111111e-05,
+      "note": "ElevenLabs Scribe v2 - $0.22 per hour. Source: elevenlabs.io/pricing/api"
+    },
+    "scribe_v2_realtime": {
+      "per_second": 0.000108333333,
+      "note": "ElevenLabs Scribe v2 Realtime - $0.39 per hour. Source: elevenlabs.io/pricing/api"
+    },
+    "elevenlabs/scribe_v2_realtime": {
+      "per_second": 0.000108333333,
+      "note": "ElevenLabs Scribe v2 Realtime - $0.39 per hour. Source: elevenlabs.io/pricing/api"
+    },
+    "assemblyai/universal-3-6-pro": {
+      "per_second": 0.000125,
+      "note": "AssemblyAI Universal-3.6 Pro Realtime (default streaming model) - $0.45/hr base, billed on WebSocket session duration. Source: assemblyai.com/pricing"
+    },
+    "universal-3-6-pro": {
+      "per_second": 0.000125,
+      "note": "AssemblyAI Universal-3.6 Pro Realtime - $0.45/hr base. Source: assemblyai.com/pricing"
+    },
+    "assemblyai/universal-3-5-pro": {
+      "per_second": 5.8333333e-05,
+      "note": "AssemblyAI Universal-3.5 Pro (pre-recorded; `best` routes here) - $0.21/hr. Source: assemblyai.com/pricing"
+    },
+    "universal-3-5-pro": {
+      "per_second": 5.8333333e-05,
+      "note": "AssemblyAI Universal-3.5 Pro - $0.21/hr. Source: assemblyai.com/pricing"
+    },
+    "universal-streaming-english": {
+      "per_second": 4.1666667e-05,
+      "note": "AssemblyAI Universal-Streaming English - $0.15/hr. Source: assemblyai.com/pricing"
+    },
+    "universal-streaming-multilingual": {
+      "per_second": 4.1666667e-05,
+      "note": "AssemblyAI Universal-Streaming Multilingual - $0.15/hr. Source: assemblyai.com/pricing"
+    },
+    "speechmatics/enhanced": {
+      "per_second": 0.000208333333,
+      "note": "Speechmatics Enhanced - batch $0.75/hr (stored), real-time $0.80/hr. Source: speechmatics.com/pricing (pay as you go)"
+    },
+    "speechmatics/melia": {
+      "per_second": 6.6666667e-05,
+      "note": "Speechmatics Melia 1 - batch $0.24/hr (stored), real-time $0.40/hr. Source: speechmatics.com/pricing (pay as you go)"
+    },
+    "speechmatics/oak": {
+      "per_second": 8.3333333e-05,
+      "note": "Speechmatics Oak 1 - batch $0.30/hr (stored), real-time $0.46/hr. Source: speechmatics.com/pricing (pay as you go)"
+    },
+    "speechmatics/linden": {
+      "per_second": 8.3333333e-05,
+      "note": "Speechmatics Linden 1 - real-time only, $0.30/hr. Source: speechmatics.com/pricing (pay as you go)"
+    },
+    "cartesia/sonic-3.6": {
+      "per_1k_chars": 0.037375,
+      "note": "Cartesia Sonic 3.6 - 1 credit per character; Cartesia sells credit plans, not a flat rate, so this is the Scale plan's $299 per 8M credits ($0.0374 per 1K). Startup $0.0392, Pro $0.05. Source: cartesia.ai/pricing"
+    },
+    "cartesia/ink-2": {
+      "per_second": 0.000108333333,
+      "note": "Cartesia Ink 2 STT - 3 credits per second, $0.39/hr on the Scale plan. Source: cartesia.ai/pricing"
     }
   },
   "chat": {
@@ -3121,9 +3432,10 @@
       "note": "DeepSeek V4 Flash Vision Exp - this id was repriced 2026-09-10 to match the V4.1 Flash reprice/rename (canonical_model_id deepseek/deepseek-v4.1-flash; see deepseek-flash). input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M (was $0.14/$0.28/$0.28/$0.0028 before the 2026-09-10 reprice). Source: api-docs.deepseek.com/quick_start/pricing"
     },
     "deepseek-v4-pro": {
-      "promptPrice": 0.000435,
-      "completionPrice": 0.00087,
-      "note": "DeepSeek V4 Pro - promotional discount still in effect as of 2026-07-01 (input $0.435/1M, output $0.87/1M), re-verified against api-docs.deepseek.com/quick_start/pricing. Standard rate (when promo ends): $1.74/1M input, $3.48/1M output."
+      "promptPrice": 0.00066,
+      "completionPrice": 0.00198,
+      "cacheReadPrice": 2.2e-05,
+      "note": "DeepSeek V4 Pro (DeepSeek-V4-Pro-0813) - off-peak input $0.66/1M (cache hit $0.022/1M), output $1.98/1M; peak input $1.32/1M (cache hit $0.044/1M), output $3.96/1M. The promotional $0.435/$0.87 recorded on 2026-07-01 has ended. Peak hours (01:00-04:00 and 06:00-10:00 UTC, Monday to Friday, excluding Chinese public holidays) bill double the off-peak rate; the schema has no time-of-day pricing, so the off-peak rate (about 79% of the week) is stored. Source: api-docs.deepseek.com/quick_start/pricing, checked 2026-11-06"
     },
     "deepseek.r1-v1:0": {
       "promptPrice": 0.00135,
@@ -5765,8 +6077,10 @@
       "note": "Mistral Large 3 - Apache 2.0 license, 256K context window"
     },
     "mistral-large-latest": {
-      "promptPrice": 0.008,
-      "completionPrice": 0.024
+      "promptPrice": 0.0007,
+      "completionPrice": 0.0021,
+      "cacheReadPrice": 7e-05,
+      "note": "Alias mistral-large-latest, priced as Mistral Large 4 (input $0.7/1M, output $2.1/1M): Mistral's -latest aliases follow the newest release, and Large 4 (v26.10) is the newest Large on docs.mistral.ai as of 2026-11-06. It was priced at Mistral Large 1's $8/$24. Source: docs.mistral.ai/inference/pricing"
     },
     "mistral-medium-2025": {
       "promptPrice": 0.0004,
@@ -5960,9 +6274,10 @@
       "note": "From LiteLLM - provider: mistral"
     },
     "mistral/mistral-large-latest": {
-      "promptPrice": 0.002,
-      "completionPrice": 0.006,
-      "note": "From LiteLLM - provider: mistral"
+      "promptPrice": 0.0007,
+      "completionPrice": 0.0021,
+      "cacheReadPrice": 7e-05,
+      "note": "Alias mistral-large-latest, priced as Mistral Large 4 (input $0.7/1M, output $2.1/1M): Mistral's -latest aliases follow the newest release, and Large 4 (v26.10) is the newest Large on docs.mistral.ai as of 2026-11-06. It was priced at Mistral Large 1's $8/$24. Source: docs.mistral.ai/inference/pricing"
     },
     "mistral/mistral-medium": {
       "promptPrice": 0.0027,
@@ -6277,7 +6592,7 @@
     "moonshotai/Kimi-K3": {
       "promptPrice": 0.003,
       "completionPrice": 0.015,
-      "cacheReadPrice": 0.003,
+      "cacheReadPrice": 0.0003,
       "note": "Kimi K3. input $3/1M, output $15/1M, cache read $3/1M. Released 2026-07-16. 1048576 context. Source: models.dev / nebius"
     },
     "moonshotai/Kimi-Linear-48B-A3B-Base": {
@@ -9065,14 +9380,14 @@
       "completionPrice": 0.0006,
       "reasoningPrice": 0.0006,
       "cacheReadPrice": 3e-06,
-      "note": "DeepSeek V4.1 Flash (canonical_model_id deepseek/deepseek-v4.1-flash) - supersedes DeepSeek V4 Flash as of 2026-09-10 with a new price: input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M. First-party DeepSeek pricing used for all reseller aliases (Fireworks, DeepInfra, Together AI, HuggingFace, Baseten, Nebius publish a higher reseller markup of input $0.3/1M, output $1.2/1M). Source: api-docs.deepseek.com/quick_start/pricing"
+      "note": "DeepSeek V4.1 Flash (canonical_model_id deepseek/deepseek-v4.1-flash) - supersedes DeepSeek V4 Flash as of 2026-09-10 with a new price: input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M. First-party DeepSeek pricing used for all reseller aliases (Fireworks, DeepInfra, Together AI, HuggingFace, Baseten, Nebius publish a higher reseller markup of input $0.3/1M, output $1.2/1M). Source: api-docs.deepseek.com/quick_start/pricing Peak hours (01:00-04:00 and 06:00-10:00 UTC, Monday to Friday, excluding Chinese public holidays) bill double the off-peak rate; the schema has no time-of-day pricing, so the off-peak rate (about 79% of the week) is stored. Source: api-docs.deepseek.com/quick_start/pricing, checked 2026-11-06"
     },
     "deepseek-v4.1-flash": {
       "promptPrice": 0.00015,
       "completionPrice": 0.0006,
       "reasoningPrice": 0.0006,
       "cacheReadPrice": 3e-06,
-      "note": "DeepSeek V4.1 Flash (canonical_model_id deepseek/deepseek-v4.1-flash) - supersedes DeepSeek V4 Flash as of 2026-09-10 with a new price: input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M. First-party DeepSeek pricing used for all reseller aliases (Fireworks, DeepInfra, Together AI, HuggingFace, Baseten, Nebius publish a higher reseller markup of input $0.3/1M, output $1.2/1M). Source: api-docs.deepseek.com/quick_start/pricing"
+      "note": "DeepSeek V4.1 Flash (canonical_model_id deepseek/deepseek-v4.1-flash) - supersedes DeepSeek V4 Flash as of 2026-09-10 with a new price: input $0.15/1M, output $0.6/1M, reasoning $0.6/1M, cache read $0.003/1M. First-party DeepSeek pricing used for all reseller aliases (Fireworks, DeepInfra, Together AI, HuggingFace, Baseten, Nebius publish a higher reseller markup of input $0.3/1M, output $1.2/1M). Source: api-docs.deepseek.com/quick_start/pricing Peak hours (01:00-04:00 and 06:00-10:00 UTC, Monday to Friday, excluding Chinese public holidays) bill double the off-peak rate; the schema has no time-of-day pricing, so the off-peak rate (about 79% of the week) is stored. Source: api-docs.deepseek.com/quick_start/pricing, checked 2026-11-06"
     },
     "deepseek-v4-1-flash": {
       "promptPrice": 0.00015,
@@ -9151,6 +9466,458 @@
       "promptPrice": 0.00030821,
       "completionPrice": 0.00077053,
       "note": "Sarvam-105B: INR 29.28 in / INR 73.20 out per 1M tokens (cached input INR 10.98), sarvam.ai/api-pricing checked 2026-10-08; converted at INR 95/USD"
+    },
+    "claude-haiku-5-5": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0005,
+      "cacheReadPrice": 1e-05,
+      "cacheWritePrice": 0.000125,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M). Above 100000 tokens of context (the prompt, counting cache reads and writes) the vendor charges input $0.50/1M, output $2.50/1M, cache read $0.05/1M, cache write $0.625/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "claude-haiku-5.5": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0005,
+      "cacheReadPrice": 1e-05,
+      "cacheWritePrice": 0.000125,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M). Above 100000 tokens of context (the prompt, counting cache reads and writes) the vendor charges input $0.50/1M, output $2.50/1M, cache read $0.05/1M, cache write $0.625/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "anthropic.claude-haiku-5-5": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0005,
+      "cacheReadPrice": 1e-05,
+      "cacheWritePrice": 0.000125,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M). Above 100000 tokens of context (the prompt, counting cache reads and writes) the vendor charges input $0.50/1M, output $2.50/1M, cache read $0.05/1M, cache write $0.625/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "global.anthropic.claude-haiku-5-5": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0005,
+      "cacheReadPrice": 1e-05,
+      "cacheWritePrice": 0.000125,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M). Above 100000 tokens of context (the prompt, counting cache reads and writes) the vendor charges input $0.50/1M, output $2.50/1M, cache read $0.05/1M, cache write $0.625/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "anthropic-claude-haiku-5-5": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0005,
+      "cacheReadPrice": 1e-05,
+      "cacheWritePrice": 0.000125,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M). Above 100000 tokens of context (the prompt, counting cache reads and writes) the vendor charges input $0.50/1M, output $2.50/1M, cache read $0.05/1M, cache write $0.625/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "global-anthropic-claude-haiku-5-5": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0005,
+      "cacheReadPrice": 1e-05,
+      "cacheWritePrice": 0.000125,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M). Above 100000 tokens of context (the prompt, counting cache reads and writes) the vendor charges input $0.50/1M, output $2.50/1M, cache read $0.05/1M, cache write $0.625/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "au.anthropic.claude-haiku-5-5": {
+      "promptPrice": 0.00011,
+      "completionPrice": 0.00055,
+      "cacheReadPrice": 1.1e-05,
+      "cacheWritePrice": 0.0001375,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M).. Amazon Bedrock regional (geo-pinned) inference profile: 1.1x the global price, as for the other Claude 5.5 regional ids. Source: models.dev / amazon-bedrock, aws.amazon.com/bedrock/pricing"
+    },
+    "au-anthropic-claude-haiku-5-5": {
+      "promptPrice": 0.00011,
+      "completionPrice": 0.00055,
+      "cacheReadPrice": 1.1e-05,
+      "cacheWritePrice": 0.0001375,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M).. Amazon Bedrock regional (geo-pinned) inference profile: 1.1x the global price, as for the other Claude 5.5 regional ids. Source: models.dev / amazon-bedrock, aws.amazon.com/bedrock/pricing"
+    },
+    "eu.anthropic.claude-haiku-5-5": {
+      "promptPrice": 0.00011,
+      "completionPrice": 0.00055,
+      "cacheReadPrice": 1.1e-05,
+      "cacheWritePrice": 0.0001375,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M).. Amazon Bedrock regional (geo-pinned) inference profile: 1.1x the global price, as for the other Claude 5.5 regional ids. Source: models.dev / amazon-bedrock, aws.amazon.com/bedrock/pricing"
+    },
+    "eu-anthropic-claude-haiku-5-5": {
+      "promptPrice": 0.00011,
+      "completionPrice": 0.00055,
+      "cacheReadPrice": 1.1e-05,
+      "cacheWritePrice": 0.0001375,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M).. Amazon Bedrock regional (geo-pinned) inference profile: 1.1x the global price, as for the other Claude 5.5 regional ids. Source: models.dev / amazon-bedrock, aws.amazon.com/bedrock/pricing"
+    },
+    "jp.anthropic.claude-haiku-5-5": {
+      "promptPrice": 0.00011,
+      "completionPrice": 0.00055,
+      "cacheReadPrice": 1.1e-05,
+      "cacheWritePrice": 0.0001375,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M).. Amazon Bedrock regional (geo-pinned) inference profile: 1.1x the global price, as for the other Claude 5.5 regional ids. Source: models.dev / amazon-bedrock, aws.amazon.com/bedrock/pricing"
+    },
+    "jp-anthropic-claude-haiku-5-5": {
+      "promptPrice": 0.00011,
+      "completionPrice": 0.00055,
+      "cacheReadPrice": 1.1e-05,
+      "cacheWritePrice": 0.0001375,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M).. Amazon Bedrock regional (geo-pinned) inference profile: 1.1x the global price, as for the other Claude 5.5 regional ids. Source: models.dev / amazon-bedrock, aws.amazon.com/bedrock/pricing"
+    },
+    "us.anthropic.claude-haiku-5-5": {
+      "promptPrice": 0.00011,
+      "completionPrice": 0.00055,
+      "cacheReadPrice": 1.1e-05,
+      "cacheWritePrice": 0.0001375,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M).. Amazon Bedrock regional (geo-pinned) inference profile: 1.1x the global price, as for the other Claude 5.5 regional ids. Source: models.dev / amazon-bedrock, aws.amazon.com/bedrock/pricing"
+    },
+    "us-anthropic-claude-haiku-5-5": {
+      "promptPrice": 0.00011,
+      "completionPrice": 0.00055,
+      "cacheReadPrice": 1.1e-05,
+      "cacheWritePrice": 0.0001375,
+      "note": "Anthropic Claude Haiku 5.5 (released 2026-10-07) - input $0.10/1M, output $0.50/1M, cache read $0.01/1M, cache write $0.125/1M (5-minute; 1-hour $0.20/1M).. Amazon Bedrock regional (geo-pinned) inference profile: 1.1x the global price, as for the other Claude 5.5 regional ids. Source: models.dev / amazon-bedrock, aws.amazon.com/bedrock/pricing"
+    },
+    "anthropic.claude-opus-5-5": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.005,
+      "note": "Anthropic Claude Opus 5.5 (released 2026-09-22) under its Amazon Bedrock global / un-prefixed id - input $4/1M, output $20/1M, cache read $0.2/1M, cache write $5/1M. Without this key the id resolved to the longer anthropic.claude-opus-5 key and billed Opus 5's $5/$25. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "global.anthropic.claude-opus-5-5": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.005,
+      "note": "Anthropic Claude Opus 5.5 (released 2026-09-22) under its Amazon Bedrock global / un-prefixed id - input $4/1M, output $20/1M, cache read $0.2/1M, cache write $5/1M. Without this key the id resolved to the longer anthropic.claude-opus-5 key and billed Opus 5's $5/$25. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "anthropic-claude-opus-5-5": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.005,
+      "note": "Anthropic Claude Opus 5.5 (released 2026-09-22) under its Amazon Bedrock global / un-prefixed id - input $4/1M, output $20/1M, cache read $0.2/1M, cache write $5/1M. Without this key the id resolved to the longer anthropic.claude-opus-5 key and billed Opus 5's $5/$25. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "global-anthropic-claude-opus-5-5": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.005,
+      "note": "Anthropic Claude Opus 5.5 (released 2026-09-22) under its Amazon Bedrock global / un-prefixed id - input $4/1M, output $20/1M, cache read $0.2/1M, cache write $5/1M. Without this key the id resolved to the longer anthropic.claude-opus-5 key and billed Opus 5's $5/$25. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "claude-opus-5-5-fast": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.04,
+      "cacheReadPrice": 0.0004,
+      "cacheWritePrice": 0.01,
+      "note": "Anthropic Claude Opus 5.5 fast mode (research preview, Claude API only) - input $8/1M, output $40/1M, cache read $0.4/1M, cache write $10/1M (2x standard). Gateways expose it under a '-fast' id; on the Claude API the model id is unchanged and the speed is a request parameter, which a model-name lookup cannot see. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "claude-opus-5.5-fast": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.04,
+      "cacheReadPrice": 0.0004,
+      "cacheWritePrice": 0.01,
+      "note": "Anthropic Claude Opus 5.5 fast mode (research preview, Claude API only) - input $8/1M, output $40/1M, cache read $0.4/1M, cache write $10/1M (2x standard). Gateways expose it under a '-fast' id; on the Claude API the model id is unchanged and the speed is a request parameter, which a model-name lookup cannot see. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "gpt-6.1-terra": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.005,
+      "cacheReadPrice": 5e-05,
+      "cacheWritePrice": 0.00125,
+      "note": "GPT-6.1 Terra. input $1/1M, output $5/1M, cache read $0.05/1M, cache write $1.25/1M. Released 2026-10-26. Above 272000 tokens of context the vendor charges input $2/1M, output $7.50/1M, cache read $0.1/1M, cache write $2.5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-6-1-terra": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.005,
+      "cacheReadPrice": 5e-05,
+      "cacheWritePrice": 0.00125,
+      "note": "GPT-6.1 Terra. input $1/1M, output $5/1M, cache read $0.05/1M, cache write $1.25/1M. Released 2026-10-26. Above 272000 tokens of context the vendor charges input $2/1M, output $7.50/1M, cache read $0.1/1M, cache write $2.5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: developers.openai.com/api/docs/pricing"
+    },
+    "global.openai.gpt-6.1-terra": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.005,
+      "cacheReadPrice": 5e-05,
+      "cacheWritePrice": 0.00125,
+      "note": "GPT-6.1 Terra. input $1/1M, output $5/1M, cache read $0.05/1M, cache write $1.25/1M. Released 2026-10-26. Above 272000 tokens of context the vendor charges input $2/1M, output $7.50/1M, cache read $0.1/1M, cache write $2.5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: developers.openai.com/api/docs/pricing"
+    },
+    "global-openai-gpt-6-1-terra": {
+      "promptPrice": 0.001,
+      "completionPrice": 0.005,
+      "cacheReadPrice": 5e-05,
+      "cacheWritePrice": 0.00125,
+      "note": "GPT-6.1 Terra. input $1/1M, output $5/1M, cache read $0.05/1M, cache write $1.25/1M. Released 2026-10-26. Above 272000 tokens of context the vendor charges input $2/1M, output $7.50/1M, cache read $0.1/1M, cache write $2.5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. Source: developers.openai.com/api/docs/pricing"
+    },
+    "openai.gpt-6.1-terra": {
+      "promptPrice": 0.0011,
+      "completionPrice": 0.0055,
+      "cacheReadPrice": 5.5e-05,
+      "cacheWritePrice": 0.001375,
+      "note": "GPT-6.1 Terra on Amazon Bedrock, regional / un-prefixed id: 1.1x the global price (input $1.10/1M, output $5.50/1M, cache read $0.055/1M, cache write $1.375/1M), as for gpt-6.1-sol. Released 2026-10-26. Source: models.dev / amazon-bedrock"
+    },
+    "us.openai.gpt-6.1-terra": {
+      "promptPrice": 0.0011,
+      "completionPrice": 0.0055,
+      "cacheReadPrice": 5.5e-05,
+      "cacheWritePrice": 0.001375,
+      "note": "GPT-6.1 Terra on Amazon Bedrock, regional / un-prefixed id: 1.1x the global price (input $1.10/1M, output $5.50/1M, cache read $0.055/1M, cache write $1.375/1M), as for gpt-6.1-sol. Released 2026-10-26. Source: models.dev / amazon-bedrock"
+    },
+    "us-openai-gpt-6-1-terra": {
+      "promptPrice": 0.0011,
+      "completionPrice": 0.0055,
+      "cacheReadPrice": 5.5e-05,
+      "cacheWritePrice": 0.001375,
+      "note": "GPT-6.1 Terra on Amazon Bedrock, regional / un-prefixed id: 1.1x the global price (input $1.10/1M, output $5.50/1M, cache read $0.055/1M, cache write $1.375/1M), as for gpt-6.1-sol. Released 2026-10-26. Source: models.dev / amazon-bedrock"
+    },
+    "gemini-4-argon": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0001,
+      "note": "Gemini 4 Argon (released 2026-10-13) - input $2/1M, output $10/1M (including thinking tokens), context caching $0.10/1M, implicit caching only. These are introductory prices through 2026-11-30; from 2026-12-01 the vendor charges input $4/1M, output $20/1M, caching $0.20/1M, and this entry must be updated then. Source: aistudio.google.com/docs/pricing"
+    },
+    "gemini/gemini-4-argon": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0001,
+      "note": "Gemini 4 Argon (released 2026-10-13) - input $2/1M, output $10/1M (including thinking tokens), context caching $0.10/1M, implicit caching only. These are introductory prices through 2026-11-30; from 2026-12-01 the vendor charges input $4/1M, output $20/1M, caching $0.20/1M, and this entry must be updated then. Source: aistudio.google.com/docs/pricing"
+    },
+    "mistral-large-4": {
+      "promptPrice": 0.0007,
+      "completionPrice": 0.0021,
+      "cacheReadPrice": 7e-05,
+      "note": "Mistral Large 4 (v26.10, released 2026-10-06) - input $0.7/1M, output $2.1/1M, cache read $0.07/1M. Source: docs.mistral.ai/inference/pricing; cache read from models.dev / mistral"
+    },
+    "mistral-large-4-0": {
+      "promptPrice": 0.0007,
+      "completionPrice": 0.0021,
+      "cacheReadPrice": 7e-05,
+      "note": "Mistral Large 4 (v26.10, released 2026-10-06) - input $0.7/1M, output $2.1/1M, cache read $0.07/1M. Source: docs.mistral.ai/inference/pricing; cache read from models.dev / mistral"
+    },
+    "kimi-k3.1-pro": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.002,
+      "note": "Kimi K3.1 Pro (released 2026-10-23) - input $2/1M, output $10/1M, cache hit $0.2/1M, cache write $2/1M (5-minute TTL; 1-hour $4/1M). 1048576 context. Batch inference bills 60% of these prices. Source: platform.kimi.ai/docs/pricing/chat"
+    },
+    "kimi-k3-1-pro": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.002,
+      "note": "Kimi K3.1 Pro (released 2026-10-23) - input $2/1M, output $10/1M, cache hit $0.2/1M, cache write $2/1M (5-minute TTL; 1-hour $4/1M). 1048576 context. Batch inference bills 60% of these prices. Source: platform.kimi.ai/docs/pricing/chat"
+    },
+    "moonshotai/kimi-k3.1-pro": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.002,
+      "note": "Kimi K3.1 Pro (released 2026-10-23) - input $2/1M, output $10/1M, cache hit $0.2/1M, cache write $2/1M (5-minute TTL; 1-hour $4/1M). 1048576 context. Batch inference bills 60% of these prices. Source: platform.kimi.ai/docs/pricing/chat"
+    },
+    "moonshotai/kimi-k3-1-pro": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.01,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.002,
+      "note": "Kimi K3.1 Pro (released 2026-10-23) - input $2/1M, output $10/1M, cache hit $0.2/1M, cache write $2/1M (5-minute TTL; 1-hour $4/1M). 1048576 context. Batch inference bills 60% of these prices. Source: platform.kimi.ai/docs/pricing/chat"
+    },
+    "kimi-k3.1-pro-highspeed": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.004,
+      "note": "Kimi K3.1 Pro highspeed (released 2026-10-23) - input $4/1M, output $20/1M, cache hit $0.2/1M, cache write $4/1M (5-minute TTL; 1-hour $8/1M). Source: platform.kimi.ai/docs/pricing/chat"
+    },
+    "kimi-k3-1-pro-highspeed": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.004,
+      "note": "Kimi K3.1 Pro highspeed (released 2026-10-23) - input $4/1M, output $20/1M, cache hit $0.2/1M, cache write $4/1M (5-minute TTL; 1-hour $8/1M). Source: platform.kimi.ai/docs/pricing/chat"
+    },
+    "moonshotai/kimi-k3.1-pro-highspeed": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.004,
+      "note": "Kimi K3.1 Pro highspeed (released 2026-10-23) - input $4/1M, output $20/1M, cache hit $0.2/1M, cache write $4/1M (5-minute TTL; 1-hour $8/1M). Source: platform.kimi.ai/docs/pricing/chat"
+    },
+    "moonshotai/kimi-k3-1-pro-highspeed": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.004,
+      "note": "Kimi K3.1 Pro highspeed (released 2026-10-23) - input $4/1M, output $20/1M, cache hit $0.2/1M, cache write $4/1M (5-minute TTL; 1-hour $8/1M). Source: platform.kimi.ai/docs/pricing/chat"
+    },
+    "MiniMax-M3.1-Flash": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "cacheReadPrice": 1.5e-05,
+      "note": "MiniMax M3.1 Flash (released 2026-10-19) - input $0.15/1M, output $0.60/1M, prompt cache read $0.015/1M. Without this key the id resolved to MiniMax-M3 and billed twice the price. Source: platform.minimax.io/docs/guides/pricing"
+    },
+    "mercury-3": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.00035,
+      "cacheReadPrice": 1e-05,
+      "note": "Inception Mercury 3 (released 2026-10-16) - input $0.10/1M, cache read $0.01/1M, output $0.35/1M at the launch discount (50% off; list price $0.20 / $0.02 / $0.70). 1M context. Source: docs.inceptionlabs.ai/get-started/models"
+    },
+    "mercury-2.5": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.00075,
+      "cacheReadPrice": 2e-05,
+      "note": "Inception Mercury 2.5 (released 2026-09-08) - input $0.20/1M, cache read $0.02/1M, output $0.75/1M. 260K context. Source: docs.inceptionlabs.ai/get-started/models"
+    },
+    "mercury-2-5": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.00075,
+      "cacheReadPrice": 2e-05,
+      "note": "Inception Mercury 2.5 (released 2026-09-08) - input $0.20/1M, cache read $0.02/1M, output $0.75/1M. 260K context. Source: docs.inceptionlabs.ai/get-started/models"
+    },
+    "mercury-voice": {
+      "promptPrice": 0.0002,
+      "completionPrice": 0.00075,
+      "cacheReadPrice": 2e-05,
+      "note": "Inception Mercury Voice (chat completions model for voice agents) - input $0.20/1M, cache read $0.02/1M, output $0.75/1M at the launch discount (50% off; list price $0.40 / $0.04 / $1.50). 128K context. Source: docs.inceptionlabs.ai/get-started/models"
+    },
+    "muse-wonder-1.0": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "note": "Meta Muse Wonder 1.0 (released 2026-10-12) - input $4/1M, output $20/1M, cache read $0.2/1M. 1048576 context. Source: models.dev / meta"
+    },
+    "muse-wonder-1-0": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "note": "Meta Muse Wonder 1.0 (released 2026-10-12) - input $4/1M, output $20/1M, cache read $0.2/1M. 1048576 context. Source: models.dev / meta"
+    },
+    "muse-wonder": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.02,
+      "cacheReadPrice": 0.0002,
+      "note": "Meta Muse Wonder 1.0 (released 2026-10-12) - input $4/1M, output $20/1M, cache read $0.2/1M. 1048576 context. Source: models.dev / meta"
+    },
+    "muse-spark-open": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.00425,
+      "cacheReadPrice": 0.00015,
+      "note": "Meta Muse Spark Open (816B MoE, 42B active; open weights; released 2026-10-15) - input $1.25/1M, output $4.25/1M, cache read $0.15/1M. Open-weight, so hosting price varies by provider; this is the OpenRouter / Fireworks rate. Source: openrouter.ai/meta/muse-spark-open"
+    },
+    "longcat-2.5": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0012,
+      "cacheReadPrice": 6e-06,
+      "note": "Meituan LongCat-2.5 (preview 2026-09-25, GA 2026-11-02) - input $0.30/1M, output $1.20/1M, cache read $0.006/1M. 1048576 context. Without this key the id resolved to longcat-2 at $0.75/$2.95. Source: models.dev / longcat (LongCat platform)"
+    },
+    "hy4": {
+      "promptPrice": 0.000417,
+      "completionPrice": 0.0012505,
+      "cacheReadPrice": 2.1e-05,
+      "note": "Tencent HY4 (released 2026-11-04) - input $0.417/1M, output $1.2505/1M, cache read $0.021/1M. 1048576 context. Hosting price varies by provider; this is the OpenRouter rate. Source: openrouter.ai/tencent/hy4"
+    },
+    "hy4-preview": {
+      "promptPrice": 0.000834,
+      "completionPrice": 0.002501,
+      "cacheReadPrice": 4.2e-05,
+      "note": "Tencent HY4 Preview (released 2026-08-28) - input $0.834/1M, output $2.501/1M, cache read $0.042/1M. Source: openrouter.ai/tencent/hy4-preview"
+    },
+    "nemotron-3.5-super": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0005,
+      "cacheReadPrice": 2e-05,
+      "note": "NVIDIA Nemotron 3.5 Super VL (120B MoE, 12B active; open weights; released 2026-10-15) - input $0.15/1M, output $0.50/1M, cache read $0.02/1M. NVIDIA's own build endpoint is free; hosting price varies by provider ($0.06-$0.30/1M input observed), and this is the OpenRouter rate. Source: openrouter.ai/nvidia/nemotron-3.5-super-vl"
+    },
+    "nemotron-3-5-super": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0005,
+      "cacheReadPrice": 2e-05,
+      "note": "NVIDIA Nemotron 3.5 Super VL (120B MoE, 12B active; open weights; released 2026-10-15) - input $0.15/1M, output $0.50/1M, cache read $0.02/1M. NVIDIA's own build endpoint is free; hosting price varies by provider ($0.06-$0.30/1M input observed), and this is the OpenRouter rate. Source: openrouter.ai/nvidia/nemotron-3.5-super-vl"
+    },
+    "beam-1.0": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.001,
+      "cacheReadPrice": 4e-05,
+      "note": "Reflection AI Beam 1.0 (501B MoE, 23B active; open weights; released 2026-10-05) - input $0.30/1M, output $1.00/1M, cache read $0.04/1M. Hosting price varies by provider ($0.25-$0.50/1M input observed); this is the OpenRouter rate. Source: openrouter.ai/reflection/beam-1.0-501b-a23b"
+    },
+    "reflection-beam": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.001,
+      "cacheReadPrice": 4e-05,
+      "note": "Reflection AI Beam 1.0 (501B MoE, 23B active; open weights; released 2026-10-05) - input $0.30/1M, output $1.00/1M, cache read $0.04/1M. Hosting price varies by provider ($0.25-$0.50/1M input observed); this is the OpenRouter rate. Source: openrouter.ai/reflection/beam-1.0-501b-a23b"
+    },
+    "reflection/beam": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.001,
+      "cacheReadPrice": 4e-05,
+      "note": "Reflection AI Beam 1.0 (501B MoE, 23B active; open weights; released 2026-10-05) - input $0.30/1M, output $1.00/1M, cache read $0.04/1M. Hosting price varies by provider ($0.25-$0.50/1M input observed); this is the OpenRouter rate. Source: openrouter.ai/reflection/beam-1.0-501b-a23b"
+    },
+    "ling-3.1-flash": {
+      "promptPrice": 7.5e-05,
+      "completionPrice": 0.000225,
+      "cacheReadPrice": 1.5e-05,
+      "note": "inclusionAI Ling 3.1 Flash (released 2026-09-29) - input $0.075/1M, output $0.225/1M, cache read $0.015/1M. Hosting price varies by provider ($0.075-$0.30/1M input observed); this is the OpenRouter rate. Source: openrouter.ai/inclusionai/ling-3.1-flash"
+    },
+    "lfm-2.5-24b-a2b": {
+      "promptPrice": 5e-05,
+      "completionPrice": 0.0007,
+      "cacheReadPrice": 2.5e-05,
+      "note": "Liquid LFM 2.5 24B-A2B (released 2026-10-13) - input $0.05/1M, output $0.70/1M, cache read $0.025/1M. 128K context. Source: openrouter.ai/liquid/lfm-2.5-24b-a2b"
+    },
+    "lfm2.5-24b-a2b": {
+      "promptPrice": 5e-05,
+      "completionPrice": 0.0007,
+      "cacheReadPrice": 2.5e-05,
+      "note": "Liquid LFM 2.5 24B-A2B (released 2026-10-13) - input $0.05/1M, output $0.70/1M, cache read $0.025/1M. 128K context. Source: openrouter.ai/liquid/lfm-2.5-24b-a2b"
+    },
+    "glm-5.3-prime": {
+      "promptPrice": 0.0028,
+      "completionPrice": 0.0088,
+      "cacheReadPrice": 0.00056,
+      "note": "Z.ai GLM-5.3 Prime (released 2026-09-23) - input $2.8/1M, output $8.8/1M, cache read $0.56/1M. Not listed on docs.z.ai's pricing page; this is the OpenRouter (z-ai) rate. Without this key the id resolved to glm-5.3 at half the price. Source: openrouter.ai/z-ai/glm-5.3-prime"
+    },
+    "qwen3.8-max-prime": {
+      "promptPrice": 0.004,
+      "completionPrice": 0.012,
+      "cacheReadPrice": 0.0005,
+      "cacheWritePrice": 0.005,
+      "note": "Qwen3.8 Max Prime (released 2026-09-23) - input $4/1M, output $12/1M, cache read $0.5/1M, cache write $5/1M. Without this key the id resolved to qwen3.8-max at half the price. Source: openrouter.ai/qwen/qwen3.8-max-prime, vercel (alibaba)"
+    },
+    "DeepSeek-V4.1-Flash-1017-Fast": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0024,
+      "note": "Baseten DeepSeek V4.1 Flash 1017 Fast (released 2026-10-17) - input $0.60/1M, output $2.40/1M. A distinct Baseten SKU with its own price; without this key the 1017 snapshot id fell through to the regular Flash price (the '-Fast' key does not occur inside it). Source: models.dev / baseten"
+    },
+    "deepseek-ai/DeepSeek-V4.1-Flash-1017-Fast": {
+      "promptPrice": 0.0006,
+      "completionPrice": 0.0024,
+      "note": "Baseten DeepSeek V4.1 Flash 1017 Fast (released 2026-10-17) - input $0.60/1M, output $2.40/1M. A distinct Baseten SKU with its own price; without this key the 1017 snapshot id fell through to the regular Flash price (the '-Fast' key does not occur inside it). Source: models.dev / baseten"
+    },
+    "gpt-image-2.6-sunburst": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.03,
+      "cacheReadPrice": 0.00125,
+      "note": "OpenAI GPT Image 2.6 Sunburst (released 2026-11-04) - text input $5/1M (cached $1.25/1M), image input $8/1M (cached $2/1M), image output $30/1M. As for gpt-image-1.5, promptPrice is the text-input rate and completionPrice the image-output rate; the schema has no separate image-input rate. OpenAI publishes no per-image table for this model. Batch is not supported. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-image-2.6-flare": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.03,
+      "cacheReadPrice": 0.00125,
+      "note": "OpenAI GPT Image 2.6 Flare (released 2026-11-04) - text input $5/1M (cached $1.25/1M), image input $8/1M (cached $2/1M), image output $30/1M. As for gpt-image-1.5, promptPrice is the text-input rate and completionPrice the image-output rate; the schema has no separate image-input rate. OpenAI publishes no per-image table for this model. Batch is not supported. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-image-2.5-sunburst": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.03,
+      "cacheReadPrice": 0.00125,
+      "note": "OpenAI GPT Image 2.5 Sunburst (released 2026-09-08) - text input $5/1M (cached $1.25/1M), image input $8/1M (cached $2/1M), image output $30/1M. As for gpt-image-1.5, promptPrice is the text-input rate and completionPrice the image-output rate; the schema has no separate image-input rate. OpenAI publishes no per-image table for this model. Batch: text input $2.50/1M (cached $0.625/1M), image input $4/1M, image output $15/1M. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-image-2.5-flare": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.03,
+      "cacheReadPrice": 0.00125,
+      "note": "OpenAI GPT Image 2.5 Flare (released 2026-09-08) - text input $5/1M (cached $1.25/1M), image input $8/1M (cached $2/1M), image output $30/1M. As for gpt-image-1.5, promptPrice is the text-input rate and completionPrice the image-output rate; the schema has no separate image-input rate. OpenAI publishes no per-image table for this model. Batch: text input $2.50/1M (cached $0.625/1M), image input $4/1M, image output $15/1M. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-image-1-mini": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.008,
+      "cacheReadPrice": 0.0002,
+      "note": "OpenAI GPT Image 1 Mini - text input $2/1M (cached $0.20/1M), image input $2.50/1M (cached $0.25/1M), image output $8/1M. Without this key the id fell through to no chat price. Source: developers.openai.com/api/docs/pricing"
+    },
+    "MAI-Image-2.6": {
+      "promptPrice": 0.005,
+      "completionPrice": 0.038,
+      "note": "Microsoft MAI-Image-2.6 (Foundry; GA 2026-10-13) - text input $5/1M, image input $8/1M, image output $38/1M; no official per-image price. Source: techcommunity.microsoft.com/blog/azure-ai-foundry-blog/mai-image-2-6-and-mai-image-2-6-flash-quality-and-speed-at-production-scale/4550970"
+    },
+    "MAI-Image-2.6-Flash": {
+      "promptPrice": 0.00175,
+      "completionPrice": 0.019,
+      "note": "Microsoft MAI-Image-2.6-Flash (Foundry; GA 2026-10-13) - text input $1.75/1M, image input $2.50/1M, image output $19/1M; no official per-image price. Source: techcommunity.microsoft.com/blog/azure-ai-foundry-blog/mai-image-2-6-and-mai-image-2-6-flash-quality-and-speed-at-production-scale/4550970"
     }
   },
   "speech_to_text": {
@@ -9354,6 +10121,13 @@
       "promptPrice": 4.2e-05,
       "completionPrice": 0.0,
       "note": "TypeSafe Jev input $0.042/1M tokens; output tokens are free. Source: https://typesafe.ai/blog/introducing-system-one-models-and-jev"
+    },
+    "mercury-decide": {
+      "promptPrice": 2e-05,
+      "completionPrice": 0.0,
+      "cacheReadPrice": 0.0,
+      "cacheWritePrice": 0.0,
+      "note": "Inception Mercury Decide decision model (POST /v1/decisions) - input $0.02/1M at the launch discount (50% off; list price $0.04/1M); output, cache read and cache write are free. Source: docs.inceptionlabs.ai/get-started/models"
     }
   },
   "deprecated": {
@@ -9443,8 +10217,8 @@
     "eleven_english_v1": "2026-08-12",
     "eleven_monolingual_v1": "2026-08-12",
     "eleven_multilingual_v1": "2026-08-12",
-    "eleven_multilingual_v2": "2026-08-12",
-    "eleven_turbo_v2": "2026-08-12",
+    "eleven_multilingual_v2": "2026-11-06",
+    "eleven_turbo_v2": "2026-11-06",
     "elevenlabs/scribe_v1": "2026-08-12",
     "elevenlabs/scribe_v1_experimental": "2026-08-12",
     "fireworks/whisper-v3": "2026-08-13",
@@ -9551,6 +10325,66 @@
     "sarvam/saarika:v3": "2026-10-08",
     "sarvam/saaras:v3": "2026-10-08",
     "sarvam/bulbul:v3": "2026-10-08",
-    "sarvam/bulbul:v2": "2026-10-08"
+    "sarvam/bulbul:v2": "2026-10-08",
+    "gpt-live-1": "2026-11-06",
+    "gpt-realtime-2.1": "2026-11-06",
+    "gpt-realtime-2": "2026-11-06",
+    "gpt-realtime-1.5": "2026-11-06",
+    "gpt-realtime-2.1-mini": "2026-11-06",
+    "gpt-audio": "2026-11-06",
+    "gpt-audio-1.5": "2026-11-06",
+    "gpt-audio-mini": "2026-11-06",
+    "gpt-transcribe": "2026-11-06",
+    "gpt-live-transcribe": "2026-11-06",
+    "gpt-realtime-whisper": "2026-11-06",
+    "gpt-realtime-translate": "2026-11-06",
+    "gemini-3.8-flash-tts": "2026-11-06",
+    "gemini-3.8-flash-lite-tts": "2026-11-06",
+    "gemini-3.1-flash-tts-preview": "2026-11-06",
+    "gemini-3.5-transcribe": "2026-11-06",
+    "gemini-3.5-transcribe-live": "2026-11-06",
+    "gemini-3.8-live": "2026-11-06",
+    "grok-voice-3.0": "2026-11-06",
+    "grok-voice-latest": "2026-11-06",
+    "MAI-Voice-2.1": "2026-11-06",
+    "MAI-Voice-2.1-Flash": "2026-11-06",
+    "MAI-Transcribe-2": "2026-11-06",
+    "MAI-Transcribe-2-Streaming": "2026-11-06",
+    "voxtral-mini-transcribe-3-0": "2026-11-06",
+    "voxtral-small-transcribe-3-0": "2026-11-06",
+    "voxtral-mini-transcribe-realtime-3-0": "2026-11-06",
+    "voxtral-mini-tts-3-0": "2026-11-06",
+    "eleven_v4": "2026-11-06",
+    "eleven_v4_turbo": "2026-11-06",
+    "eleven_v3": "2026-11-06",
+    "eleven_v3_conversational": "2026-11-06",
+    "eleven_flash_v2": "2026-11-06",
+    "eleven_flash_v2_5": "2026-11-06",
+    "eleven_realtime_v1_mini": "2026-11-06",
+    "eleven_realtime_v1_max": "2026-11-06",
+    "scribe_v2": "2026-11-06",
+    "elevenlabs/scribe_v2": "2026-11-06",
+    "scribe_v2_realtime": "2026-11-06",
+    "elevenlabs/scribe_v2_realtime": "2026-11-06",
+    "assemblyai/universal-3-6-pro": "2026-11-06",
+    "universal-3-6-pro": "2026-11-06",
+    "assemblyai/universal-3-5-pro": "2026-11-06",
+    "universal-3-5-pro": "2026-11-06",
+    "universal-streaming-english": "2026-11-06",
+    "universal-streaming-multilingual": "2026-11-06",
+    "speechmatics/enhanced": "2026-11-06",
+    "speechmatics/melia": "2026-11-06",
+    "speechmatics/oak": "2026-11-06",
+    "speechmatics/linden": "2026-11-06",
+    "cartesia/sonic-3.6": "2026-11-06",
+    "cartesia/ink-2": "2026-11-06",
+    "gemini-2.5-flash-preview-tts": "2026-11-06",
+    "gemini/gemini-2.5-flash-preview-tts": "2026-11-06",
+    "gemini-2.5-pro-preview-tts": "2026-11-06",
+    "gemini/gemini-2.5-pro-preview-tts": "2026-11-06",
+    "gpt-4o-mini-tts": "2026-11-06",
+    "speechmatics/standard": "2026-11-06",
+    "deepgram/whisper": "2026-11-06",
+    "deepgram/whisper-large": "2026-11-06"
   }
 }

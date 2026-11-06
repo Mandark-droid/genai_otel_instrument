@@ -6,6 +6,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.47.0] - 2026-11-06
+
+November 2026 pricing sweep: models released since the 2026-10-03 sweep, image and speech
+models, and existing entries that billed the wrong price. Prices were read on each vendor's
+own pricing page on 2026-11-06; models.dev was used only to find new releases. Every new
+entry's `note` names its source and any rate the flat schema cannot hold.
+
+### Added
+
+- **Chat:** Claude Haiku 5.5 (with its Bedrock global and regional ids), GPT-6.1 Terra
+  (with Bedrock ids), Gemini 4 Argon, Mistral Large 4, Kimi K3.1 Pro and K3.1 Pro
+  highspeed, MiniMax M3.1 Flash, Meta Muse Wonder 1.0 and Muse Spark Open, Inception
+  Mercury 3, Mercury 2.5 and Mercury Voice, Meituan LongCat-2.5, Tencent HY4 and HY4
+  Preview, NVIDIA Nemotron 3.5 Super, Reflection Beam 1.0, inclusionAI Ling 3.1 Flash,
+  Liquid LFM 2.5 24B-A2B, GLM-5.3 Prime, Qwen3.8 Max Prime, Claude Opus 5.5 fast mode
+  (gateway `-fast` ids) and Baseten's DeepSeek V4.1 Flash 1017 Fast.
+- **Image models:** GPT Image 2.6 Sunburst and Flare (released 2026-11-04) and GPT Image
+  2.5 Sunburst and Flare, priced per token; GPT Image 1.5 and GPT Image 1 Mini per image
+  from OpenAI's table; Nano Banana 2.1; Gemini 3.1 Flash Lite Image; FLUX 3 Image and FLUX 3
+  Image Klein; Qwen-Image 2.1 Pro; Grok Imagine Image; MAI-Image-2.6 and 2.6 Flash (per
+  token).
+- **Speech models:** GPT-Live 1, gpt-realtime-2.1 / 2.1-mini / 2 / 1.5, gpt-audio /
+  1.5 / mini, gpt-transcribe, gpt-live-transcribe, gpt-realtime-whisper,
+  gpt-realtime-translate; Gemini 3.8 Flash TTS and Flash-Lite TTS, Gemini 3.1 Flash TTS
+  Preview, Gemini 3.5 Transcribe and Transcribe Live, Gemini 3.8 Live; Grok Voice 3.0;
+  MAI-Voice-2.1 and Flash, MAI-Transcribe-2 and Streaming; Voxtral Mini/Small Transcribe 3,
+  Voxtral Mini Transcribe Realtime 3 and Voxtral TTS 3; ElevenLabs v4, v4 Turbo, v3, v3
+  Conversational, Flash v2 and v2.5, Realtime v1 Mini and Max, Scribe v2 and v2 Realtime;
+  AssemblyAI Universal-3.6 Pro, Universal-3.5 Pro and Universal-Streaming; Speechmatics
+  Enhanced, Melia, Oak and Linden; Cartesia Sonic 3.6 and Ink 2.
+- **Decision models:** Inception Mercury Decide.
+
+### Fixed
+
+- Bedrock's `anthropic.claude-opus-5-5` and `global.anthropic.claude-opus-5-5` matched the
+  longer `anthropic.claude-opus-5` key and billed Opus 5's $5/$25 instead of $4/$20.
+- New models that matched an older sibling's key and billed its price: Mistral Large 4
+  (billed `mistral-large`, about 3x), Kimi K3.1 Pro (billed `kimi-k3`), MiniMax M3.1 Flash
+  (2x), LongCat-2.5, GLM-5.3 Prime and Qwen3.8 Max Prime (half), Nano Banana 2.1 (2x),
+  GPT Image 1 Mini (2-5x), gpt-realtime-2.1-mini (3.2x) and gpt-realtime-whisper (a token
+  rate on a per-minute product).
+- `deepseek-v4-pro` still carried the promotion recorded on 2026-07-01 ($0.435/$0.87); it
+  is now DeepSeek's off-peak $0.66/$1.98 with $0.022 cache hits. DeepSeek bills double in
+  peak hours (01:00-04:00 and 06:00-10:00 UTC on weekdays); the schema has no time-of-day
+  pricing, so the off-peak rate is stored and the notes say so.
+- `gpt-image-2` portrait and landscape images were derived from a token ratio and billed
+  about 1.9x; OpenAI's table prices them below square ($0.005 / $0.041 / $0.165).
+- `mistral-large-latest` was priced as Mistral Large 1 ($8/$24); it now follows Large 4.
+- `moonshotai/Kimi-K3` stored its $3 input price as the cache-read price; it is $0.30.
+- Vendor price changes: ElevenLabs Multilingual v2 $0.10 to $0.08 and Turbo v2 $0.05 to
+  $0.04 per 1K characters; FLUX.2 [flex] $0.06 to $0.05 per megapixel; Deepgram Whisper
+  Large $0.006 to $0.0048 per minute.
+- Entries that were wrong before: Gemini 2.5 Flash and Pro Preview TTS were 67x and 16x
+  low, `gpt-4o-mini-tts` matched neither OpenAI rate, and `speechmatics/standard` held a
+  per-character TTS price on a transcription tier (now $0.45/hr).
+
+### Known limitations
+
+- Claude Haiku 5.5 (above 100K prompt tokens), GPT-6.1 Terra (above 272K) and DeepSeek peak
+  hours are stored at the base rate. Gemini 4 Argon's price doubles on 2026-12-01 and Gemini
+  3.8 TTS's on 2027-01-01; those entries must be updated then.
+- GPT Image 2.5 and 2.6 publish no per-image price, so per-image estimates for them use
+  `gpt-image-2`'s table; token-based costs use their own rates.
+- Not added for lack of a confirmed id or price: Qwen-Image 2.1 Turbo, Seedream 5.0,
+  Ideogram, Recraft V4.x, Fish Audio Drama 3, and Deepgram Flux TTS/STT (voice-named ids).
+
 ## [1.46.1] - 2026-10-28
 
 ### Added

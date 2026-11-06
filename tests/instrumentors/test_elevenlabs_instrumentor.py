@@ -120,13 +120,13 @@ class TestCostResolution(unittest.TestCase):
         inst = _instrumentor()
         span = _Span()
         inst._record_media_cost(span, "eleven_multilingual_v2", {"characters": 1000})
-        self.assertAlmostEqual(span.attrs["gen_ai.usage.cost.total"], 0.10, places=6)
+        self.assertAlmostEqual(span.attrs["gen_ai.usage.cost.total"], 0.08, places=6)
 
     def test_tts_turbo_is_cheaper_than_multilingual(self):
         inst = _instrumentor()
         span = _Span()
         inst._record_media_cost(span, "eleven_turbo_v2", {"characters": 1000})
-        self.assertAlmostEqual(span.attrs["gen_ai.usage.cost.total"], 0.05, places=6)
+        self.assertAlmostEqual(span.attrs["gen_ai.usage.cost.total"], 0.04, places=6)
 
     def test_scribe_resolves_from_bare_model_id(self):
         """Regression: the SDK passes 'scribe_v1' but the table keys it
@@ -188,7 +188,7 @@ class TestTTSSpan(unittest.TestCase):
         inst = _instrumentor()
         span = _Span()
         inst._tts_span_setup(span, (), {"text": "x" * 500, "model_id": "eleven_multilingual_v2"})
-        self.assertAlmostEqual(span.attrs["gen_ai.usage.cost.total"], 0.05, places=6)
+        self.assertAlmostEqual(span.attrs["gen_ai.usage.cost.total"], 0.04, places=6)
 
     def test_convert_returns_iterator_without_consuming_it(self):
         """The SDK returns Iterator[bytes]; draining it in the wrapper would
