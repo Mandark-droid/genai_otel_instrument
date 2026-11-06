@@ -1294,3 +1294,12 @@ def test_november_2026_image_token_prices(calc, model, prompt_price, completion_
     costs = calc.calculate_granular_cost(model, usage, "chat")
     assert costs["prompt"] == pytest.approx(prompt_price)
     assert costs["completion"] == pytest.approx(completion_price)
+
+
+@pytest.mark.parametrize(
+    "model", ["gemini-3.8-flash", "gemini-3-8-flash", "gemini/gemini-3.8-flash"]
+)
+def test_gemini_3_8_flash_caches_at_its_own_rate(calc, model):
+    # Google: context caching $0.075/1M through 2026-12-31 (input $0.75/1M).
+    entry = calc.pricing_data["chat"][calc._normalize_model_name(model, "chat")]
+    assert entry["cacheReadPrice"] == pytest.approx(0.000075)

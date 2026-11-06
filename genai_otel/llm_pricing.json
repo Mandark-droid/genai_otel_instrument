@@ -3985,17 +3985,20 @@
     "gemini-3-8-flash": {
       "promptPrice": 0.00075,
       "completionPrice": 0.00375,
-      "note": "Google Gemini 3.8 Flash (released 2026-09-02) - input $0.75/1M, output $3.75/1M. Source: models.dev / google, ai.google.dev/pricing"
+      "cacheReadPrice": 7.5e-05,
+      "note": "Google Gemini 3.8 Flash (released 2026-09-02) - input $0.75/1M, output $3.75/1M (including thinking), context caching $0.075/1M, through 2026-12-31; from 2027-01-01 the vendor charges $1.50 / $7.50 / $0.15, and this entry must be updated then. Source: aistudio.google.com/docs/pricing"
     },
     "gemini-3.8-flash": {
       "promptPrice": 0.00075,
       "completionPrice": 0.00375,
-      "note": "Google Gemini 3.8 Flash (released 2026-09-02) - input $0.75/1M, output $3.75/1M. Source: models.dev / google, ai.google.dev/pricing"
+      "cacheReadPrice": 7.5e-05,
+      "note": "Google Gemini 3.8 Flash (released 2026-09-02) - input $0.75/1M, output $3.75/1M (including thinking), context caching $0.075/1M, through 2026-12-31; from 2027-01-01 the vendor charges $1.50 / $7.50 / $0.15, and this entry must be updated then. Source: aistudio.google.com/docs/pricing"
     },
     "gemini/gemini-3.8-flash": {
       "promptPrice": 0.00075,
       "completionPrice": 0.00375,
-      "note": "Google Gemini 3.8 Flash (released 2026-09-02) - input $0.75/1M, output $3.75/1M. Source: models.dev / google, ai.google.dev/pricing"
+      "cacheReadPrice": 7.5e-05,
+      "note": "Google Gemini 3.8 Flash (released 2026-09-02) - input $0.75/1M, output $3.75/1M (including thinking), context caching $0.075/1M, through 2026-12-31; from 2027-01-01 the vendor charges $1.50 / $7.50 / $0.15, and this entry must be updated then. Source: aistudio.google.com/docs/pricing"
     },
     "gemini-exp-1206": {
       "promptPrice": 0.0,

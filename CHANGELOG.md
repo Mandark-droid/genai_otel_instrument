@@ -55,6 +55,8 @@ entry's `note` names its source and any rate the flat schema cannot hold.
   about 1.9x; OpenAI's table prices them below square ($0.005 / $0.041 / $0.165).
 - `mistral-large-latest` was priced as Mistral Large 1 ($8/$24); it now follows Large 4.
 - `moonshotai/Kimi-K3` stored its $3 input price as the cache-read price; it is $0.30.
+- Gemini 3.8 Flash had no cache-read price, so cached tokens billed at the full $0.75 input
+  rate; Google's context caching is $0.075/1M (through 2026-12-31).
 - Vendor price changes: ElevenLabs Multilingual v2 $0.10 to $0.08 and Turbo v2 $0.05 to
   $0.04 per 1K characters; FLUX.2 [flex] $0.06 to $0.05 per megapixel; Deepgram Whisper
   Large $0.006 to $0.0048 per minute.
