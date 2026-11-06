@@ -1206,8 +1206,9 @@ NOVEMBER_2026_IMAGES = [
     ("gpt-image-2", {"quality": "high", "size": "1024x1024"}, 0.211),
     ("gpt-image-2", {"quality": "high", "size": "1536x1024"}, 0.165),
     ("gpt-image-2", {"quality": "low", "size": "1024x1536"}, 0.005),
-    # GPT Image 2.5/2.6 publish no per-image table and resolve to gpt-image-2.
-    ("gpt-image-2.6-sunburst", {"quality": "medium", "size": "1024x1536"}, 0.041),
+    # GPT Image 2.5/2.6 publish no per-image table. Since 1.46.3 the lookup rule no longer
+    # lends them gpt-image-2's: per-image cost is unpriced; token costs use their chat entries.
+    ("gpt-image-2.6-sunburst", {"quality": "medium", "size": "1024x1536"}, 0.0),
     # GPT Image 1 Mini and 1.5 resolved to gpt-image-1 before.
     ("gpt-image-1-mini", {"quality": "low", "size": "1024x1024"}, 0.005),
     ("gpt-image-1-mini", {"quality": "high", "size": "1536x1024"}, 0.052),

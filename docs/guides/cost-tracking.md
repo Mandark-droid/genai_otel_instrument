@@ -188,6 +188,26 @@ and the recorded cost would then depend on which aggregator was indexed first.
 - **Tiered and scheduled prices**: Claude Haiku 5.5 (above 100K prompt tokens), GPT-6.x (above 272K), DeepSeek (peak hours) and introductory prices (Gemini 4 Argon to 2026-11-30, Gemini 3.8 TTS to 2026-12-31) are stored at the base or current rate; each entry's `note` states the other rates
 - **Hardware pricing**: Replicate charges per second of GPU/CPU time
 
+## How a Model Name Finds Its Price
+
+A call's model name is matched to a key in the pricing file:
+
+1. **Exact match**, ignoring case.
+2. Otherwise, **a key found inside the name**, on token boundaries (`-`, `.`, `/`, `:`, `_`), if
+   what follows the key still names the same model:
+   - **kept:** a dated or numbered snapshot (`-20260928`, `-2024-08-06`, `-002`), a Bedrock
+     version (`-v1:0`), a Vertex tag (`@default`), `-latest`, `-preview`, `-instruct`, a
+     quantisation tag (`-fp8`), and other words that do not name a new model;
+   - **refused:** a new version (`mistral-large` + `-4`, `kimi-k3` + `.1-pro`), a 4-digit
+     release tag (`mistral-small` + `-2603`), and, for chat, another modality (`-tts`, `-image`,
+     `-realtime`, `-embedding`).
+3. Among acceptable keys, the one that is the whole rest of the name wins
+   (`bedrock/us.anthropic.claude-opus-5-5` takes the regional key), then the longest.
+
+A name no key prices is reported as unpriced (`pricing_source`), or estimated from a parameter
+count in the name. It is never billed at another model's price. Use
+`CostCalculator().resolve_model_key(model, call_type)` to see which key prices a name.
+
 ## Custom Model Pricing
 
 For models not in the pricing database:

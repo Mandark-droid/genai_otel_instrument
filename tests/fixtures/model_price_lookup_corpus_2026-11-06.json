@@ -1,0 +1,2688 @@
+{
+ "source": "models.dev (https://models.dev, MIT licensed) api.json, first-party provider listings only",
+ "captured": "2026-11-06",
+ "providers": [
+  "anthropic",
+  "openai",
+  "google",
+  "google-vertex",
+  "google-vertex-anthropic",
+  "amazon-bedrock",
+  "azure",
+  "mistral",
+  "deepseek",
+  "moonshotai",
+  "minimax",
+  "xai",
+  "alibaba",
+  "zai",
+  "zhipuai",
+  "cohere",
+  "meta",
+  "xiaomi",
+  "inception"
+ ],
+ "count": 532,
+ "names": {
+  "MiniMax-M2": {
+   "provider": "minimax",
+   "input_per_1m": 0.3,
+   "output_per_1m": 1.2
+  },
+  "MiniMax-M2.1": {
+   "provider": "minimax",
+   "input_per_1m": 0.3,
+   "output_per_1m": 1.2
+  },
+  "MiniMax-M2.5": {
+   "provider": "minimax",
+   "input_per_1m": 0.3,
+   "output_per_1m": 1.2
+  },
+  "MiniMax-M2.5-highspeed": {
+   "provider": "minimax",
+   "input_per_1m": 0.6,
+   "output_per_1m": 2.4
+  },
+  "MiniMax-M2.7": {
+   "provider": "minimax",
+   "input_per_1m": 0.3,
+   "output_per_1m": 1.2
+  },
+  "MiniMax-M2.7-highspeed": {
+   "provider": "minimax",
+   "input_per_1m": 0.6,
+   "output_per_1m": 2.4
+  },
+  "MiniMax-M3": {
+   "provider": "minimax",
+   "input_per_1m": 0.3,
+   "output_per_1m": 1.2
+  },
+  "MiniMax-M3.1-Flash": {
+   "provider": "minimax",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "amazon.nova-2-lite-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.33,
+   "output_per_1m": 2.75
+  },
+  "amazon.nova-lite-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.06,
+   "output_per_1m": 0.24
+  },
+  "amazon.nova-micro-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.035,
+   "output_per_1m": 0.14
+  },
+  "amazon.nova-pro-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.8,
+   "output_per_1m": 3.2
+  },
+  "anthropic.claude-fable-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 10,
+   "output_per_1m": 50
+  },
+  "anthropic.claude-fable-5-1": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 10,
+   "output_per_1m": 50
+  },
+  "anthropic.claude-haiku-4-5-20251001-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1,
+   "output_per_1m": 5
+  },
+  "anthropic.claude-haiku-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.5
+  },
+  "anthropic.claude-opus-4-1-20250805-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 15,
+   "output_per_1m": 75
+  },
+  "anthropic.claude-opus-4-5-20251101-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "anthropic.claude-opus-4-6-v1": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "anthropic.claude-opus-4-7": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "anthropic.claude-opus-4-8": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "anthropic.claude-opus-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "anthropic.claude-opus-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 4,
+   "output_per_1m": 20
+  },
+  "anthropic.claude-sonnet-4-5-20250929-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "anthropic.claude-sonnet-4-6": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3.3,
+   "output_per_1m": 16.5
+  },
+  "anthropic.claude-sonnet-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "anthropic.claude-sonnet-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "apac.amazon.nova-lite-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.063,
+   "output_per_1m": 0.252
+  },
+  "apac.amazon.nova-micro-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.037,
+   "output_per_1m": 0.148
+  },
+  "apac.amazon.nova-pro-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.84,
+   "output_per_1m": 3.36
+  },
+  "apac.anthropic.claude-sonnet-4-20250514-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "au.anthropic.claude-haiku-4-5-20251001-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.1,
+   "output_per_1m": 5.5
+  },
+  "au.anthropic.claude-haiku-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.11,
+   "output_per_1m": 0.55
+  },
+  "au.anthropic.claude-opus-4-6-v1": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "au.anthropic.claude-opus-4-7": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "au.anthropic.claude-opus-4-8": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "au.anthropic.claude-opus-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "au.anthropic.claude-opus-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 4.4,
+   "output_per_1m": 22
+  },
+  "au.anthropic.claude-sonnet-4-5-20250929-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3.3,
+   "output_per_1m": 16.5
+  },
+  "au.anthropic.claude-sonnet-4-6": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3.3,
+   "output_per_1m": 16.5
+  },
+  "au.anthropic.claude-sonnet-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "au.anthropic.claude-sonnet-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "c4ai-aya-expanse-32b": {
+   "provider": "cohere",
+   "input_per_1m": 0.5,
+   "output_per_1m": 1.5
+  },
+  "ca.amazon.nova-lite-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.064,
+   "output_per_1m": 0.256
+  },
+  "claude-fable-5": {
+   "provider": "azure",
+   "input_per_1m": 10,
+   "output_per_1m": 50
+  },
+  "claude-fable-5-1": {
+   "provider": "azure",
+   "input_per_1m": 10,
+   "output_per_1m": 50
+  },
+  "claude-fable-5-1@default": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 10,
+   "output_per_1m": 50
+  },
+  "claude-fable-5@default": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 10,
+   "output_per_1m": 50
+  },
+  "claude-haiku-4-5": {
+   "provider": "azure",
+   "input_per_1m": 1,
+   "output_per_1m": 5
+  },
+  "claude-haiku-4-5-20251001": {
+   "provider": "anthropic",
+   "input_per_1m": 1,
+   "output_per_1m": 5
+  },
+  "claude-haiku-4-5@20251001": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 1,
+   "output_per_1m": 5
+  },
+  "claude-haiku-5-5": {
+   "provider": "azure",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.5
+  },
+  "claude-haiku-5-5@default": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.5
+  },
+  "claude-mythos-5": {
+   "provider": "azure",
+   "input_per_1m": 10,
+   "output_per_1m": 50
+  },
+  "claude-opus-4-1@20250805": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 15,
+   "output_per_1m": 75
+  },
+  "claude-opus-4-5": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "claude-opus-4-5-20251101": {
+   "provider": "anthropic",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "claude-opus-4-5@20251101": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "claude-opus-4-6": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "claude-opus-4-6@default": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "claude-opus-4-7": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "claude-opus-4-7@default": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "claude-opus-4-8": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "claude-opus-4-8@default": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "claude-opus-4@20250514": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 15,
+   "output_per_1m": 75
+  },
+  "claude-opus-5": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "claude-opus-5-5": {
+   "provider": "azure",
+   "input_per_1m": 4,
+   "output_per_1m": 20
+  },
+  "claude-opus-5-5@default": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 4,
+   "output_per_1m": 20
+  },
+  "claude-opus-5@default": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "claude-sonnet-4-5": {
+   "provider": "azure",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "claude-sonnet-4-5-20250929": {
+   "provider": "anthropic",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "claude-sonnet-4-5@20250929": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "claude-sonnet-4-6": {
+   "provider": "azure",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "claude-sonnet-4-6@default": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "claude-sonnet-4@20250514": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "claude-sonnet-5": {
+   "provider": "azure",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "claude-sonnet-5-5": {
+   "provider": "azure",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "claude-sonnet-5-5@default": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "claude-sonnet-5@default": {
+   "provider": "google-vertex-anthropic",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "codestral-2": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.3,
+   "output_per_1m": 0.9
+  },
+  "codestral-2501": {
+   "provider": "azure",
+   "input_per_1m": 0.3,
+   "output_per_1m": 0.9
+  },
+  "codestral-2508": {
+   "provider": "mistral",
+   "input_per_1m": 0.3,
+   "output_per_1m": 0.9
+  },
+  "codestral-latest": {
+   "provider": "mistral",
+   "input_per_1m": 0.3,
+   "output_per_1m": 0.9
+  },
+  "codex-mini": {
+   "provider": "azure",
+   "input_per_1m": 1.5,
+   "output_per_1m": 6
+  },
+  "cohere-command-a": {
+   "provider": "azure",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "cohere-embed-v-4-0": {
+   "provider": "azure",
+   "input_per_1m": 0.12,
+   "output_per_1m": 0
+  },
+  "cohere-embed-v3-english": {
+   "provider": "azure",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0
+  },
+  "cohere-embed-v3-multilingual": {
+   "provider": "azure",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0
+  },
+  "command-a-03-2025": {
+   "provider": "cohere",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "command-a-plus-05-2026": {
+   "provider": "cohere",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "command-a-reasoning-08-2025": {
+   "provider": "cohere",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "command-a-translate-08-2025": {
+   "provider": "cohere",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "command-a-vision-07-2025": {
+   "provider": "cohere",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "command-r-08-2024": {
+   "provider": "cohere",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "command-r-plus-08-2024": {
+   "provider": "cohere",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "command-r7b-12-2024": {
+   "provider": "cohere",
+   "input_per_1m": 0.0375,
+   "output_per_1m": 0.15
+  },
+  "command-r7b-arabic-02-2025": {
+   "provider": "cohere",
+   "input_per_1m": 0.0375,
+   "output_per_1m": 0.15
+  },
+  "deep-research-max-preview-04-2026": {
+   "provider": "google",
+   "input_per_1m": 2,
+   "output_per_1m": 12
+  },
+  "deep-research-preview-04-2026": {
+   "provider": "google",
+   "input_per_1m": 2,
+   "output_per_1m": 12
+  },
+  "deepseek-ai/deepseek-v3.1-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.6,
+   "output_per_1m": 1.7
+  },
+  "deepseek-ai/deepseek-v3.2-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.56,
+   "output_per_1m": 1.68
+  },
+  "deepseek-flash": {
+   "provider": "deepseek",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "deepseek-v3.2": {
+   "provider": "azure",
+   "input_per_1m": 0.58,
+   "output_per_1m": 1.68
+  },
+  "deepseek-v3.2-speciale": {
+   "provider": "azure",
+   "input_per_1m": 0.58,
+   "output_per_1m": 1.68
+  },
+  "deepseek-v4-1-flash-1017": {
+   "provider": "mistral",
+   "input_per_1m": 0.3,
+   "output_per_1m": 1.2
+  },
+  "deepseek-v4-flash": {
+   "provider": "deepseek",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "deepseek-v4-flash-0731": {
+   "provider": "alibaba",
+   "input_per_1m": 0.44,
+   "output_per_1m": 1.32
+  },
+  "deepseek-v4-flash-vision-exp": {
+   "provider": "deepseek",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "deepseek-v4-pro": {
+   "provider": "deepseek",
+   "input_per_1m": 0.66,
+   "output_per_1m": 1.98
+  },
+  "deepseek-v4.1-flash": {
+   "provider": "azure",
+   "input_per_1m": 0.3,
+   "output_per_1m": 1.2
+  },
+  "deepseek.r1-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.35,
+   "output_per_1m": 5.4
+  },
+  "deepseek.v3-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.58,
+   "output_per_1m": 1.68
+  },
+  "deepseek.v3.2": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.62,
+   "output_per_1m": 1.85
+  },
+  "devstral-2512": {
+   "provider": "mistral",
+   "input_per_1m": 0.4,
+   "output_per_1m": 2
+  },
+  "devstral-latest": {
+   "provider": "mistral",
+   "input_per_1m": 0.4,
+   "output_per_1m": 2
+  },
+  "devstral-medium-latest": {
+   "provider": "mistral",
+   "input_per_1m": 0.4,
+   "output_per_1m": 2
+  },
+  "eu.amazon.nova-2-lite-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.374,
+   "output_per_1m": 3.157
+  },
+  "eu.amazon.nova-lite-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.069,
+   "output_per_1m": 0.276
+  },
+  "eu.amazon.nova-micro-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.04,
+   "output_per_1m": 0.16
+  },
+  "eu.amazon.nova-pro-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.92,
+   "output_per_1m": 3.68
+  },
+  "eu.anthropic.claude-fable-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 11,
+   "output_per_1m": 55
+  },
+  "eu.anthropic.claude-haiku-4-5-20251001-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.1,
+   "output_per_1m": 5.5
+  },
+  "eu.anthropic.claude-haiku-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.11,
+   "output_per_1m": 0.55
+  },
+  "eu.anthropic.claude-opus-4-5-20251101-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "eu.anthropic.claude-opus-4-6-v1": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "eu.anthropic.claude-opus-4-7": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "eu.anthropic.claude-opus-4-8": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "eu.anthropic.claude-opus-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "eu.anthropic.claude-opus-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 4.4,
+   "output_per_1m": 22
+  },
+  "eu.anthropic.claude-sonnet-4-20250514-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "eu.anthropic.claude-sonnet-4-5-20250929-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3.3,
+   "output_per_1m": 16.5
+  },
+  "eu.anthropic.claude-sonnet-4-6": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3.3,
+   "output_per_1m": 16.5
+  },
+  "eu.anthropic.claude-sonnet-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "eu.anthropic.claude-sonnet-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "eu.mistral.pixtral-large-2502-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "gemini-2.5-computer-use-preview-10-2025": {
+   "provider": "google",
+   "input_per_1m": 1.25,
+   "output_per_1m": 10
+  },
+  "gemini-2.5-flash": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.3,
+   "output_per_1m": 2.5
+  },
+  "gemini-2.5-flash-image": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.3,
+   "output_per_1m": 30
+  },
+  "gemini-2.5-flash-lite": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.4
+  },
+  "gemini-2.5-flash-preview-tts": {
+   "provider": "google",
+   "input_per_1m": 0.5,
+   "output_per_1m": 10
+  },
+  "gemini-2.5-flash-tts": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.5,
+   "output_per_1m": 10
+  },
+  "gemini-2.5-pro": {
+   "provider": "google-vertex",
+   "input_per_1m": 1.25,
+   "output_per_1m": 10
+  },
+  "gemini-2.5-pro-preview-tts": {
+   "provider": "google",
+   "input_per_1m": 1,
+   "output_per_1m": 20
+  },
+  "gemini-2.5-pro-tts": {
+   "provider": "google-vertex",
+   "input_per_1m": 1,
+   "output_per_1m": 20
+  },
+  "gemini-3-flash-preview": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.5,
+   "output_per_1m": 3
+  },
+  "gemini-3-pro-image": {
+   "provider": "google-vertex",
+   "input_per_1m": 2,
+   "output_per_1m": 120
+  },
+  "gemini-3.1-flash-image": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.5,
+   "output_per_1m": 60
+  },
+  "gemini-3.1-flash-lite": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.25,
+   "output_per_1m": 1.5
+  },
+  "gemini-3.1-flash-lite-image": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.25,
+   "output_per_1m": 30
+  },
+  "gemini-3.1-flash-lite-preview": {
+   "provider": "google",
+   "input_per_1m": 0.25,
+   "output_per_1m": 1.5
+  },
+  "gemini-3.1-flash-live-preview": {
+   "provider": "google",
+   "input_per_1m": 0.75,
+   "output_per_1m": 4.5
+  },
+  "gemini-3.1-flash-tts-preview": {
+   "provider": "google",
+   "input_per_1m": 1,
+   "output_per_1m": 20
+  },
+  "gemini-3.1-pro-preview": {
+   "provider": "google-vertex",
+   "input_per_1m": 2,
+   "output_per_1m": 12
+  },
+  "gemini-3.1-pro-preview-customtools": {
+   "provider": "google-vertex",
+   "input_per_1m": 2,
+   "output_per_1m": 12
+  },
+  "gemini-3.5-flash": {
+   "provider": "google-vertex",
+   "input_per_1m": 1.5,
+   "output_per_1m": 9
+  },
+  "gemini-3.5-flash-lite": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.3,
+   "output_per_1m": 2.5
+  },
+  "gemini-3.5-live-translate-preview": {
+   "provider": "google",
+   "input_per_1m": 3.5,
+   "output_per_1m": 21
+  },
+  "gemini-3.6-flash": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.75,
+   "output_per_1m": 3.75
+  },
+  "gemini-3.7-flash": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.75,
+   "output_per_1m": 3.75
+  },
+  "gemini-3.8-flash": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.75,
+   "output_per_1m": 3.75
+  },
+  "gemini-4-argon": {
+   "provider": "google-vertex",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "gemini-embedding-001": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0
+  },
+  "gemini-embedding-2": {
+   "provider": "google",
+   "input_per_1m": 0.2,
+   "output_per_1m": 0
+  },
+  "gemini-flash-latest": {
+   "provider": "google",
+   "input_per_1m": 0.75,
+   "output_per_1m": 3.75
+  },
+  "gemini-flash-lite-latest": {
+   "provider": "google",
+   "input_per_1m": 0.3,
+   "output_per_1m": 2.5
+  },
+  "gemini-nano-banana-2.1": {
+   "provider": "google-vertex",
+   "input_per_1m": 1.5,
+   "output_per_1m": 30
+  },
+  "gemini-omni-flash-preview": {
+   "provider": "google",
+   "input_per_1m": 1.5,
+   "output_per_1m": 17.5
+  },
+  "gemini-pro-latest": {
+   "provider": "google",
+   "input_per_1m": 2,
+   "output_per_1m": 12
+  },
+  "glm-4.5": {
+   "provider": "zai",
+   "input_per_1m": 0.6,
+   "output_per_1m": 2.2
+  },
+  "glm-4.5-air": {
+   "provider": "zai",
+   "input_per_1m": 0.2,
+   "output_per_1m": 1.1
+  },
+  "glm-4.5v": {
+   "provider": "zai",
+   "input_per_1m": 0.6,
+   "output_per_1m": 1.8
+  },
+  "glm-4.6": {
+   "provider": "zai",
+   "input_per_1m": 0.6,
+   "output_per_1m": 2.2
+  },
+  "glm-4.6v": {
+   "provider": "zai",
+   "input_per_1m": 0.3,
+   "output_per_1m": 0.9
+  },
+  "glm-4.7": {
+   "provider": "zai",
+   "input_per_1m": 0.6,
+   "output_per_1m": 2.2
+  },
+  "glm-4.7-flashx": {
+   "provider": "zai",
+   "input_per_1m": 0.07,
+   "output_per_1m": 0.4
+  },
+  "glm-5": {
+   "provider": "zai",
+   "input_per_1m": 1,
+   "output_per_1m": 3.2
+  },
+  "glm-5-2": {
+   "provider": "mistral",
+   "input_per_1m": 1.4,
+   "output_per_1m": 4.4
+  },
+  "glm-5-turbo": {
+   "provider": "zai",
+   "input_per_1m": 1.2,
+   "output_per_1m": 4
+  },
+  "glm-5.1": {
+   "provider": "zai",
+   "input_per_1m": 1.4,
+   "output_per_1m": 4.4
+  },
+  "glm-5.2": {
+   "provider": "alibaba",
+   "input_per_1m": 1.4,
+   "output_per_1m": 4.4
+  },
+  "glm-5.3": {
+   "provider": "zai",
+   "input_per_1m": 1.4,
+   "output_per_1m": 4.4
+  },
+  "glm-5.3-flash": {
+   "provider": "zai",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.5
+  },
+  "glm-5.3-flashx": {
+   "provider": "zai",
+   "input_per_1m": 0.37,
+   "output_per_1m": 1.25
+  },
+  "glm-5v-turbo": {
+   "provider": "zai",
+   "input_per_1m": 1.2,
+   "output_per_1m": 4
+  },
+  "global.amazon.nova-2-lite-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.3,
+   "output_per_1m": 2.5
+  },
+  "global.anthropic.claude-fable-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 10,
+   "output_per_1m": 50
+  },
+  "global.anthropic.claude-fable-5-1": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 10,
+   "output_per_1m": 50
+  },
+  "global.anthropic.claude-haiku-4-5-20251001-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1,
+   "output_per_1m": 5
+  },
+  "global.anthropic.claude-haiku-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.5
+  },
+  "global.anthropic.claude-opus-4-5-20251101-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "global.anthropic.claude-opus-4-6-v1": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "global.anthropic.claude-opus-4-7": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "global.anthropic.claude-opus-4-8": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "global.anthropic.claude-opus-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5,
+   "output_per_1m": 25
+  },
+  "global.anthropic.claude-opus-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 4,
+   "output_per_1m": 20
+  },
+  "global.anthropic.claude-sonnet-4-20250514-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "global.anthropic.claude-sonnet-4-5-20250929-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "global.anthropic.claude-sonnet-4-6": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "global.anthropic.claude-sonnet-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "global.anthropic.claude-sonnet-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "global.moonshotai.kimi-k3": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "global.openai.gpt-5.6-luna": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.2,
+   "output_per_1m": 1.2
+  },
+  "global.openai.gpt-5.6-sol": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 4,
+   "output_per_1m": 20
+  },
+  "global.openai.gpt-5.6-terra": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 12
+  },
+  "global.openai.gpt-6-astra": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 10,
+   "output_per_1m": 50
+  },
+  "global.openai.gpt-6-luna": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.5
+  },
+  "global.openai.gpt-6-sol": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "global.openai.gpt-6.1-sol": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "global.openai.gpt-6.1-terra": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1,
+   "output_per_1m": 5
+  },
+  "global.xai.grok-4.6": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "global.xai.grok-4.7": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "global.zai.glm-5.3": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.68,
+   "output_per_1m": 5.28
+  },
+  "google.gemma-3-12b-it": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.09,
+   "output_per_1m": 0.29
+  },
+  "google.gemma-3-27b-it": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.23,
+   "output_per_1m": 0.38
+  },
+  "google.gemma-3-4b-it": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.04,
+   "output_per_1m": 0.08
+  },
+  "google.gemma-4-26b-a4b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.13,
+   "output_per_1m": 0.4
+  },
+  "google.gemma-4-31b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.14,
+   "output_per_1m": 0.4
+  },
+  "google.gemma-4-e2b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.04,
+   "output_per_1m": 0.08
+  },
+  "google/gemma-4-26b-a4b-it-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "gpt-3.5-turbo": {
+   "provider": "openai",
+   "input_per_1m": 0.5,
+   "output_per_1m": 1.5
+  },
+  "gpt-3.5-turbo-0125": {
+   "provider": "azure",
+   "input_per_1m": 0.5,
+   "output_per_1m": 1.5
+  },
+  "gpt-3.5-turbo-1106": {
+   "provider": "azure",
+   "input_per_1m": 1,
+   "output_per_1m": 2
+  },
+  "gpt-3.5-turbo-instruct": {
+   "provider": "azure",
+   "input_per_1m": 1.5,
+   "output_per_1m": 2
+  },
+  "gpt-4": {
+   "provider": "openai",
+   "input_per_1m": 30,
+   "output_per_1m": 60
+  },
+  "gpt-4-turbo": {
+   "provider": "azure",
+   "input_per_1m": 10,
+   "output_per_1m": 30
+  },
+  "gpt-4-turbo-vision": {
+   "provider": "azure",
+   "input_per_1m": 10,
+   "output_per_1m": 30
+  },
+  "gpt-4.1": {
+   "provider": "azure",
+   "input_per_1m": 2,
+   "output_per_1m": 8
+  },
+  "gpt-4.1-mini": {
+   "provider": "azure",
+   "input_per_1m": 0.4,
+   "output_per_1m": 1.6
+  },
+  "gpt-4.1-nano": {
+   "provider": "azure",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.4
+  },
+  "gpt-4o": {
+   "provider": "azure",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "gpt-4o-2024-05-13": {
+   "provider": "openai",
+   "input_per_1m": 5,
+   "output_per_1m": 15
+  },
+  "gpt-4o-2024-08-06": {
+   "provider": "openai",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "gpt-4o-2024-11-20": {
+   "provider": "openai",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "gpt-4o-mini": {
+   "provider": "azure",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "gpt-5": {
+   "provider": "azure",
+   "input_per_1m": 1.25,
+   "output_per_1m": 10
+  },
+  "gpt-5-codex": {
+   "provider": "azure",
+   "input_per_1m": 1.25,
+   "output_per_1m": 10
+  },
+  "gpt-5-mini": {
+   "provider": "azure",
+   "input_per_1m": 0.25,
+   "output_per_1m": 2
+  },
+  "gpt-5-nano": {
+   "provider": "azure",
+   "input_per_1m": 0.05,
+   "output_per_1m": 0.4
+  },
+  "gpt-5-pro": {
+   "provider": "azure",
+   "input_per_1m": 15,
+   "output_per_1m": 120
+  },
+  "gpt-5.1": {
+   "provider": "azure",
+   "input_per_1m": 1.25,
+   "output_per_1m": 10
+  },
+  "gpt-5.1-codex": {
+   "provider": "azure",
+   "input_per_1m": 1.25,
+   "output_per_1m": 10
+  },
+  "gpt-5.1-codex-max": {
+   "provider": "azure",
+   "input_per_1m": 1.25,
+   "output_per_1m": 10
+  },
+  "gpt-5.1-codex-mini": {
+   "provider": "azure",
+   "input_per_1m": 0.25,
+   "output_per_1m": 2
+  },
+  "gpt-5.2": {
+   "provider": "azure",
+   "input_per_1m": 1.75,
+   "output_per_1m": 14
+  },
+  "gpt-5.2-codex": {
+   "provider": "azure",
+   "input_per_1m": 1.75,
+   "output_per_1m": 14
+  },
+  "gpt-5.2-pro": {
+   "provider": "openai",
+   "input_per_1m": 21,
+   "output_per_1m": 168
+  },
+  "gpt-5.3-codex": {
+   "provider": "azure",
+   "input_per_1m": 1.75,
+   "output_per_1m": 14
+  },
+  "gpt-5.3-codex-spark": {
+   "provider": "openai",
+   "input_per_1m": 1.75,
+   "output_per_1m": 14
+  },
+  "gpt-5.4": {
+   "provider": "azure",
+   "input_per_1m": 2.5,
+   "output_per_1m": 15
+  },
+  "gpt-5.4-mini": {
+   "provider": "azure",
+   "input_per_1m": 0.75,
+   "output_per_1m": 4.5
+  },
+  "gpt-5.4-nano": {
+   "provider": "azure",
+   "input_per_1m": 0.2,
+   "output_per_1m": 1.25
+  },
+  "gpt-5.4-pro": {
+   "provider": "azure",
+   "input_per_1m": 30,
+   "output_per_1m": 180
+  },
+  "gpt-5.5": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 30
+  },
+  "gpt-5.5-pro": {
+   "provider": "openai",
+   "input_per_1m": 30,
+   "output_per_1m": 180
+  },
+  "gpt-5.6": {
+   "provider": "openai",
+   "input_per_1m": 4,
+   "output_per_1m": 20
+  },
+  "gpt-5.6-luna": {
+   "provider": "azure",
+   "input_per_1m": 0.2,
+   "output_per_1m": 1.2
+  },
+  "gpt-5.6-sol": {
+   "provider": "azure",
+   "input_per_1m": 4,
+   "output_per_1m": 20
+  },
+  "gpt-5.6-terra": {
+   "provider": "azure",
+   "input_per_1m": 2,
+   "output_per_1m": 12
+  },
+  "gpt-6-astra": {
+   "provider": "azure",
+   "input_per_1m": 10,
+   "output_per_1m": 50
+  },
+  "gpt-6-luna": {
+   "provider": "azure",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.5
+  },
+  "gpt-6-sol": {
+   "provider": "azure",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "gpt-6.1-sol": {
+   "provider": "azure",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "gpt-6.1-terra": {
+   "provider": "azure",
+   "input_per_1m": 1,
+   "output_per_1m": 5
+  },
+  "gpt-chat-latest": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 30
+  },
+  "gpt-daybreak-blue-latest": {
+   "provider": "openai",
+   "input_per_1m": 4,
+   "output_per_1m": 20
+  },
+  "gpt-daybreak-red-latest": {
+   "provider": "openai",
+   "input_per_1m": 12.5,
+   "output_per_1m": 75
+  },
+  "gpt-image-1": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 40
+  },
+  "gpt-image-1.5": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 32
+  },
+  "gpt-image-2": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 30
+  },
+  "gpt-image-2.5-flare": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 30
+  },
+  "gpt-image-2.5-sunburst": {
+   "provider": "azure",
+   "input_per_1m": 5,
+   "output_per_1m": 30
+  },
+  "gpt-realtime-2.1": {
+   "provider": "openai",
+   "input_per_1m": 4,
+   "output_per_1m": 24
+  },
+  "grok-4-1-fast-non-reasoning": {
+   "provider": "azure",
+   "input_per_1m": 0.2,
+   "output_per_1m": 0.5
+  },
+  "grok-4-1-fast-reasoning": {
+   "provider": "azure",
+   "input_per_1m": 0.2,
+   "output_per_1m": 0.5
+  },
+  "grok-4-20-non-reasoning": {
+   "provider": "azure",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "grok-4-20-reasoning": {
+   "provider": "azure",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "grok-4.20-0309-non-reasoning": {
+   "provider": "xai",
+   "input_per_1m": 1.25,
+   "output_per_1m": 2.5
+  },
+  "grok-4.20-0309-reasoning": {
+   "provider": "xai",
+   "input_per_1m": 1.25,
+   "output_per_1m": 2.5
+  },
+  "grok-4.20-multi-agent-0309": {
+   "provider": "xai",
+   "input_per_1m": 1.25,
+   "output_per_1m": 2.5
+  },
+  "grok-4.3": {
+   "provider": "xai",
+   "input_per_1m": 1.25,
+   "output_per_1m": 2.5
+  },
+  "grok-4.5": {
+   "provider": "xai",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "grok-4.6": {
+   "provider": "azure",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "grok-4.7": {
+   "provider": "xai",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "grok-build-0.1": {
+   "provider": "xai",
+   "input_per_1m": 1,
+   "output_per_1m": 2
+  },
+  "in.anthropic.claude-haiku-4-5-20251001-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.1,
+   "output_per_1m": 5.5
+  },
+  "in.anthropic.claude-opus-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "in.anthropic.claude-sonnet-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "in.openai.gpt-5.6-luna": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.22,
+   "output_per_1m": 1.32
+  },
+  "in.openai.gpt-5.6-terra": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 13.2
+  },
+  "jp.amazon.nova-2-lite-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.396,
+   "output_per_1m": 3.311
+  },
+  "jp.anthropic.claude-haiku-4-5-20251001-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.1,
+   "output_per_1m": 5.5
+  },
+  "jp.anthropic.claude-haiku-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.11,
+   "output_per_1m": 0.55
+  },
+  "jp.anthropic.claude-opus-4-7": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "jp.anthropic.claude-opus-4-8": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "jp.anthropic.claude-opus-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "jp.anthropic.claude-opus-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 4.4,
+   "output_per_1m": 22
+  },
+  "jp.anthropic.claude-sonnet-4-5-20250929-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3.3,
+   "output_per_1m": 16.5
+  },
+  "jp.anthropic.claude-sonnet-4-6": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3.3,
+   "output_per_1m": 16.5
+  },
+  "jp.anthropic.claude-sonnet-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "kimi-k2.5": {
+   "provider": "azure",
+   "input_per_1m": 0.6,
+   "output_per_1m": 3
+  },
+  "kimi-k2.6": {
+   "provider": "azure",
+   "input_per_1m": 0.95,
+   "output_per_1m": 4
+  },
+  "kimi-k2.7-code": {
+   "provider": "azure",
+   "input_per_1m": 0.95,
+   "output_per_1m": 4
+  },
+  "kimi-k2.7-code-highspeed": {
+   "provider": "moonshotai",
+   "input_per_1m": 1.9,
+   "output_per_1m": 8
+  },
+  "kimi-k3": {
+   "provider": "alibaba",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "kimi-k3.1-pro": {
+   "provider": "moonshotai",
+   "input_per_1m": 2,
+   "output_per_1m": 10
+  },
+  "kimi-k3.1-pro-highspeed": {
+   "provider": "moonshotai",
+   "input_per_1m": 4,
+   "output_per_1m": 20
+  },
+  "llama-3.3-70b-instruct": {
+   "provider": "azure",
+   "input_per_1m": 0.71,
+   "output_per_1m": 0.71
+  },
+  "llama-4-maverick-17b-128e-instruct-fp8": {
+   "provider": "azure",
+   "input_per_1m": 0.25,
+   "output_per_1m": 1
+  },
+  "llama-4-scout-17b-16e-instruct": {
+   "provider": "azure",
+   "input_per_1m": 0.2,
+   "output_per_1m": 0.78
+  },
+  "magistral-medium-latest": {
+   "provider": "mistral",
+   "input_per_1m": 2,
+   "output_per_1m": 5
+  },
+  "mercury-2": {
+   "provider": "inception",
+   "input_per_1m": 0.25,
+   "output_per_1m": 0.75
+  },
+  "mercury-2.5": {
+   "provider": "inception",
+   "input_per_1m": 0.2,
+   "output_per_1m": 0.75
+  },
+  "mercury-3": {
+   "provider": "inception",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.35
+  },
+  "mercury-edit-2": {
+   "provider": "inception",
+   "input_per_1m": 0.25,
+   "output_per_1m": 0.75
+  },
+  "meta.llama3-1-70b-instruct-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.72,
+   "output_per_1m": 0.72
+  },
+  "meta.llama3-1-8b-instruct-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.22,
+   "output_per_1m": 0.22
+  },
+  "meta.llama3-3-70b-instruct-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.72,
+   "output_per_1m": 0.72
+  },
+  "meta.llama4-maverick-17b-instruct-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.24,
+   "output_per_1m": 0.97
+  },
+  "meta.llama4-scout-17b-instruct-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.17,
+   "output_per_1m": 0.66
+  },
+  "meta/llama-3.3-70b-instruct-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.72,
+   "output_per_1m": 0.72
+  },
+  "meta/llama-4-maverick-17b-128e-instruct-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.35,
+   "output_per_1m": 1.15
+  },
+  "meta/llama-4-scout-17b-16e-instruct-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.25,
+   "output_per_1m": 0.7
+  },
+  "mimo-v2.5": {
+   "provider": "xiaomi",
+   "input_per_1m": 0.14,
+   "output_per_1m": 0.28
+  },
+  "mimo-v2.5-pro": {
+   "provider": "xiaomi",
+   "input_per_1m": 0.435,
+   "output_per_1m": 0.87
+  },
+  "mimo-v2.5-pro-ultraspeed": {
+   "provider": "xiaomi",
+   "input_per_1m": 1.305,
+   "output_per_1m": 2.61
+  },
+  "mimo-v2.6-flash": {
+   "provider": "xiaomi",
+   "input_per_1m": 0.14,
+   "output_per_1m": 0.28
+  },
+  "mimo-v2.6-pro": {
+   "provider": "xiaomi",
+   "input_per_1m": 0.435,
+   "output_per_1m": 0.87
+  },
+  "mimo-v2.6-pro-ultraspeed": {
+   "provider": "xiaomi",
+   "input_per_1m": 4.35,
+   "output_per_1m": 8.7
+  },
+  "minimax.minimax-m2": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.3,
+   "output_per_1m": 1.2
+  },
+  "minimax.minimax-m2.1": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.3,
+   "output_per_1m": 1.2
+  },
+  "minimax.minimax-m2.5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.3,
+   "output_per_1m": 1.2
+  },
+  "ministral-14b-2512": {
+   "provider": "mistral",
+   "input_per_1m": 0.2,
+   "output_per_1m": 0.2
+  },
+  "ministral-3b": {
+   "provider": "azure",
+   "input_per_1m": 0.04,
+   "output_per_1m": 0.04
+  },
+  "ministral-3b-2512": {
+   "provider": "mistral",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.1
+  },
+  "ministral-3b-latest": {
+   "provider": "mistral",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.1
+  },
+  "ministral-8b-2512": {
+   "provider": "mistral",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.15
+  },
+  "ministral-8b-latest": {
+   "provider": "mistral",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.15
+  },
+  "mistral-embed": {
+   "provider": "mistral",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0
+  },
+  "mistral-large-2512": {
+   "provider": "mistral",
+   "input_per_1m": 0.5,
+   "output_per_1m": 1.5
+  },
+  "mistral-large-4": {
+   "provider": "mistral",
+   "input_per_1m": 0.7,
+   "output_per_1m": 2.1
+  },
+  "mistral-large-4-0-8": {
+   "provider": "mistral",
+   "input_per_1m": 0.7,
+   "output_per_1m": 2.1
+  },
+  "mistral-large-latest": {
+   "provider": "mistral",
+   "input_per_1m": 0.5,
+   "output_per_1m": 1.5
+  },
+  "mistral-medium-2505": {
+   "provider": "mistral",
+   "input_per_1m": 0.4,
+   "output_per_1m": 2
+  },
+  "mistral-medium-2508": {
+   "provider": "mistral",
+   "input_per_1m": 0.4,
+   "output_per_1m": 2
+  },
+  "mistral-medium-2604": {
+   "provider": "mistral",
+   "input_per_1m": 1.5,
+   "output_per_1m": 7.5
+  },
+  "mistral-medium-3": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.4,
+   "output_per_1m": 2
+  },
+  "mistral-medium-latest": {
+   "provider": "mistral",
+   "input_per_1m": 1.5,
+   "output_per_1m": 7.5
+  },
+  "mistral-small-2503": {
+   "provider": "azure",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.3
+  },
+  "mistral-small-2506": {
+   "provider": "mistral",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.3
+  },
+  "mistral-small-2603": {
+   "provider": "mistral",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "mistral-small-latest": {
+   "provider": "mistral",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "mistral.devstral-2-123b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.4,
+   "output_per_1m": 2
+  },
+  "mistral.magistral-small-2509": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.5,
+   "output_per_1m": 1.5
+  },
+  "mistral.ministral-3-14b-instruct": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.2,
+   "output_per_1m": 0.2
+  },
+  "mistral.ministral-3-3b-instruct": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.1
+  },
+  "mistral.ministral-3-8b-instruct": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.15
+  },
+  "mistral.mistral-large-3-675b-instruct": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.5,
+   "output_per_1m": 1.5
+  },
+  "mistral.pixtral-large-2502-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "mistral.voxtral-mini-3b-2507": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.04,
+   "output_per_1m": 0.04
+  },
+  "mistral.voxtral-small-24b-2507": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.3
+  },
+  "model-router": {
+   "provider": "azure",
+   "input_per_1m": 0.14,
+   "output_per_1m": 0
+  },
+  "moonshot.kimi-k2-thinking": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.6,
+   "output_per_1m": 2.5
+  },
+  "moonshotai.kimi-k2.5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.6,
+   "output_per_1m": 3
+  },
+  "moonshotai/kimi-k2-thinking-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.6,
+   "output_per_1m": 2.5
+  },
+  "muse-spark-1.1": {
+   "provider": "meta",
+   "input_per_1m": 1.25,
+   "output_per_1m": 4.25
+  },
+  "muse-spark-1.2": {
+   "provider": "meta",
+   "input_per_1m": 1.25,
+   "output_per_1m": 4.25
+  },
+  "muse-spark-1.2-contributor": {
+   "provider": "meta",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.2
+  },
+  "muse-spark-1.3": {
+   "provider": "meta",
+   "input_per_1m": 1.25,
+   "output_per_1m": 4.25
+  },
+  "muse-spark-1.3-contributor": {
+   "provider": "meta",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.2
+  },
+  "muse-wonder-1.0": {
+   "provider": "meta",
+   "input_per_1m": 4,
+   "output_per_1m": 20
+  },
+  "nvidia.nemotron-nano-12b-v2": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.2,
+   "output_per_1m": 0.6
+  },
+  "nvidia.nemotron-nano-3-30b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.06,
+   "output_per_1m": 0.24
+  },
+  "nvidia.nemotron-nano-9b-v2": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.06,
+   "output_per_1m": 0.23
+  },
+  "nvidia.nemotron-super-3-120b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.65
+  },
+  "o1": {
+   "provider": "azure",
+   "input_per_1m": 15,
+   "output_per_1m": 60
+  },
+  "o1-pro": {
+   "provider": "openai",
+   "input_per_1m": 150,
+   "output_per_1m": 600
+  },
+  "o3": {
+   "provider": "azure",
+   "input_per_1m": 2,
+   "output_per_1m": 8
+  },
+  "o3-mini": {
+   "provider": "azure",
+   "input_per_1m": 1.1,
+   "output_per_1m": 4.4
+  },
+  "o3-pro": {
+   "provider": "openai",
+   "input_per_1m": 20,
+   "output_per_1m": 80
+  },
+  "o4-mini": {
+   "provider": "azure",
+   "input_per_1m": 1.1,
+   "output_per_1m": 4.4
+  },
+  "open-mistral-nemo": {
+   "provider": "mistral",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.15
+  },
+  "openai.gpt-5.4": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.75,
+   "output_per_1m": 16.5
+  },
+  "openai.gpt-5.5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 33
+  },
+  "openai.gpt-5.6-luna": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.22,
+   "output_per_1m": 1.32
+  },
+  "openai.gpt-5.6-sol": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 4.4,
+   "output_per_1m": 22
+  },
+  "openai.gpt-5.6-terra": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 13.2
+  },
+  "openai.gpt-6-astra": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 11,
+   "output_per_1m": 55
+  },
+  "openai.gpt-6-luna": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.11,
+   "output_per_1m": 0.55
+  },
+  "openai.gpt-6-sol": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "openai.gpt-6.1-sol": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "openai.gpt-6.1-terra": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.1,
+   "output_per_1m": 5.5
+  },
+  "openai.gpt-oss-120b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "openai.gpt-oss-120b-1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "openai.gpt-oss-20b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.07,
+   "output_per_1m": 0.3
+  },
+  "openai.gpt-oss-20b-1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.07,
+   "output_per_1m": 0.3
+  },
+  "openai.gpt-oss-safeguard-120b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "openai.gpt-oss-safeguard-20b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.07,
+   "output_per_1m": 0.2
+  },
+  "openai/gpt-oss-120b-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.09,
+   "output_per_1m": 0.36
+  },
+  "openai/gpt-oss-20b-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.07,
+   "output_per_1m": 0.25
+  },
+  "phi-4": {
+   "provider": "azure",
+   "input_per_1m": 0.125,
+   "output_per_1m": 0.5
+  },
+  "phi-4-mini": {
+   "provider": "azure",
+   "input_per_1m": 0.075,
+   "output_per_1m": 0.3
+  },
+  "phi-4-mini-reasoning": {
+   "provider": "azure",
+   "input_per_1m": 0.075,
+   "output_per_1m": 0.3
+  },
+  "phi-4-multimodal": {
+   "provider": "azure",
+   "input_per_1m": 0.08,
+   "output_per_1m": 0.32
+  },
+  "phi-4-reasoning": {
+   "provider": "azure",
+   "input_per_1m": 0.125,
+   "output_per_1m": 0.5
+  },
+  "phi-4-reasoning-plus": {
+   "provider": "azure",
+   "input_per_1m": 0.125,
+   "output_per_1m": 0.5
+  },
+  "pixtral-12b": {
+   "provider": "mistral",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.15
+  },
+  "qvq-max": {
+   "provider": "alibaba",
+   "input_per_1m": 1.2,
+   "output_per_1m": 4.8
+  },
+  "qwen-flash": {
+   "provider": "alibaba",
+   "input_per_1m": 0.05,
+   "output_per_1m": 0.4
+  },
+  "qwen-max": {
+   "provider": "alibaba",
+   "input_per_1m": 1.6,
+   "output_per_1m": 6.4
+  },
+  "qwen-mt-plus": {
+   "provider": "alibaba",
+   "input_per_1m": 2.46,
+   "output_per_1m": 7.37
+  },
+  "qwen-mt-turbo": {
+   "provider": "alibaba",
+   "input_per_1m": 0.16,
+   "output_per_1m": 0.49
+  },
+  "qwen-omni-turbo": {
+   "provider": "alibaba",
+   "input_per_1m": 0.07,
+   "output_per_1m": 0.27
+  },
+  "qwen-omni-turbo-realtime": {
+   "provider": "alibaba",
+   "input_per_1m": 0.27,
+   "output_per_1m": 1.07
+  },
+  "qwen-plus": {
+   "provider": "alibaba",
+   "input_per_1m": 0.4,
+   "output_per_1m": 1.2
+  },
+  "qwen-plus-character-ja": {
+   "provider": "alibaba",
+   "input_per_1m": 0.5,
+   "output_per_1m": 1.4
+  },
+  "qwen-turbo": {
+   "provider": "alibaba",
+   "input_per_1m": 0.05,
+   "output_per_1m": 0.2
+  },
+  "qwen-vl-max": {
+   "provider": "alibaba",
+   "input_per_1m": 0.8,
+   "output_per_1m": 3.2
+  },
+  "qwen-vl-ocr": {
+   "provider": "alibaba",
+   "input_per_1m": 0.07,
+   "output_per_1m": 0.16
+  },
+  "qwen-vl-plus": {
+   "provider": "alibaba",
+   "input_per_1m": 0.21,
+   "output_per_1m": 0.63
+  },
+  "qwen.qwen3-235b-a22b-2507-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.22,
+   "output_per_1m": 0.88
+  },
+  "qwen.qwen3-32b-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "qwen.qwen3-coder-30b-a3b-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.6
+  },
+  "qwen.qwen3-coder-480b-a35b-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.45,
+   "output_per_1m": 1.8
+  },
+  "qwen.qwen3-coder-next": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.5,
+   "output_per_1m": 1.2
+  },
+  "qwen.qwen3-next-80b-a3b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.15,
+   "output_per_1m": 1.2
+  },
+  "qwen.qwen3-vl-235b-a22b": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.53,
+   "output_per_1m": 2.66
+  },
+  "qwen/qwen3-235b-a22b-instruct-2507-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.22,
+   "output_per_1m": 0.88
+  },
+  "qwen2-5-omni-7b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.4
+  },
+  "qwen3-14b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.35,
+   "output_per_1m": 1.4
+  },
+  "qwen3-235b-a22b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.7,
+   "output_per_1m": 2.8
+  },
+  "qwen3-32b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.7,
+   "output_per_1m": 2.8
+  },
+  "qwen3-8b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.18,
+   "output_per_1m": 0.7
+  },
+  "qwen3-coder-30b-a3b-instruct": {
+   "provider": "alibaba",
+   "input_per_1m": 0.45,
+   "output_per_1m": 2.25
+  },
+  "qwen3-coder-480b-a35b-instruct": {
+   "provider": "alibaba",
+   "input_per_1m": 1.5,
+   "output_per_1m": 7.5
+  },
+  "qwen3-coder-flash": {
+   "provider": "alibaba",
+   "input_per_1m": 0.3,
+   "output_per_1m": 1.5
+  },
+  "qwen3-coder-plus": {
+   "provider": "alibaba",
+   "input_per_1m": 1,
+   "output_per_1m": 5
+  },
+  "qwen3-livetranslate-flash-realtime": {
+   "provider": "alibaba",
+   "input_per_1m": 10,
+   "output_per_1m": 10
+  },
+  "qwen3-max": {
+   "provider": "alibaba",
+   "input_per_1m": 1.2,
+   "output_per_1m": 6
+  },
+  "qwen3-next-80b-a3b-instruct": {
+   "provider": "alibaba",
+   "input_per_1m": 0.5,
+   "output_per_1m": 2
+  },
+  "qwen3-next-80b-a3b-thinking": {
+   "provider": "alibaba",
+   "input_per_1m": 0.5,
+   "output_per_1m": 6
+  },
+  "qwen3-omni-flash": {
+   "provider": "alibaba",
+   "input_per_1m": 0.43,
+   "output_per_1m": 1.66
+  },
+  "qwen3-omni-flash-realtime": {
+   "provider": "alibaba",
+   "input_per_1m": 0.52,
+   "output_per_1m": 1.99
+  },
+  "qwen3-vl-235b-a22b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.7,
+   "output_per_1m": 2.8
+  },
+  "qwen3-vl-30b-a3b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.2,
+   "output_per_1m": 0.8
+  },
+  "qwen3-vl-plus": {
+   "provider": "alibaba",
+   "input_per_1m": 0.2,
+   "output_per_1m": 1.6
+  },
+  "qwen3.5-122b-a10b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.4,
+   "output_per_1m": 3.2
+  },
+  "qwen3.5-27b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.3,
+   "output_per_1m": 2.4
+  },
+  "qwen3.5-35b-a3b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.25,
+   "output_per_1m": 2
+  },
+  "qwen3.5-397b-a17b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.6,
+   "output_per_1m": 3.6
+  },
+  "qwen3.5-flash": {
+   "provider": "alibaba",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.4
+  },
+  "qwen3.5-plus": {
+   "provider": "alibaba",
+   "input_per_1m": 0.4,
+   "output_per_1m": 2.4
+  },
+  "qwen3.6-27b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.6,
+   "output_per_1m": 3.6
+  },
+  "qwen3.6-35b-a3b": {
+   "provider": "alibaba",
+   "input_per_1m": 0.375,
+   "output_per_1m": 2.25
+  },
+  "qwen3.6-flash": {
+   "provider": "alibaba",
+   "input_per_1m": 0.25,
+   "output_per_1m": 1.5
+  },
+  "qwen3.6-max-preview": {
+   "provider": "alibaba",
+   "input_per_1m": 1.3,
+   "output_per_1m": 7.8
+  },
+  "qwen3.6-plus": {
+   "provider": "alibaba",
+   "input_per_1m": 0.5,
+   "output_per_1m": 3
+  },
+  "qwen3.7-flash": {
+   "provider": "alibaba",
+   "input_per_1m": 0.03,
+   "output_per_1m": 0.13
+  },
+  "qwen3.7-max": {
+   "provider": "alibaba",
+   "input_per_1m": 2.5,
+   "output_per_1m": 7.5
+  },
+  "qwen3.7-plus": {
+   "provider": "alibaba",
+   "input_per_1m": 0.4,
+   "output_per_1m": 1.6
+  },
+  "qwen3.8-flash": {
+   "provider": "alibaba",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.47
+  },
+  "qwen3.8-max": {
+   "provider": "alibaba",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "qwen3.8-omni-flash": {
+   "provider": "alibaba",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.47
+  },
+  "qwq-plus": {
+   "provider": "alibaba",
+   "input_per_1m": 0.8,
+   "output_per_1m": 2.4
+  },
+  "text-embedding-3-large": {
+   "provider": "azure",
+   "input_per_1m": 0.13,
+   "output_per_1m": 0
+  },
+  "text-embedding-3-small": {
+   "provider": "azure",
+   "input_per_1m": 0.02,
+   "output_per_1m": 0
+  },
+  "text-embedding-ada-002": {
+   "provider": "azure",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0
+  },
+  "us-gov.openai.gpt-oss-120b-1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.18,
+   "output_per_1m": 0.72
+  },
+  "us-gov.openai.gpt-oss-20b-1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.084,
+   "output_per_1m": 0.36
+  },
+  "us.amazon.nova-2-lite-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.33,
+   "output_per_1m": 2.75
+  },
+  "us.amazon.nova-lite-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.06,
+   "output_per_1m": 0.24
+  },
+  "us.amazon.nova-micro-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.035,
+   "output_per_1m": 0.14
+  },
+  "us.amazon.nova-premier-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.5,
+   "output_per_1m": 12.5
+  },
+  "us.amazon.nova-pro-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.8,
+   "output_per_1m": 3.2
+  },
+  "us.anthropic.claude-fable-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 11,
+   "output_per_1m": 55
+  },
+  "us.anthropic.claude-fable-5-1": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 11,
+   "output_per_1m": 55
+  },
+  "us.anthropic.claude-haiku-4-5-20251001-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.1,
+   "output_per_1m": 5.5
+  },
+  "us.anthropic.claude-haiku-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.11,
+   "output_per_1m": 0.55
+  },
+  "us.anthropic.claude-opus-4-1-20250805-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 15,
+   "output_per_1m": 75
+  },
+  "us.anthropic.claude-opus-4-5-20251101-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "us.anthropic.claude-opus-4-6-v1": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "us.anthropic.claude-opus-4-7": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "us.anthropic.claude-opus-4-8": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "us.anthropic.claude-opus-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 5.5,
+   "output_per_1m": 27.5
+  },
+  "us.anthropic.claude-opus-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 4.4,
+   "output_per_1m": 22
+  },
+  "us.anthropic.claude-sonnet-4-20250514-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3,
+   "output_per_1m": 15
+  },
+  "us.anthropic.claude-sonnet-4-5-20250929-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3.3,
+   "output_per_1m": 16.5
+  },
+  "us.anthropic.claude-sonnet-4-6": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3.3,
+   "output_per_1m": 16.5
+  },
+  "us.anthropic.claude-sonnet-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "us.anthropic.claude-sonnet-5-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "us.deepseek.r1-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.35,
+   "output_per_1m": 5.4
+  },
+  "us.meta.llama3-1-70b-instruct-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.72,
+   "output_per_1m": 0.72
+  },
+  "us.meta.llama3-1-8b-instruct-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.22,
+   "output_per_1m": 0.22
+  },
+  "us.meta.llama3-3-70b-instruct-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.72,
+   "output_per_1m": 0.72
+  },
+  "us.meta.llama4-maverick-17b-instruct-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.24,
+   "output_per_1m": 0.97
+  },
+  "us.meta.llama4-scout-17b-instruct-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.17,
+   "output_per_1m": 0.66
+  },
+  "us.mistral.pixtral-large-2502-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "us.moonshotai.kimi-k3": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 3.3,
+   "output_per_1m": 16.5
+  },
+  "us.openai.gpt-5.6-luna": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.22,
+   "output_per_1m": 1.32
+  },
+  "us.openai.gpt-5.6-sol": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 4.4,
+   "output_per_1m": 22
+  },
+  "us.openai.gpt-5.6-terra": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 13.2
+  },
+  "us.openai.gpt-6-astra": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 11,
+   "output_per_1m": 55
+  },
+  "us.openai.gpt-6-luna": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.11,
+   "output_per_1m": 0.55
+  },
+  "us.openai.gpt-6-sol": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "us.openai.gpt-6.1-sol": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 11
+  },
+  "us.openai.gpt-6.1-terra": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.1,
+   "output_per_1m": 5.5
+  },
+  "us.writer.palmyra-x4-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "us.writer.palmyra-x5-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.6,
+   "output_per_1m": 6
+  },
+  "us.xai.grok-4.6": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 6.6
+  },
+  "us.xai.grok-4.7": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 6.6
+  },
+  "us.zai.glm-5.3": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.848,
+   "output_per_1m": 5.808
+  },
+  "voxtral-small-2507": {
+   "provider": "mistral",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.4
+  },
+  "voxtral-small-latest": {
+   "provider": "mistral",
+   "input_per_1m": 0.1,
+   "output_per_1m": 0.4
+  },
+  "writer.palmyra-x4-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.5,
+   "output_per_1m": 10
+  },
+  "writer.palmyra-x5-v1:0": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.6,
+   "output_per_1m": 6
+  },
+  "xai.grok-4.3": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1.25,
+   "output_per_1m": 2.5
+  },
+  "xai.grok-4.6": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 2.2,
+   "output_per_1m": 6.6
+  },
+  "xai/grok-4.1-fast-non-reasoning": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.2,
+   "output_per_1m": 0.5
+  },
+  "xai/grok-4.1-fast-reasoning": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.2,
+   "output_per_1m": 0.5
+  },
+  "xai/grok-4.20-non-reasoning": {
+   "provider": "google-vertex",
+   "input_per_1m": 1.25,
+   "output_per_1m": 2.5
+  },
+  "xai/grok-4.20-reasoning": {
+   "provider": "google-vertex",
+   "input_per_1m": 1.25,
+   "output_per_1m": 2.5
+  },
+  "xai/grok-4.3": {
+   "provider": "google-vertex",
+   "input_per_1m": 1.25,
+   "output_per_1m": 2.5
+  },
+  "xai/grok-4.6": {
+   "provider": "google-vertex",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "xai/grok-4.7": {
+   "provider": "google-vertex",
+   "input_per_1m": 2,
+   "output_per_1m": 6
+  },
+  "zai-glm-5-2": {
+   "provider": "mistral",
+   "input_per_1m": 1.4,
+   "output_per_1m": 4.4
+  },
+  "zai-glm-5-3": {
+   "provider": "mistral",
+   "input_per_1m": 1.4,
+   "output_per_1m": 4.4
+  },
+  "zai-glm-5-3-flash": {
+   "provider": "mistral",
+   "input_per_1m": 0.15,
+   "output_per_1m": 0.5
+  },
+  "zai-org/glm-4.7-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 0.6,
+   "output_per_1m": 2.2
+  },
+  "zai-org/glm-5-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 1,
+   "output_per_1m": 3.2
+  },
+  "zai-org/glm-5.2-maas": {
+   "provider": "google-vertex",
+   "input_per_1m": 1.4,
+   "output_per_1m": 4.4
+  },
+  "zai.glm-4.7": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.6,
+   "output_per_1m": 2.2
+  },
+  "zai.glm-4.7-flash": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 0.07,
+   "output_per_1m": 0.4
+  },
+  "zai.glm-5": {
+   "provider": "amazon-bedrock",
+   "input_per_1m": 1,
+   "output_per_1m": 3.2
+  }
+ }
+}

@@ -2317,6 +2317,26 @@ def build_cost_vectors(runtime: Runtime) -> Dict[str, Any]:
         ("gpt-4oo", _CHAT_USAGE, "key followed by an alphanumeric is not a boundary match"),
         ("xgpt-4o", _CHAT_USAGE, "key preceded by an alphanumeric is not a boundary match"),
         ("my_gpt-4o_proxy", _CHAT_USAGE, "underscore is a token boundary"),
+        # The price lookup rule (1.46.3): what follows a key decides whether it prices the name.
+        ("gpt-4o-5", _CHAT_USAGE, "a new version after a key is unpriced, not the key's price"),
+        (
+            "anthropic.claude-opus-5-5",
+            _CHAT_USAGE,
+            "a longer prefixed key of an older model must not win",
+        ),
+        ("deepseek-v4-flash-0731", _CHAT_USAGE, "a 4-digit release tag is a different release"),
+        ("gemini-2.5-flash-tts", _CHAT_USAGE, "another modality never takes a text model's price"),
+        (
+            "gemini-2.5-flash-preview-09-2025",
+            _CHAT_USAGE,
+            "-preview and a MM-YYYY date keep the model",
+        ),
+        (
+            "mistral-large-4-0-8",
+            _CHAT_USAGE,
+            "a patch release after a two-part version keeps the key",
+        ),
+        ("llama-4-scout-17b-16e-instruct", _CHAT_USAGE, "a size tag is not a version"),
         ("acme-smol:360m", _CHAT_USAGE, "local tier: < 1B parameters"),
         ("acme-llama:1b", _CHAT_USAGE, "local tier boundary: exactly 1B"),
         ("acme-llama:7b", _CHAT_USAGE, "local tier: 1-10B"),

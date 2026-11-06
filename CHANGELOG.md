@@ -6,7 +6,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.46.2] - 2026-11-06
+## [1.46.3] - 2026-11-06
+
+A model name is never billed at another model's price. Measured on 532 model names from
+first-party listings on models.dev (now a test fixture): names priced as a different model fell
+from 30 to 2, and names priced right rose from 369 to 388.
+
+### Fixed
+
+- **Model price lookup.** A pricing key found inside a longer model name now prices it only if
+  what follows the key still names the same model. Before, the longest contained key won
+  outright. So a new model billed its predecessor's price: `mistral-large-4` as
+  `mistral-large` (about 3x), `MiniMax-M3.1-Flash` as `MiniMax-M3` (2x), `grok-4.5` as `grok-4`,
+  and `gemini-2.5-flash-tts` at the text model's price. And a longer provider-prefixed key of an
+  older model beat the newer model's own entry, so `anthropic.claude-opus-5-5` billed as
+  `anthropic.claude-opus-5`.
+  - **Refused:** a new version (`-4`, `.1-pro`), a 4-digit release tag (`-2512`), and, for chat,
+    another modality (`-tts`, `-image`, `-realtime`, `-embedding`).
+  - **Kept:** snapshots, Bedrock and Vertex version tags, `-latest`, `-preview`, `-instruct` and
+    quantisation tags, and a patch release after a two-part version (`mistral-large-4-0-8`).
+  - **Ranking:** the key that is the whole rest of the name wins, then the longest.
+  - A name no key prices is reported unpriced, or estimated from a parameter count, as before.
+    The guide's "How a Model Name Finds Its Price" has the rule.
+- **Claude Sonnet 5.5's cache-read price** was $0.20/1M. Anthropic prices Sonnet 5.5 (and Opus
+  5.5) cache hits at 0.05x input, so it is $0.10/1M.
+- **Grok 4.20 dotted keys:** `grok-4.20-0309-reasoning`, `-0309-non-reasoning` and
+  `grok-4.20-multi-agent-0309` were $2/$6. xAI lists $1.25/$2.50, which their dashed twins
+  already had.
+
+### Added
+
+- `CostCalculator.resolve_model_key(model, call_type="chat")`: the key that prices a name, or
+  None.
+- Keys:
+  - Bedrock regional Claude Sonnet 5.5 (`au.`, `eu.`, `us.`) at 1.1x;
+  - `grok-4.5`, `grok-4.20-reasoning`, `grok-4.20-non-reasoning`;
+  - `gemini-3.5-flash-lite`;
+  - the Mistral release tags `mistral-small-2603`, `-2506`, `-2503`, `mistral-large-2512`,
+    `ministral-3b-2512`, `magistral-small-2509`, `pixtral-large-2502`;
+  - the Vertex Model-as-a-Service Llama 4 Scout and Maverick ids;
+  - `deepseek-v4.1-flash-1017` at the Flash price, which DeepSeek says is unchanged.
+- Tests:
+  - the rule's cases, on a hand-built table;
+  - a ratchet over the 532-name corpus;
+  - every key keeps its price behind five gateway prefixes;
+  - the span lookup and the key scan agree.
+- New cost contract vectors for the ports.
+
+### Changed
+
+- **Names that matched an older model's key are now unpriced** until the table has them, for
+  example a new version (`gpt-4o-5`) or an unreleased 4-digit tag.
+- **GPT Image 2.5 and 2.6 per-image cost is unpriced.** 1.46.2 priced it from `gpt-image-2`'s
+  table, a different model's price. Their token costs use their own entries, as before.
+- **A first lookup takes about 3 microseconds instead of 19.** The name's boundary-aligned
+  substrings are looked up in the exact index instead of testing every key. Cached lookups are
+  unchanged.
+
 
 November 2026 pricing sweep: models released since the 2026-10-03 sweep, image and speech
 models, and existing entries that billed the wrong price. Prices were read on each vendor's

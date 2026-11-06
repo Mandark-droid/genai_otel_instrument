@@ -5203,19 +5203,22 @@
       "note": "xAI Grok 4.20 (Mar 2026) - 2M context, per docs.x.ai/docs/models"
     },
     "grok-4.20-0309-non-reasoning": {
-      "promptPrice": 0.002,
-      "completionPrice": 0.006,
-      "note": "xAI Grok 4.20 non-reasoning snapshot (Mar 9, 2026)"
+      "promptPrice": 0.00125,
+      "completionPrice": 0.0025,
+      "cacheReadPrice": 0.0002,
+      "note": "xAI Grok 4.20 grok-4.20-0309-non-reasoning - input $1.25/1M, cached input $0.20/1M, output $2.50/1M. Above 200000 tokens of context the vendor charges input $2.50/1M, cached $0.40/1M, output $5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. It was stored at $2/$6, which contradicted its dashed twin and the vendor page. Source: docs.x.ai/developers/pricing"
     },
     "grok-4.20-0309-reasoning": {
-      "promptPrice": 0.002,
-      "completionPrice": 0.006,
-      "note": "xAI Grok 4.20 reasoning snapshot (Mar 9, 2026) - 2M context, cached $0.20/1M"
+      "promptPrice": 0.00125,
+      "completionPrice": 0.0025,
+      "cacheReadPrice": 0.0002,
+      "note": "xAI Grok 4.20 grok-4.20-0309-reasoning - input $1.25/1M, cached input $0.20/1M, output $2.50/1M. Above 200000 tokens of context the vendor charges input $2.50/1M, cached $0.40/1M, output $5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. It was stored at $2/$6, which contradicted its dashed twin and the vendor page. Source: docs.x.ai/developers/pricing"
     },
     "grok-4.20-multi-agent-0309": {
-      "promptPrice": 0.002,
-      "completionPrice": 0.006,
-      "note": "xAI Grok 4.20 multi-agent snapshot (Mar 9, 2026)"
+      "promptPrice": 0.00125,
+      "completionPrice": 0.0025,
+      "cacheReadPrice": 0.0002,
+      "note": "xAI Grok 4.20 grok-4.20-multi-agent-0309 - input $1.25/1M, cached input $0.20/1M, output $2.50/1M. Above 200000 tokens of context the vendor charges input $2.50/1M, cached $0.40/1M, output $5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. It was stored at $2/$6, which contradicted its dashed twin and the vendor page. Source: docs.x.ai/developers/pricing"
     },
     "grok-4.3": {
       "promptPrice": 0.00125,
@@ -9012,44 +9015,44 @@
     "claude-sonnet-5-5": {
       "promptPrice": 0.002,
       "completionPrice": 0.01,
-      "cacheReadPrice": 0.0002,
+      "cacheReadPrice": 0.0001,
       "cacheWritePrice": 0.0025,
-      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.10/1M (0.05x input, as for Opus 5.5), cache write $2.5/1M. The cache-read price was stored as $0.20/1M before 1.46.3. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "claude-sonnet-5.5": {
       "promptPrice": 0.002,
       "completionPrice": 0.01,
-      "cacheReadPrice": 0.0002,
+      "cacheReadPrice": 0.0001,
       "cacheWritePrice": 0.0025,
-      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.10/1M (0.05x input, as for Opus 5.5), cache write $2.5/1M. The cache-read price was stored as $0.20/1M before 1.46.3. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "anthropic.claude-sonnet-5-5": {
       "promptPrice": 0.002,
       "completionPrice": 0.01,
-      "cacheReadPrice": 0.0002,
+      "cacheReadPrice": 0.0001,
       "cacheWritePrice": 0.0025,
-      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.10/1M (0.05x input, as for Opus 5.5), cache write $2.5/1M. The cache-read price was stored as $0.20/1M before 1.46.3. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "anthropic-claude-sonnet-5-5": {
       "promptPrice": 0.002,
       "completionPrice": 0.01,
-      "cacheReadPrice": 0.0002,
+      "cacheReadPrice": 0.0001,
       "cacheWritePrice": 0.0025,
-      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.10/1M (0.05x input, as for Opus 5.5), cache write $2.5/1M. The cache-read price was stored as $0.20/1M before 1.46.3. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "global.anthropic.claude-sonnet-5-5": {
       "promptPrice": 0.002,
       "completionPrice": 0.01,
-      "cacheReadPrice": 0.0002,
+      "cacheReadPrice": 0.0001,
       "cacheWritePrice": 0.0025,
-      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.10/1M (0.05x input, as for Opus 5.5), cache write $2.5/1M. The cache-read price was stored as $0.20/1M before 1.46.3. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "global-anthropic-claude-sonnet-5-5": {
       "promptPrice": 0.002,
       "completionPrice": 0.01,
-      "cacheReadPrice": 0.0002,
+      "cacheReadPrice": 0.0001,
       "cacheWritePrice": 0.0025,
-      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.2/1M, cache write $2.5/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+      "note": "Anthropic Claude Sonnet 5.5 (released 2026-09-28) - input $2/1M, output $10/1M, cache read $0.10/1M (0.05x input, as for Opus 5.5), cache write $2.5/1M. The cache-read price was stored as $0.20/1M before 1.46.3. Source: platform.claude.com/docs/en/about-claude/pricing"
     },
     "gpt-6.1-sol": {
       "promptPrice": 0.002,
@@ -9921,6 +9924,140 @@
       "promptPrice": 0.00175,
       "completionPrice": 0.019,
       "note": "Microsoft MAI-Image-2.6-Flash (Foundry; GA 2026-10-13) - text input $1.75/1M, image input $2.50/1M, image output $19/1M; no official per-image price. Source: techcommunity.microsoft.com/blog/azure-ai-foundry-blog/mai-image-2-6-and-mai-image-2-6-flash-quality-and-speed-at-production-scale/4550970"
+    },
+    "au.anthropic.claude-sonnet-5-5": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00011,
+      "cacheWritePrice": 0.00275,
+      "note": "Anthropic Claude Sonnet 5.5 on an Amazon Bedrock regional (geo-pinned) profile - 1.1x the global price: input $2.20/1M, output $11/1M, cache read $0.11/1M, cache write $2.75/1M, as for the other Claude 5.5 regional ids. Bedrock lists au, eu and us profiles for this model. Source: models.dev / amazon-bedrock"
+    },
+    "au-anthropic-claude-sonnet-5-5": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00011,
+      "cacheWritePrice": 0.00275,
+      "note": "Anthropic Claude Sonnet 5.5 on an Amazon Bedrock regional (geo-pinned) profile - 1.1x the global price: input $2.20/1M, output $11/1M, cache read $0.11/1M, cache write $2.75/1M, as for the other Claude 5.5 regional ids. Bedrock lists au, eu and us profiles for this model. Source: models.dev / amazon-bedrock"
+    },
+    "eu.anthropic.claude-sonnet-5-5": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00011,
+      "cacheWritePrice": 0.00275,
+      "note": "Anthropic Claude Sonnet 5.5 on an Amazon Bedrock regional (geo-pinned) profile - 1.1x the global price: input $2.20/1M, output $11/1M, cache read $0.11/1M, cache write $2.75/1M, as for the other Claude 5.5 regional ids. Bedrock lists au, eu and us profiles for this model. Source: models.dev / amazon-bedrock"
+    },
+    "eu-anthropic-claude-sonnet-5-5": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00011,
+      "cacheWritePrice": 0.00275,
+      "note": "Anthropic Claude Sonnet 5.5 on an Amazon Bedrock regional (geo-pinned) profile - 1.1x the global price: input $2.20/1M, output $11/1M, cache read $0.11/1M, cache write $2.75/1M, as for the other Claude 5.5 regional ids. Bedrock lists au, eu and us profiles for this model. Source: models.dev / amazon-bedrock"
+    },
+    "us.anthropic.claude-sonnet-5-5": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00011,
+      "cacheWritePrice": 0.00275,
+      "note": "Anthropic Claude Sonnet 5.5 on an Amazon Bedrock regional (geo-pinned) profile - 1.1x the global price: input $2.20/1M, output $11/1M, cache read $0.11/1M, cache write $2.75/1M, as for the other Claude 5.5 regional ids. Bedrock lists au, eu and us profiles for this model. Source: models.dev / amazon-bedrock"
+    },
+    "us-anthropic-claude-sonnet-5-5": {
+      "promptPrice": 0.0022,
+      "completionPrice": 0.011,
+      "cacheReadPrice": 0.00011,
+      "cacheWritePrice": 0.00275,
+      "note": "Anthropic Claude Sonnet 5.5 on an Amazon Bedrock regional (geo-pinned) profile - 1.1x the global price: input $2.20/1M, output $11/1M, cache read $0.11/1M, cache write $2.75/1M, as for the other Claude 5.5 regional ids. Bedrock lists au, eu and us profiles for this model. Source: models.dev / amazon-bedrock"
+    },
+    "mistral-small-2603": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "cacheReadPrice": 1.5e-05,
+      "note": "Mistral Small 4 (v26.03, released 2026-03-16) - input $0.15/1M, cached $0.015/1M, output $0.60/1M. Source: docs.mistral.ai/inference/pricing"
+    },
+    "mistral-large-2512": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "cacheReadPrice": 5e-05,
+      "note": "Mistral Large 3 (v25.12) - input $0.50/1M, cached $0.05/1M, output $1.50/1M. Source: models.dev / mistral"
+    },
+    "ministral-3b-2512": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0001,
+      "cacheReadPrice": 1e-05,
+      "note": "Ministral 3 3B (v25.12, released 2025-12-02) - input $0.10/1M, cached $0.01/1M, output $0.10/1M. Source: docs.mistral.ai/inference/pricing"
+    },
+    "magistral-small-2509": {
+      "promptPrice": 0.0005,
+      "completionPrice": 0.0015,
+      "note": "Magistral Small 1.2 (v25.09, released 2025-09-18) - input $0.50/1M, output $1.50/1M. Source: models.dev / amazon-bedrock"
+    },
+    "mistral-small-2506": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Mistral Small 3.2 (v25.06, released 2025-06-20) - input $0.10/1M, output $0.30/1M. Source: models.dev / mistral"
+    },
+    "mistral-small-2503": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0003,
+      "note": "Mistral Small 3.1 (v25.03) - input $0.10/1M, output $0.30/1M. Source: models.dev / azure, google-vertex"
+    },
+    "pixtral-large-2502": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "note": "Pixtral Large (v25.02) - input $2/1M, output $6/1M. Source: models.dev / amazon-bedrock"
+    },
+    "grok-4.20-reasoning": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.0025,
+      "cacheReadPrice": 0.0002,
+      "note": "xAI Grok 4.20 (Reasoning) - input $1.25/1M, cached input $0.20/1M, output $2.50/1M. Above 200000 tokens of context the vendor charges input $2.50/1M, cached $0.40/1M, output $5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. xAI lists it as grok-4.20-0309-reasoning. Source: docs.x.ai/developers/pricing"
+    },
+    "grok-4.20-non-reasoning": {
+      "promptPrice": 0.00125,
+      "completionPrice": 0.0025,
+      "cacheReadPrice": 0.0002,
+      "note": "xAI Grok 4.20 (Non-Reasoning) - input $1.25/1M, cached input $0.20/1M, output $2.50/1M. Above 200000 tokens of context the vendor charges input $2.50/1M, cached $0.40/1M, output $5/1M; the flat per-token schema cannot model context-dependent tiers, so the base tier is stored. xAI lists it as grok-4.20-0309-non-reasoning. Source: docs.x.ai/developers/pricing"
+    },
+    "grok-4.5": {
+      "promptPrice": 0.002,
+      "completionPrice": 0.006,
+      "cacheReadPrice": 0.0003,
+      "note": "xAI Grok 4.5 - input $2/1M, cached input $0.30/1M, output $6/1M. Above 200000 tokens of context the vendor charges input $4/1M, cached $0.60/1M, output $12/1M; the base tier is stored. Without this key it billed grok-4's price. Source: docs.x.ai/developers/pricing"
+    },
+    "gemini-3.5-flash-lite": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0025,
+      "cacheReadPrice": 3e-05,
+      "note": "Google Gemini 3.5 Flash Lite (released 2026-07-21) - input $0.30/1M, output $2.50/1M, context caching $0.03/1M. Without this key it billed Gemini 3.5 Flash's price. Source: aistudio.google.com/docs/pricing"
+    },
+    "gemini/gemini-3.5-flash-lite": {
+      "promptPrice": 0.0003,
+      "completionPrice": 0.0025,
+      "cacheReadPrice": 3e-05,
+      "note": "Google Gemini 3.5 Flash Lite (released 2026-07-21) - input $0.30/1M, output $2.50/1M, context caching $0.03/1M. Without this key it billed Gemini 3.5 Flash's price. Source: aistudio.google.com/docs/pricing"
+    },
+    "meta/llama-4-scout-17b-16e-instruct-maas": {
+      "promptPrice": 0.00025,
+      "completionPrice": 0.0007,
+      "note": "Llama 4 Scout 17B 16E Instruct on Vertex AI Model-as-a-Service - input $0.25/1M, output $0.70/1M. Source: models.dev / google-vertex"
+    },
+    "meta/llama-4-maverick-17b-128e-instruct-maas": {
+      "promptPrice": 0.00035,
+      "completionPrice": 0.00115,
+      "note": "Llama 4 Maverick 17B 128E Instruct on Vertex AI Model-as-a-Service - input $0.35/1M, output $1.15/1M. Source: models.dev / google-vertex"
+    },
+    "deepseek-v4.1-flash-1017": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "reasoningPrice": 0.0006,
+      "cacheReadPrice": 3e-06,
+      "note": "DeepSeek-V4.1-Flash-1017 (released 2026-10-17), served as deepseek-flash at the same price: input $0.15/1M, output $0.6/1M, cache read $0.003/1M (off-peak; peak hours bill double). First-party DeepSeek pricing is used for reseller ids, as for deepseek-v4.1-flash. Source: api-docs.deepseek.com/updates"
+    },
+    "deepseek-v4-1-flash-1017": {
+      "promptPrice": 0.00015,
+      "completionPrice": 0.0006,
+      "reasoningPrice": 0.0006,
+      "cacheReadPrice": 3e-06,
+      "note": "DeepSeek-V4.1-Flash-1017 (released 2026-10-17), served as deepseek-flash at the same price: input $0.15/1M, output $0.6/1M, cache read $0.003/1M (off-peak; peak hours bill double). First-party DeepSeek pricing is used for reseller ids, as for deepseek-v4.1-flash. Source: api-docs.deepseek.com/updates"
     }
   },
   "speech_to_text": {

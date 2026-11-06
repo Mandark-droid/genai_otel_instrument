@@ -39,7 +39,9 @@ class TestCostCalculator(unittest.TestCase):
 
     def test_calculate_jev_cost_with_free_output_tokens(self):
         usage = {"prompt_tokens": 1000, "completion_tokens": 2000}
-        cost = self.calculator.calculate_cost("jev-1.13.0", usage, "chat")
+        # The exact name: "jev-1.13.0" against a bare "jev" chat key reads "-1" as a new version
+        # under the price lookup rule (decision lookups have their own rule for versioned Jev ids).
+        cost = self.calculator.calculate_cost("jev", usage, "chat")
         self.assertAlmostEqual(cost, 0.000042)
 
     def test_calculate_embedding_cost(self):

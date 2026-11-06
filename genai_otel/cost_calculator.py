@@ -47,6 +47,91 @@ def _matches_on_token_boundary(haystack: str, needle: str) -> bool:
     return False
 
 
+def _boundary_match_ends(haystack: str, needle: str):
+    """Yield the end index of every occurrence of ``needle`` on token boundaries.
+
+    Same boundary rule as :func:`_matches_on_token_boundary`, but every
+    occurrence is reported, because the text after a key decides whether the
+    key may price the name (see :func:`_remainder_rank`).
+    """
+    if not needle:
+        return
+    needs_left = needle[0].isalnum()
+    needs_right = needle[-1].isalnum()
+    start = haystack.find(needle)
+    while start != -1:
+        end = start + len(needle)
+        left_ok = not needs_left or start == 0 or not haystack[start - 1].isalnum()
+        right_ok = not needs_right or end == len(haystack) or not haystack[end].isalnum()
+        if left_ok and right_ok:
+            yield end
+        start = haystack.find(needle, start + 1)
+
+
+# --- What may follow a key and still name the same model -------------------------------
+# A key found inside a longer model name prices that name only if the text after it does
+# not name a different model. Without this rule the longest contained key won outright,
+# so a new model silently billed its predecessor's price ("mistral-large-4" as
+# "mistral-large", about 3x) and a longer provider-prefixed key of an OLDER model beat
+# the newer model's own key ("anthropic.claude-opus-5-5" as "anthropic.claude-opus-5").
+# An unknown model is reported as unpriced instead, which a screen can show as such.
+
+#: A remainder made only of these leaves the same model and price: a dated or numbered
+#: snapshot (-20260928, -2024-08-06, -08-2025, -002, -250612), a Bedrock version (-v1:0),
+#: a Vertex tag (@default, @20251101), a client label ([1m]), -latest / :latest,
+#: -preview, -exp, -instruct / -chat / -it, and quantisation tags.
+_SAME_MODEL_SUFFIX = re.compile(
+    r"^(?:"
+    r"[-_@](?:\d{8}|\d{4}-\d{2}-\d{2}|\d{2}-\d{4}|\d{3}|\d{6})(?!\d)"
+    r"|-v\d+(?::\d+)?"
+    r"|@[a-z0-9._-]+"
+    r"|\[[^\]]+\]"
+    r"|[-:]latest|-preview|-exp(?:erimental)?"
+    r"|-(?:instruct|chat|it)"
+    r"|-(?:fp8|bf16|fp16|int4|int8|awq|gptq|gguf|mlx)"
+    r")+$"
+)
+#: A remainder that starts a new version: "-4", ".1-pro", "-5". Not a size tag ("-17b").
+_VERSION_CONTINUATION = re.compile(r"^[-.]\d{1,2}(?![\da-z])")
+#: ...except a single patch number after a key that already ends in two numeric parts:
+#: "mistral-large-4-0" + "-8" is Mistral Large 4.0.8, the same model.
+_PATCH_RELEASE = re.compile(r"^[-.]\d{1,2}$")
+_ENDS_IN_TWO_NUMBERS = re.compile(r"\d+(?:[-.]\d+)+$")
+#: A 4-digit release tag ("-2512", "-0731", "-1017") names a different release: Mistral
+#: uses them for new versions at new prices, and resellers publish their own prices under
+#: them. An ISO date ("-2024-08-06") is not one.
+_RELEASE_TAG = re.compile(r"^[-_]\d{4}(?!\d)(?!-\d{2}-\d{2})")
+#: In the chat section, a remainder naming another modality is never a text model's price.
+_OTHER_MODALITY = re.compile(
+    r"(?:^|[-.:_/])(?:image|images|tts|audio|realtime|transcribe|transcription|"
+    r"embed|embedding|embeddings|live|speech|voice)(?![a-z])"
+)
+
+
+def _remainder_rank(key: str, remainder: str, refuse_other_modality: bool) -> Optional[int]:
+    """How well ``key`` prices a name it is followed by ``remainder`` in.
+
+    0 - nothing follows the key (it ends the name; a route prefix may precede it);
+    1 - only a same-model suffix follows;
+    2 - some other remainder follows that does not name another model;
+    None - the remainder names another version, release or modality, so the key
+    must not price the name.
+    """
+    if not remainder:
+        return 0
+    if _SAME_MODEL_SUFFIX.match(remainder):
+        return 1
+    if _VERSION_CONTINUATION.match(remainder) and not (
+        _ENDS_IN_TWO_NUMBERS.search(key) and _PATCH_RELEASE.match(remainder)
+    ):
+        return None
+    if _RELEASE_TAG.match(remainder):
+        return None
+    if refuse_other_modality and _OTHER_MODALITY.search(remainder):
+        return None
+    return 2
+
+
 class CostCalculator:
     """Calculate estimated costs for LLM API calls based on loaded pricing data."""
 
@@ -87,6 +172,8 @@ class CostCalculator:
         # plus per-model memoization caches for name resolution and chat pricing.
         self._exact_index: Dict[str, Dict[str, str]] = {}
         self._substr_index: Dict[str, List[Tuple[str, str]]] = {}
+        self._key_order: Dict[str, Dict[str, int]] = {}
+        self._first_key: Dict[str, Dict[str, str]] = {}
         self._indexed_counts: Dict[str, int] = {}
         self._norm_cache: Dict[Tuple[str, str], Optional[str]] = {}
         self._chat_pricing_cache: Dict[str, Optional[Dict[str, Any]]] = {}
@@ -127,6 +214,8 @@ class CostCalculator:
         """
         self._exact_index = {}
         self._substr_index = {}
+        self._key_order = {}
+        self._first_key = {}
         self._indexed_counts = {}
         self._norm_cache = {}
         self._chat_pricing_cache = {}
@@ -142,6 +231,15 @@ class CostCalculator:
             self._exact_index[category] = {lk: k for lk, k in lowered}
             # Longest keys first so a substring match prefers the most specific model.
             self._substr_index[category] = sorted(lowered, key=lambda t: len(t[0]), reverse=True)
+            # Position in that order, and the first original key per lowercase key,
+            # so the span lookup in _resolve_model_key ranks exactly as the scan does.
+            order: Dict[str, int] = {}
+            first: Dict[str, str] = {}
+            for idx, (lk, k) in enumerate(self._substr_index[category]):
+                order.setdefault(lk, idx)
+                first.setdefault(lk, k)
+            self._key_order[category] = order
+            self._first_key[category] = first
             # Record the source dict size, not the index size. Keys that differ
             # only by case collapse into one exact-index entry, so the two
             # counts are not interchangeable - see _resolve_model_key.
@@ -782,11 +880,27 @@ class CostCalculator:
         self._norm_cache[cache_key] = result
         return result
 
-    def _resolve_model_key(self, model: str, category: str) -> Optional[str]:
+    def resolve_model_key(self, model: str, call_type: str = "chat") -> Optional[str]:
+        """The pricing-table key that prices ``model`` for ``call_type``, or None.
+
+        The public form of the lookup every cost uses: an exact (case-insensitive)
+        key first; otherwise a key found inside the name on token boundaries, if
+        what follows it still names the same model (see :func:`_remainder_rank`).
+        None means unpriced - never a different model's key.
+        """
+        return self._normalize_model_name(model, self._section_for(call_type))
+
+    def _resolve_model_key(
+        self, model: str, category: str, _scan_only: bool = False
+    ) -> Optional[str]:
         """Resolve a model name to its pricing key using precomputed indices.
 
-        Preserves the original semantics: case-insensitive exact match first,
-        then the longest matching substring key.
+        Case-insensitive exact match first. Otherwise every key found inside the
+        name on token boundaries is a candidate, ranked by what follows it
+        (:func:`_remainder_rank`): a key that ends the name, then one followed
+        only by a same-model suffix, then one followed by anything else that does
+        not name another version, release or modality. Within a rank the longest
+        key wins. No acceptable candidate means None (unpriced).
         """
         cat_data = self._pricing_data.get(category)
         if not isinstance(cat_data, dict) or not cat_data:
@@ -814,15 +928,65 @@ class CostCalculator:
         hit = exact.get(normalized_model)
         if hit is not None:
             return hit
-        for lower_key, original_key in self._substr_index.get(category, ()):  # longest-first
+        refuse_other_modality = category == "chat"
+        substr = self._substr_index.get(category, ())
+        # A key can only match where it starts and ends on token boundaries, so
+        # the candidates are the name's boundary-aligned substrings. A name has
+        # few of those, so looking each up in the exact index is cheaper than
+        # testing every key against the name - except for a name with very many
+        # separators, where the key scan is the cheaper of the two. Both give the
+        # same answer.
+        starts, ends = {0}, {len(normalized_model)}
+        for i, ch in enumerate(normalized_model):
+            if not ch.isalnum():
+                starts.update((i, i + 1))
+                ends.update((i, i + 1))
+        if not _scan_only and len(starts) * len(ends) < len(substr):
+            order = self._key_order.get(category, {})
+            first_key = self._first_key.get(category, {})
+            best: Optional[Tuple[int, int, str]] = None  # (rank, longest-first order, key)
+            for i in starts:
+                for j in ends:
+                    if j <= i:
+                        continue
+                    lower_key = normalized_model[i:j]
+                    # Spans between token boundaries satisfy the boundary rule by
+                    # construction. Keys differing only by case resolve to the first
+                    # in longest-first order, as the key scan below does.
+                    original_key = first_key.get(lower_key)
+                    if original_key is None:
+                        continue
+                    r = _remainder_rank(lower_key, normalized_model[j:], refuse_other_modality)
+                    if r is None:
+                        continue
+                    cand = (r, order.get(lower_key, 0), original_key)
+                    if best is None or cand < best:
+                        best = cand
+            return best[2] if best else None
+        best_rank: Optional[int] = None
+        best_key: Optional[str] = None
+        for lower_key, original_key in substr:  # longest-first
             # Containment alone is not enough: a short key ("o1", "o3", "auto")
             # matches inside an unrelated name and bills that model's price.
             # See _matches_on_token_boundary.
-            if lower_key in normalized_model and _matches_on_token_boundary(
-                normalized_model, lower_key
-            ):
+            if lower_key not in normalized_model:
+                continue
+            rank: Optional[int] = None
+            for end in _boundary_match_ends(normalized_model, lower_key):
+                r = _remainder_rank(lower_key, normalized_model[end:], refuse_other_modality)
+                if r is not None and (rank is None or r < rank):
+                    rank = r
+                    if r == 0:
+                        break
+            if rank is None:
+                continue
+            if rank == 0:
+                # Keys are scanned longest-first, so the first key that is the
+                # whole rest of the name is the best possible candidate.
                 return original_key
-        return None
+            if best_rank is None or rank < best_rank:
+                best_rank, best_key = rank, original_key
+        return best_key
 
     def _extract_param_count_from_model_name(self, model: str) -> Optional[float]:
         """Extract parameter count from Ollama or HuggingFace model name.
