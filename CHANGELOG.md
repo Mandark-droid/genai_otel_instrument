@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.47.0] - 2026-11-06
+## [1.46.2] - 2026-11-06
 
 November 2026 pricing sweep: models released since the 2026-10-03 sweep, image and speech
 models, and existing entries that billed the wrong price. Prices were read on each vendor's
