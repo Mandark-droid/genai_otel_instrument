@@ -14,7 +14,6 @@ import json
 import struct
 import wave
 
-import httpx
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
@@ -233,6 +232,7 @@ def test_media_modality_allow_list_applies(spans):
 
 
 def test_openai_decisions_with_an_input_audio_part():
+    httpx = pytest.importorskip("httpx")
     openai = pytest.importorskip("openai")
     from genai_otel.instrumentors.openai_instrumentor import OpenAIInstrumentor
 

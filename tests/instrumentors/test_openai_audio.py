@@ -10,9 +10,9 @@ import io
 import json
 import wave
 
-import httpx
 import pytest
 
+httpx = pytest.importorskip("httpx")
 openai = pytest.importorskip("openai")
 
 from opentelemetry import context as otel_context  # noqa: E402

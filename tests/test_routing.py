@@ -3,7 +3,6 @@
 import asyncio
 import json
 
-import httpx
 import pytest
 from opentelemetry import context as otel_context
 from opentelemetry.sdk.trace import TracerProvider
@@ -57,8 +56,16 @@ def test_record_caps_values_and_keeps_repeated_headers():
         def set_attribute(self, key, value):
             self.attributes[key] = value
 
+    class Headers:
+        """httpx.Headers' shape: get_list for repeated headers."""
+
+        _items = [("x-a", "1"), ("x-a", "2"), ("x-b", "y" * 1000)]
+
+        def get_list(self, name):
+            return [v for k, v in self._items if k == name]
+
     span = Span()
-    headers = httpx.Headers([("x-a", "1"), ("x-a", "2"), ("x-b", "y" * 1000)])
+    headers = Headers()
     record_response_headers(span, headers, ("x-a", "x-b", "x-missing"))
     assert span.attributes["http.response.header.x-a"] == ["1", "2"]
     assert len(span.attributes["http.response.header.x-b"][0]) == routing.MAX_HEADER_VALUE
@@ -83,6 +90,7 @@ ROUTER_HEADERS = {
 
 
 def _openai_harness(allow="", is_async=False, body=CHAT, monkeypatch=None):
+    httpx = pytest.importorskip("httpx")
     openai = pytest.importorskip("openai")
     from genai_otel.instrumentors.openai_instrumentor import OpenAIInstrumentor
 
