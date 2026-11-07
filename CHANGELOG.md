@@ -6,6 +6,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.5] - 2026-11-07
+
+Decision spans understand audio. Decision models now take audio as input (is the caller
+finished speaking? is the tone calm or agitated?), and the decision instrumentation assumed
+every non-text input was an image.
+
+### Fixed
+
+- **Audio in a decision request was recorded as `[image omitted]`.** Any raw bytes, asset
+  object or data URL in a decision request was called an image. Inputs are now recognised by
+  part type (`input_audio`, `input_image`), then MIME type, then their first bytes: WAV, MP3,
+  OGG, FLAC and WebM for audio; PNG, JPEG, GIF and WebP for images. Bytes of no known kind are
+  `[binary omitted]`, and audio is `[audio omitted]`. An `input_audio` part's base64 audio no
+  longer reaches `input.value`.
+
+### Added
+
+- `genai.decision.input.modalities` (`text`, `image`, `audio`) on every DECISION span, with
+  content capture off too, since it is metadata, not content. `genai.decision.input.audio_seconds`
+  is recorded for WAV audio, whose header gives the duration without decoding.
+- With media capture on, image and audio inputs of decision requests become media parts
+  (`gen_ai.prompt.0.content.<m>.*`). They go through the same size cap, modality allow-list,
+  redactor and store as other media. With content capture on as well, `input.value` refers to
+  the stored copy (`[audio: <uri>]`). This covers the OpenAI Decisions SDK path, the TypeSafe
+  SystemOne path, the HTTP path matcher and `decision_span`.
+- `decision_span(audio=..., audio_format=...)` for in-process decisions over audio. It accepts
+  bytes, a path, a binary file object or a `(name, file)` tuple, and a file object is returned
+  to where it was.
+- `genai_otel.media.sniff`: media classification by header, MIME type and data URL.
+  `decision.omit_media()` replaces `omit_images()`, which is kept as an alias.
+
 ## [1.46.4] - 2026-11-07
 
 Framework spans no longer leak into the caller's context, and no framework instrumentor puts

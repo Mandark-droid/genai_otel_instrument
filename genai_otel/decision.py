@@ -36,7 +36,7 @@ import functools
 import inspect
 import threading
 from collections.abc import Mapping
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Dict, Optional
 
 from .config import OTelConfig
 from .instrumentors.decision import (
@@ -91,6 +91,12 @@ class decision_span:  # pylint: disable=invalid-name - used like a function
         questions: The questions asked, as a SystemOne mapping or an OpenAI list.
         provider: Who hosts the model, when anyone does. Omit for in-process.
         state: The input the model decided on. Recorded only with content capture on.
+        audio: Audio the model decided on: bytes, a path, a binary file object or a
+            ``(name, file)`` tuple. Its modality is always recorded; the audio itself
+            only with media capture on, through the media pipeline. A file object is
+            read up to the media size cap and returned to where it was.
+        audio_format: The audio's format (``wav``, ``mp3``...) when it cannot be told
+            from the bytes or the file name.
         system: The API shape, ``decision.system``. Defaults to ``"custom"``.
         name: The span name. Defaults to ``"decision"``.
     """
@@ -103,6 +109,8 @@ class decision_span:  # pylint: disable=invalid-name - used like a function
         state: Any = None,
         system: str = "custom",
         name: str = "decision",
+        audio: Any = None,
+        audio_format: Optional[str] = None,
     ):
         self.model = model
         self.questions = questions
@@ -110,9 +118,38 @@ class decision_span:  # pylint: disable=invalid-name - used like a function
         self.state = state
         self.system = system
         self.name = name
+        self.audio = audio
+        self.audio_format = audio_format
         self._context = None
 
+    def _audio_part(self) -> Optional[Dict[str, Any]]:
+        """``audio`` as an ``input_audio`` part, the shape the SDK paths use."""
+        if self.audio is None:
+            return None
+        from .media.speech import read_audio  # noqa: WPS433 - lazy
+
+        data, name, size = read_audio(self.audio, _instrumentor()._media_max_bytes())
+        if data is None:
+            return {"type": "input_audio", "input_audio": {"format": self.audio_format}}
+        fmt = self.audio_format
+        if not fmt and name and "." in str(name):
+            fmt = str(name).rsplit(".", 1)[-1].lower()
+        part: Dict[str, Any] = {"type": "input_audio", "input_audio": {"data": data}}
+        if fmt:
+            part["input_audio"]["format"] = fmt
+        if size is not None and size > len(data):
+            part["input_audio"]["size"] = size
+        return part
+
     def _request(self) -> DecisionRequest:
+        payload: Dict[str, Any] = {
+            "state": self.state,
+            "model": self.model,
+            "questions": self.questions,
+        }
+        audio = self._audio_part()
+        if audio is not None:
+            payload["audio"] = audio
         return DecisionRequest(
             protocol=PROTOCOL_MANUAL,
             system=self.system,
@@ -120,7 +157,7 @@ class decision_span:  # pylint: disable=invalid-name - used like a function
             model=self.model,
             provider=self.provider,
             questions=questions_of(self.questions),
-            payload={"state": self.state, "model": self.model, "questions": self.questions},
+            payload=payload,
         )
 
     def _eval_kwargs(self) -> dict:
@@ -144,6 +181,8 @@ class decision_span:  # pylint: disable=invalid-name - used like a function
             state=self.state,
             system=self.system,
             name=self.name,
+            audio=self.audio,
+            audio_format=self.audio_format,
         )
 
     @staticmethod

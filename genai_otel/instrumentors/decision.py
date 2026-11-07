@@ -41,6 +41,13 @@ from opentelemetry import context as otel_context
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
+from ..media.sniff import (
+    audio_format_mime,
+    classify_data_url,
+    classify_mime,
+    sniff_bytes,
+    wav_seconds,
+)
 from .base import BaseInstrumentor, _server_attributes, _unwrap_api_response
 
 logger = logging.getLogger(__name__)
@@ -59,6 +66,11 @@ SYSTEM_TYPESAFE = "typesafe"
 # ``hide_input_images``. A data URL is the image itself, and a URL may be a
 # signed link to it; neither belongs on a span.
 IMAGE_OMITTED = "[image omitted]"
+# Audio gets its own placeholder. Bytes of no known kind are "binary": calling
+# them an image (as before) was a false statement on the span.
+AUDIO_OMITTED = "[audio omitted]"
+BINARY_OMITTED = "[binary omitted]"
+_PLACEHOLDERS = {"image": IMAGE_OMITTED, "audio": AUDIO_OMITTED, "binary": BINARY_OMITTED}
 
 # Recognised hosts. Anything else is self-hosted or a gateway, and gets no
 # provider unless the operator names one: a guess would misattribute spend.
@@ -425,72 +437,303 @@ def usage_of(raw: Any) -> DecisionUsage:
 
 _IMAGE_PART_TYPES = frozenset({"input_image", "image", "image_url"})
 _IMAGE_KEEP_KEYS = frozenset({"type", "detail"})
+_AUDIO_PART_TYPES = frozenset({"input_audio", "audio"})
+_AUDIO_KEEP_KEYS = frozenset({"type", "format"})
+_MIME_KEYS = ("mime_type", "media_type", "content_type", "mimeType", "mediaType")
+_ASSET_CLASS_NAMES = frozenset({"Image", "Asset", "Audio"})
 
 
-def to_jsonable(value: Any) -> Any:
-    """Convert SDK models, structs and mappings into plain JSON values."""
+def _asset_mime(value: Any) -> Optional[str]:
+    for key in _MIME_KEYS:
+        mime = getattr(value, key, None)
+        if isinstance(mime, str) and mime:
+            return mime
+    return None
+
+
+def _asset_bytes(value: Any) -> Optional[bytes]:
+    for key in ("data", "bytes", "content"):
+        data = getattr(value, key, None)
+        if isinstance(data, (bytes, bytearray)):
+            return bytes(data)
+    return None
+
+
+def _classify_asset(value: Any) -> Tuple[str, Optional[str]]:
+    """typesafe-sdk style asset objects: by MIME type, then by bytes, then by class."""
+    found = classify_mime(_asset_mime(value)) or sniff_bytes(_asset_bytes(value))
+    if found and found[0] != "binary":
+        return found
+    name = type(value).__name__
+    if name == "Image":
+        return "image", None
+    if name == "Audio":
+        return "audio", None
+    return found or ("binary", None)
+
+
+def _part_modality(value: Mapping) -> Optional[Tuple[str, Optional[str]]]:
+    """A content part's modality: by its ``type``, or a MIME key beside its data."""
+    ptype = str(value.get("type", "")).lower()
+    if ptype in _IMAGE_PART_TYPES:
+        return "image", None
+    if ptype in _AUDIO_PART_TYPES:
+        audio = value.get("input_audio") if isinstance(value.get("input_audio"), Mapping) else {}
+        return "audio", audio_format_mime(audio.get("format") or value.get("format"))
+    for key in _MIME_KEYS:
+        found = classify_mime(value.get(key))
+        if found:
+            return found
+    return None
+
+
+def _is_asset(value: Any) -> bool:
+    return type(value).__name__ in _ASSET_CLASS_NAMES and not isinstance(value, Mapping)
+
+
+def to_jsonable(value: Any, _refs: Optional[Dict[int, str]] = None) -> Any:
+    """Convert SDK models, structs and mappings into plain JSON values.
+
+    Media is never serialised: bytes and asset objects become a placeholder naming
+    their kind (``[image omitted]``, ``[audio omitted]``, ``[binary omitted]``), or,
+    when ``_refs`` maps the object to an offloaded copy, a reference to it.
+    """
+    if _refs and id(value) in _refs:
+        return _refs[id(value)]
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
     if isinstance(value, (bytes, bytearray)):
-        # Raw bytes in a decision request are an image or other asset.
-        return IMAGE_OMITTED
+        kind = sniff_bytes(value)
+        return _PLACEHOLDERS[kind[0] if kind else "binary"]
     try:
         import msgspec
 
         if isinstance(value, msgspec.Struct):
-            return to_jsonable(msgspec.to_builtins(value))
+            return to_jsonable(msgspec.to_builtins(value), _refs)
     except (ImportError, TypeError):
         pass
-    if type(value).__name__ in ("Image", "Asset") and not isinstance(value, Mapping):
+    if _is_asset(value):
         # typesafe-sdk asset objects: a file or bytes, never text worth keeping.
-        return IMAGE_OMITTED
+        return _PLACEHOLDERS[_classify_asset(value)[0]]
     if isinstance(value, Mapping):
-        return {str(key): to_jsonable(item) for key, item in value.items()}
+        return {str(key): to_jsonable(item, _refs) for key, item in value.items()}
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-        return [to_jsonable(item) for item in value]
+        return [to_jsonable(item, _refs) for item in value]
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
-        return to_jsonable(dataclasses.asdict(value))
+        return to_jsonable(dataclasses.asdict(value), _refs)
     for method_name in ("model_dump", "dict"):
         method = getattr(value, method_name, None)
         if callable(method):
             try:
-                return to_jsonable(method())
+                return to_jsonable(method(), _refs)
             except Exception:  # noqa: BLE001 - fall through to the next spelling
                 continue
     attrs = getattr(value, "__dict__", None)
     if isinstance(attrs, dict):
         return {
-            str(key): to_jsonable(item) for key, item in attrs.items() if not key.startswith("_")
+            str(key): to_jsonable(item, _refs)
+            for key, item in attrs.items()
+            if not key.startswith("_")
         }
     # Anything else, a generator included, is described rather than read: reading
     # it here would consume what the SDK is about to send.
     return str(value)
 
 
-def omit_images(value: Any) -> Any:
-    """Replace every image in a JSON value with ``IMAGE_OMITTED``."""
+def omit_media(value: Any) -> Any:
+    """Replace every image and audio payload in a JSON value with its placeholder."""
     if isinstance(value, str):
-        if value.startswith("data:") and ";base64," in value[:200]:
-            return IMAGE_OMITTED
+        found = classify_data_url(value)
+        if found:
+            return _PLACEHOLDERS[found[0]]
         return value
     if isinstance(value, list):
-        return [omit_images(item) for item in value]
+        return [omit_media(item) for item in value]
     if isinstance(value, dict):
-        if str(value.get("type", "")).lower() in _IMAGE_PART_TYPES:
+        found = _part_modality(value)
+        if found and found[0] == "image":
             return {
                 key: (item if key in _IMAGE_KEEP_KEYS else IMAGE_OMITTED)
                 for key, item in value.items()
             }
-        return {key: omit_images(item) for key, item in value.items()}
+        if found and found[0] == "audio":
+            return {
+                key: (item if key in _AUDIO_KEEP_KEYS else AUDIO_OMITTED)
+                for key, item in value.items()
+            }
+        return {key: omit_media(item) for key, item in value.items()}
     return value
 
 
-def payload_json(payload: Any, max_length: int = 0) -> str:
-    """``payload`` as JSON with images omitted, capped at ``max_length`` (0 = unlimited)."""
-    text = json.dumps(omit_images(to_jsonable(payload)), default=str, sort_keys=True)
+#: The old name, kept for callers outside this module.
+omit_images = omit_media
+
+
+def payload_json(
+    payload: Any, max_length: int = 0, media_refs: Optional[Dict[int, str]] = None
+) -> str:
+    """``payload`` as JSON with media omitted, capped at ``max_length`` (0 = unlimited).
+
+    ``media_refs`` maps ``id()`` of an offloaded media object to the reference that
+    replaces it.
+    """
+    text = json.dumps(omit_media(to_jsonable(payload, media_refs)), default=str, sort_keys=True)
     if max_length and max_length > 0:
         return text[:max_length]
     return text
+
+
+# --------------------------------------------------------------------------- #
+# Input media
+# --------------------------------------------------------------------------- #
+
+
+@dataclasses.dataclass
+class MediaInput:
+    """One image or audio input of a decision request."""
+
+    obj: Any  # the object in the request, so its serialisation can point at the copy
+    modality: str
+    mime: Optional[str]
+    data: Optional[bytes] = None
+    size: Optional[int] = None
+
+
+@dataclasses.dataclass
+class InputScan:
+    """What a decision request's input holds: its modalities and media."""
+
+    modalities: List[str] = dataclasses.field(default_factory=list)
+    media: List[MediaInput] = dataclasses.field(default_factory=list)
+    audio_seconds: Optional[float] = None
+
+
+def decision_inputs(request: "DecisionRequest") -> List[Any]:
+    """What the model decides on: SystemOne ``state``, OpenAI ``input``, chat messages,
+    and audio a manual ``decision_span(audio=...)`` was given."""
+    payload = request.payload
+    if not isinstance(payload, Mapping):
+        return []
+    return [
+        payload[k] for k in ("state", "input", "messages", "audio") if payload.get(k) is not None
+    ]
+
+
+def _decode_b64(value: Any, max_bytes: int) -> Tuple[Optional[bytes], Optional[int]]:
+    """Decode base64 (or a data URL's payload), refusing past ``max_bytes``."""
+    import base64
+    import binascii
+
+    if not isinstance(value, str) or not value:
+        return None, None
+    if value.startswith("data:"):
+        value = value.split(",", 1)[-1]
+    estimated = (len(value) * 3) // 4
+    if estimated > max_bytes:
+        return None, estimated
+    try:
+        data = base64.b64decode(value, validate=False)
+        return data, len(data)
+    except (binascii.Error, ValueError):
+        return None, None
+
+
+def scan_inputs(value: Any, max_bytes: int = 10 * 1024 * 1024) -> InputScan:
+    """Walk a decision input once: the modalities it carries and its media.
+
+    Never reads a stream or file the SDK has yet to send. Base64 is decoded only up
+    to ``max_bytes``; past it the media is listed with its size and no bytes.
+    """
+    scan = InputScan()
+    seen: List[str] = []
+
+    def note(modality: str) -> None:
+        if modality in ("text", "image", "audio") and modality not in seen:
+            seen.append(modality)
+
+    def add(obj, modality, mime, data=None, size=None):
+        note(modality)
+        if modality in ("image", "audio"):
+            scan.media.append(MediaInput(obj, modality, mime, data, size))
+            if modality == "audio" and data is not None:
+                seconds = wav_seconds(data)
+                if seconds is not None:
+                    scan.audio_seconds = (scan.audio_seconds or 0.0) + seconds
+
+    def walk(node: Any, depth: int = 0) -> None:
+        if depth > 20 or node is None or isinstance(node, (bool, int, float)):
+            return
+        if isinstance(node, str):
+            found = classify_data_url(node)
+            if found:
+                data, size = _decode_b64(node, max_bytes)
+                add(node, found[0], found[1], data, size)
+            elif node.strip():
+                note("text")
+            return
+        if isinstance(node, (bytes, bytearray)):
+            kind = sniff_bytes(node) or ("binary", None)
+            add(node, kind[0], kind[1], bytes(node), len(node))
+            return
+        if _is_asset(node):
+            modality, mime = _classify_asset(node)
+            data = _asset_bytes(node)
+            add(
+                node,
+                modality,
+                mime or (sniff_bytes(data) or (None, None))[1],
+                data,
+                len(data) if data is not None else None,
+            )
+            return
+        if isinstance(node, Mapping):
+            found = _part_modality(node)
+            if found:
+                modality, mime = found
+                audio = node.get("input_audio")
+                audio = audio if isinstance(audio, Mapping) else {}
+                if modality == "audio":
+                    raw = audio.get("data") if audio else node.get("data")
+                else:
+                    raw = node.get("image_url") or node.get("url") or node.get("data")
+                    if isinstance(raw, Mapping):
+                        raw = raw.get("url")
+                if isinstance(raw, str) and (raw.startswith("data:") or modality == "audio"):
+                    data, size = _decode_b64(raw, max_bytes)
+                elif isinstance(raw, (bytes, bytearray)):
+                    data, size = bytes(raw), len(raw)
+                    # A manual decision_span read only up to the cap; it says the real size.
+                    declared = audio.get("size")
+                    if isinstance(declared, int) and declared > max_bytes:
+                        data, size = None, declared
+                else:
+                    data, size = None, None
+                if mime is None and data is not None:
+                    mime = (sniff_bytes(data) or (None, None))[1]
+                add(node, modality, mime, data, size)
+                return
+            for item in node.values():
+                walk(item, depth + 1)
+            return
+        if isinstance(node, Sequence):
+            for item in node:
+                walk(item, depth + 1)
+            return
+        if dataclasses.is_dataclass(node) and not isinstance(node, type):
+            walk(to_jsonable(node), depth + 1)
+            return
+        for method_name in ("model_dump", "dict"):
+            method = getattr(node, method_name, None)
+            if callable(method):
+                try:
+                    walk(method(), depth + 1)
+                except Exception:  # noqa: BLE001
+                    pass
+                return
+
+    walk(value)
+    scan.modalities = sorted(seen)
+    return scan
 
 
 # --------------------------------------------------------------------------- #
@@ -527,12 +770,22 @@ def request_attributes(request: DecisionRequest) -> Dict[str, Any]:
     return attrs
 
 
-def request_list_attributes(request: DecisionRequest, capture: bool) -> Dict[str, Any]:
-    """Array attributes known before the call, kept apart so they stay arrays."""
+def request_list_attributes(
+    request: DecisionRequest, capture: bool, scan: Optional[InputScan] = None
+) -> Dict[str, Any]:
+    """Array attributes known before the call, kept apart so they stay arrays.
+
+    ``genai.decision.input.modalities`` is metadata, not content: it is recorded
+    with content capture off too.
+    """
     attrs: Dict[str, Any] = {}
     types = _distinct([q.type for q in request.questions])
     if types:
         attrs["genai.decision.question.types"] = types
+    if scan is not None and scan.modalities:
+        attrs["genai.decision.input.modalities"] = scan.modalities
+    if scan is not None and scan.audio_seconds is not None:
+        attrs["genai.decision.input.audio_seconds"] = round(scan.audio_seconds, 3)
     if capture:
         names = [q.name for q in request.questions if q.name]
         if names:
@@ -540,12 +793,14 @@ def request_list_attributes(request: DecisionRequest, capture: bool) -> Dict[str
     return attrs
 
 
-def request_content_attributes(request: DecisionRequest, max_length: int) -> Dict[str, Any]:
+def request_content_attributes(
+    request: DecisionRequest, max_length: int, media_refs: Optional[Dict[int, str]] = None
+) -> Dict[str, Any]:
     """``input.value`` for content capture. The caller decides whether capture is on."""
     if request.payload is None:
         return {}
     return {
-        "input.value": payload_json(request.payload, max_length),
+        "input.value": payload_json(request.payload, max_length, media_refs),
         "input.mime_type": "application/json",
     }
 
@@ -772,8 +1027,7 @@ class BaseDecisionInstrumentor(BaseInstrumentor):
             span = trace.get_current_span()
             try:
                 setattr(span, _REQUEST_ON_SPAN, request)
-                for key, value in request_list_attributes(request, capture).items():
-                    span.set_attribute(key, value)
+                self._annotate_inputs(span, request, capture)
             except Exception as e:  # noqa: BLE001 - telemetry must not break the call
                 logger.debug("Could not annotate decision span: %s", e)
             return wrapped(*call_args, **call_kwargs)
@@ -781,6 +1035,61 @@ class BaseDecisionInstrumentor(BaseInstrumentor):
         return self.create_span_wrapper(span_name=span_name, extract_attributes=extract)(call)(
             *args, **kwargs
         )
+
+    def _annotate_inputs(self, span, request: DecisionRequest, capture: bool) -> None:
+        """Input modalities, list attributes and, with media capture on, the media itself.
+
+        Media goes through the same offload path, size cap, modality allow-list and
+        redactor as the speech instrumentors. With content capture on as well,
+        ``input.value`` is rewritten so each offloaded input reads as a reference to
+        its stored copy rather than as a placeholder.
+        """
+        media_on = self._speech_media_enabled()
+        scan = scan_inputs(decision_inputs(request), self._media_max_bytes())
+        for key, value in request_list_attributes(request, capture, scan).items():
+            span.set_attribute(key, value)
+        if not media_on or not scan.media:
+            return
+        from ..media import ContentPart  # noqa: WPS433 - lazy, media is optional
+
+        pairs = []
+        for item in scan.media:
+            if item.data is not None:
+                size = item.size if item.size is not None else len(item.data)
+                part = ContentPart(
+                    type=item.modality,
+                    data=item.data,
+                    media_mime_type=item.mime,
+                    media_byte_size=size,
+                    extra={"declared_size": size},
+                )
+            elif item.size:
+                # Too large to decode: recorded with no bytes, so the span still says
+                # the input was there and why it is not stored.
+                part = ContentPart(
+                    type=item.modality,
+                    media_mime_type=item.mime,
+                    media_byte_size=item.size,
+                    media_source="reference_only",
+                    extra={"stripped_reason": "size_exceeded"},
+                )
+            else:
+                continue  # a URL the model fetches itself: nothing here to store
+            pairs.append((item, part))
+        if not pairs:
+            return
+        self._emit_speech_parts(span, "prompt", "user", [part for _, part in pairs])
+        if capture:
+            refs = {
+                id(item.obj): f"[{item.modality}: {part.media_uri}]"
+                for item, part in pairs
+                if getattr(part, "media_uri", None)
+            }
+            if refs:
+                for key, value in request_content_attributes(
+                    request, self._max_length(), refs
+                ).items():
+                    span.set_attribute(key, value)
 
     def _decision_response_attributes(
         self, request: DecisionRequest, payload: Any
@@ -857,8 +1166,7 @@ class BaseDecisionInstrumentor(BaseInstrumentor):
         if recording:
             try:
                 setattr(span, _REQUEST_ON_SPAN, request)
-                for key, value in request_list_attributes(request, capture).items():
-                    span.set_attribute(key, value)
+                self._annotate_inputs(span, request, capture)
             except Exception as e:  # noqa: BLE001
                 logger.debug("Could not annotate decision span: %s", e)
         start_time = time.time()

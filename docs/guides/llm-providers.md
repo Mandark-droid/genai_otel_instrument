@@ -219,6 +219,31 @@ with decision_span(model="laya-router-421m", questions=questions, state=message)
 decorator, the function's return value is recorded when it is a response (has `answers`) or a
 set of answers. `d.fail(message)` ends the span as an error without an exception.
 
+A decision over audio passes it as `audio=` (bytes, a path, a binary file object or a
+`(name, file)` tuple), with `audio_format=` when the format cannot be told from the bytes or the
+file name:
+
+```python
+with decision_span(model="eot-detector", questions=questions, audio=clip_wav) as d:
+    d.record({"finished": {"type": "noul", "probability": model(clip_wav)}})
+```
+
+### Audio and image inputs
+
+Decision requests can carry images and audio: `input_image` / `input_audio` parts, data URLs,
+asset objects, raw bytes and `decision_span(audio=...)`. They are recognised by part type, then
+MIME type, then the first bytes (WAV, MP3, OGG, FLAC, WebM; PNG, JPEG, GIF, WebP). Bytes of no
+known kind are `[binary omitted]`, never called an image.
+
+- `genai.decision.input.modalities` (`text`, `image`, `audio`) is recorded on every DECISION span,
+  with content capture off too: it says what kind of input was decided on, not what it said.
+- `genai.decision.input.audio_seconds` is recorded when the audio is WAV, whose duration the
+  header gives without decoding.
+- With media capture on (`GENAI_OTEL_MEDIA_CAPTURE_MODE`), each image and audio input becomes a
+  media part (`gen_ai.prompt.0.content.<m>.*`) through the same size cap, modality allow-list,
+  redactor and store as every other media part. With content capture on as well, `input.value`
+  refers to the stored copy (`[audio: <uri>]`) instead of the placeholder.
+
 ### Attributes
 
 | Attribute | When | Notes |
@@ -239,7 +264,9 @@ set of answers. `d.fail(message)` ends the span as an error without an exception
 | `genai.decision.question.names` | **content capture on** | caller labels can be sensitive |
 | `genai.decision.min_confidence` | **content capture on** | lowest confidence across choice and score answers |
 | `genai.decision.choice`, `.confidence`, `.probability`, `.score`, `.margin` | **content capture on**, one-question calls | `margin` is the top probability minus the second |
-| `input.value`, `output.value`, `*.mime_type` = `application/json` | **content capture on** | the request and response JSON, images replaced with `[image omitted]`, capped at `GENAI_CONTENT_MAX_LENGTH` |
+| `genai.decision.input.modalities` | always | `text`, `image`, `audio`: what the input carried |
+| `genai.decision.input.audio_seconds` | WAV audio inputs | from the header |
+| `input.value`, `output.value`, `*.mime_type` = `application/json` | **content capture on** | the request and response JSON with media replaced by `[image omitted]`, `[audio omitted]` or `[binary omitted]` (or `[<kind>: <uri>]` when media capture stored it), capped at `GENAI_CONTENT_MAX_LENGTH` |
 
 SystemOne spans also keep the attributes they carried as LLM spans before 1.38
 (`llm.request.model_name`, `llm.response.model_name`, `llm.token_count.*`,

@@ -159,6 +159,8 @@ need content capture, is in [Decision models](../guides/llm-providers.md#decisio
 | `genai.decision.protocol` | string | always: `openai_decisions`, `systemone`, `granite_adapter`, `manual` |
 | `genai.decision.question_count`, `genai.decision.refusal_count` | int | always |
 | `genai.decision.question.types` | string[] | always |
+| `genai.decision.input.modalities` | string[] | always: `text`, `image`, `audio` |
+| `genai.decision.input.audio_seconds` | double | WAV audio inputs |
 | `genai.decision.option_count` | int | one-question calls |
 | `genai.decision.question.names` | string[] | content capture on |
 | `genai.decision.min_confidence` | double | content capture on |
