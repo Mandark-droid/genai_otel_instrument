@@ -1281,7 +1281,7 @@ NOVEMBER_2026_AUDIO = [
     ("gpt-realtime-translate", MINUTE, 0.034),
     ("gpt-realtime-2.1", MILLION_TOKENS, 32.0),
     ("gpt-realtime-2.1-mini", MILLION_TOKENS, 10.0),
-    # Split input/output rates since 1.46.6: 1M audio output tokens, the published $12.
+    # Split input/output rates since 1.46.5: 1M audio output tokens, the published $12.
     ("gpt-4o-mini-tts", {"input_tokens": 0, "output_tokens": 1_000_000}, 12.0),
     ("gemini-3.8-flash-tts", MILLION_TOKENS, 9.0),
     ("gemini-3.8-flash-lite-tts", MILLION_TOKENS, 6.0),

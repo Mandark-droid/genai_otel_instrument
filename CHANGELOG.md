@@ -6,44 +6,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.46.7] - 2026-11-07
+## [1.46.5] - 2026-11-07
 
-Fast/slow routing can be measured. A small decision model handles most steps, and a router
-sends a step to a large model only when it judges the step needs it. Spans now say why the
-router chose the model, and which decision caused which call.
+Three additions for voice and routing workloads:
 
-### Added
+- **Audio inputs on decision spans (#47).** Decision models now take audio as input (has the
+  caller finished speaking? is the tone calm?), and decision spans assumed every non-text input
+  was an image.
+- **OpenAI's speech endpoints (#46).** In a voice application on OpenAI, the speech half of
+  every turn had no span, no cost and no media.
+- **Fast/slow routing (#49).** A small decision model handles most steps, and a router sends a
+  step to a large model only when it judges the step needs it. Spans now say why the router
+  chose the model, and which decision caused which call.
 
-- **Router response headers.** `GENAI_CAPTURE_RESPONSE_HEADERS` (or
-  `instrument(capture_response_headers=[...])`; `GENAI_ROUTER_RESPONSE_HEADERS` is accepted as
-  another name) lists response headers to record on model-call spans as
-  `http.response.header.<name>`. An example is LiteLLM's `x-litellm-model-id`,
-  `x-litellm-model-group` and `x-litellm-attempted-fallbacks`. Nothing is recorded by default.
-  Credential headers (`authorization`, `cookie`, `set-cookie`, `x-api-key`, `api-key`, and names
-  containing `auth`, `secret`, `password` or `cookie`) are never recorded, even when listed.
-  This applies to OpenAI-compatible clients (OpenAI, Azure OpenAI, a LiteLLM proxy, any
-  `base_url`), sync and async, plain and `with_raw_response`.
-- `gen_ai.router.requested_model` when a router answered with another model than the one
-  requested (`model="auto"` served by `gpt-5.5`). A dated snapshot of the requested model does
-  not count.
-- **Decision-to-call links.** `with genai_otel.escalation_from(d):` adds an OpenTelemetry span
-  link to the decision `d` from every model call made inside the block. Calls include chat,
-  completions, Responses, embeddings and speech. Agent, tool and HTTP spans get no link, and
-  parentage is unchanged. `d` is what `decision_span` returns (it now has `.span_context`), a
-  span, a `SpanContext`, or `genai_otel.last_decision()` for a decision made through an SDK.
-  With `GENAI_LINK_DECISIONS=true`, the next model call after a decision in the same context is
-  linked automatically, marked inferred. Concurrent asyncio tasks never link to each other's
-  decisions. Each link is mirrored on the linked span as `genai.decision.link.span_id` and
-  `genai.decision.link.inferred`, because some trace stores keep a link's ids but not its
-  attributes.
+### Fixed
 
-## [1.46.6] - 2026-11-07
-
-OpenAI's speech endpoints are traced. In a voice application on OpenAI, the speech half of every
-turn had no span, no cost and no media.
+- **Audio in a decision request was recorded as `[image omitted]`.** Any raw bytes, asset
+  object or data URL in a decision request was called an image. Inputs are now recognised by
+  part type (`input_audio`, `input_image`), then MIME type, then their first bytes: WAV, MP3,
+  OGG, FLAC and WebM for audio; PNG, JPEG, GIF and WebP for images. Bytes of no known kind are
+  `[binary omitted]`, and audio is `[audio omitted]`. An `input_audio` part's base64 audio no
+  longer reaches `input.value`.
+- **`gpt-4o-transcribe` and `gpt-4o-mini-transcribe` were priced at their input rate for every
+  token,** which left output tokens at a quarter of OpenAI's price. **`gpt-4o-mini-tts` was
+  priced at its audio-output rate for every token,** which put its text input at 20x OpenAI's
+  price. Each now has OpenAI's input and output rates, checked 2026-11-07. Added
+  `gpt-4o-transcribe-diarize`.
 
 ### Added
 
+- `genai.decision.input.modalities` (`text`, `image`, `audio`) on every DECISION span, with
+  content capture off too, since it is metadata, not content. `genai.decision.input.audio_seconds`
+  is recorded for WAV audio, whose header gives the duration without decoding.
+- With media capture on, image and audio inputs of decision requests become media parts
+  (`gen_ai.prompt.0.content.<m>.*`). They go through the same size cap, modality allow-list,
+  redactor and store as other media. With content capture on as well, `input.value` refers to
+  the stored copy (`[audio: <uri>]`). This covers the OpenAI Decisions SDK path, the TypeSafe
+  SystemOne path, the HTTP path matcher and `decision_span`.
+- `decision_span(audio=..., audio_format=...)` for in-process decisions over audio. It accepts
+  bytes, a path, a binary file object or a `(name, file)` tuple, and a file object is returned
+  to where it was.
+- `genai_otel.media.sniff`: media classification by header, MIME type and data URL.
+  `decision.omit_media()` replaces `omit_images()`, which is kept as an alias.
 - **`client.audio.transcriptions.create`, `client.audio.translations.create` and
   `client.audio.speech.create`** are traced on `OpenAI`, `AsyncOpenAI` and `AzureOpenAI`
   clients, including `with_raw_response`, `with_streaming_response` and streamed transcription
@@ -68,45 +72,28 @@ turn had no span, no cost and no media.
 - Split-rate audio prices: `per_1k_input_tokens` / `per_1k_output_tokens`, plus optional
   per-modality rates. An entry that prices a side the usage does not report is refused, rather
   than billing part of the call.
-
-### Fixed
-
-- **`gpt-4o-transcribe` and `gpt-4o-mini-transcribe` were priced at their input rate for every
-  token,** which left output tokens at a quarter of OpenAI's price. **`gpt-4o-mini-tts` was
-  priced at its audio-output rate for every token,** which put its text input at 20x OpenAI's
-  price. Each now has OpenAI's input and output rates, checked 2026-11-07. Added
-  `gpt-4o-transcribe-diarize`.
-
-## [1.46.5] - 2026-11-07
-
-Decision spans understand audio. Decision models now take audio as input (is the caller
-finished speaking? is the tone calm or agitated?), and the decision instrumentation assumed
-every non-text input was an image.
-
-### Fixed
-
-- **Audio in a decision request was recorded as `[image omitted]`.** Any raw bytes, asset
-  object or data URL in a decision request was called an image. Inputs are now recognised by
-  part type (`input_audio`, `input_image`), then MIME type, then their first bytes: WAV, MP3,
-  OGG, FLAC and WebM for audio; PNG, JPEG, GIF and WebP for images. Bytes of no known kind are
-  `[binary omitted]`, and audio is `[audio omitted]`. An `input_audio` part's base64 audio no
-  longer reaches `input.value`.
-
-### Added
-
-- `genai.decision.input.modalities` (`text`, `image`, `audio`) on every DECISION span, with
-  content capture off too, since it is metadata, not content. `genai.decision.input.audio_seconds`
-  is recorded for WAV audio, whose header gives the duration without decoding.
-- With media capture on, image and audio inputs of decision requests become media parts
-  (`gen_ai.prompt.0.content.<m>.*`). They go through the same size cap, modality allow-list,
-  redactor and store as other media. With content capture on as well, `input.value` refers to
-  the stored copy (`[audio: <uri>]`). This covers the OpenAI Decisions SDK path, the TypeSafe
-  SystemOne path, the HTTP path matcher and `decision_span`.
-- `decision_span(audio=..., audio_format=...)` for in-process decisions over audio. It accepts
-  bytes, a path, a binary file object or a `(name, file)` tuple, and a file object is returned
-  to where it was.
-- `genai_otel.media.sniff`: media classification by header, MIME type and data URL.
-  `decision.omit_media()` replaces `omit_images()`, which is kept as an alias.
+- **Router response headers.** `GENAI_CAPTURE_RESPONSE_HEADERS` (or
+  `instrument(capture_response_headers=[...])`; `GENAI_ROUTER_RESPONSE_HEADERS` is accepted as
+  another name) lists response headers to record on model-call spans as
+  `http.response.header.<name>`. An example is LiteLLM's `x-litellm-model-id`,
+  `x-litellm-model-group` and `x-litellm-attempted-fallbacks`. Nothing is recorded by default.
+  Credential headers (`authorization`, `cookie`, `set-cookie`, `x-api-key`, `api-key`, and names
+  containing `auth`, `secret`, `password` or `cookie`) are never recorded, even when listed.
+  This applies to OpenAI-compatible clients (OpenAI, Azure OpenAI, a LiteLLM proxy, any
+  `base_url`), sync and async, plain and `with_raw_response`.
+- `gen_ai.router.requested_model` when a router answered with another model than the one
+  requested (`model="auto"` served by `gpt-5.5`). A dated snapshot of the requested model does
+  not count.
+- **Decision-to-call links.** `with genai_otel.escalation_from(d):` adds an OpenTelemetry span
+  link to the decision `d` from every model call made inside the block. Calls include chat,
+  completions, Responses, embeddings and speech. Agent, tool and HTTP spans get no link, and
+  parentage is unchanged. `d` is what `decision_span` returns (it now has `.span_context`), a
+  span, a `SpanContext`, or `genai_otel.last_decision()` for a decision made through an SDK.
+  With `GENAI_LINK_DECISIONS=true`, the next model call after a decision in the same context is
+  linked automatically, marked inferred. Concurrent asyncio tasks never link to each other's
+  decisions. Each link is mirrored on the linked span as `genai.decision.link.span_id` and
+  `genai.decision.link.inferred`, because some trace stores keep a link's ids but not its
+  attributes.
 
 ## [1.46.4] - 2026-11-07
 
