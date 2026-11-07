@@ -573,6 +573,21 @@ class OTelConfig:
         default_factory=lambda: (os.getenv("GENAI_DECISION_PROVIDER") or "").strip() or None
     )
 
+    # Fast/slow routing (issue #49). Response headers recorded on model-call spans as
+    # http.response.header.<name>: an allowlist, empty by default, because headers can
+    # carry tokens and ids that do not belong on spans; credential headers are refused
+    # whatever is listed. GENAI_ROUTER_RESPONSE_HEADERS is accepted as an alias.
+    capture_response_headers: Any = field(
+        default_factory=lambda: os.getenv("GENAI_CAPTURE_RESPONSE_HEADERS")
+        or os.getenv("GENAI_ROUTER_RESPONSE_HEADERS")
+        or ""
+    )
+    # Link the next model call after a decision to that decision, marked as inferred.
+    link_decisions: bool = field(
+        default_factory=lambda: os.getenv("GENAI_LINK_DECISIONS", "false").strip().lower()
+        in ("1", "true", "yes")
+    )
+
     # Evaluation and Safety Features (v0.2.0)
     # PII Detection
     enable_pii_detection: bool = field(

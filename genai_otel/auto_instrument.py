@@ -561,6 +561,18 @@ def setup_auto_instrumentation(config: OTelConfig):
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to add usage holder processor: %s", e, exc_info=True)
 
+    # Decision -> model-call links (escalation_from, GENAI_LINK_DECISIONS). Adds a
+    # link at span start only to model calls made inside an escalation_from block,
+    # or after a decision when inference is on; otherwise it does nothing.
+    try:
+        from .routing import DecisionLinkSpanProcessor
+
+        tracer_provider.add_span_processor(
+            DecisionLinkSpanProcessor(infer=getattr(config, "link_decisions", False))
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Failed to add decision link processor: %s", e, exc_info=True)
+
     if config.enable_session_propagation:
         try:
             tracer_provider.add_span_processor(SessionSpanProcessor())

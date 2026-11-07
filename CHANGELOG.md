@@ -6,6 +6,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.7] - 2026-11-07
+
+Fast/slow routing can be measured. A small decision model handles most steps, and a router
+sends a step to a large model only when it judges the step needs it. Spans now say why the
+router chose the model, and which decision caused which call.
+
+### Added
+
+- **Router response headers.** `GENAI_CAPTURE_RESPONSE_HEADERS` (or
+  `instrument(capture_response_headers=[...])`; `GENAI_ROUTER_RESPONSE_HEADERS` is accepted as
+  another name) lists response headers to record on model-call spans as
+  `http.response.header.<name>`. An example is LiteLLM's `x-litellm-model-id`,
+  `x-litellm-model-group` and `x-litellm-attempted-fallbacks`. Nothing is recorded by default.
+  Credential headers (`authorization`, `cookie`, `set-cookie`, `x-api-key`, `api-key`, and names
+  containing `auth`, `secret`, `password` or `cookie`) are never recorded, even when listed.
+  This applies to OpenAI-compatible clients (OpenAI, Azure OpenAI, a LiteLLM proxy, any
+  `base_url`), sync and async, plain and `with_raw_response`.
+- `gen_ai.router.requested_model` when a router answered with another model than the one
+  requested (`model="auto"` served by `gpt-5.5`). A dated snapshot of the requested model does
+  not count.
+- **Decision-to-call links.** `with genai_otel.escalation_from(d):` adds an OpenTelemetry span
+  link to the decision `d` from every model call made inside the block. Calls include chat,
+  completions, Responses, embeddings and speech. Agent, tool and HTTP spans get no link, and
+  parentage is unchanged. `d` is what `decision_span` returns (it now has `.span_context`), a
+  span, a `SpanContext`, or `genai_otel.last_decision()` for a decision made through an SDK.
+  With `GENAI_LINK_DECISIONS=true`, the next model call after a decision in the same context is
+  linked automatically, marked inferred. Concurrent asyncio tasks never link to each other's
+  decisions. Each link is mirrored on the linked span as `genai.decision.link.span_id` and
+  `genai.decision.link.inferred`, because some trace stores keep a link's ids but not its
+  attributes.
+
 ## [1.46.6] - 2026-11-07
 
 OpenAI's speech endpoints are traced. In a voice application on OpenAI, the speech half of every

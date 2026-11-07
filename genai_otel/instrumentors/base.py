@@ -48,6 +48,7 @@ from ..config import (
 )
 from ..cost_calculator import CostCalculator
 from ..exceptions import PolicyViolationError
+from ..routing import served_by_another_model
 from ..semconv import SemanticConvention as SC
 from ..semconv import genai_semconv_modes, genai_tier_opted_in
 from ..server_metrics import get_server_metrics
@@ -2907,6 +2908,15 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             span.set_attribute(key, value)
                         else:
                             span.set_attribute(key, str(value))
+                    # A router that answered with another model than the one asked
+                    # for (an alias such as "auto"): say so explicitly. A snapshot of
+                    # the requested model is not another model.
+                    served = response_attrs.get("gen_ai.response.model")
+                    requested = (getattr(span, "attributes", None) or {}).get(
+                        "gen_ai.request.model"
+                    )
+                    if served_by_another_model(requested, served):
+                        span.set_attribute("gen_ai.router.requested_model", str(requested))
         except Exception as e:
             logger.warning("Failed to extract response attributes for span '%s': %s", _sname, e)
 

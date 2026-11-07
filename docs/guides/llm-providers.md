@@ -312,6 +312,55 @@ span says so with `evaluation.skipped_reason = decision_span`.
 `examples/decisions/` has one runnable example per call path; the README there says which ones
 need a key or a server.
 
+### Fast/slow routing
+
+A common agent pattern: a small decision model handles most steps, and a router sends a step to
+a large model only when it judges the step needs it. Two things show whether that pays off.
+
+**Why the router chose the model.** Routers return their choice in response headers, and which
+headers depends on the router. List the ones to record:
+
+```bash
+GENAI_CAPTURE_RESPONSE_HEADERS=x-litellm-model-id,x-litellm-model-group,x-litellm-attempted-fallbacks
+```
+
+`instrument(capture_response_headers=[...])` does the same, and `GENAI_ROUTER_RESPONSE_HEADERS`
+is accepted as another name. Each listed header goes on the model-call span as
+`http.response.header.<name>`, a string array. Nothing is recorded by default. Credential
+headers (`authorization`, `cookie`, `set-cookie`, `x-api-key`, `api-key` and any name containing
+`auth`, `secret`, `password` or `cookie`) are never recorded, even when listed. This applies to
+OpenAI-compatible clients (OpenAI, Azure OpenAI, a LiteLLM proxy or any `base_url`), sync and
+async, plain and `with_raw_response`.
+
+When a router answers with another model than the one requested (`model="auto"` served by
+`gpt-5.5`), the span says so: `gen_ai.router.requested_model` is the alias, next to
+`gen_ai.response.model`. A dated snapshot of the requested model does not count.
+
+**Which decision caused which call.** Link the model calls a decision causes to it:
+
+```python
+from genai_otel import decision_span, escalation_from
+
+with decision_span(model="router-421m", questions=questions, state=step) as d:
+    d.record(router(step))
+
+if needs_large_model:
+    with escalation_from(d):
+        client.chat.completions.create(model="gpt-5.5", messages=messages)
+```
+
+Every model call (chat, completions, Responses, embeddings, speech) started inside the block
+gets an OpenTelemetry span link to the decision. Agent, tool and HTTP spans do not, so a call
+is not counted twice. The link does not change the call's parent. For a decision made through
+an SDK (`client.decisions.create`), use `escalation_from(genai_otel.last_decision())`.
+
+With `GENAI_LINK_DECISIONS=true`, the next model call after a decision in the same context is
+linked automatically, marked `inferred`. Concurrent asyncio tasks never link to each other's
+decisions. Tasks started after a decision share it, and the first call among them takes it.
+
+Each link is mirrored as `genai.decision.link.span_id` and `genai.decision.link.inferred` on the
+linked span, since some trace stores keep a link's ids but not its attributes.
+
 ## TypeSafe AI / Jev
 
 TypeSafe's System One API evaluates typed questions against unstructured state and

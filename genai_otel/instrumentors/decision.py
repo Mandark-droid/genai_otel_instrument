@@ -905,6 +905,9 @@ class DecisionRecorder:
         self.has_result = False
         self.error: Optional[str] = None
         self.error_type: Optional[str] = None
+        #: The decision span's context: pass the recorder to ``escalation_from`` to
+        #: link the model calls this decision causes.
+        self.span_context = None
 
     def record(self, answers: Any, usage: Any = None, model: Optional[str] = None) -> None:
         """Record the answers, in either protocol's shape, and the usage if reported.
@@ -1171,6 +1174,7 @@ class BaseDecisionInstrumentor(BaseInstrumentor):
                 logger.debug("Could not annotate decision span: %s", e)
         start_time = time.time()
         recorder = DecisionRecorder()
+        recorder.span_context = span.get_span_context()
         evaluate_later = False
         try:
             if BaseInstrumentor._blocking_active:

@@ -10,8 +10,10 @@ import logging
 from typing import Any, Dict, Optional
 
 import wrapt
+from opentelemetry import trace
 
 from ..config import OTelConfig
+from ..routing import is_our_model_call, parse_header_allowlist, record_response_headers
 from .base import BaseInstrumentor, find_base_url_claim, strip_content_attributes
 from .decision import (
     PROTOCOL_GRANITE_ADAPTER,
@@ -346,6 +348,49 @@ class OpenAIInstrumentor(BaseInstrumentor):
         wrap_decisions_resource(self, client, "openai.decisions")
         # Speech: transcriptions, translations and text-to-speech.
         wrap_audio_resources(self, client)
+        self._install_response_header_hook(client, is_async=False)
+
+    def _install_response_header_hook(self, client, is_async: bool) -> None:
+        """Copy allowlisted response headers (router metadata) onto the model-call span.
+
+        An httpx response event hook on this client only: it fires inside the call,
+        when the headers arrive (before the first chunk of a stream), while our span
+        is current. Off, at the cost of one check, unless an allowlist is configured.
+        """
+        allowlist = parse_header_allowlist(
+            getattr(self.config, "capture_response_headers", None) if self.config else None
+        )
+        if not allowlist:
+            return
+        http_client = getattr(client, "_client", None)
+        hooks = getattr(http_client, "event_hooks", None)
+        if not isinstance(hooks, dict):
+            logger.debug("OpenAI client has no httpx event hooks; response headers not captured")
+            return
+        if getattr(http_client, "_genai_otel_header_hook", False):
+            return
+
+        def record(response) -> None:
+            span = trace.get_current_span()
+            if is_our_model_call(span):
+                record_response_headers(span, getattr(response, "headers", None), allowlist)
+
+        if is_async:
+
+            async def hook(response):
+                record(response)
+
+        else:
+
+            def hook(response):
+                record(response)
+
+        try:
+            hooks.setdefault("response", []).append(hook)
+            http_client.event_hooks = hooks
+            http_client._genai_otel_header_hook = True
+        except Exception as e:  # noqa: BLE001 - telemetry must never break the client
+            logger.debug("Could not install the response header hook: %s", e)
 
     def _instrument_async_client(self, client):
         """Instrument AsyncOpenAI client methods.
@@ -383,6 +428,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
         wrap_decisions_resource(self, client, "openai.decisions")
         wrap_audio_resources(self, client)
+        self._install_response_header_hook(client, is_async=True)
 
     async def _call_sampled_out(self, span, span_name, extract_attributes, func, args, kwargs):
         """Make an async call whose span the sampler dropped.

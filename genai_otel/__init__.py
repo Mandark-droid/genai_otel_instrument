@@ -70,6 +70,9 @@ _LAZY_IMPORTS = {
     # Decision spans for in-process decision models
     "decision_span": (".decision", "decision_span"),
     "DecisionRecorder": (".decision", "DecisionRecorder"),
+    # Fast/slow routing: link model calls to the decision that caused them
+    "escalation_from": (".routing", "escalation_from"),
+    "last_decision": (".routing", "last_decision"),
 }
 
 
@@ -181,4 +184,6 @@ __all__ = [
     "trace_operation",
     "decision_span",
     "DecisionRecorder",
+    "escalation_from",
+    "last_decision",
 ]
