@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.6] - 2026-11-07
+
+Voice-agent turn telemetry (#48): who spoke when, for Pipecat, LiveKit Agents and applications
+with their own audio loop. For a voice agent the questions that matter are about timing, and a
+transcript keeps the words but not the timing.
+
+### Fixed
+
+- **Pipecat and LiveKit Agents put conversation content on spans with content capture off.**
+  Both trace through the global tracer provider, which is this library's once `instrument()`
+  has run.
+  - Pipecat sets messages, transcripts, spoken text, system instructions and tool definitions
+    on its spans unconditionally. They are now removed with capture off.
+  - LiveKit sends transcripts unless told otherwise. `LIVEKIT_TELEMETRY_ALLOW_PII=false` is now
+    set unless the application set it.
+
+### Added
+
+- The `pipecat` and `livekit_agents` instrumentors. They are on by default and inactive unless
+  the framework is installed (Pipecat 1.15+, LiveKit Agents 1.8+ for the turn shape).
+  - Pipecat pipelines get `voice.turn` spans under `voice.conversation`, from their speaking
+    frames.
+  - LiveKit's `user_speaking` / `agent_speaking` spans get the `voice.turn.*` attributes, and
+    its `agent_session` gets the conversation totals.
+- Per turn: speaker, duration, overlap, `voice.turn.interrupted`, whether that came from the
+  framework or was derived (agent interruption or user barge-in), and on agent turns the
+  response latency from the end of the user turn it answers.
+- Per conversation: talk time and share, silence, dead air (gaps over `GENAI_VOICE_DEAD_AIR_MS`,
+  default 2000), interruption and barge-in counts, and response-latency median and maximum.
+- `genai_otel.voice_conversation()` gives applications with their own audio loop the same
+  shape. Turns are recorded as blocks or with times known afterwards.
+
 ## [1.46.5] - 2026-11-07
 
 Three additions for voice and routing workloads:

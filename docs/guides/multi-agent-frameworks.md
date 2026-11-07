@@ -664,6 +664,53 @@ agent.print_response("In one sentence, what does OpenTelemetry do?")
 
 See the [Agno example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/agno/example.py).
 
+## Voice Agents: Pipecat and LiveKit Agents
+
+For a voice agent the questions that matter are about timing: how long after the user stopped
+speaking the agent started, who interrupted whom, and how much dead air there was. A transcript
+keeps the words but loses the timing. Both frameworks trace themselves through the global
+tracer provider, so their spans reach the same backend as this library's once `instrument()`
+has run. The `pipecat` and `livekit_agents` instrumentors (on by default, and inactive unless
+the framework is installed) add one turn shape to both.
+
+| | Pipecat (1.15+) | LiveKit Agents (1.8+) |
+|---|---|---|
+| Who spoke when | `voice.turn` spans under a `voice.conversation` span, from the pipeline's speaking frames | LiveKit's own `user_speaking` / `agent_speaking` spans get the `voice.turn.*` attributes |
+| Conversation totals | on `voice.conversation` | on LiveKit's `agent_session` |
+| Content with capture off | Pipecat's `input`, `output`, `transcript`, `text`, `gen_ai.system_instructions`, `tools` and `tools.definitions` are removed from its spans | `LIVEKIT_TELEMETRY_ALLOW_PII=false` is set unless your application set it, so LiveKit withholds transcripts itself |
+
+A speaker turn is the audible interval, from first to last audio. Each turn carries:
+
+- `voice.turn.speaker` (`user` / `agent`), `voice.turn.index`, `voice.turn.duration_ms` and
+  `voice.turn.overlap_ms`;
+- `voice.turn.interrupted`: the turn was cut off by the other party. On a user turn the agent
+  interrupted; on an agent turn the user barged in. Overlap that does not end the turn (an
+  "mm-hm") is overlap, not an interruption. `voice.turn.interrupted.source` is `framework` or
+  `derived`;
+- on agent turns, `voice.turn.response_latency_ms`: the time from the end of the user turn it
+  answers to the agent's first audio, with that turn's index as `voice.turn.answers_turn`.
+
+The conversation carries `voice.turn_count.user` / `.agent`, `voice.user_talk_ms`,
+`voice.agent_talk_ms`, `voice.agent_talk_share`, `voice.silence_ms`, `voice.dead_air_ms`,
+`voice.dead_air_count`, `voice.dead_air_max_ms`, `voice.interruption_count` (the agent cut the
+user off), `voice.barge_in_count` (the user cut the agent off), and the response-latency median
+and maximum. Dead air is a gap longer than `GENAI_VOICE_DEAD_AIR_MS` (default 2000).
+
+No audio and no text go on these spans. Pipecat's own exchange-level `turn` spans and its STT,
+LLM and TTS spans are kept. The model calls inside them are this library's provider spans, which
+nest under Pipecat's, so tokens are counted once.
+
+For an application with its own audio loop, the same shape:
+
+```python
+import genai_otel
+
+with genai_otel.voice_conversation(conversation_id=call_id) as conv:
+    with conv.turn("user"):           # from the first to the last user audio
+        ...
+    conv.add_turn("agent", start=t2, end=t3)   # or with times known afterwards (epoch seconds)
+```
+
 ## Other Frameworks
 
 | Framework | Description | Install Extra | Example |

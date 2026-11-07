@@ -67,6 +67,9 @@ DEFAULT_INSTRUMENTORS = [
     "openai_agents",
     "bedrock_agents",
     "crewai",
+    # Voice agents. Each does nothing unless its framework is installed.
+    "pipecat",
+    "livekit_agents",
 ]
 
 # Opt-in only. `litellm_latency` wraps litellm's own entry points to measure

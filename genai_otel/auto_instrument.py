@@ -218,6 +218,11 @@ def _check_openinference():
 
 
 # Defines the available instrumentors. This is now at the module level for easier mocking in tests.
+from .instrumentors.voice_instrumentors import (  # noqa: E402
+    LiveKitAgentsInstrumentor,
+    PipecatInstrumentor,
+)
+
 INSTRUMENTORS = {
     "antigravity": AntigravityInstrumentor,  # Google Antigravity agent SDK
     "openai": OpenAIInstrumentor,
@@ -232,6 +237,8 @@ INSTRUMENTORS = {
     "strands_agents": StrandsAgentsInstrumentor,  # Current Strands Agents SDK
     "google.generativeai": GoogleAIInstrumentor,
     "google_adk": GoogleADKInstrumentor,  # Google Agent Development Kit
+    "pipecat": PipecatInstrumentor,  # Pipecat voice agents: turns + content rule
+    "livekit_agents": LiveKitAgentsInstrumentor,  # LiveKit Agents: turns + PII switch
     "boto3": AWSBedrockInstrumentor,
     "azure.ai.inference": AzureAIInferenceInstrumentor,
     "azure.ai.openai": AzureOpenAIInstrumentor,

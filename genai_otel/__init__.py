@@ -73,6 +73,8 @@ _LAZY_IMPORTS = {
     # Fast/slow routing: link model calls to the decision that caused them
     "escalation_from": (".routing", "escalation_from"),
     "last_decision": (".routing", "last_decision"),
+    # Voice-agent turn telemetry for applications with their own audio loop
+    "voice_conversation": (".voice", "voice_conversation"),
 }
 
 
@@ -186,4 +188,5 @@ __all__ = [
     "DecisionRecorder",
     "escalation_from",
     "last_decision",
+    "voice_conversation",
 ]

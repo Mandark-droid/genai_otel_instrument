@@ -39,6 +39,8 @@ NON_PROVIDER_KEYS = {
     "crewai",
     "dspy",
     "google_adk",
+    "livekit_agents",
+    "pipecat",
     "guardrails",
     "haystack",
     "instructor",
