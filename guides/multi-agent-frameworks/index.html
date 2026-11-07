@@ -870,6 +870,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#voice-agents-pipecat-and-livekit-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voice Agents: Pipecat and LiveKit Agents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#other-frameworks" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1629,6 +1640,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#voice-agents-pipecat-and-livekit-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voice Agents: Pipecat and LiveKit Agents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#other-frameworks" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1853,7 +1875,34 @@ node execution.</p>
 <p>Google Agent Development Kit instrumentation.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>google-adk<span class="o">]</span>
 </code></pre></div>
-<p>Instruments <code>Runner.run_async()</code> and <code>InMemoryRunner.run_debug()</code>. Captures agent name, model, tools, sub-agents, and session info.</p>
+<p>Instruments <code>Runner.run_async()</code> and <code>InMemoryRunner.run_debug()</code> with one span per run
+(<code>google_adk.runner.run</code> / <code>google_adk.runner.run_debug</code>). ADK traces itself through the global
+tracer provider, so its own spans (ADK 2.x: <code>invoke_workflow</code>, <code>invoke_agent</code>,
+<code>generate_content</code>, <code>execute_tool</code>) sit under the run span, in one trace per run, including
+handoffs between agents.</p>
+<p>The run span carries:</p>
+<ul>
+<li><code>session.id</code> and <code>gen_ai.conversation.id</code> (the ADK session), the app name, tools and
+  sub-agents;</li>
+<li><code>gen_ai.agent.name</code>: the agent the run started at. On a later turn of a conversation that was
+  handed off, ADK starts at the agent that answered last, not at the root, which is kept as
+  <code>google_adk.root_agent.name</code>;</li>
+<li><code>google_adk.final_agent.name</code> (the agent that answered), <code>google_adk.agents</code> (in order of
+  first appearance), <code>google_adk.transfers</code> (<code>from&gt;to</code>), <code>google_adk.transfer_count</code>,
+  <code>google_adk.invocation_id</code> and <code>google_adk.event_count</code>;</li>
+<li>with content capture on, <code>google_adk.input_message</code> and <code>google_adk.output</code> (the final
+  answer).</li>
+</ul>
+<p>It carries no token counts: ADK's model-call spans and the model instrumentors (Gemini, LiteLLM)
+already do.</p>
+<p>A caller may stop iterating early (for example, <code>break</code> on <code>event.is_final_response()</code>). The run
+span then ends with <code>genai.stream.closed_early=true</code>, and the next turn starts a trace of its own.</p>
+<p><strong>Content.</strong> With content capture off (the default), the run span carries no message text, and
+<code>ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS</code> is set to <code>false</code> unless your application set it. That
+covers ADK's legacy span schema (<code>ADK_TELEMETRY_SCHEMA_VERSION_OPT_IN=1</code>), whose <code>call_llm</code>
+spans otherwise record the full model request and response. ADK's default schema records message
+content only under <code>OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT</code>, which this library's
+content setting also follows.</p>
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_adk_example.py">Google ADK example</a>.</p>
 <h2 id="google-antigravity-sdk">Google Antigravity SDK<a class="headerlink" href="#google-antigravity-sdk" title="Permanent link">&para;</a></h2>
 <p>Native instrumentation for the Google Antigravity Python agent SDK. The
@@ -2220,6 +2269,66 @@ standard cost enrichment path.</p>
 <a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a><span class="n">agent</span><span class="o">.</span><span class="n">print_response</span><span class="p">(</span><span class="s2">&quot;In one sentence, what does OpenTelemetry do?&quot;</span><span class="p">)</span>
 </code></pre></div>
 <p>See the <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/agno/example.py">Agno example</a>.</p>
+<h2 id="voice-agents-pipecat-and-livekit-agents">Voice Agents: Pipecat and LiveKit Agents<a class="headerlink" href="#voice-agents-pipecat-and-livekit-agents" title="Permanent link">&para;</a></h2>
+<p>For a voice agent the questions that matter are about timing: how long after the user stopped
+speaking the agent started, who interrupted whom, and how much dead air there was. A transcript
+keeps the words but loses the timing. Both frameworks trace themselves through the global
+tracer provider, so their spans reach the same backend as this library's once <code>instrument()</code>
+has run. The <code>pipecat</code> and <code>livekit_agents</code> instrumentors (on by default, and inactive unless
+the framework is installed) add one turn shape to both.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Pipecat (1.15+)</th>
+<th>LiveKit Agents (1.8+)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Who spoke when</td>
+<td><code>voice.turn</code> spans under a <code>voice.conversation</code> span, from the pipeline's speaking frames</td>
+<td>LiveKit's own <code>user_speaking</code> / <code>agent_speaking</code> spans get the <code>voice.turn.*</code> attributes</td>
+</tr>
+<tr>
+<td>Conversation totals</td>
+<td>on <code>voice.conversation</code></td>
+<td>on LiveKit's <code>agent_session</code></td>
+</tr>
+<tr>
+<td>Content with capture off</td>
+<td>Pipecat's <code>input</code>, <code>output</code>, <code>transcript</code>, <code>text</code>, <code>gen_ai.system_instructions</code>, <code>tools</code> and <code>tools.definitions</code> are removed from its spans</td>
+<td><code>LIVEKIT_TELEMETRY_ALLOW_PII=false</code> is set unless your application set it, so LiveKit withholds transcripts itself</td>
+</tr>
+</tbody>
+</table>
+<p>A speaker turn is the audible interval, from first to last audio. Each turn carries:</p>
+<ul>
+<li><code>voice.turn.speaker</code> (<code>user</code> / <code>agent</code>), <code>voice.turn.index</code>, <code>voice.turn.duration_ms</code> and
+  <code>voice.turn.overlap_ms</code>;</li>
+<li><code>voice.turn.interrupted</code>: the turn was cut off by the other party. On a user turn the agent
+  interrupted; on an agent turn the user barged in. Overlap that does not end the turn (an
+  "mm-hm") is overlap, not an interruption. <code>voice.turn.interrupted.source</code> is <code>framework</code> or
+  <code>derived</code>;</li>
+<li>on agent turns, <code>voice.turn.response_latency_ms</code>: the time from the end of the user turn it
+  answers to the agent's first audio, with that turn's index as <code>voice.turn.answers_turn</code>.</li>
+</ul>
+<p>The conversation carries <code>voice.turn_count.user</code> / <code>.agent</code>, <code>voice.user_talk_ms</code>,
+<code>voice.agent_talk_ms</code>, <code>voice.agent_talk_share</code>, <code>voice.silence_ms</code>, <code>voice.dead_air_ms</code>,
+<code>voice.dead_air_count</code>, <code>voice.dead_air_max_ms</code>, <code>voice.interruption_count</code> (the agent cut the
+user off), <code>voice.barge_in_count</code> (the user cut the agent off), and the response-latency median
+and maximum. Dead air is a gap longer than <code>GENAI_VOICE_DEAD_AIR_MS</code> (default 2000).</p>
+<p>No audio and no text go on these spans. Pipecat's own exchange-level <code>turn</code> spans and its STT,
+LLM and TTS spans are kept. The model calls inside them are this library's provider spans, which
+nest under Pipecat's, so tokens are counted once.</p>
+<p>For an application with its own audio loop, the same shape:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="k">with</span> <span class="n">genai_otel</span><span class="o">.</span><span class="n">voice_conversation</span><span class="p">(</span><span class="n">conversation_id</span><span class="o">=</span><span class="n">call_id</span><span class="p">)</span> <span class="k">as</span> <span class="n">conv</span><span class="p">:</span>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>    <span class="k">with</span> <span class="n">conv</span><span class="o">.</span><span class="n">turn</span><span class="p">(</span><span class="s2">&quot;user&quot;</span><span class="p">):</span>           <span class="c1"># from the first to the last user audio</span>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>        <span class="o">...</span>
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>    <span class="n">conv</span><span class="o">.</span><span class="n">add_turn</span><span class="p">(</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">t2</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">t3</span><span class="p">)</span>   <span class="c1"># or with times known afterwards (epoch seconds)</span>
+</code></pre></div>
 <h2 id="other-frameworks">Other Frameworks<a class="headerlink" href="#other-frameworks" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

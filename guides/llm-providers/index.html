@@ -682,6 +682,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#audio-and-image-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio and image inputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -736,6 +747,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fastslow-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fast/slow routing
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -760,6 +782,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Audio Providers: Billing by Media, Not Tokens">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#openai-speech-transcriptions-translations-and-text-to-speech" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAI speech: transcriptions, translations and text-to-speech
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1725,6 +1764,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#audio-and-image-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio and image inputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1779,6 +1829,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fastslow-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fast/slow routing
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1803,6 +1864,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Audio Providers: Billing by Media, Not Tokens">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#openai-speech-transcriptions-translations-and-text-to-speech" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAI speech: transcriptions, translations and text-to-speech
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2375,6 +2453,27 @@ self-hosted and gets no provider, unless <code>GENAI_DECISION_PROVIDER</code> na
 <p><code>questions</code> and answers may be a SystemOne mapping or an OpenAI Decisions list. As a
 decorator, the function's return value is recorded when it is a response (has <code>answers</code>) or a
 set of answers. <code>d.fail(message)</code> ends the span as an error without an exception.</p>
+<p>A decision over audio passes it as <code>audio=</code> (bytes, a path, a binary file object or a
+<code>(name, file)</code> tuple), with <code>audio_format=</code> when the format cannot be told from the bytes or the
+file name:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">with</span> <span class="n">decision_span</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;eot-detector&quot;</span><span class="p">,</span> <span class="n">questions</span><span class="o">=</span><span class="n">questions</span><span class="p">,</span> <span class="n">audio</span><span class="o">=</span><span class="n">clip_wav</span><span class="p">)</span> <span class="k">as</span> <span class="n">d</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">d</span><span class="o">.</span><span class="n">record</span><span class="p">({</span><span class="s2">&quot;finished&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;noul&quot;</span><span class="p">,</span> <span class="s2">&quot;probability&quot;</span><span class="p">:</span> <span class="n">model</span><span class="p">(</span><span class="n">clip_wav</span><span class="p">)}})</span>
+</code></pre></div>
+<h3 id="audio-and-image-inputs">Audio and image inputs<a class="headerlink" href="#audio-and-image-inputs" title="Permanent link">&para;</a></h3>
+<p>Decision requests can carry images and audio: <code>input_image</code> / <code>input_audio</code> parts, data URLs,
+asset objects, raw bytes and <code>decision_span(audio=...)</code>. They are recognised by part type, then
+MIME type, then the first bytes (WAV, MP3, OGG, FLAC, WebM; PNG, JPEG, GIF, WebP). Bytes of no
+known kind are <code>[binary omitted]</code>, never called an image.</p>
+<ul>
+<li><code>genai.decision.input.modalities</code> (<code>text</code>, <code>image</code>, <code>audio</code>) is recorded on every DECISION span,
+  with content capture off too: it says what kind of input was decided on, not what it said.</li>
+<li><code>genai.decision.input.audio_seconds</code> is recorded when the audio is WAV, whose duration the
+  header gives without decoding.</li>
+<li>With media capture on (<code>GENAI_OTEL_MEDIA_CAPTURE_MODE</code>), each image and audio input becomes a
+  media part (<code>gen_ai.prompt.0.content.&lt;m&gt;.*</code>) through the same size cap, modality allow-list,
+  redactor and store as every other media part. With content capture on as well, <code>input.value</code>
+  refers to the stored copy (<code>[audio: &lt;uri&gt;]</code>) instead of the placeholder.</li>
+</ul>
 <h3 id="attributes">Attributes<a class="headerlink" href="#attributes" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -2466,9 +2565,19 @@ set of answers. <code>d.fail(message)</code> ends the span as an error without a
 <td><code>margin</code> is the top probability minus the second</td>
 </tr>
 <tr>
+<td><code>genai.decision.input.modalities</code></td>
+<td>always</td>
+<td><code>text</code>, <code>image</code>, <code>audio</code>: what the input carried</td>
+</tr>
+<tr>
+<td><code>genai.decision.input.audio_seconds</code></td>
+<td>WAV audio inputs</td>
+<td>from the header</td>
+</tr>
+<tr>
 <td><code>input.value</code>, <code>output.value</code>, <code>*.mime_type</code> = <code>application/json</code></td>
 <td><strong>content capture on</strong></td>
-<td>the request and response JSON, images replaced with <code>[image omitted]</code>, capped at <code>GENAI_CONTENT_MAX_LENGTH</code></td>
+<td>the request and response JSON with media replaced by <code>[image omitted]</code>, <code>[audio omitted]</code> or <code>[binary omitted]</code> (or <code>[&lt;kind&gt;: &lt;uri&gt;]</code> when media capture stored it), capped at <code>GENAI_CONTENT_MAX_LENGTH</code></td>
 </tr>
 </tbody>
 </table>
@@ -2534,6 +2643,42 @@ span says so with <code>evaluation.skipped_reason = decision_span</code>.</p>
 <h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
 <p><code>examples/decisions/</code> has one runnable example per call path; the README there says which ones
 need a key or a server.</p>
+<h3 id="fastslow-routing">Fast/slow routing<a class="headerlink" href="#fastslow-routing" title="Permanent link">&para;</a></h3>
+<p>A common agent pattern: a small decision model handles most steps, and a router sends a step to
+a large model only when it judges the step needs it. Two things show whether that pays off.</p>
+<p><strong>Why the router chose the model.</strong> Routers return their choice in response headers, and which
+headers depends on the router. List the ones to record:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">GENAI_CAPTURE_RESPONSE_HEADERS</span><span class="o">=</span>x-litellm-model-id,x-litellm-model-group,x-litellm-attempted-fallbacks
+</code></pre></div>
+<p><code>instrument(capture_response_headers=[...])</code> does the same, and <code>GENAI_ROUTER_RESPONSE_HEADERS</code>
+is accepted as another name. Each listed header goes on the model-call span as
+<code>http.response.header.&lt;name&gt;</code>, a string array. Nothing is recorded by default. Credential
+headers (<code>authorization</code>, <code>cookie</code>, <code>set-cookie</code>, <code>x-api-key</code>, <code>api-key</code> and any name containing
+<code>auth</code>, <code>secret</code>, <code>password</code> or <code>cookie</code>) are never recorded, even when listed. This applies to
+OpenAI-compatible clients (OpenAI, Azure OpenAI, a LiteLLM proxy or any <code>base_url</code>), sync and
+async, plain and <code>with_raw_response</code>.</p>
+<p>When a router answers with another model than the one requested (<code>model="auto"</code> served by
+<code>gpt-5.5</code>), the span says so: <code>gen_ai.router.requested_model</code> is the alias, next to
+<code>gen_ai.response.model</code>. A dated snapshot of the requested model does not count.</p>
+<p><strong>Which decision caused which call.</strong> Link the model calls a decision causes to it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">genai_otel</span><span class="w"> </span><span class="kn">import</span> <span class="n">decision_span</span><span class="p">,</span> <span class="n">escalation_from</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="k">with</span> <span class="n">decision_span</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;router-421m&quot;</span><span class="p">,</span> <span class="n">questions</span><span class="o">=</span><span class="n">questions</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="n">step</span><span class="p">)</span> <span class="k">as</span> <span class="n">d</span><span class="p">:</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">d</span><span class="o">.</span><span class="n">record</span><span class="p">(</span><span class="n">router</span><span class="p">(</span><span class="n">step</span><span class="p">))</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="k">if</span> <span class="n">needs_large_model</span><span class="p">:</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="k">with</span> <span class="n">escalation_from</span><span class="p">(</span><span class="n">d</span><span class="p">):</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>        <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-5.5&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">)</span>
+</code></pre></div>
+<p>Every model call (chat, completions, Responses, embeddings, speech) started inside the block
+gets an OpenTelemetry span link to the decision. Agent, tool and HTTP spans do not, so a call
+is not counted twice. The link does not change the call's parent. For a decision made through
+an SDK (<code>client.decisions.create</code>), use <code>escalation_from(genai_otel.last_decision())</code>.</p>
+<p>With <code>GENAI_LINK_DECISIONS=true</code>, the next model call after a decision in the same context is
+linked automatically, marked <code>inferred</code>. Concurrent asyncio tasks never link to each other's
+decisions. Tasks started after a decision share it, and the first call among them takes it.</p>
+<p>Each link is mirrored as <code>genai.decision.link.span_id</code> and <code>genai.decision.link.inferred</code> on the
+linked span, since some trace stores keep a link's ids but not its attributes.</p>
 <h2 id="typesafe-ai-jev">TypeSafe AI / Jev<a class="headerlink" href="#typesafe-ai-jev" title="Permanent link">&para;</a></h2>
 <p>TypeSafe's System One API evaluates typed questions against unstructured state and
 returns decisions instead of generated prose. TraceVerde wraps both
@@ -2543,15 +2688,15 @@ behind <code>base_url</code>, question counts and types, token usage and Jev's p
 price, and, with content capture on, the typed answers and their confidence.</p>
 <p>Before 1.38 these were <code>LLM</code> spans. The <code>llm.*</code> attributes are still emitted until
 2.0, and <code>GENAI_DECISION_LEGACY_LLM_KIND=true</code> keeps the old span kind.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[typesafe]&#39;</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TYPESAFE_API_KEY</span><span class="o">=</span><span class="s2">&quot;your-key&quot;</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span><span class="s2">&quot;https://otel.example.internal:4318&quot;</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_PROTOCOL</span><span class="o">=</span><span class="s2">&quot;http/protobuf&quot;</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_CERTIFICATE</span><span class="o">=</span><span class="s2">&quot;/absolute/path/to/platform-ca.crt&quot;</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span><span class="s2">&quot;typesafe&quot;</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CONTENT_CAPTURE</span><span class="o">=</span><span class="nb">true</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CONTENT_MAX_LENGTH</span><span class="o">=</span><span class="m">0</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>python<span class="w"> </span>examples/typesafe/example.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;genai-otel-instrument[typesafe]&#39;</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TYPESAFE_API_KEY</span><span class="o">=</span><span class="s2">&quot;your-key&quot;</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span><span class="s2">&quot;https://otel.example.internal:4318&quot;</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_PROTOCOL</span><span class="o">=</span><span class="s2">&quot;http/protobuf&quot;</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_CERTIFICATE</span><span class="o">=</span><span class="s2">&quot;/absolute/path/to/platform-ca.crt&quot;</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span><span class="s2">&quot;typesafe&quot;</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLE_CONTENT_CAPTURE</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_CONTENT_MAX_LENGTH</span><span class="o">=</span><span class="m">0</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>python<span class="w"> </span>examples/typesafe/example.py
 </code></pre></div>
 <p>The example sends one state with a <code>Choice</code>, <code>Noul</code>, and <code>Score</code> question so you
 can inspect the complete structured response in the terminal and the resulting
@@ -2568,22 +2713,22 @@ as a plain <code>replicate.run</code> span, cost tracking excluded, same as befo
 <p>ElevenLabs is billed per unit of media rather than per token, so its spans carry
 different usage attributes. Text-to-speech is priced per character of input text
 and Scribe speech-to-text per second of audio.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">elevenlabs</span><span class="w"> </span><span class="kn">import</span> <span class="n">ElevenLabs</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">client</span> <span class="o">=</span> <span class="n">ElevenLabs</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">)</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># Text-to-speech: convert() returns an iterator of audio bytes. Draining it is</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="c1"># what completes the span and records time-to-first-byte.</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="n">audio</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">text_to_speech</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="n">voice_id</span><span class="o">=</span><span class="s2">&quot;21m00Tcm4TlvDq8ikWAM&quot;</span><span class="p">,</span>
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Hello from TraceVerde.&quot;</span><span class="p">,</span>
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>    <span class="n">model_id</span><span class="o">=</span><span class="s2">&quot;eleven_multilingual_v2&quot;</span><span class="p">,</span>
-<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="p">))</span>
-<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>
-<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="c1"># Scribe speech-to-text</span>
-<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="n">transcript</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">speech_to_text</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">model_id</span><span class="o">=</span><span class="s2">&quot;scribe_v1&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s2">&quot;call.mp3&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">elevenlabs</span><span class="w"> </span><span class="kn">import</span> <span class="n">ElevenLabs</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="n">client</span> <span class="o">=</span> <span class="n">ElevenLabs</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">)</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Text-to-speech: convert() returns an iterator of audio bytes. Draining it is</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="c1"># what completes the span and records time-to-first-byte.</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="n">audio</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">text_to_speech</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>    <span class="n">voice_id</span><span class="o">=</span><span class="s2">&quot;21m00Tcm4TlvDq8ikWAM&quot;</span><span class="p">,</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>    <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Hello from TraceVerde.&quot;</span><span class="p">,</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="n">model_id</span><span class="o">=</span><span class="s2">&quot;eleven_multilingual_v2&quot;</span><span class="p">,</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="p">))</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="c1"># Scribe speech-to-text</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="n">transcript</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">speech_to_text</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">model_id</span><span class="o">=</span><span class="s2">&quot;scribe_v1&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s2">&quot;call.mp3&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">))</span>
 </code></pre></div>
 <table>
 <thead>
@@ -2627,45 +2772,97 @@ actually waits for on a voice turn.</p>
 <p><strong>Audio payloads are never attached to spans.</strong> Only sizes and durations are
 recorded. For voice workloads the audio is frequently personal data, so
 reference-only is the default rather than something to opt into.</p>
+<h3 id="openai-speech-transcriptions-translations-and-text-to-speech">OpenAI speech: transcriptions, translations and text-to-speech<a class="headerlink" href="#openai-speech-transcriptions-translations-and-text-to-speech" title="Permanent link">&para;</a></h3>
+<p><code>client.audio.transcriptions.create</code>, <code>client.audio.translations.create</code> and
+<code>client.audio.speech.create</code> are traced on <code>OpenAI</code>, <code>AsyncOpenAI</code> and <code>AzureOpenAI</code> clients,
+including their <code>with_raw_response</code> and <code>with_streaming_response</code> variants and streamed
+transcription (<code>stream=True</code>). The spans are <code>openai.audio.transcriptions</code>,
+<code>openai.audio.translations</code> and <code>openai.audio.speech</code>, with the attributes in the table above.
+A translation also carries <code>gen_ai.request.target_language_code=en</code>: OpenAI translates only into
+English.</p>
+<p>Cost comes from what OpenAI bills:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Billed by</th>
+<th>Read from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>whisper-1</code></td>
+<td>seconds of audio</td>
+<td>the response's <code>usage.seconds</code> or <code>duration</code>; for <code>text</code>/<code>srt</code>/<code>vtt</code> responses, the WAV header of the upload</td>
+</tr>
+<tr>
+<td><code>gpt-4o-transcribe</code>, <code>gpt-4o-mini-transcribe</code>, <code>gpt-4o-transcribe-diarize</code></td>
+<td>input and output tokens, at separate rates</td>
+<td>the response's <code>usage</code></td>
+</tr>
+<tr>
+<td><code>tts-1</code>, <code>tts-1-hd</code></td>
+<td>characters of input</td>
+<td>the request</td>
+</tr>
+<tr>
+<td><code>gpt-4o-mini-tts</code></td>
+<td>input and output tokens, at separate rates</td>
+<td>only <code>stream_format="sse"</code> responses report usage</td>
+</tr>
+</tbody>
+</table>
+<p>When the billed quantity is not knowable (<code>gpt-4o-mini-tts</code> without <code>sse</code>, a <code>whisper-1</code> text
+response on non-WAV audio), the span has no cost and <code>gen_ai.usage.cost.unknown_reason</code> says why
+(<code>no_usage_reported</code>, or <code>unpriced_model</code> for an Azure deployment name with no price). A
+plausible wrong cost is worse than none.</p>
+<p>A speech span stays open until its audio has been read. Streamed speech records the time to the
+first audio chunk. Speech the caller stops reading early ends with
+<code>genai.stream.closed_early=true</code> and is still billed for its characters.</p>
+<p>With media capture on (<code>GENAI_OTEL_MEDIA_CAPTURE_MODE</code>), the uploaded audio and the synthesised
+audio are recorded as media parts, through the media pipeline's size cap, allow-list and
+redactor. With content capture on, the transcript and the input text are recorded. Both are off
+by default. The upload is read before the SDK sends it, and a file object is returned to where
+it was.</p>
 <h2 id="quick-example-openai">Quick Example: OpenAI<a class="headerlink" href="#quick-example-openai" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">()</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;You are a helpful assistant.&quot;</span><span class="p">},</span>
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;What is OpenTelemetry?&quot;</span><span class="p">},</span>
-<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>    <span class="p">],</span>
-<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>    <span class="n">max_tokens</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span>
-<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="p">)</span>
-<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>
-<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Response: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tokens used: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">total_tokens</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="c1"># Traces, metrics, and costs are automatically captured</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">()</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;You are a helpful assistant.&quot;</span><span class="p">},</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;What is OpenTelemetry?&quot;</span><span class="p">},</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>    <span class="p">],</span>
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>    <span class="n">max_tokens</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span>
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="p">)</span>
+<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>
+<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Response: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tokens used: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">total_tokens</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a><span class="c1"># Traces, metrics, and costs are automatically captured</span>
 </code></pre></div>
 <h2 id="quick-example-responses-api">Quick Example: Responses API<a class="headerlink" href="#quick-example-responses-api" title="Permanent link">&para;</a></h2>
 <p><code>client.responses.create</code> is traced as its own span (<code>openai.responses</code>). This is
 the default path for native GPT-5.6+ models, because Chat Completions rejects
 function tools combined with reasoning -- so agent runtimes that use tools and
 reasoning together end up here rather than on <code>chat.completions.create</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">()</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">responses</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-5.6&quot;</span><span class="p">,</span>
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>    <span class="n">instructions</span><span class="o">=</span><span class="s2">&quot;You are a helpful assistant.&quot;</span><span class="p">,</span>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;What is OpenTelemetry?&quot;</span><span class="p">,</span>
-<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>    <span class="n">max_output_tokens</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span>
-<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="p">)</span>
-<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>
-<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">output_text</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">()</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">responses</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-5.6&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>    <span class="n">instructions</span><span class="o">=</span><span class="s2">&quot;You are a helpful assistant.&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;What is OpenTelemetry?&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>    <span class="n">max_output_tokens</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="p">)</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">output_text</span><span class="p">)</span>
 </code></pre></div>
 <p>The Responses shape differs from Chat Completions in every field the
 instrumentation reads, and each is mapped onto the same semantic conventions so
@@ -2728,20 +2925,20 @@ response events arrive.</p>
 every non-Anthropic model -- it removes the per-vendor request body that makes
 <code>invoke_model</code> awkward. Because it is model-agnostic, the span shape does not
 depend on <code>modelId</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">boto3</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;bedrock-runtime&quot;</span><span class="p">,</span> <span class="n">region_name</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span><span class="p">)</span>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">converse</span><span class="p">(</span>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    <span class="n">modelId</span><span class="o">=</span><span class="s2">&quot;meta.llama3-70b-instruct-v1:0&quot;</span><span class="p">,</span>
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>    <span class="n">system</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;You are a helpful assistant.&quot;</span><span class="p">}],</span>
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;What is OpenTelemetry?&quot;</span><span class="p">}]}],</span>
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>    <span class="n">inferenceConfig</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;maxTokens&quot;</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span> <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">},</span>
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="p">)</span>
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>
-<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">][</span><span class="s2">&quot;message&quot;</span><span class="p">][</span><span class="s2">&quot;content&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">])</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">boto3</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;bedrock-runtime&quot;</span><span class="p">,</span> <span class="n">region_name</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span><span class="p">)</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">converse</span><span class="p">(</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    <span class="n">modelId</span><span class="o">=</span><span class="s2">&quot;meta.llama3-70b-instruct-v1:0&quot;</span><span class="p">,</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>    <span class="n">system</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;You are a helpful assistant.&quot;</span><span class="p">}],</span>
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;What is OpenTelemetry?&quot;</span><span class="p">}]}],</span>
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>    <span class="n">inferenceConfig</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;maxTokens&quot;</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span> <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">},</span>
+<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="p">)</span>
+<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a>
+<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">][</span><span class="s2">&quot;message&quot;</span><span class="p">][</span><span class="s2">&quot;content&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">])</span>
 </code></pre></div>
 <p>Converse differs from <code>invoke_model</code> in every field the instrumentation reads,
 and each is mapped onto the same semantic conventions the other providers emit:</p>
@@ -2793,47 +2990,47 @@ while you iterate -- so the span stays open until the event stream is exhausted
 rather than closing on return, which would report near-zero latency and no
 tokens. Token counts arrive only in the trailing <code>metadata</code> event and are picked
 up from there.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">converse_stream</span><span class="p">(</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">modelId</span><span class="o">=</span><span class="s2">&quot;meta.llama3-70b-instruct-v1:0&quot;</span><span class="p">,</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;Explain tracing.&quot;</span><span class="p">}]}],</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="p">)</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s2">&quot;stream&quot;</span><span class="p">]:</span>
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    <span class="k">if</span> <span class="s2">&quot;contentBlockDelta&quot;</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="p">[</span><span class="s2">&quot;contentBlockDelta&quot;</span><span class="p">][</span><span class="s2">&quot;delta&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">],</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">converse_stream</span><span class="p">(</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="n">modelId</span><span class="o">=</span><span class="s2">&quot;meta.llama3-70b-instruct-v1:0&quot;</span><span class="p">,</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;Explain tracing.&quot;</span><span class="p">}]}],</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="p">)</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s2">&quot;stream&quot;</span><span class="p">]:</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>    <span class="k">if</span> <span class="s2">&quot;contentBlockDelta&quot;</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="p">[</span><span class="s2">&quot;contentBlockDelta&quot;</span><span class="p">][</span><span class="s2">&quot;delta&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">],</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="quick-example-embeddings-and-rag">Quick Example: Embeddings and RAG<a class="headerlink" href="#quick-example-embeddings-and-rag" title="Permanent link">&para;</a></h2>
 <p>Embedding calls are traced as their own spans, so a retrieval-augmented call
 shows both of its legs: the lookup that chose the context and the generation
 that used it. Without the embedding span, the retrieval step is invisible and
 its tokens and cost go unrecorded.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">opentelemetry</span><span class="w"> </span><span class="kn">import</span> <span class="n">trace</span>
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">()</span>
-<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="n">tracer</span> <span class="o">=</span> <span class="n">trace</span><span class="o">.</span><span class="n">get_tracer</span><span class="p">(</span><span class="s2">&quot;rag.demo&quot;</span><span class="p">)</span>
-<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
-<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="k">with</span> <span class="n">tracer</span><span class="o">.</span><span class="n">start_as_current_span</span><span class="p">(</span><span class="s2">&quot;rag.pipeline&quot;</span><span class="p">):</span>
-<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>    <span class="c1"># 1. Index - one span, input_count = number of chunks</span>
-<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>    <span class="n">indexed</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
-<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>        <span class="nb">input</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;chunk one&quot;</span><span class="p">,</span> <span class="s2">&quot;chunk two&quot;</span><span class="p">,</span> <span class="s2">&quot;chunk three&quot;</span><span class="p">],</span>
-<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>    <span class="p">)</span>
-<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>
-<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a>    <span class="c1"># 2. Retrieve - one span for the query embedding</span>
-<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>    <span class="n">query</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
-<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a>        <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;what did chunk two say?&quot;</span><span class="p">,</span>
-<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a>    <span class="p">)</span>
-<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a>
-<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a>    <span class="c1"># 3. Generate - the chat span, as usual</span>
-<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a>    <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
-<a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a>        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Answer from the retrieved context.&quot;</span><span class="p">}],</span>
-<a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a>    <span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">opentelemetry</span><span class="w"> </span><span class="kn">import</span> <span class="n">trace</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">()</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="n">tracer</span> <span class="o">=</span> <span class="n">trace</span><span class="o">.</span><span class="n">get_tracer</span><span class="p">(</span><span class="s2">&quot;rag.demo&quot;</span><span class="p">)</span>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="k">with</span> <span class="n">tracer</span><span class="o">.</span><span class="n">start_as_current_span</span><span class="p">(</span><span class="s2">&quot;rag.pipeline&quot;</span><span class="p">):</span>
+<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>    <span class="c1"># 1. Index - one span, input_count = number of chunks</span>
+<a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a>    <span class="n">indexed</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-17-13" name="__codelineno-17-13" href="#__codelineno-17-13"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-14" name="__codelineno-17-14" href="#__codelineno-17-14"></a>        <span class="nb">input</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;chunk one&quot;</span><span class="p">,</span> <span class="s2">&quot;chunk two&quot;</span><span class="p">,</span> <span class="s2">&quot;chunk three&quot;</span><span class="p">],</span>
+<a id="__codelineno-17-15" name="__codelineno-17-15" href="#__codelineno-17-15"></a>    <span class="p">)</span>
+<a id="__codelineno-17-16" name="__codelineno-17-16" href="#__codelineno-17-16"></a>
+<a id="__codelineno-17-17" name="__codelineno-17-17" href="#__codelineno-17-17"></a>    <span class="c1"># 2. Retrieve - one span for the query embedding</span>
+<a id="__codelineno-17-18" name="__codelineno-17-18" href="#__codelineno-17-18"></a>    <span class="n">query</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-17-19" name="__codelineno-17-19" href="#__codelineno-17-19"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-20" name="__codelineno-17-20" href="#__codelineno-17-20"></a>        <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;what did chunk two say?&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-21" name="__codelineno-17-21" href="#__codelineno-17-21"></a>    <span class="p">)</span>
+<a id="__codelineno-17-22" name="__codelineno-17-22" href="#__codelineno-17-22"></a>
+<a id="__codelineno-17-23" name="__codelineno-17-23" href="#__codelineno-17-23"></a>    <span class="c1"># 3. Generate - the chat span, as usual</span>
+<a id="__codelineno-17-24" name="__codelineno-17-24" href="#__codelineno-17-24"></a>    <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-17-25" name="__codelineno-17-25" href="#__codelineno-17-25"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-26" name="__codelineno-17-26" href="#__codelineno-17-26"></a>        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Answer from the retrieved context.&quot;</span><span class="p">}],</span>
+<a id="__codelineno-17-27" name="__codelineno-17-27" href="#__codelineno-17-27"></a>    <span class="p">)</span>
 </code></pre></div>
 <p>Wrapping the three calls in a parent span groups them into a single trace, so
 the whole pipeline is one unit in the UI rather than three unrelated calls.</p>
@@ -2853,44 +3050,44 @@ Messages methods unwrapped, avoiding duplicate request spans while applying its 
 cost enrichment to the native GenAI usage attributes. If you set
 <code>open_telemetry=False</code> on the client (or <code>ANTHROPIC_OPEN_TELEMETRY=false</code> before client
 creation), TraceVerde uses its own Messages wrapper instead.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">anthropic</span>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">anthropic</span><span class="o">.</span><span class="n">Anthropic</span><span class="p">()</span>
-<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="n">message</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">messages</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;claude-sonnet-4-20250514&quot;</span><span class="p">,</span>
-<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>    <span class="n">max_tokens</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
-<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Explain quantum computing in one sentence.&quot;</span><span class="p">}</span>
-<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>    <span class="p">],</span>
-<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="p">)</span>
-<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>
-<a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a><span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
-<a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a><span class="c1"># Cost tracking and token usage automatically captured</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">anthropic</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">anthropic</span><span class="o">.</span><span class="n">Anthropic</span><span class="p">()</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="n">message</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">messages</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;claude-sonnet-4-20250514&quot;</span><span class="p">,</span>
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>    <span class="n">max_tokens</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
+<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
+<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Explain quantum computing in one sentence.&quot;</span><span class="p">}</span>
+<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>    <span class="p">],</span>
+<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="p">)</span>
+<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>
+<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a><span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+<a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="c1"># Cost tracking and token usage automatically captured</span>
 </code></pre></div>
 <h2 id="quick-example-cometapi">Quick Example: CometAPI<a class="headerlink" href="#quick-example-cometapi" title="Permanent link">&para;</a></h2>
 <p>CometAPI is an all-in-one aggregator that exposes 500+ models (GPT, Claude, Gemini, DeepSeek, Qwen, and more) behind a single API key. It is compatible with both the Anthropic SDK and the OpenAI SDK - point either client's <code>base_url</code> at <code>https://api.cometapi.com</code> and TraceVerde detects and traces the calls with <code>gen_ai.system = "cometapi"</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">anthropic</span>
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>
-<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">anthropic</span><span class="o">.</span><span class="n">Anthropic</span><span class="p">(</span>
-<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://api.cometapi.com&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;your-cometapi-key&quot;</span><span class="p">,</span>  <span class="c1"># from https://www.cometapi.com/console/token</span>
-<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="p">)</span>
-<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="n">message</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">messages</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;claude-sonnet-5&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>    <span class="n">max_tokens</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
-<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Can you describe LLMs to me?&quot;</span><span class="p">}</span>
-<a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a>    <span class="p">],</span>
-<a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a><span class="p">)</span>
-<a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a>
-<a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a><span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
-<a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a><span class="c1"># Spans named cometapi.messages.create with token usage and cost tracking</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">anthropic</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="n">client</span> <span class="o">=</span> <span class="n">anthropic</span><span class="o">.</span><span class="n">Anthropic</span><span class="p">(</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://api.cometapi.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;your-cometapi-key&quot;</span><span class="p">,</span>  <span class="c1"># from https://www.cometapi.com/console/token</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="p">)</span>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="n">message</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">messages</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;claude-sonnet-5&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a>    <span class="n">max_tokens</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
+<a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[</span>
+<a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a>        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Can you describe LLMs to me?&quot;</span><span class="p">}</span>
+<a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a>    <span class="p">],</span>
+<a id="__codelineno-19-16" name="__codelineno-19-16" href="#__codelineno-19-16"></a><span class="p">)</span>
+<a id="__codelineno-19-17" name="__codelineno-19-17" href="#__codelineno-19-17"></a>
+<a id="__codelineno-19-18" name="__codelineno-19-18" href="#__codelineno-19-18"></a><span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+<a id="__codelineno-19-19" name="__codelineno-19-19" href="#__codelineno-19-19"></a><span class="c1"># Spans named cometapi.messages.create with token usage and cost tracking</span>
 </code></pre></div>
 <p>The OpenAI SDK works the same way with <code>base_url="https://api.cometapi.com/v1"</code> (spans are named <code>cometapi.chat.completion</code>).</p>
 <div class="admonition note">
@@ -2903,23 +3100,23 @@ disable the aggregator instrumentor, the generic SDK instrumentor traces
 those clients instead.</p>
 </div>
 <h2 id="quick-example-ollama-local">Quick Example: Ollama (Local)<a class="headerlink" href="#quick-example-ollama-local" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">ollama</span>
-<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>
-<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="n">response</span> <span class="o">=</span> <span class="n">ollama</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span>
-<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;llama2&quot;</span><span class="p">,</span>
-<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Why is the sky blue?&quot;</span><span class="p">}],</span>
-<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="p">)</span>
-<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a>
-<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">][</span><span class="s2">&quot;content&quot;</span><span class="p">])</span>
-<a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a><span class="c1"># Local model traces captured with token counting</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">ollama</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="n">response</span> <span class="o">=</span> <span class="n">ollama</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span>
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;llama2&quot;</span><span class="p">,</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Why is the sky blue?&quot;</span><span class="p">}],</span>
+<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="p">)</span>
+<a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>
+<a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">][</span><span class="s2">&quot;content&quot;</span><span class="p">])</span>
+<a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a><span class="c1"># Local model traces captured with token counting</span>
 </code></pre></div>
 <h2 id="special-providers">Special Providers<a class="headerlink" href="#special-providers" title="Permanent link">&para;</a></h2>
 <h3 id="huggingface-transformers">HuggingFace Transformers<a class="headerlink" href="#huggingface-transformers" title="Permanent link">&para;</a></h3>
 <p>Local model execution with estimated costs based on parameter count.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>huggingface<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>huggingface<span class="o">]</span>
 </code></pre></div>
 <p>Instruments:</p>
 <ul>
@@ -2939,24 +3136,24 @@ those clients instead.</p>
 </ul>
 <h3 id="hyperbolic">Hyperbolic<a class="headerlink" href="#hyperbolic" title="Permanent link">&para;</a></h3>
 <p>Requires OTLP gRPC exporter due to <code>requests</code> library conflicts.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_PROTOCOL</span><span class="o">=</span>grpc
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span>http://localhost:4317
-<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span><span class="s2">&quot;openai,anthropic,hyperbolic&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_PROTOCOL</span><span class="o">=</span>grpc
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span>http://localhost:4317
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_ENABLED_INSTRUMENTORS</span><span class="o">=</span><span class="s2">&quot;openai,anthropic,hyperbolic&quot;</span>
 </code></pre></div>
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/hyperbolic_example.py">Hyperbolic example</a>.</p>
 <h3 id="google-genai-new-sdk">Google GenAI (new SDK)<a class="headerlink" href="#google-genai-new-sdk" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>google<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>google<span class="o">]</span>
 </code></pre></div>
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_genai_example.py">Google GenAI example</a>.</p>
 <h3 id="litellm-multi-provider-proxy">LiteLLM (Multi-Provider Proxy)<a class="headerlink" href="#litellm-multi-provider-proxy" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openinference<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openinference<span class="o">]</span>
 </code></pre></div>
 <p>LiteLLM enables cost tracking across 100+ providers via a single proxy. Streaming latency
 is reported automatically for routes litellm sends through the OpenAI SDK; for
 routes it serves with its own HTTP client, enable the opt-in <code>litellm_latency</code>
 instrumentor (see <a href="../../getting-started/configuration/">Configuration</a>). See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/litellm/example.py">LiteLLM example</a>.</p>
 <h3 id="smolagents-huggingface-agents">Smolagents (HuggingFace Agents)<a class="headerlink" href="#smolagents-huggingface-agents" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openinference<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>pip<span class="w"> </span>install<span class="w"> </span>genai-otel-instrument<span class="o">[</span>openinference<span class="o">]</span>
 </code></pre></div>
 <p>See <a href="https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/smolagents/example.py">Smolagents example</a>.</p>
 <h2 id="captured-attributes">Captured Attributes<a class="headerlink" href="#captured-attributes" title="Permanent link">&para;</a></h2>

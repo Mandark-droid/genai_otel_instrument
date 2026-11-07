@@ -866,6 +866,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#how-a-model-name-finds-its-price" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a Model Name Finds Its Price
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#custom-model-pricing" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1531,6 +1542,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#how-a-model-name-finds-its-price" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a Model Name Finds Its Price
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#custom-model-pricing" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1724,7 +1746,7 @@ identical to a genuinely free call:</p>
 <p>If <code>unpriced</code> is large, the model is missing from <code>genai_otel/llm_pricing.json</code> —
 add it via <code>custom_pricing_json</code> or open an issue.</p>
 <h2 id="supported-providers">Supported Providers<a class="headerlink" href="#supported-providers" title="Permanent link">&para;</a></h2>
-<p>The pricing file carries <strong>1550+ chat models</strong>, covering roughly 83% of the
+<p>The pricing file carries <strong>1600+ chat models</strong>, covering roughly 83% of the
 priced catalogue on models.dev. Coverage is deliberately limited to first-party
 providers and the major clouds that resell under their own SKUs — gateway and
 router listings are excluded, because they re-price the same underlying model
@@ -1740,17 +1762,17 @@ and the recorded cost would then depend on which aggregator was indexed first.</
 <tbody>
 <tr>
 <td>OpenAI</td>
-<td>GPT-6 Astra/Luna/Sol/6.1 Sol, GPT-5.5 series, GPT-4o, GPT-4 Turbo, o1/o3, embeddings (50+)</td>
+<td>GPT-6 Astra/Luna/Sol, GPT-6.1 Sol/Terra, GPT Image 2.6/2.5/2/1.5/1 Mini, GPT-Live 1, gpt-realtime-2.1, gpt-transcribe, GPT-5.5 series, GPT-4o, GPT-4 Turbo, o1/o3, embeddings (50+)</td>
 <td>Per token (prompt/completion)</td>
 </tr>
 <tr>
 <td>Anthropic</td>
-<td>Claude Opus 5.5, Claude Sonnet 5.5, Claude Fable 5.1, Claude Opus 5, Claude Sonnet 5, Claude 3.5/3 series (20+)</td>
+<td>Claude Opus 5.5, Claude Sonnet 5.5, Claude Haiku 5.5, Claude Fable 5.1, Claude Opus 5, Claude Sonnet 5, Claude 3.5/3 series (20+)</td>
 <td>Per token + cache pricing</td>
 </tr>
 <tr>
 <td>Google AI</td>
-<td>Gemini 3.8 Flash, Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.5 Flash / Flash Lite, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (35+)</td>
+<td>Gemini 4 Argon, Nano Banana 2.1, Gemini 3.8 Flash / Flash TTS / Live, Gemini 3.5 Transcribe, Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.5 Flash / Flash Lite, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (35+)</td>
 <td>Per token</td>
 </tr>
 <tr>
@@ -1770,17 +1792,17 @@ and the recorded cost would then depend on which aggregator was indexed first.</
 </tr>
 <tr>
 <td>Mistral AI</td>
-<td>Large/Medium/Small, Mixtral, embeddings (20+)</td>
+<td>Large 4/Medium/Small, Mixtral, Voxtral 3 transcription and TTS, embeddings (25+)</td>
 <td>Per token</td>
 </tr>
 <tr>
 <td>Moonshot AI</td>
-<td>Kimi K3, Kimi K2.7 Code, K2.6, K2.5, Kimi Latest (20+)</td>
+<td>Kimi K3.1 Pro / Highspeed, Kimi K3, Kimi K2.7 Code, K2.6, K2.5, Kimi Latest (20+)</td>
 <td>Per token + cache pricing</td>
 </tr>
 <tr>
 <td>Alibaba / Qwen</td>
-<td>Qwen3.8-Max, Qwen3.8 Omni Flash, Qwen3.8 Flash, Qwen3.8 27B, Qwen3.7 Flash/Max, Qwen3.6 series (40+)</td>
+<td>Qwen3.8-Max Prime, Qwen3.8-Max, Qwen-Image 2.1 Pro, Qwen3.8 Omni Flash, Qwen3.8 Flash, Qwen3.8 27B, Qwen3.7 Flash/Max, Qwen3.6 series (40+)</td>
 <td>Per token</td>
 </tr>
 <tr>
@@ -1795,12 +1817,12 @@ and the recorded cost would then depend on which aggregator was indexed first.</
 </tr>
 <tr>
 <td>Zhipu / Z.AI</td>
-<td>GLM-5.3, GLM-5.3-FlashX, GLM-5.3-Flash, GLM-5.2, GLM-5.1, GLM-5 series</td>
+<td>GLM-5.3 Prime, GLM-5.3, GLM-5.3-FlashX, GLM-5.3-Flash, GLM-5.2, GLM-5.1, GLM-5 series</td>
 <td>Per token + cache pricing</td>
 </tr>
 <tr>
 <td>Meituan</td>
-<td>LongCat-2.0, LongCat Flash Chat</td>
+<td>LongCat-2.5, LongCat-2.0, LongCat Flash Chat</td>
 <td>Per token (cache free)</td>
 </tr>
 <tr>
@@ -1810,7 +1832,7 @@ and the recorded cost would then depend on which aggregator was indexed first.</
 </tr>
 <tr>
 <td>Nvidia</td>
-<td>Nemotron 3 Ultra, Nemotron 4/Nano/Super (15+)</td>
+<td>Nemotron 3.5 Super / Lightning, Nemotron 3 Ultra, Nemotron 4/Nano/Super (15+)</td>
 <td>Per token</td>
 </tr>
 <tr>
@@ -1860,18 +1882,18 @@ and the recorded cost would then depend on which aggregator was indexed first.</
 </tr>
 <tr>
 <td>Deepgram</td>
-<td>Nova-3/2, Aura, Whisper (20+)</td>
+<td>Nova-3/2, Aura-2/1, Whisper Large (20+)</td>
 <td>Per second/character</td>
 </tr>
 <tr>
 <td>AssemblyAI</td>
-<td>Universal-3, slam-1 (5+)</td>
+<td>Universal-3.6 Pro (streaming), Universal-3.5 Pro, Universal-Streaming, slam-1 (8+)</td>
 <td>Per second</td>
 </tr>
 <tr>
 <td>ElevenLabs</td>
-<td>Multilingual v2, Turbo v2 (8+)</td>
-<td>Per character</td>
+<td>v4 / v4 Turbo, v3 / v3 Conversational, Flash v2.5, Multilingual v2, Scribe v2, Realtime v1 (15+)</td>
+<td>Per character; STT and Realtime per second</td>
 </tr>
 <tr>
 <td>IBM Granite</td>
@@ -1880,8 +1902,8 @@ and the recorded cost would then depend on which aggregator was indexed first.</
 </tr>
 <tr>
 <td>DeepSeek</td>
-<td>V3, R1, VL (15+)</td>
-<td>Per token</td>
+<td>V4 Pro, V4.1 Flash, V3, R1, VL (15+)</td>
+<td>Per token (off-peak rate; peak hours bill 2x)</td>
 </tr>
 <tr>
 <td>Qwen/Alibaba</td>
@@ -1898,6 +1920,41 @@ and the recorded cost would then depend on which aggregator was indexed first.</
 <td>Solar Pro 4, Solar Pro 2, Solar Mini</td>
 <td>Per token</td>
 </tr>
+<tr>
+<td>Meta</td>
+<td>Muse Wonder 1.0, Muse Spark Open, Muse Spark 1.x, Muse Glimmer</td>
+<td>Per token + cache pricing</td>
+</tr>
+<tr>
+<td>MiniMax</td>
+<td>MiniMax M3.1 Flash, MiniMax M3 / Highspeed</td>
+<td>Per token</td>
+</tr>
+<tr>
+<td>Inception</td>
+<td>Mercury 3, Mercury 2.5, Mercury Voice, Mercury Decide (decisions)</td>
+<td>Per token + cache pricing</td>
+</tr>
+<tr>
+<td>Microsoft (Foundry)</td>
+<td>MAI-Image 2.6 / Flash, MAI-Voice 2.1 / Flash, MAI-Transcribe 2 / Streaming</td>
+<td>Per token, per character, per second</td>
+</tr>
+<tr>
+<td>Black Forest Labs</td>
+<td>FLUX 3 Image / Klein, FLUX.2 pro/flex/max/klein</td>
+<td>Per image by resolution; per megapixel</td>
+</tr>
+<tr>
+<td>Speechmatics</td>
+<td>Standard, Enhanced, Melia, Oak, Linden</td>
+<td>Per second</td>
+</tr>
+<tr>
+<td>Cartesia</td>
+<td>Sonic 3.6, Sonic 2, Ink 2</td>
+<td>Per character (credit plan rate); per second</td>
+</tr>
 </tbody>
 </table>
 <h2 id="special-pricing">Special Pricing<a class="headerlink" href="#special-pricing" title="Permanent link">&para;</a></h2>
@@ -1905,8 +1962,27 @@ and the recorded cost would then depend on which aggregator was indexed first.</
 <li><strong>Reasoning tokens</strong>: OpenAI o1/o3 series have separate pricing for reasoning tokens</li>
 <li><strong>Cache pricing</strong>: Anthropic prompt caching costs (read/write rates)</li>
 <li><strong>Batch pricing</strong>: Some providers offer discounted batch pricing</li>
+<li><strong>Tiered and scheduled prices</strong>: Claude Haiku 5.5 (above 100K prompt tokens), GPT-6.x (above 272K), DeepSeek (peak hours) and introductory prices (Gemini 4 Argon to 2026-11-30, Gemini 3.8 TTS to 2026-12-31) are stored at the base or current rate; each entry's <code>note</code> states the other rates</li>
 <li><strong>Hardware pricing</strong>: Replicate charges per second of GPU/CPU time</li>
 </ul>
+<h2 id="how-a-model-name-finds-its-price">How a Model Name Finds Its Price<a class="headerlink" href="#how-a-model-name-finds-its-price" title="Permanent link">&para;</a></h2>
+<p>A call's model name is matched to a key in the pricing file:</p>
+<ol>
+<li><strong>Exact match</strong>, ignoring case.</li>
+<li>Otherwise, <strong>a key found inside the name</strong>, on token boundaries (<code>-</code>, <code>.</code>, <code>/</code>, <code>:</code>, <code>_</code>), if
+   what follows the key still names the same model:</li>
+<li><strong>kept:</strong> a dated or numbered snapshot (<code>-20260928</code>, <code>-2024-08-06</code>, <code>-002</code>), a Bedrock
+     version (<code>-v1:0</code>), a Vertex tag (<code>@default</code>), <code>-latest</code>, <code>-preview</code>, <code>-instruct</code>, a
+     quantisation tag (<code>-fp8</code>), and other words that do not name a new model;</li>
+<li><strong>refused:</strong> a new version (<code>mistral-large</code> + <code>-4</code>, <code>kimi-k3</code> + <code>.1-pro</code>), a 4-digit
+     release tag (<code>mistral-small</code> + <code>-2603</code>), and, for chat, another modality (<code>-tts</code>, <code>-image</code>,
+     <code>-realtime</code>, <code>-embedding</code>).</li>
+<li>Among acceptable keys, the one that is the whole rest of the name wins
+   (<code>bedrock/us.anthropic.claude-opus-5-5</code> takes the regional key), then the longest.</li>
+</ol>
+<p>A name no key prices is reported as unpriced (<code>pricing_source</code>), or estimated from a parameter
+count in the name. It is never billed at another model's price. Use
+<code>CostCalculator().resolve_model_key(model, call_type)</code> to see which key prices a name.</p>
 <h2 id="custom-model-pricing">Custom Model Pricing<a class="headerlink" href="#custom-model-pricing" title="Permanent link">&para;</a></h2>
 <p>For models not in the pricing database:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Chat models</span>
