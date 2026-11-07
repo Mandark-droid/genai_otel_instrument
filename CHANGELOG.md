@@ -6,6 +6,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.6] - 2026-11-07
+
+OpenAI's speech endpoints are traced. In a voice application on OpenAI, the speech half of every
+turn had no span, no cost and no media.
+
+### Added
+
+- **`client.audio.transcriptions.create`, `client.audio.translations.create` and
+  `client.audio.speech.create`** are traced on `OpenAI`, `AsyncOpenAI` and `AzureOpenAI`
+  clients, including `with_raw_response`, `with_streaming_response` and streamed transcription
+  (`stream=True`). The spans are `openai.audio.transcriptions`, `openai.audio.translations` and
+  `openai.audio.speech`. They use the attribute names the Sarvam and ElevenLabs speech spans
+  already use: `gen_ai.request.voice_id`, `gen_ai.request.language_code`,
+  `gen_ai.response.transcript_length`, `gen_ai.usage.characters` and
+  `gen_ai.usage.audio_duration_seconds`. A translation also carries
+  `gen_ai.request.target_language_code=en`.
+- **Cost from what OpenAI bills.** `whisper-1` is billed by seconds of audio, taken from the
+  response, or from the WAV header for `text`/`srt`/`vtt` responses. `tts-1` and `tts-1-hd` are
+  billed by characters. The `gpt-4o-*-transcribe` models are billed by input and output tokens.
+  `gpt-4o-mini-tts` is billed by tokens and is priced only when `stream_format="sse"` reports
+  usage. When the billed quantity is not knowable, the span has no cost and
+  `gen_ai.usage.cost.unknown_reason` says why.
+- A speech span lasts until its audio has been read. Streamed speech records time to first
+  audio. Speech the caller stops reading early ends with `genai.stream.closed_early=true` and is
+  still billed for its characters.
+- With media capture on, the uploaded audio and the synthesised audio are recorded through the
+  media pipeline. With content capture on, the transcript and the input text are recorded. The
+  upload is read before the SDK sends it, and a file object is returned to where it was.
+- Split-rate audio prices: `per_1k_input_tokens` / `per_1k_output_tokens`, plus optional
+  per-modality rates. An entry that prices a side the usage does not report is refused, rather
+  than billing part of the call.
+
+### Fixed
+
+- **`gpt-4o-transcribe` and `gpt-4o-mini-transcribe` were priced at their input rate for every
+  token,** which left output tokens at a quarter of OpenAI's price. **`gpt-4o-mini-tts` was
+  priced at its audio-output rate for every token,** which put its text input at 20x OpenAI's
+  price. Each now has OpenAI's input and output rates, checked 2026-11-07. Added
+  `gpt-4o-transcribe-diarize`.
+
 ## [1.46.5] - 2026-11-07
 
 Decision spans understand audio. Decision models now take audio as input (is the caller

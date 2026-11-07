@@ -390,6 +390,40 @@ actually waits for on a voice turn.
 recorded. For voice workloads the audio is frequently personal data, so
 reference-only is the default rather than something to opt into.
 
+### OpenAI speech: transcriptions, translations and text-to-speech
+
+`client.audio.transcriptions.create`, `client.audio.translations.create` and
+`client.audio.speech.create` are traced on `OpenAI`, `AsyncOpenAI` and `AzureOpenAI` clients,
+including their `with_raw_response` and `with_streaming_response` variants and streamed
+transcription (`stream=True`). The spans are `openai.audio.transcriptions`,
+`openai.audio.translations` and `openai.audio.speech`, with the attributes in the table above.
+A translation also carries `gen_ai.request.target_language_code=en`: OpenAI translates only into
+English.
+
+Cost comes from what OpenAI bills:
+
+| Model | Billed by | Read from |
+|---|---|---|
+| `whisper-1` | seconds of audio | the response's `usage.seconds` or `duration`; for `text`/`srt`/`vtt` responses, the WAV header of the upload |
+| `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`, `gpt-4o-transcribe-diarize` | input and output tokens, at separate rates | the response's `usage` |
+| `tts-1`, `tts-1-hd` | characters of input | the request |
+| `gpt-4o-mini-tts` | input and output tokens, at separate rates | only `stream_format="sse"` responses report usage |
+
+When the billed quantity is not knowable (`gpt-4o-mini-tts` without `sse`, a `whisper-1` text
+response on non-WAV audio), the span has no cost and `gen_ai.usage.cost.unknown_reason` says why
+(`no_usage_reported`, or `unpriced_model` for an Azure deployment name with no price). A
+plausible wrong cost is worse than none.
+
+A speech span stays open until its audio has been read. Streamed speech records the time to the
+first audio chunk. Speech the caller stops reading early ends with
+`genai.stream.closed_early=true` and is still billed for its characters.
+
+With media capture on (`GENAI_OTEL_MEDIA_CAPTURE_MODE`), the uploaded audio and the synthesised
+audio are recorded as media parts, through the media pipeline's size cap, allow-list and
+redactor. With content capture on, the transcript and the input text are recorded. Both are off
+by default. The upload is read before the SDK sends it, and a file object is returned to where
+it was.
+
 ## Quick Example: OpenAI
 
 ```python

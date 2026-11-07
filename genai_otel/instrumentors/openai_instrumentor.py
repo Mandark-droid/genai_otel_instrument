@@ -24,6 +24,7 @@ from .decision import (
     openai_questions,
     provider_for_base_url,
 )
+from .openai_audio import wrap_audio_resources
 
 logger = logging.getLogger(__name__)
 
@@ -343,6 +344,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
         # The Decisions API (`POST /v1/decisions`): a DECISION span, not a chat one.
         wrap_decisions_resource(self, client, "openai.decisions")
+        # Speech: transcriptions, translations and text-to-speech.
+        wrap_audio_resources(self, client)
 
     def _instrument_async_client(self, client):
         """Instrument AsyncOpenAI client methods.
@@ -379,6 +382,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
             )(original_responses_create)
 
         wrap_decisions_resource(self, client, "openai.decisions")
+        wrap_audio_resources(self, client)
 
     async def _call_sampled_out(self, span, span_name, extract_attributes, func, args, kwargs):
         """Make an async call whose span the sampler dropped.

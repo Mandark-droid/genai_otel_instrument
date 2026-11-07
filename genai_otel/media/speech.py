@@ -140,3 +140,33 @@ def text_part(text: Any) -> Optional[ContentPart]:
     if not isinstance(text, str) or not text:
         return None
     return ContentPart(type="text", text=text)
+
+
+def wav_header_seconds(data: Optional[bytes], size: Optional[int] = None) -> Optional[float]:
+    """Duration of a WAV payload from its header, or None when it is not a readable WAV.
+
+    Reads only the header, so the first few kilobytes are enough. The ``data`` chunk's
+    declared length is used; a streamed WAV that declares 0 or 0xFFFFFFFF falls back
+    to the file's full ``size``. Anything else yields None: no duration, never a guess.
+    """
+    import struct
+
+    if not data or data[:4] != b"RIFF" or data[8:12] != b"WAVE":
+        return None
+    try:
+        pos, byte_rate = 12, None
+        while pos + 8 <= len(data):
+            chunk_id = data[pos : pos + 4]
+            (length,) = struct.unpack("<I", data[pos + 4 : pos + 8])
+            if chunk_id == b"fmt " and pos + 20 <= len(data):
+                (byte_rate,) = struct.unpack("<I", data[pos + 16 : pos + 20])
+            elif chunk_id == b"data":
+                if not byte_rate:
+                    return None
+                if length in (0, 0xFFFFFFFF) and size:
+                    length = max(size - (pos + 8), 0)
+                return length / float(byte_rate) if length else None
+            pos += 8 + length + (length & 1)
+    except struct.error:
+        return None
+    return None

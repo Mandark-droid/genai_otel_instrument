@@ -484,8 +484,43 @@ AUDIO_UNIT_CASES = [
     ("deepgram/nova-3", {"seconds": 60}, 0.0077, "per_second"),
     ("deepgram/aura-asteria-en", {"characters": 1000}, 0.015, "per_1k_chars"),
     ("assemblyai/best", {"seconds": 3600}, 0.21, "per_second"),
-    ("gpt-4o-transcribe", {"tokens": 1000}, 0.0025, "per_1k_tokens"),
+    # Split input/output token rates (OpenAI: $2.50/1M in, $10/1M out).
+    (
+        "gpt-4o-transcribe",
+        {"input_tokens": 1000, "output_tokens": 100},
+        0.0035,
+        "per_1k_input_tokens",
+    ),
+    (
+        "gpt-4o-mini-tts",
+        {"input_tokens": 100, "output_tokens": 1000},
+        0.01206,
+        "per_1k_output_tokens",
+    ),
 ]
+
+
+def test_split_rate_audio_entry_refuses_when_a_side_is_missing(calc):
+    """Pricing only the input of a transcription would read as the whole bill."""
+    assert calc.calculate_cost("gpt-4o-transcribe", {"input_tokens": 1000}, "audio") == 0.0
+    assert calc.calculate_cost("gpt-4o-transcribe", {"tokens": 1000}, "audio") == 0.0
+
+
+def test_split_rate_audio_entry_prices_modality_rates_with_side_fallback():
+    calc = CostCalculator()  # its own: this test adds an entry
+    calc.pricing_data["audio"]["test/split"] = {
+        "per_1k_input_tokens": 1.0,
+        "per_1k_input_audio_tokens": 3.0,
+        "per_1k_output_tokens": 2.0,
+    }
+    usage = {
+        "input_tokens": 3000,
+        "input_audio_tokens": 1000,
+        "input_text_tokens": 1000,
+        "output_tokens": 1000,
+    }
+    # audio 1k*3 + text 1k*1 (side rate) + 1k uncovered input *1 + output 1k*2
+    assert calc.calculate_cost("test/split", usage, "audio") == pytest.approx(3 + 1 + 1 + 2)
 
 
 @pytest.mark.parametrize("model,usage,expected,unit", AUDIO_UNIT_CASES)
@@ -1246,7 +1281,8 @@ NOVEMBER_2026_AUDIO = [
     ("gpt-realtime-translate", MINUTE, 0.034),
     ("gpt-realtime-2.1", MILLION_TOKENS, 32.0),
     ("gpt-realtime-2.1-mini", MILLION_TOKENS, 10.0),
-    ("gpt-4o-mini-tts", MILLION_TOKENS, 12.0),
+    # Split input/output rates since 1.46.6: 1M audio output tokens, the published $12.
+    ("gpt-4o-mini-tts", {"input_tokens": 0, "output_tokens": 1_000_000}, 12.0),
     ("gemini-3.8-flash-tts", MILLION_TOKENS, 9.0),
     ("gemini-3.8-flash-lite-tts", MILLION_TOKENS, 6.0),
     ("gemini-2.5-flash-preview-tts", MILLION_TOKENS, 10.0),

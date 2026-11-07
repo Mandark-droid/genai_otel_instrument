@@ -803,6 +803,74 @@ class CostCalculator:
         "per_1k_tokens": ("tokens", 1000),
     }
 
+    # Token-billed speech models price input and output tokens differently (OpenAI's
+    # gpt-4o-transcribe: $2.50/1M in, $10/1M out). One blended rate is wrong for every
+    # clip, so these entries name a rate per side, and optionally per modality.
+    AUDIO_SPLIT_UNITS = {
+        "per_1k_input_tokens": "input_tokens",
+        "per_1k_output_tokens": "output_tokens",
+        "per_1k_input_audio_tokens": "input_audio_tokens",
+        "per_1k_input_text_tokens": "input_text_tokens",
+        "per_1k_output_audio_tokens": "output_audio_tokens",
+        "per_1k_output_text_tokens": "output_text_tokens",
+    }
+
+    def _split_audio_cost(
+        self, model_key: str, pricing: Dict[str, Any], usage: Dict[str, Any]
+    ) -> float:
+        """Price a split-rate audio entry; refuse (0.0) when the usage lacks a priced side.
+
+        For each side the entry prices (input, output): per-modality rates apply to the
+        per-modality counts when both are present, with the side's own rate covering any
+        modality that has no rate of its own; otherwise the side's rate applies to the
+        side's total. A side the entry prices but the usage does not report makes the
+        whole call unpriced, since half a bill would read as the bill.
+        """
+        total = 0.0
+        for side in ("input", "output"):
+            side_rate = pricing.get(f"per_1k_{side}_tokens")
+            modal_rates = {
+                m: pricing[f"per_1k_{side}_{m}_tokens"]
+                for m in ("audio", "text")
+                if f"per_1k_{side}_{m}_tokens" in pricing
+            }
+            if side_rate is None and not modal_rates:
+                continue
+            modal_counts = {
+                m: usage[f"{side}_{m}_tokens"]
+                for m in ("audio", "text")
+                if isinstance(usage.get(f"{side}_{m}_tokens"), (int, float))
+            }
+            side_total = usage.get(f"{side}_tokens")
+            if modal_rates and modal_counts:
+                for m, count in modal_counts.items():
+                    rate = modal_rates.get(m, side_rate)
+                    if rate is None:
+                        return self._refuse_split(model_key, side, usage)
+                    total += count / 1000 * rate
+                # Tokens of the side not covered by a modality count (a provider that
+                # reports only some of them) are priced at the side's rate.
+                if isinstance(side_total, (int, float)) and side_rate is not None:
+                    rest = side_total - sum(modal_counts.values())
+                    if rest > 0:
+                        total += rest / 1000 * side_rate
+            elif side_rate is not None and isinstance(side_total, (int, float)):
+                total += side_total / 1000 * side_rate
+            else:
+                return self._refuse_split(model_key, side, usage)
+        return total
+
+    @staticmethod
+    def _refuse_split(model_key: str, side: str, usage: Dict[str, Any]) -> float:
+        logger.warning(
+            "Audio model %s prices %s tokens but usage supplied %s; refusing to price "
+            "rather than bill part of the call.",
+            model_key,
+            side,
+            sorted(usage) or "nothing",
+        )
+        return 0.0
+
     def _calculate_audio_cost(self, model: str, usage: Dict[str, int]) -> float:
         """Calculate cost for audio models.
 
@@ -824,6 +892,9 @@ class CostCalculator:
             return 0.0
 
         pricing = self.pricing_data["audio"][model_key]
+
+        if isinstance(pricing, dict) and any(k in pricing for k in self.AUDIO_SPLIT_UNITS):
+            return self._split_audio_cost(model_key, pricing, usage)
 
         if isinstance(pricing, dict):
             for unit, (usage_key, divisor) in self.AUDIO_UNITS.items():

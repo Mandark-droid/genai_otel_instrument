@@ -790,14 +790,24 @@
       "per_1k_tokens": 0.00015
     },
     "gpt-4o-mini-transcribe": {
-      "per_1k_tokens": 0.00125
+      "per_1k_input_tokens": 0.00125,
+      "per_1k_output_tokens": 0.005,
+      "note": "OpenAI gpt-4o-mini-transcribe - input $1.25/1M, output $5.00/1M (~$0.003/min). Was one rate, the input rate, applied to every token. Source: developers.openai.com/api/docs/pricing"
     },
     "gpt-4o-mini-tts": {
-      "per_1k_tokens": 0.012,
-      "note": "OpenAI gpt-4o-mini-tts - audio output $12/1M (stored), text input $0.60/1M. Was 0.0025 per 1K. Source: developers.openai.com/api/docs/pricing"
+      "per_1k_input_tokens": 0.0006,
+      "per_1k_output_tokens": 0.012,
+      "note": "OpenAI gpt-4o-mini-tts - text input $0.60/1M, audio output $12/1M. Was one rate, the output rate, applied to every token. Source: developers.openai.com/api/docs/pricing"
     },
     "gpt-4o-transcribe": {
-      "per_1k_tokens": 0.0025
+      "per_1k_input_tokens": 0.0025,
+      "per_1k_output_tokens": 0.01,
+      "note": "OpenAI gpt-4o-transcribe - input $2.50/1M, output $10.00/1M (~$0.006/min). Was one rate, the input rate, applied to every token. Source: developers.openai.com/api/docs/pricing"
+    },
+    "gpt-4o-transcribe-diarize": {
+      "per_1k_input_tokens": 0.0025,
+      "per_1k_output_tokens": 0.01,
+      "note": "OpenAI gpt-4o-transcribe-diarize - input $2.50/1M, output $10.00/1M (~$0.006/min). Source: developers.openai.com/api/docs/pricing"
     },
     "whisper-1": {
       "per_second": 0.0001
@@ -10475,6 +10485,13 @@
     "gpt-audio-1.5": "2026-11-06",
     "gpt-audio-mini": "2026-11-06",
     "gpt-transcribe": "2026-11-06",
+    "gpt-4o-transcribe": "2026-11-07",
+    "gpt-4o-transcribe-diarize": "2026-11-07",
+    "gpt-4o-mini-transcribe": "2026-11-07",
+    "gpt-4o-mini-tts": "2026-11-07",
+    "tts-1": "2026-11-07",
+    "tts-1-hd": "2026-11-07",
+    "whisper-1": "2026-11-07",
     "gpt-live-transcribe": "2026-11-06",
     "gpt-realtime-whisper": "2026-11-06",
     "gpt-realtime-translate": "2026-11-06",
@@ -10522,7 +10539,6 @@
     "gemini/gemini-2.5-flash-preview-tts": "2026-11-06",
     "gemini-2.5-pro-preview-tts": "2026-11-06",
     "gemini/gemini-2.5-pro-preview-tts": "2026-11-06",
-    "gpt-4o-mini-tts": "2026-11-06",
     "speechmatics/standard": "2026-11-06",
     "deepgram/whisper": "2026-11-06",
     "deepgram/whisper-large": "2026-11-06"
