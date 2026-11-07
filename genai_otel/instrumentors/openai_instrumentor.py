@@ -202,6 +202,13 @@ def _with_granite_decisions(owner: BaseInstrumentor, client: Any, original: Any,
 class OpenAIInstrumentor(BaseInstrumentor):
     """Instrumentor for OpenAI SDK"""
 
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTES = frozenset(
+        {
+            "embedding.text",
+        }
+    )
+
     MEDIA_PROVIDER = "openai"
 
     def __init__(self):

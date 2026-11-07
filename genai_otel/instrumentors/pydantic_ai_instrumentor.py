@@ -286,6 +286,16 @@ class _TracedAgentContext(AbstractAsyncContextManager):
 class PydanticAIInstrumentor(BaseInstrumentor):
     """Instrumentor for Pydantic AI agent framework"""
 
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTES = frozenset(
+        {
+            "pydantic_ai.result.data",
+            "pydantic_ai.result.last_message",
+            "pydantic_ai.user_prompt",
+            "pydantic_ai.system_prompts",
+        }
+    )
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()
@@ -527,7 +537,7 @@ class PydanticAIInstrumentor(BaseInstrumentor):
         try:
             extracted = self._extract_agent_attributes(instance, args, kwargs)
             extracted = self._with_provider_aliases(extracted)
-            extracted = strip_content_attributes(extracted, self.config)
+            extracted = strip_content_attributes(extracted, self.config, self)
             for key, value in extracted.items():
                 attrs[key] = value if isinstance(value, (str, int, float, bool)) else str(value)
         except Exception as e:  # noqa: BLE001
@@ -560,10 +570,10 @@ class PydanticAIInstrumentor(BaseInstrumentor):
     def _cap_content(self, text: Any, default: int = 200) -> str:
         """Cap captured content per ``config.content_max_length``.
 
-        Content capture is a required audit feature, so content keeps flowing;
-        this only bounds its size. ``content_max_length == 0`` (or missing) means
-        unlimited. When no usable config is present (unit tests) the historical
-        default cap is used.
+        Only bounds the size. Whether the text reaches a span at all is decided by
+        the content-capture setting (``CONTENT_ATTRIBUTES``).
+        ``content_max_length == 0`` (or missing) means unlimited. When no usable
+        config is present (unit tests) the historical default cap is used.
         """
         s = text if isinstance(text, str) else str(text)
         cfg = getattr(self, "config", None)

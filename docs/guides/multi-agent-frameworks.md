@@ -205,7 +205,37 @@ Google Agent Development Kit instrumentation.
 pip install genai-otel-instrument[google-adk]
 ```
 
-Instruments `Runner.run_async()` and `InMemoryRunner.run_debug()`. Captures agent name, model, tools, sub-agents, and session info.
+Instruments `Runner.run_async()` and `InMemoryRunner.run_debug()` with one span per run
+(`google_adk.runner.run` / `google_adk.runner.run_debug`). ADK traces itself through the global
+tracer provider, so its own spans (ADK 2.x: `invoke_workflow`, `invoke_agent`,
+`generate_content`, `execute_tool`) sit under the run span, in one trace per run, including
+handoffs between agents.
+
+The run span carries:
+
+- `session.id` and `gen_ai.conversation.id` (the ADK session), the app name, tools and
+  sub-agents;
+- `gen_ai.agent.name`: the agent the run started at. On a later turn of a conversation that was
+  handed off, ADK starts at the agent that answered last, not at the root, which is kept as
+  `google_adk.root_agent.name`;
+- `google_adk.final_agent.name` (the agent that answered), `google_adk.agents` (in order of
+  first appearance), `google_adk.transfers` (`from>to`), `google_adk.transfer_count`,
+  `google_adk.invocation_id` and `google_adk.event_count`;
+- with content capture on, `google_adk.input_message` and `google_adk.output` (the final
+  answer).
+
+It carries no token counts: ADK's model-call spans and the model instrumentors (Gemini, LiteLLM)
+already do.
+
+A caller may stop iterating early (for example, `break` on `event.is_final_response()`). The run
+span then ends with `genai.stream.closed_early=true`, and the next turn starts a trace of its own.
+
+**Content.** With content capture off (the default), the run span carries no message text, and
+`ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS` is set to `false` unless your application set it. That
+covers ADK's legacy span schema (`ADK_TELEMETRY_SCHEMA_VERSION_OPT_IN=1`), whose `call_llm`
+spans otherwise record the full model request and response. ADK's default schema records message
+content only under `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT`, which this library's
+content setting also follows.
 
 See [Google ADK example](https://github.com/Mandark-droid/genai_otel_instrument/tree/main/examples/google_adk_example.py).
 

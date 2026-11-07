@@ -29,6 +29,13 @@ def _cap_content(config, text):
 class OpenRouterInstrumentor(BaseInstrumentor):
     """Instrumentor for OpenRouter API (OpenAI-compatible interface)"""
 
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTES = frozenset(
+        {
+            "embedding.text",
+        }
+    )
+
     # Domain used both to detect OpenRouter clients and to claim them so the
     # generic OpenAI instrumentor does not wrap the same client a second time.
     _CLAIM_DOMAIN = "openrouter.ai"

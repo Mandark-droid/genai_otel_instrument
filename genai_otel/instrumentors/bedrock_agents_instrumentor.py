@@ -24,6 +24,17 @@ logger = logging.getLogger(__name__)
 class BedrockAgentsInstrumentor(BaseInstrumentor):
     """Instrumentor for AWS Bedrock Agents"""
 
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTES = frozenset(
+        {
+            "bedrock.agent.input_text",
+            "bedrock.agent.prompt_attributes",
+            "bedrock.retrieval.query",
+            "bedrock.rag.input_text",
+            "bedrock.rag.output_text",
+        }
+    )
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()

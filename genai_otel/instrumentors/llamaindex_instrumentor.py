@@ -16,13 +16,20 @@ logger = logging.getLogger(__name__)
 class LlamaIndexInstrumentor(BaseInstrumentor):
     """Instrumentor for LlamaIndex"""
 
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTES = frozenset(
+        {
+            "llamaindex.query",
+        }
+    )
+
     def _cap_content(self, text: Any, default: int = 200) -> str:
         """Cap captured content per ``config.content_max_length``.
 
-        Content capture is a required audit feature, so content keeps flowing;
-        this only bounds its size. ``content_max_length == 0`` (or missing) means
-        unlimited. When no usable config is present (unit tests) the historical
-        default cap is used.
+        Only bounds the size. Whether the text reaches a span at all is decided by
+        the content-capture setting (``CONTENT_ATTRIBUTES``).
+        ``content_max_length == 0`` (or missing) means unlimited. When no usable
+        config is present (unit tests) the historical default cap is used.
         """
         s = text if isinstance(text, str) else str(text)
         cfg = getattr(self, "config", None)
@@ -54,7 +61,9 @@ class LlamaIndexInstrumentor(BaseInstrumentor):
                     # query: contain any failure here and still run the query.
                     try:
                         query_text = args[0] if args else kwargs.get("query_str", "")
-                        span.set_attribute("llamaindex.query", self._cap_content(query_text))
+                        self._set_content_attribute(
+                            span, "llamaindex.query", self._cap_content(query_text)
+                        )
                     except Exception as e:
                         logger.debug("Failed to set llamaindex query attribute: %s", e)
                     result = original_query(instance, *args, **kwargs)

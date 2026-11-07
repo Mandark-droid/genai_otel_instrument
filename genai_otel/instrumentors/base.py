@@ -51,6 +51,7 @@ from ..exceptions import PolicyViolationError
 from ..semconv import SemanticConvention as SC
 from ..semconv import genai_semconv_modes, genai_tier_opted_in
 from ..server_metrics import get_server_metrics
+from ._stream_context import drive_async_in_context, drive_in_context
 
 
 def _unwrap_api_response(result: Any) -> Any:
@@ -139,24 +140,53 @@ def _get_default_cost_calculator() -> "CostCalculator":
 # (gen_ai.response in Bedrock, Groq, Mistral, SambaNova and Azure OpenAI; the Responses
 # API's and Bedrock Converse's instructions). The guard sits where the base wrapper writes
 # attributes, so a new instrumentor cannot forget it.
-_CONTENT_KEYS = frozenset({"gen_ai.response", "gen_ai.request.instructions", "gen_ai.prompt"})
+_CONTENT_KEYS = frozenset(
+    {
+        "gen_ai.response",
+        "gen_ai.request.instructions",
+        "gen_ai.prompt",
+        # OpenInference's input/output payloads.
+        "input.value",
+        "output.value",
+    }
+)
 _CONTENT_PREFIXES = ("gen_ai.prompt.", "gen_ai.completion.")
 
 
-def strip_content_attributes(
-    attrs: Dict[str, Any], config: Optional["OTelConfig"]
-) -> Dict[str, Any]:
-    """Drop prompt / completion text from ``attrs`` unless content capture is on.
+def is_content_attribute(key: str, owner: Any = None) -> bool:
+    """Whether attribute ``key`` carries prompt, input or output TEXT.
 
-    Without a config (direct use, unit tests) attributes pass unchanged, as before.
+    The global keys above, plus whatever ``owner`` (an instrumentor or its class)
+    declares in ``CONTENT_ATTRIBUTES`` / ``CONTENT_ATTRIBUTE_PREFIXES`` /
+    ``CONTENT_ATTRIBUTE_PATTERNS``, less its ``NON_CONTENT_ATTRIBUTES``: structural
+    keys (counts, key names, types) that happen to share a content prefix.
+    """
+    if key in _CONTENT_KEYS or key.startswith(_CONTENT_PREFIXES):
+        return True
+    if owner is None:
+        return False
+    if key in getattr(owner, "NON_CONTENT_ATTRIBUTES", ()):
+        return False
+    if key in getattr(owner, "CONTENT_ATTRIBUTES", ()):
+        return True
+    prefixes = tuple(getattr(owner, "CONTENT_ATTRIBUTE_PREFIXES", ()))
+    if prefixes and key.startswith(prefixes):
+        return True
+    return any(p.search(key) for p in getattr(owner, "CONTENT_ATTRIBUTE_PATTERNS", ()))
+
+
+def strip_content_attributes(
+    attrs: Dict[str, Any], config: Optional["OTelConfig"], owner: Any = None
+) -> Dict[str, Any]:
+    """Drop prompt / input / output text from ``attrs`` unless content capture is on.
+
+    ``owner`` is the instrumentor writing the attributes; its declared content keys
+    are dropped too (see :func:`is_content_attribute`). Without a config (direct
+    use, unit tests) attributes pass unchanged, as before.
     """
     if not config or getattr(config, "enable_content_capture", False):
         return attrs
-    return {
-        k: v
-        for k, v in attrs.items()
-        if k not in _CONTENT_KEYS and not k.startswith(_CONTENT_PREFIXES)
-    }
+    return {k: v for k, v in attrs.items() if not is_content_attribute(k, owner)}
 
 
 def content_capture_on(config: Optional["OTelConfig"]) -> bool:
@@ -1320,6 +1350,32 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
     and handling common instrumentation patterns.
     """
 
+    #: Attribute keys this instrumentor writes that carry prompt, input or output
+    #: TEXT. With content capture off they never reach a span: the base wrapper
+    #: strips them from start and response attributes, and attributes set later go
+    #: through :meth:`_set_content_attribute`. A test fails when an instrumentor
+    #: writes captured text under a key that is not declared here.
+    CONTENT_ATTRIBUTES: frozenset = frozenset()
+    #: Key prefixes whose every key is content (``crewai.inputs.<name>``).
+    CONTENT_ATTRIBUTE_PREFIXES: Tuple[str, ...] = ()
+    #: Compiled patterns for content keys with a variable middle part.
+    CONTENT_ATTRIBUTE_PATTERNS: Tuple[Any, ...] = ()
+    #: Structural keys (counts, key names, types) under a content prefix.
+    NON_CONTENT_ATTRIBUTES: frozenset = frozenset()
+
+    def _set_content_attribute(self, span, key: str, value: Any) -> None:
+        """Set a text attribute only when content capture is on, capped to its limit."""
+        if not content_capture_on(self.config):
+            return
+        try:
+            text = value if isinstance(value, str) else str(value)
+            limit = getattr(self.config, "content_max_length", 0) if self.config else 0
+            if isinstance(limit, int) and limit > 0:
+                text = text[:limit]
+            span.set_attribute(key, text)
+        except Exception as e:  # noqa: BLE001 - capture must never fail the call
+            logger.debug("Failed to set content attribute %s: %s", key, e)
+
     # Multimodal: subclasses that support content-part detection set this to one of
     # "openai" | "anthropic" | "google" | "groq". Default None disables media capture.
     MEDIA_PROVIDER: Optional[str] = None
@@ -1968,6 +2024,76 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         except Exception as e:  # noqa: BLE001
             logger.warning("Failed to emit speech media for span: %s", e)
 
+    # ------------------------------------------------------------------
+    # Generator spans: attached only while the generator runs.
+    # ------------------------------------------------------------------
+    def _on_stream_item(self, span, item: Any) -> None:
+        """Called with each item a traced generator yields. Override to read them.
+
+        Must not change, hold back or consume the item. Exceptions are swallowed.
+        """
+
+    def _on_stream_end(self, span, outcome: str) -> None:
+        """Called once, before a traced generator's span ends.
+
+        ``outcome`` is ``"ok"`` (exhausted), ``"error"`` or ``"closed"`` (the consumer
+        stopped early). Override to set summary attributes. Exceptions are swallowed.
+        """
+
+    def _end_generator_span(
+        self, span, span_name: str, outcome: str, error: Optional[BaseException] = None
+    ) -> None:
+        """End a traced generator's span, once, whatever made it stop."""
+        try:
+            self._on_stream_end(span, outcome)
+        except Exception as e:  # noqa: BLE001 - an override must not break the stream
+            logger.debug("Stream end hook failed for '%s': %s", span_name, e)
+        try:
+            if outcome == "error" and error is not None:
+                if self.error_counter:
+                    self.error_counter.add(
+                        1, {"operation": span_name, "error_type": type(error).__name__}
+                    )
+                span.set_status(Status(StatusCode.ERROR, str(error)))
+                span.record_exception(error)
+            else:
+                if self.request_counter:
+                    self.request_counter.add(1, {"operation": span_name})
+                if outcome == "ok":
+                    span.set_status(Status(StatusCode.OK))
+                else:
+                    # Stopping early is the consumer's choice, not a failure.
+                    span.set_attribute("genai.stream.closed_early", True)
+        except Exception as e:  # noqa: BLE001 - metrics must never break the call
+            logger.debug("Failed to record stream end for '%s': %s", span_name, e)
+        finally:
+            span.end()
+            server_metrics = get_server_metrics()
+            if server_metrics:
+                server_metrics.decrement_requests_running()
+
+    def _traced_async_generator(self, agen, span, span_name: str, ctx):
+        """Drive ``agen`` with ``ctx`` attached only while it runs, then end ``span``.
+
+        See :mod:`genai_otel.instrumentors._stream_context` for why the span is not
+        simply left attached for the generator's lifetime.
+        """
+        return drive_async_in_context(
+            agen,
+            ctx,
+            on_item=lambda item: self._on_stream_item(span, item),
+            on_end=lambda outcome, error: self._end_generator_span(span, span_name, outcome, error),
+        )
+
+    def _traced_generator(self, gen, span, span_name: str, ctx):
+        """The synchronous counterpart of :meth:`_traced_async_generator`."""
+        return drive_in_context(
+            gen,
+            ctx,
+            on_item=lambda item: self._on_stream_item(span, item),
+            on_end=lambda outcome, error: self._end_generator_span(span, span_name, outcome, error),
+        )
+
     def create_span_wrapper(
         self, span_name: str, extract_attributes: Optional[Callable[[Any, Any, Any], Dict]] = None
     ) -> Callable:
@@ -1993,7 +2119,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                     try:
                         extracted_attrs = extract_attributes(instance, args, kwargs)
                         extracted_attrs = self._with_provider_aliases(extracted_attrs)
-                        extracted_attrs = strip_content_attributes(extracted_attrs, self.config)
+                        extracted_attrs = strip_content_attributes(
+                            extracted_attrs, self.config, self
+                        )
                         for key, value in extracted_attrs.items():
                             if isinstance(value, (str, int, float, bool)):
                                 initial_attributes[key] = value
@@ -2266,77 +2394,24 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                             otel_context.detach(token)
                             return value
 
-                    # Handle async generators (e.g. astream(), run_stream())
-                    # These return immediately but the actual work happens during
-                    # iteration, so keep the span open until iteration completes.
-                    if inspect.isasyncgen(result):
+                    # Generators (astream(), run_stream(), Runner.run_async()):
+                    # the work happens while the caller iterates, so the span
+                    # stays open until iteration ends. It is NOT left attached
+                    # in the caller's context meanwhile: a generator has no
+                    # context of its own and is resumed -- and finalised -- by
+                    # whoever drives it, so a detach held across a yield ran in
+                    # another context when the consumer broke out early, closed
+                    # it from another task or left it to the GC. That logged
+                    # "Failed to detach context" and left this span current for
+                    # good, so every later call nested under it. The span is
+                    # attached only while the generator itself runs.
+                    if inspect.isasyncgen(result) or inspect.isgenerator(result):
                         # Iterated later, possibly elsewhere: see the stream case.
                         self._abandon_agent_budget(span)
-
-                        async def _async_gen_traced():
-                            try:
-                                async for item in result:
-                                    yield item
-                                if self.request_counter:
-                                    self.request_counter.add(1, {"operation": span.name})
-                                span.set_status(Status(StatusCode.OK))
-                            except Exception as e:
-                                try:
-                                    if self.error_counter:
-                                        self.error_counter.add(
-                                            1,
-                                            {
-                                                "operation": span_name,
-                                                "error_type": type(e).__name__,
-                                            },
-                                        )
-                                except Exception:
-                                    pass
-                                span.set_status(Status(StatusCode.ERROR, str(e)))
-                                span.record_exception(e)
-                                raise
-                            finally:
-                                span.end()
-                                otel_context.detach(token)
-                                server_metrics = get_server_metrics()
-                                if server_metrics:
-                                    server_metrics.decrement_requests_running()
-
-                        return _async_gen_traced()
-
-                    # Handle sync generators (e.g. stream())
-                    if inspect.isgenerator(result):
-                        self._abandon_agent_budget(span)
-
-                        def _gen_traced():
-                            try:
-                                yield from result
-                                if self.request_counter:
-                                    self.request_counter.add(1, {"operation": span.name})
-                                span.set_status(Status(StatusCode.OK))
-                            except Exception as e:
-                                try:
-                                    if self.error_counter:
-                                        self.error_counter.add(
-                                            1,
-                                            {
-                                                "operation": span_name,
-                                                "error_type": type(e).__name__,
-                                            },
-                                        )
-                                except Exception:
-                                    pass
-                                span.set_status(Status(StatusCode.ERROR, str(e)))
-                                span.record_exception(e)
-                                raise
-                            finally:
-                                span.end()
-                                otel_context.detach(token)
-                                server_metrics = get_server_metrics()
-                                if server_metrics:
-                                    server_metrics.decrement_requests_running()
-
-                        return _gen_traced()
+                        otel_context.detach(token)
+                        if inspect.isasyncgen(result):
+                            return self._traced_async_generator(result, span, span_name, ctx)
+                        return self._traced_generator(result, span, span_name, ctx)
 
                     if self.request_counter:
                         self.request_counter.add(1, {"operation": span.name})
@@ -2823,7 +2898,7 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
                 response_attrs = self._extract_response_attributes(result)
                 if response_attrs and isinstance(response_attrs, dict):
                     response_attrs = self._with_provider_aliases(response_attrs)
-                    response_attrs = strip_content_attributes(response_attrs, self.config)
+                    response_attrs = strip_content_attributes(response_attrs, self.config, self)
                     for key, value in response_attrs.items():
                         if isinstance(value, (str, int, float, bool)):
                             span.set_attribute(key, value)

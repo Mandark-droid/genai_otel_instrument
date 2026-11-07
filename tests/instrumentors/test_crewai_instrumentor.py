@@ -778,7 +778,8 @@ class TestCrewAICallPaths(unittest.TestCase):
             provider = TracerProvider()
             provider.add_span_processor(SimpleSpanProcessor(self.exporter))
             self.instrumentor.tracer = provider.get_tracer("test")
-            self.instrumentor.instrument(OTelConfig())
+            # Content capture on: these tests read crewai.output.
+            self.instrumentor.instrument(OTelConfig(enable_content_capture=True))
 
     def tearDown(self):
         ThreadPoolExecutor.submit = self._saved_submit

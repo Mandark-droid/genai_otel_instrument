@@ -22,6 +22,16 @@ logger = logging.getLogger(__name__)
 class InstructorInstrumentor(BaseInstrumentor):
     """Instrumentor for Instructor framework"""
 
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTE_PREFIXES = ("instructor.response.",)
+    NON_CONTENT_ATTRIBUTES = frozenset(
+        {
+            "instructor.response.type",
+            "instructor.response.fields_count",
+            "instructor.response.fields",
+        }
+    )
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()
@@ -181,10 +191,10 @@ class InstructorInstrumentor(BaseInstrumentor):
     def _cap_content(self, text: Any, default: int = 200) -> str:
         """Cap captured content per ``config.content_max_length``.
 
-        Content capture is a required audit feature, so content keeps flowing;
-        this only bounds its size. ``content_max_length == 0`` (or missing) means
-        unlimited. When no usable config is present (unit tests) the historical
-        default cap is used.
+        Only bounds the size. Whether the text reaches a span at all is decided by
+        the content-capture setting (``CONTENT_ATTRIBUTES``).
+        ``content_max_length == 0`` (or missing) means unlimited. When no usable
+        config is present (unit tests) the historical default cap is used.
         """
         s = text if isinstance(text, str) else str(text)
         cfg = getattr(self, "config", None)

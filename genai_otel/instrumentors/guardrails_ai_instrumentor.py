@@ -22,6 +22,14 @@ logger = logging.getLogger(__name__)
 class GuardrailsAIInstrumentor(BaseInstrumentor):
     """Instrumentor for Guardrails AI framework"""
 
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTES = frozenset(
+        {
+            "guardrails.llm_output_preview",
+            "guardrails.validated_output_preview",
+        }
+    )
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()
@@ -181,10 +189,10 @@ class GuardrailsAIInstrumentor(BaseInstrumentor):
     def _cap_content(self, text: Any, default: int = 200) -> str:
         """Cap captured content per ``config.content_max_length``.
 
-        Content capture is a required audit feature, so content keeps flowing;
-        this only bounds its size. ``content_max_length == 0`` (or missing) means
-        unlimited. When no usable config is present (unit tests) the historical
-        default cap is used.
+        Only bounds the size. Whether the text reaches a span at all is decided by
+        the content-capture setting (``CONTENT_ATTRIBUTES``).
+        ``content_max_length == 0`` (or missing) means unlimited. When no usable
+        config is present (unit tests) the historical default cap is used.
         """
         s = text if isinstance(text, str) else str(text)
         cfg = getattr(self, "config", None)

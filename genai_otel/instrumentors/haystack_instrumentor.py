@@ -12,6 +12,7 @@ Requirements:
 
 import json
 import logging
+import re
 from typing import Any, Dict, Optional
 
 from ..config import OTelConfig
@@ -22,6 +23,18 @@ logger = logging.getLogger(__name__)
 
 class HaystackInstrumentor(BaseInstrumentor):
     """Instrumentor for Haystack NLP framework"""
+
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTES = frozenset(
+        {
+            "haystack.pipeline.input.query",
+            "haystack.generator.prompt",
+            "haystack.chat_generator.last_message",
+            "haystack.retriever.query",
+            "haystack.retriever.filters",
+        }
+    )
+    CONTENT_ATTRIBUTE_PATTERNS = (re.compile(r"^haystack\.output\..+\.first_reply$"),)
 
     def __init__(self):
         """Initialize the instrumentor."""
@@ -124,10 +137,10 @@ class HaystackInstrumentor(BaseInstrumentor):
     def _cap_content(self, text: Any, default: int = 200) -> str:
         """Cap captured content per ``config.content_max_length``.
 
-        Content capture is a required audit feature, so content keeps flowing;
-        this only bounds its size. ``content_max_length == 0`` (or missing) means
-        unlimited. When no config is present (e.g. unit tests) the historical
-        default cap is used.
+        Only bounds the size. Whether the text reaches a span at all is decided by
+        the content-capture setting (``CONTENT_ATTRIBUTES``).
+        ``content_max_length == 0`` (or missing) means unlimited. When no config
+        is present (e.g. unit tests) the historical default cap is used.
 
         Args:
             text: The value to stringify and cap.

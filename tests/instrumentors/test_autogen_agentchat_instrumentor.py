@@ -133,7 +133,9 @@ class TestAgainstRealPackageLayout(unittest.TestCase):
         provider.add_span_processor(SimpleSpanProcessor(self.exporter))
         self.instrumentor = AutoGenAgentChatInstrumentor()
         self.instrumentor.tracer = provider.get_tracer("test")
-        self.instrumentor.instrument(OTelConfig())
+        # Content capture on: these tests read the task text. With it off (the
+        # default) the text is dropped; test_content_declarations covers that.
+        self.instrumentor.instrument(OTelConfig(enable_content_capture=True))
 
     def _spans(self, name):
         return [s for s in self.exporter.get_finished_spans() if s.name == name]

@@ -10,6 +10,7 @@ from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
 from ..config import OTelConfig
+from ._stream_context import drive_async_in_context, drive_in_context
 from .base import BaseInstrumentor, content_capture_on
 
 logger = logging.getLogger(__name__)
@@ -118,10 +119,13 @@ class XAIInstrumentor(BaseInstrumentor):
                 async def wrapped(*args, _original=original, **kwargs):
                     start = time.time()
                     span = instrumentor._start_span("xai.chat", model, "chat")
-                    token = otel_context.attach(trace.set_span_in_context(span))
+                    # Current only while the stream produces the next chunk: a
+                    # detach held across the yield ran in another context when
+                    # the caller stopped early (see _stream_context).
+                    ctx = trace.set_span_in_context(span)
                     result = None
                     try:
-                        async for item in _original(*args, **kwargs):
+                        async for item in drive_async_in_context(_original(*args, **kwargs), ctx):
                             if isinstance(item, tuple) and item:
                                 result = item[0]
                             yield item
@@ -132,17 +136,16 @@ class XAIInstrumentor(BaseInstrumentor):
                     finally:
                         if span.is_recording():
                             span.end()
-                        otel_context.detach(token)
 
             else:
 
                 def wrapped(*args, _original=original, **kwargs):
                     start = time.time()
                     span = instrumentor._start_span("xai.chat", model, "chat")
-                    token = otel_context.attach(trace.set_span_in_context(span))
+                    ctx = trace.set_span_in_context(span)
                     result = None
                     try:
-                        for item in _original(*args, **kwargs):
+                        for item in drive_in_context(_original(*args, **kwargs), ctx):
                             if isinstance(item, tuple) and item:
                                 result = item[0]
                             yield item
@@ -153,7 +156,6 @@ class XAIInstrumentor(BaseInstrumentor):
                     finally:
                         if span.is_recording():
                             span.end()
-                        otel_context.detach(token)
 
             wrapped._genai_otel_xai_wrapped = True
             try:

@@ -105,6 +105,23 @@ def _forget_inner_stream(note) -> None:
 class LangGraphInstrumentor(BaseInstrumentor):
     """Instrumentor for LangGraph stateful workflow framework"""
 
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTES = frozenset(
+        {
+            "langgraph.input",
+        }
+    )
+    CONTENT_ATTRIBUTE_PREFIXES = (
+        "langgraph.input.",
+        "langgraph.output.",
+    )
+    NON_CONTENT_ATTRIBUTES = frozenset(
+        {
+            "langgraph.input.keys",
+            "langgraph.output.keys",
+        }
+    )
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()
@@ -499,7 +516,7 @@ class LangGraphInstrumentor(BaseInstrumentor):
             try:
                 extracted = self._graph_attributes(instance, args, kwargs)
                 extracted = self._with_provider_aliases(extracted)
-                extracted = strip_content_attributes(extracted, self.config)
+                extracted = strip_content_attributes(extracted, self.config, self)
                 for key, value in extracted.items():
                     if isinstance(value, (str, int, float, bool)):
                         attributes[key] = value
@@ -565,10 +582,10 @@ class LangGraphInstrumentor(BaseInstrumentor):
     def _cap_content(self, text: Any, default: int = 200) -> str:
         """Cap captured content per ``config.content_max_length``.
 
-        Content capture is a required audit feature, so content keeps flowing;
-        this only bounds its size. ``content_max_length == 0`` (or missing) means
-        unlimited. When no config is present (unit tests) the historical default
-        cap is used.
+        Only bounds the size. Whether the text reaches a span at all is decided by
+        the content-capture setting (``CONTENT_ATTRIBUTES``).
+        ``content_max_length == 0`` (or missing) means unlimited. When no config
+        is present (unit tests) the historical default cap is used.
         """
         s = text if isinstance(text, str) else str(text)
         cfg = getattr(self, "config", None)

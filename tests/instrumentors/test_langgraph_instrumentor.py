@@ -528,7 +528,8 @@ def lg():
         with patch.dict("sys.modules", modules):
             instrumentor = LangGraphInstrumentor()
             instrumentor.tracer = tracer
-            instrumentor.instrument(OTelConfig())
+            # Content capture on: these tests read graph inputs and outputs.
+            instrumentor.instrument(OTelConfig(enable_content_capture=True))
             yield types.SimpleNamespace(
                 instrumentor=instrumentor,
                 tracer=tracer,

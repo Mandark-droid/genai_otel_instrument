@@ -36,6 +36,13 @@ def _cap_content(config, text):
 class CometAPIInstrumentor(BaseInstrumentor):
     """Instrumentor for CometAPI (OpenAI- and Anthropic-compatible interfaces)"""
 
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTES = frozenset(
+        {
+            "embedding.text",
+        }
+    )
+
     # Domain used both to detect CometAPI clients and to claim them so the
     # generic OpenAI/Anthropic instrumentors do not wrap the same client a
     # second time.

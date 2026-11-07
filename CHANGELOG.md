@@ -6,6 +6,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.4] - 2026-11-07
+
+Framework spans no longer leak into the caller's context, and no framework instrumentor puts
+prompt, input or output text on a span when content capture is off. Found while tracing a Google
+ADK multi-agent run end to end.
+
+### Changed
+
+- **Behaviour change: framework content follows the content-capture setting.** With content
+  capture off, which is the default, these attributes are no longer recorded. Before, they were
+  recorded regardless:
+  - `google_adk.input_message`, `google_adk.output`
+  - `autogen_agentchat.task`
+  - `autogen.message`, `autogen.conversation.last_message`, `autogen.conversation.summary`
+  - `bedrock.agent.input_text`, `bedrock.agent.prompt_attributes`, `bedrock.retrieval.query`,
+    `bedrock.rag.input_text`, `bedrock.rag.output_text`
+  - `dspy.predict.instructions`, `dspy.cot.reasoning`, `dspy.*.input.*`, `dspy.*.output.*`
+  - `guardrails.llm_output_preview`, `guardrails.validated_output_preview`
+  - `haystack.pipeline.input.query`, `haystack.generator.prompt`,
+    `haystack.chat_generator.last_message`, `haystack.retriever.query`,
+    `haystack.retriever.filters`, `haystack.output.*.first_reply`
+  - `crewai.inputs` and `crewai.inputs.*`, `crewai.output`, `crewai.output.json`,
+    `crewai.task.description`, `crewai.task.expected_output`, `crewai.agent.goal`,
+    `crewai.agent.backstory`
+  - `langgraph.input`, `langgraph.input.*`, `langgraph.output.*`
+  - `pydantic_ai.user_prompt`, `pydantic_ai.system_prompts`, `pydantic_ai.result.last_message`
+  - `instructor.response.<field>`, `llamaindex.query`, `sarvam.stt.prompt`, and the
+    OpenInference `input.value` / `output.value`
+
+  Counts, key names, types and identifiers stay. To record the text again, turn content capture
+  on (`GENAI_ENABLE_CONTENT_CAPTURE=true`, or `enable_content_capture=True`).
+- With content capture off, the Google ADK instrumentor sets
+  `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false` unless the application set it. This stops ADK's
+  legacy span schema from recording full model requests and responses.
+
+### Fixed
+
+- **A span wrapped around a generator stayed current after the caller stopped iterating.** This
+  affected `google_adk.runner.run`, `autogen_agentchat.agent.run_stream`,
+  `autogen_agentchat.team.run_stream`, `databricks.mlflow.predict_stream` and xAI streamed chat.
+  When the caller broke out early, closed the stream from another task or left it to the garbage
+  collector, OpenTelemetry logged "Failed to detach context". The ended span then stayed current,
+  so every later call, including the next turn of a conversation, nested under it in one trace.
+  The span is now attached only while the generator runs, and values and exceptions sent in are
+  forwarded. Stopping early ends the span with `genai.stream.closed_early=true` and is not an
+  error.
+- **The Google ADK run span named the root agent on every turn.** ADK starts a later turn at the
+  agent that answered last. `gen_ai.agent.name` is now the agent the run started at, and the root
+  is kept as `google_adk.root_agent.name`.
+
+### Added
+
+- Google ADK run outcome: `google_adk.final_agent.name`, `google_adk.agents`,
+  `google_adk.transfers` (`from>to`), `google_adk.transfer_count`, `google_adk.invocation_id`,
+  `google_adk.event_count` and, with content capture on, `google_adk.output`, the final answer.
+  The same attributes go on `run_debug()` spans.
+- `BaseInstrumentor.CONTENT_ATTRIBUTES`, `CONTENT_ATTRIBUTE_PREFIXES`,
+  `CONTENT_ATTRIBUTE_PATTERNS` and `NON_CONTENT_ATTRIBUTES`, for declaring an instrumentor's
+  content keys. Declared keys are stripped centrally, and `_set_content_attribute()` handles text
+  set after the call. A test fails when an instrumentor captures text under an undeclared key.
+
 ## [1.46.3] - 2026-11-06
 
 A model name is never billed at another model's price. Measured on 532 model names from

@@ -85,6 +85,13 @@ def _safe_kwarg(kwargs, key, default=None):
 class SarvamAIInstrumentor(BaseInstrumentor):
     """Instrumentor for Sarvam AI SDK (sarvamai package)."""
 
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTES = frozenset(
+        {
+            "sarvam.stt.prompt",
+        }
+    )
+
     def __init__(self):
         """Initialize the instrumentor."""
         super().__init__()
@@ -613,7 +620,9 @@ class SarvamAIInstrumentor(BaseInstrumentor):
                     # Capture STT translate-specific params
                     prompt = _safe_kwarg(kwargs, "prompt")
                     if prompt:
-                        span.set_attribute("sarvam.stt.prompt", str(prompt)[:200])
+                        instrumentor._set_content_attribute(
+                            span, "sarvam.stt.prompt", str(prompt)[:200]
+                        )
                     input_audio_codec = _safe_kwarg(kwargs, "input_audio_codec")
                     if input_audio_codec:
                         span.set_attribute("sarvam.stt.input_audio_codec", str(input_audio_codec))

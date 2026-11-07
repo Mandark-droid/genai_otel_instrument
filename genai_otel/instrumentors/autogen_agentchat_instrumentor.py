@@ -88,17 +88,19 @@ def _traced_when_started(
                     async for item in stream:
                         yield item
                 finally:
-                    # A caller that stops early closes this generator only. The base
-                    # wrapper does not close the generator it iterates, so AutoGen's
-                    # own one was left to the garbage collector: its cleanup (ending
-                    # AutoGen's span, marking a team as no longer running) ran later
-                    # in another task. Close innermost first, in this call, so each
-                    # context is detached where it was attached.
+                    # A caller that stops early closes this generator only. AutoGen's
+                    # own generator must be closed in this call too, or its cleanup
+                    # (ending AutoGen's span, marking a team as no longer running) runs
+                    # later in another task. The traced stream closes it first, under
+                    # the span's context, which is where AutoGen made its own span
+                    # current; closing it directly from here instead would restore
+                    # our span into the caller's context. Anything still open after
+                    # that (nested streams) is closed innermost last.
                     try:
+                        await stream.aclose()
+                    finally:
                         for inner in opened:
                             await inner.aclose()
-                    finally:
-                        await stream.aclose()
 
             return _iterate()
 
@@ -162,6 +164,13 @@ def _classes_implementing(base: Any, method: str) -> List[Any]:
 
 class AutoGenAgentChatInstrumentor(BaseInstrumentor):
     """Instrumentor for AutoGen AgentChat framework (v0.4+)"""
+
+    # Content keys: dropped with content capture off (BaseInstrumentor.CONTENT_ATTRIBUTES).
+    CONTENT_ATTRIBUTES = frozenset(
+        {
+            "autogen_agentchat.task",
+        }
+    )
 
     def __init__(self):
         """Initialize the instrumentor."""
@@ -303,10 +312,10 @@ class AutoGenAgentChatInstrumentor(BaseInstrumentor):
     def _cap_content(self, text: Any, default: int = 200) -> str:
         """Cap captured content per ``config.content_max_length``.
 
-        Content capture is a required audit feature, so content keeps flowing;
-        this only bounds its size. ``content_max_length == 0`` (or missing) means
-        unlimited. When no usable config is present (unit tests) the historical
-        default cap is used.
+        Only bounds the size. Whether the text reaches a span at all is decided by
+        the content-capture setting (``CONTENT_ATTRIBUTES``).
+        ``content_max_length == 0`` (or missing) means unlimited. When no usable
+        config is present (unit tests) the historical default cap is used.
         """
         s = text if isinstance(text, str) else str(text)
         cfg = getattr(self, "config", None)
