@@ -2632,6 +2632,125 @@
       "cacheReadPrice": 0.001,
       "cacheWritePrice": 0.0125
     },
+    "claude-fable-5-2": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.04,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.01,
+      "note": "Anthropic Claude Fable 5.2 (released 2026-11-09) - input $8/1M, output $40/1M, 5m cache write $10/1M, cache hit $0.20/1M (0.025x, not the usual 0.1x). Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "claude-fable-5.2": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.04,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.01,
+      "note": "Anthropic Claude Fable 5.2 (released 2026-11-09) - input $8/1M, output $40/1M, 5m cache write $10/1M, cache hit $0.20/1M (0.025x, not the usual 0.1x). Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "claude-fable-5-2@default": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.04,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.01,
+      "note": "Anthropic Claude Fable 5.2 (released 2026-11-09) - input $8/1M, output $40/1M, 5m cache write $10/1M, cache hit $0.20/1M (0.025x, not the usual 0.1x). Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "anthropic.claude-fable-5-2": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.04,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.01,
+      "note": "Anthropic Claude Fable 5.2 (released 2026-11-09) - input $8/1M, output $40/1M, 5m cache write $10/1M, cache hit $0.20/1M (0.025x, not the usual 0.1x). Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "anthropic-claude-fable-5-2": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.04,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.01,
+      "note": "Anthropic Claude Fable 5.2 (released 2026-11-09) - input $8/1M, output $40/1M, 5m cache write $10/1M, cache hit $0.20/1M (0.025x, not the usual 0.1x). Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "global.anthropic.claude-fable-5-2": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.04,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.01,
+      "note": "Anthropic Claude Fable 5.2 (released 2026-11-09) - input $8/1M, output $40/1M, 5m cache write $10/1M, cache hit $0.20/1M (0.025x, not the usual 0.1x). Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "global-anthropic-claude-fable-5-2": {
+      "promptPrice": 0.008,
+      "completionPrice": 0.04,
+      "cacheReadPrice": 0.0002,
+      "cacheWritePrice": 0.01,
+      "note": "Anthropic Claude Fable 5.2 (released 2026-11-09) - input $8/1M, output $40/1M, 5m cache write $10/1M, cache hit $0.20/1M (0.025x, not the usual 0.1x). Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "us.anthropic.claude-fable-5-2": {
+      "promptPrice": 0.0088,
+      "completionPrice": 0.044,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.011,
+      "note": "Anthropic Claude Fable 5.2 on a Bedrock/Vertex regional or multi-region endpoint - 10% premium over the global endpoint: input $8.80/1M, output $44/1M, 5m cache write $11/1M, cache hit $0.22/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "us-anthropic-claude-fable-5-2": {
+      "promptPrice": 0.0088,
+      "completionPrice": 0.044,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.011,
+      "note": "Anthropic Claude Fable 5.2 on a Bedrock/Vertex regional or multi-region endpoint - 10% premium over the global endpoint: input $8.80/1M, output $44/1M, 5m cache write $11/1M, cache hit $0.22/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "eu.anthropic.claude-fable-5-2": {
+      "promptPrice": 0.0088,
+      "completionPrice": 0.044,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.011,
+      "note": "Anthropic Claude Fable 5.2 on a Bedrock/Vertex regional or multi-region endpoint - 10% premium over the global endpoint: input $8.80/1M, output $44/1M, 5m cache write $11/1M, cache hit $0.22/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "eu-anthropic-claude-fable-5-2": {
+      "promptPrice": 0.0088,
+      "completionPrice": 0.044,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.011,
+      "note": "Anthropic Claude Fable 5.2 on a Bedrock/Vertex regional or multi-region endpoint - 10% premium over the global endpoint: input $8.80/1M, output $44/1M, 5m cache write $11/1M, cache hit $0.22/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "au.anthropic.claude-fable-5-2": {
+      "promptPrice": 0.0088,
+      "completionPrice": 0.044,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.011,
+      "note": "Anthropic Claude Fable 5.2 on a Bedrock/Vertex regional or multi-region endpoint - 10% premium over the global endpoint: input $8.80/1M, output $44/1M, 5m cache write $11/1M, cache hit $0.22/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "au-anthropic-claude-fable-5-2": {
+      "promptPrice": 0.0088,
+      "completionPrice": 0.044,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.011,
+      "note": "Anthropic Claude Fable 5.2 on a Bedrock/Vertex regional or multi-region endpoint - 10% premium over the global endpoint: input $8.80/1M, output $44/1M, 5m cache write $11/1M, cache hit $0.22/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "jp.anthropic.claude-fable-5-2": {
+      "promptPrice": 0.0088,
+      "completionPrice": 0.044,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.011,
+      "note": "Anthropic Claude Fable 5.2 on a Bedrock/Vertex regional or multi-region endpoint - 10% premium over the global endpoint: input $8.80/1M, output $44/1M, 5m cache write $11/1M, cache hit $0.22/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "jp-anthropic-claude-fable-5-2": {
+      "promptPrice": 0.0088,
+      "completionPrice": 0.044,
+      "cacheReadPrice": 0.00022,
+      "cacheWritePrice": 0.011,
+      "note": "Anthropic Claude Fable 5.2 on a Bedrock/Vertex regional or multi-region endpoint - 10% premium over the global endpoint: input $8.80/1M, output $44/1M, 5m cache write $11/1M, cache hit $0.22/1M. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "claude-fable-5-2-fast": {
+      "promptPrice": 0.016,
+      "completionPrice": 0.08,
+      "cacheReadPrice": 0.0004,
+      "cacheWritePrice": 0.02,
+      "note": "Anthropic Claude Fable 5.2 fast mode - input $16/1M, output $80/1M, cache read $0.40/1M, cache write $20/1M (2x standard; caching multipliers apply on top). Gateways expose it under a '-fast' id; on the Claude API the model id is unchanged and the speed is a request parameter, which a model-name lookup cannot see. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
+    "claude-fable-5.2-fast": {
+      "promptPrice": 0.016,
+      "completionPrice": 0.08,
+      "cacheReadPrice": 0.0004,
+      "cacheWritePrice": 0.02,
+      "note": "Anthropic Claude Fable 5.2 fast mode - input $16/1M, output $80/1M, cache read $0.40/1M, cache write $20/1M (2x standard; caching multipliers apply on top). Gateways expose it under a '-fast' id; on the Claude API the model id is unchanged and the speed is a request parameter, which a model-name lookup cannot see. Source: platform.claude.com/docs/en/about-claude/pricing"
+    },
     "claude-fable-5-1": {
       "promptPrice": 0.01,
       "completionPrice": 0.05,
@@ -10388,6 +10507,23 @@
     "grok-4-6": "2026-09-23",
     "grok-4.7": "2026-09-23",
     "grok-4-7": "2026-09-23",
+    "claude-fable-5-2": "2026-11-10",
+    "claude-fable-5.2": "2026-11-10",
+    "claude-fable-5-2@default": "2026-11-10",
+    "anthropic.claude-fable-5-2": "2026-11-10",
+    "anthropic-claude-fable-5-2": "2026-11-10",
+    "global.anthropic.claude-fable-5-2": "2026-11-10",
+    "global-anthropic-claude-fable-5-2": "2026-11-10",
+    "us.anthropic.claude-fable-5-2": "2026-11-10",
+    "us-anthropic-claude-fable-5-2": "2026-11-10",
+    "eu.anthropic.claude-fable-5-2": "2026-11-10",
+    "eu-anthropic-claude-fable-5-2": "2026-11-10",
+    "au.anthropic.claude-fable-5-2": "2026-11-10",
+    "au-anthropic-claude-fable-5-2": "2026-11-10",
+    "jp.anthropic.claude-fable-5-2": "2026-11-10",
+    "jp-anthropic-claude-fable-5-2": "2026-11-10",
+    "claude-fable-5-2-fast": "2026-11-10",
+    "claude-fable-5.2-fast": "2026-11-10",
     "claude-opus-5-5": "2026-09-23",
     "claude-opus-5.5": "2026-09-23",
     "groq/whisper-large-v3": "2026-08-13",

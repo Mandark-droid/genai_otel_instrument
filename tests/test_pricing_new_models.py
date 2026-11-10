@@ -73,6 +73,16 @@ NEW_CHAT_MODELS = [
     ("eu.anthropic.claude-fable-5-1", 0.011, 0.055),
     ("au-anthropic-claude-fable-5-1", 0.011, 0.055),
     ("jp-anthropic-claude-fable-5-1", 0.011, 0.055),
+    # --- Fable 5.2 (released 2026-11-09): $8 / $40, cheaper than 5.1. A "5-2" name must
+    # never fall back to the 5.1 price (the lookup rule refuses a new version).
+    ("claude-fable-5-2", 0.008, 0.04),
+    ("claude-fable-5.2", 0.008, 0.04),
+    ("claude-fable-5-2@default", 0.008, 0.04),
+    ("anthropic.claude-fable-5-2", 0.008, 0.04),
+    ("global.anthropic.claude-fable-5-2", 0.008, 0.04),
+    ("us.anthropic.claude-fable-5-2", 0.0088, 0.044),
+    ("eu-anthropic-claude-fable-5-2", 0.0088, 0.044),
+    ("claude-fable-5-2-fast", 0.016, 0.08),
     ("gemini-3.8-flash", 0.00075, 0.00375),
     ("gemini-3-8-flash", 0.00075, 0.00375),
     ("gemini/gemini-3.8-flash", 0.00075, 0.00375),

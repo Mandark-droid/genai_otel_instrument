@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Claude Fable 5.2 pricing** (released 2026-11-09): input $8, output $40, 5-minute cache write
+  $10 and cache hit $0.20 per million tokens (0.025x input, as on Fable 5.1). Regional and
+  multi-region Bedrock and Vertex endpoints are priced at the 10% premium. A `-fast` id prices
+  fast mode at 2x. Until now a `claude-fable-5-2` name was unpriced, because the lookup rule
+  never prices a new version at an older one's price. Source: Anthropic's pricing page,
+  checked 2026-11-10.
+
 ## [1.46.6] - 2026-11-07
 
 Voice-agent turn telemetry (#48): who spoke when, for Pipecat, LiveKit Agents and applications
