@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.7] - 2026-11-10
+
+Pricing-only patch: Claude Fable 5.2.
+
 ### Added
 
 - **Claude Fable 5.2 pricing** (released 2026-11-09): input $8, output $40, 5-minute cache write
