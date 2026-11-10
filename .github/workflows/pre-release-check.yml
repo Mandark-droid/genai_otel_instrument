@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, windows-latest, macos-latest]
         # Keep release validation aligned with the regular test matrix for all
         # currently supported versions and the 3.14 support candidate.
         python-version: ["3.9", "3.12", "3.13", "3.14"]
@@ -118,7 +118,7 @@ jobs:
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+      if: matrix.os == 'ubuntu-24.04' && matrix.python-version == '3.12'
       with:
         name: dist-packages
         path: dist/
