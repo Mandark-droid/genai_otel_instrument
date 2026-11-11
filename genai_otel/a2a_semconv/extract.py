@@ -264,6 +264,8 @@ class Observation:
         self.task_ids: Set[str] = set()
         self.context_ids: Set[str] = set()
         self.states: Set[str] = set()
+        # The latest state seen, in event order: a stream's final state.
+        self.last_state: Optional[str] = None
         self.artifact_ids: Set[str] = set()
         self.message_id: Optional[str] = None
         self.reference_task_ids: List[str] = []
@@ -311,6 +313,7 @@ class Observation:
         name = state_name(getattr(status, "state", None))
         if name:
             self.states.add(name)
+            self.last_state = name
         if _has(status, "message"):
             self._add_parts(getattr(status.message, "parts", []) or [])
 
@@ -390,11 +393,15 @@ def build_attributes(
         if value not in (None, ""):
             always[key] = value
 
-    # A value seen as several distinct ones across the operation is left off: a task
-    # id or state that changes mid-stream would mislabel the span.
-    put(A2AAttributes.TASK_ID, _single(request.task_ids | response.task_ids))
+    # An id seen as several distinct values across the operation is left off: it would
+    # mislabel the span. A task's state, by contrast, legitimately moves through a
+    # stream (submitted -> working -> completed), so the FINAL state is recorded, but
+    # only when the operation concerned at most one task.
+    task_ids = request.task_ids | response.task_ids
+    put(A2AAttributes.TASK_ID, _single(task_ids))
     put(A2AAttributes.CONVERSATION_ID, _single(request.context_ids | response.context_ids))
-    put(A2AAttributes.TASK_STATE, _single(response.states))
+    if len(task_ids) <= 1:
+        put(A2AAttributes.TASK_STATE, response.last_state)
     put(A2AAttributes.TENANT, request.tenant)
     put(A2AAttributes.MESSAGE_ID, request.message_id)
     if request.reference_task_ids:

@@ -170,9 +170,10 @@ Deviations and choices the spec left open:
    `a2a.response.text`, `a2a.response.data`, `a2a.agent.skill_names`. File media types are
    recorded without content capture (they are type, not content); file bytes, URLs and names never.
 4. **Task state values** are lower-case without the proto prefix (`input_required`).
-5. **Multi-valued rule applies to streams literally**: a normal stream passes through
-   `submitted`, `working`, `completed`, so `a2a.task.state` is omitted on it, as the spec says.
-   Task id and context id stay when single. Unary calls and single-state streams carry the state.
+5. **A stream records its final task state** (founder decision, 2026-11-12). A normal stream passes through
+   `submitted`, `working` and `completed`, and `a2a.task.state` is the last state seen, provided the
+   operation concerned at most one task. This departs from the convention's literal multi-valued rule,
+   on purpose. Task id and context id are still omitted when they have several values.
 6. **Enabled by default** (in `DEFAULT_INSTRUMENTORS`), since it is a no-op without `a2a-sdk` 1.x.
 7. **The propagation interceptor is attached on the first call of each client** (so clients built
    before `instrument()` are covered), not by wrapping `BaseClient.__init__`. It edits a copy of the

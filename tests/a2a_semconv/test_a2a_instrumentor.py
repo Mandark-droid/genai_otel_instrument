@@ -319,8 +319,8 @@ async def test_client_streaming_span_ends_when_the_stream_ends(make_instrumentor
     assert span.name == "SendStreamingMessage refund-agent"
     assert span.attributes["a2a.method.name"] == "SendStreamingMessage"
     assert span.attributes["a2a.artifact.count"] == 1
-    # The task went submitted -> working -> completed: several states, so none is claimed.
-    assert "a2a.task.state" not in span.attributes
+    # The task went submitted -> working -> completed: the FINAL state is recorded.
+    assert span.attributes["a2a.task.state"] == "completed"
     assert span.attributes["a2a.task.id"]
 
 
