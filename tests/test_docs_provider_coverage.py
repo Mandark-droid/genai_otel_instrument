@@ -30,6 +30,7 @@ README = REPO_ROOT / "README.md"
 # structured-output wrappers, and cross-cutting tooling. These are documented in
 # docs/guides/multi-agent-frameworks.md and docs/guides/mcp-tools.md instead.
 NON_PROVIDER_KEYS = {
+    "a2a",
     "agents",
     "antigravity",
     "autogen",

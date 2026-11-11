@@ -379,6 +379,26 @@ Written on a span by the evaluation runtime, whichever detectors are enabled.
 | `evaluation.pii.prompt.model_analyzed_length` | int | Characters the PII entity model read |
 | `evaluation.<detector>.prompt.analyzed_length` | int | Characters read by `prompt_injection`, `restricted_topics` or `bias` when it has a block policy: the whole prompt |
 
+### A2A (Agent2Agent)
+
+`a2a.*` keys follow the OpenTelemetry A2A conventions (development status); the part and
+artifact counts are genai_otel additions. `a2a.protocol.binding` is **provisional** while
+OpenTelemetry settles how to record the binding. Content rules and error mapping:
+[A2A](../guides/multi-agent-frameworks.md#a2a-agent2agent).
+
+| Attribute | Type | Notes |
+|---|---|---|
+| `a2a.method.name` | string | `SendMessage`, `SendStreamingMessage`, `GetTask`, ... |
+| `a2a.protocol.version`, `a2a.protocol.binding` (provisional), `a2a.tenant` | string | binding is `jsonrpc`, `grpc` or `http_json` |
+| `a2a.message.id`, `a2a.message.reference_task_ids`, `a2a.task.id`, `a2a.task.state` | string / string[] | state is lower-case, e.g. `input_required` |
+| `a2a.message.{text,file,data}_part_count`, `a2a.response.{text,file,data}_part_count`, `a2a.artifact.count`, `a2a.agent.skill_count` | int | counts only (genai_otel) |
+| `a2a.message.file_media_types`, `a2a.response.file_media_types` | string[] | media types of file parts; never their bytes, URLs or names |
+| `a2a.message.text`, `a2a.message.data`, `a2a.response.text`, `a2a.response.data`, `a2a.agent.skill_names` | string / string[] | only with content capture on |
+
+Also set: `gen_ai.conversation.id` (the A2A `contextId`), `gen_ai.agent.name` / `.description` /
+`.version` (from the Agent Card), `gen_ai.operation.name=invoke_agent` (client spans),
+`error.type`, `server.address`, `server.port`.
+
 ### Object storage (S3 API and SeaweedFS)
 
 | Attribute | Notes |

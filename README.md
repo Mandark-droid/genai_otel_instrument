@@ -162,6 +162,8 @@ for OpenAI, SDK, and MLflow code.
 ### Multi-Agent Frameworks (13)
 CrewAI, LangGraph, Google ADK, AutoGen, AutoGen AgentChat, OpenAI Agents SDK, Pydantic AI, AWS Bedrock Agents, Anthropic Claude Agent SDK, Strands Agents, Microsoft Agent Framework, Agno, and Antigravity
 
+**Agent-to-agent calls:** A2A (Agent2Agent, `a2a-sdk` 1.x) clients and servers get spans with the method, task, context and agent attributes, and W3C trace context travels between the agents so one trace crosses both. Failed or rejected tasks are not error spans; message text, data parts and skill names are recorded only with content capture on; files are never inlined. `a2a.protocol.binding` is provisional. See [A2A](https://mandark-droid.github.io/genai_otel_instrument/guides/multi-agent-frameworks/#a2a-agent2agent).
+
 [See all frameworks with examples >>](https://mandark-droid.github.io/genai_otel_instrument/guides/multi-agent-frameworks/)
 
 ### MCP Tools (20+)

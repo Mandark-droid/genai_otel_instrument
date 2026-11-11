@@ -67,6 +67,8 @@ DEFAULT_INSTRUMENTORS = [
     "openai_agents",
     "bedrock_agents",
     "crewai",
+    # Does nothing unless a2a-sdk 1.0+ is installed.
+    "a2a",
     # Voice agents. Each does nothing unless its framework is installed.
     "pipecat",
     "livekit_agents",
@@ -329,6 +331,12 @@ class OTelConfig:
     )
     enable_cost_tracking: bool = field(
         default_factory=lambda: os.getenv("GENAI_ENABLE_COST_TRACKING", "true").lower() == "true"
+    )
+    # Whether A2A (Agent2Agent) calls carry W3C trace context between agents: injected
+    # by the client through the SDK's interceptor hook, read back by the server when no
+    # transport instrumentation did. On by default, so one trace crosses both agents.
+    a2a_propagate: bool = field(
+        default_factory=lambda: os.getenv("GENAI_A2A_PROPAGATE", "true").lower() != "false"
     )
     enable_mcp_instrumentation: bool = field(
         default_factory=lambda: os.getenv("GENAI_ENABLE_MCP_INSTRUMENTATION", "true").lower()

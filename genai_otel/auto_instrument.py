@@ -171,6 +171,11 @@ try:
 except ImportError:  # pragma: no cover - mirrors the fallback used above
     from genai_otel.mcp_semconv.client_instrumentor import MCPClientInstrumentor
 
+try:
+    from .a2a_semconv.instrumentor import A2AInstrumentor
+except ImportError:  # pragma: no cover - mirrors the fallback used above
+    from genai_otel.a2a_semconv.instrumentor import A2AInstrumentor
+
 logger = logging.getLogger(__name__)
 
 # OpenInference instrumentors are loaded lazily to avoid importing litellm (~10s)
@@ -282,6 +287,9 @@ INSTRUMENTORS = {
     # rather than default: it is most useful with a tool schema map attached,
     # which only the application can supply. See genai_otel.mcp_semconv.
     "mcp_client": MCPClientInstrumentor,
+    # A2A (Agent2Agent) client + server spans and trace propagation between agents.
+    # Default-on, and a no-op unless a2a-sdk 1.0+ is installed.
+    "a2a": A2AInstrumentor,
 }
 
 # OpenInference instrumentors are added to INSTRUMENTORS

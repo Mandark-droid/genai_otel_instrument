@@ -32,6 +32,7 @@ certificate file that signed the endpoint. The exporter appends the signal path
 | `GENAI_ENABLE_GPU_METRICS` | `true` | GPU utilization, memory, temperature, power metrics |
 | `GENAI_ENABLE_MCP_INSTRUMENTATION` | `true` | Database, cache, vector DB, queue instrumentation |
 | `GENAI_ENABLE_HTTP_INSTRUMENTATION` | `false` | HTTP/API instrumentation (disabled to avoid OTLP conflicts) |
+| `GENAI_A2A_PROPAGATE` | `true` | Carry W3C trace context between agents on A2A calls (client injects, server joins the trace). `false` turns it off. See [A2A](../guides/multi-agent-frameworks.md#a2a-agent2agent) |
 | `GENAI_ENABLE_SEAWEEDFS_INSTRUMENTATION` | `true` | SeaweedFS Filer tracing; inert unless endpoints are declared |
 | `GENAI_OTEL_SEAWEEDFS_ENDPOINTS` | — | Comma-separated `host[:port]` / URLs of SeaweedFS gateway and Filer; see the [SeaweedFS guide](../guides/seaweedfs.md) |
 | `GENAI_OTEL_SEAWEEDFS_PATH_PREFIX_SEGMENTS` | `2` | Path segments kept in `url.path.prefix` on Filer spans |

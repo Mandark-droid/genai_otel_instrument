@@ -711,6 +711,83 @@ with genai_otel.voice_conversation(conversation_id=call_id) as conv:
     conv.add_turn("agent", start=t2, end=t3)   # or with times known afterwards (epoch seconds)
 ```
 
+## A2A (Agent2Agent)
+
+[A2A](https://a2a-protocol.org) is the protocol agents use to call each other: discover an
+agent through its Agent Card, send it a message, follow the task it runs. The `a2a`
+instrumentor covers the official Python SDK, `a2a-sdk` 1.0 or later (`pip install a2a-sdk`).
+It is on by default and does nothing when the SDK is absent or older than 1.0.
+
+```python
+import genai_otel
+
+genai_otel.instrument()   # before the first `import a2a`, see "The SDK's own spans" below
+
+from a2a.client.client_factory import ClientFactory
+# ... build the client and call send_message as usual
+```
+
+**What you get**
+
+- A CLIENT span per client call (`send_message`, `get_task`, `list_tasks`, `cancel_task`,
+  `subscribe`, `get_extended_agent_card` and the push-notification config calls), named
+  `{a2a.method.name} {agent name}`. A streaming call's span ends when the stream does.
+  It also carries `gen_ai.operation.name=invoke_agent` and the target's `gen_ai.agent.name`,
+  so an agent graph can draw the edge from the calling agent to the called one.
+- A server side for the SDK's request handlers (`DefaultRequestHandler`, its v2 and legacy
+  forms, and so the JSON-RPC, REST and gRPC bindings). When an HTTP or gRPC server span is
+  already current (FastAPI, Starlette, ASGI or gRPC instrumentation), the A2A attributes go
+  on that span, and an HTTP one is renamed to `{method} {agent}`. Only when there is none
+  does a SERVER span open.
+- **One trace across both agents.** The client injects W3C `traceparent` / `tracestate`
+  through the SDK's `ClientCallInterceptor` hook (headers over HTTP, metadata over gRPC), and
+  the server joins that trace when no transport instrumentation did. Baggage follows the
+  session-baggage rules: nothing but the ids you named in `GENAI_SESSION_BAGGAGE_KEYS`
+  leaves the process as `session.id` / `user.id`. `GENAI_A2A_PROPAGATE=false` turns
+  propagation off.
+
+**Attributes**
+
+| Attribute | Notes |
+|---|---|
+| `a2a.method.name` | `SendMessage`, `SendStreamingMessage`, `GetTask`, `CancelTask`, `SubscribeToTask` ... |
+| `a2a.protocol.version` | From the Agent Card interface in use (client spans) |
+| `a2a.protocol.binding` | **Provisional.** `jsonrpc`, `grpc` or `http_json`. OpenTelemetry has not settled how to record the binding (semantic-conventions-genai issue 612); this name may change |
+| `a2a.tenant`, `a2a.message.id`, `a2a.message.reference_task_ids` | From the request |
+| `a2a.task.id`, `a2a.task.state` | State is one of `submitted`, `working`, `completed`, `failed`, `canceled`, `input_required`, `rejected`, `auth_required` |
+| `gen_ai.conversation.id` | The A2A `contextId` |
+| `gen_ai.agent.name` / `.description` / `.version` | From the Agent Card |
+| `server.address`, `server.port` | From the card's interface URL (client spans) |
+| `error.type` | The A2A error name (`TaskNotFoundError`), else the HTTP or gRPC status |
+| `a2a.message.{text,file,data}_part_count`, `a2a.response.{text,file,data}_part_count`, `a2a.artifact.count`, `a2a.agent.skill_count` | genai_otel additions: counts, never content |
+
+A task id, context id or state that takes several values during one operation (a stream
+that goes `submitted`, `working`, `completed`) is left off rather than guessed.
+
+**What is recorded, and when**
+
+| Always | Only with content capture on (`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true` or `GENAI_ENABLE_CONTENT_CAPTURE=true`) | Never |
+|---|---|---|
+| Ids, task states, counts of parts by kind, the artifact count, file media types, the Agent Card's name, description and version, the skill count | Message and artifact text (`a2a.message.text`, `a2a.response.text`), data parts (`a2a.message.data`, `a2a.response.data`), skill names (`a2a.agent.skill_names`) | File bytes, file URLs and file names |
+
+**Failed tasks are not errors.** A task that ends `failed` or `rejected` sets
+`a2a.task.state` and leaves the span status alone: the call worked, and the agent's answer
+was no. A raised error (a JSON-RPC error, a gRPC status, an HTTP error) marks the span ERROR.
+
+**The SDK's own spans.** `a2a-sdk` makes spans of its own, named after Python modules and
+carrying no A2A attributes, with its internal queues marked SERVER. The instrumentor sets
+`OTEL_INSTRUMENTATION_A2A_SDK_ENABLED=false` to stop them, unless you set that variable
+yourself. The SDK reads it once, when `a2a.utils.telemetry` is first imported, so
+`genai_otel.instrument()` has to run before your application imports `a2a`. If `a2a` is
+already imported the SDK's spans stay on beside ours, and one INFO line says so; set the
+variable in the environment to fix that.
+
+**Limits.** Python SDK 1.x only. Client wrapping covers the SDK's `BaseClient` (what
+`ClientFactory` returns); a custom `Client` subclass is not wrapped. Server wrapping covers
+`DefaultRequestHandler` (V2) and `LegacyRequestHandler`; a handler you write yourself on
+`RequestHandler` is not. No A2A metrics yet: the OpenTelemetry convention for them is still
+open. The Java, Go, JavaScript and .NET SDKs are not covered.
+
 ## Other Frameworks
 
 | Framework | Description | Install Extra | Example |

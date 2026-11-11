@@ -407,6 +407,9 @@ dev = [
     # importable in dev. The package requires 3.10+; the tests that need it
     # skip themselves on 3.9.
     "mcp>=1.0.0; python_version >= '3.10'",
+    # tests/a2a_semconv drives the real a2a-sdk client and request handler over an
+    # in-process ASGI app. The SDK needs 3.10+; the tests importorskip it.
+    "a2a-sdk[http-server]>=1.0.0,<2; python_version >= '3.10'",
     # tests/instrumentors/test_typesafe_sdk_decisions.py drives the real
     # TypeSafeClient over a mock transport (SystemOne DECISION spans).
     "typesafe-sdk>=0.7.0; python_version >= '3.10'",
@@ -438,6 +441,7 @@ packages = [
     "genai_otel",
     "genai_otel.instrumentors",
     "genai_otel.mcp_instrumentors",
+    "genai_otel.a2a_semconv",
     "genai_otel.evaluation",
     "genai_otel.media",
     "genai_otel.media.stores",
