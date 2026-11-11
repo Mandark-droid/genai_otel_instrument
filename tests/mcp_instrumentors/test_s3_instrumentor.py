@@ -116,8 +116,11 @@ class TestS3Instrumentor:
             "db.system": "s3",
             "db.operation": "PutObject",
             "server.address": "seaweed.example.com",
+            "server.port": 8333,
             "s3.bucket": "media",
             "s3.object": "images/cat.png",
+            "aws.s3.bucket": "media",
+            "aws.s3.key": "images/cat.png",
         }
 
     def test_bucket_without_key(self, exporter, fake_botocore):

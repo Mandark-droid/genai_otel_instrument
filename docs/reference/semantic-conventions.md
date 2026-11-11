@@ -379,6 +379,19 @@ Written on a span by the evaluation runtime, whichever detectors are enabled.
 | `evaluation.pii.prompt.model_analyzed_length` | int | Characters the PII entity model read |
 | `evaluation.<detector>.prompt.analyzed_length` | int | Characters read by `prompt_injection`, `restricted_topics` or `bias` when it has a block policy: the whole prompt |
 
+### Object storage (S3 API and SeaweedFS)
+
+| Attribute | Notes |
+|---|---|
+| `db.system` | `s3` on S3 API spans (unchanged) |
+| `db.system.name` | `seaweedfs` on S3 spans to a declared SeaweedFS endpoint, and on Filer spans (custom value; the registry has none) |
+| `server.address`, `server.port` | Host and port of the endpoint (credentials, path and query never recorded) |
+| `aws.s3.bucket`, `aws.s3.key` | Standard names, added next to the legacy `s3.bucket` / `s3.object` (both emitted; the legacy names are deprecated) |
+| `aws.request_id` | From the `x-amz-request-id` response header |
+| `db.operation.name`, `http.request.method`, `http.response.status_code` | Filer spans (`seaweedfs.filer.<operation>`) |
+| `url.path.prefix` | First N path segments only (default 2) |
+| `seaweedfs.request.size`, `seaweedfs.response.size` | Bytes, from `Content-Length` when stated |
+
 ### Multimodal Content-Part Attributes (v1.0.0)
 
 Emitted only when `GENAI_OTEL_MEDIA_CAPTURE_MODE` is set to `reference_only` or `full`.

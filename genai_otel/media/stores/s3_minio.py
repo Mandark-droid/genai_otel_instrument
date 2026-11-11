@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import threading
 import time
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urlsplit, urlunsplit
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ class S3MinioStore:
         require_https: bool = False,
         connect_timeout: float = 1.0,
         read_timeout: float = 5.0,
+        trace_calls: bool = False,
     ) -> None:
         if require_https and endpoint and endpoint.lower().startswith("http://"):
             raise ValueError(
@@ -66,6 +68,7 @@ class S3MinioStore:
         self._bucket = bucket
         self._endpoint = endpoint
         self._warned = False
+        self._trace_calls = trace_calls
         self._down_until = 0.0
         self._lock = threading.Lock()
         client_kwargs = {
@@ -89,7 +92,8 @@ class S3MinioStore:
         if create_bucket_if_missing:
             # Best-effort bucket creation (idempotent)
             try:
-                self._client.create_bucket(Bucket=bucket)
+                with self._quiet():
+                    self._client.create_bucket(Bucket=bucket)
             except Exception as e:  # noqa: BLE001
                 code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
                 if code in ("BucketAlreadyOwnedByYou", "BucketAlreadyExists"):
@@ -98,6 +102,14 @@ class S3MinioStore:
                     self._note_failure("create_bucket", e)
 
     _COOLDOWN_SECONDS = 30.0
+
+    def _quiet(self) -> Any:
+        """Suppress instrumentation spans for the SDK's own uploads unless opted back in."""
+        if self._trace_calls:
+            return contextlib.nullcontext()
+        from ..suppress import suppress_instrumentation
+
+        return suppress_instrumentation()
 
     def _note_failure(self, op: str, exc: Exception) -> None:
         """Log ONE warning per store and start a short cool-down for uploads."""
@@ -117,12 +129,13 @@ class S3MinioStore:
         if time.monotonic() < self._down_until:
             raise RuntimeError("media store unreachable (cooling down)")
         try:
-            self._client.put_object(
-                Bucket=self._bucket,
-                Key=key,
-                Body=data,
-                ContentType=mime_type or "application/octet-stream",
-            )
+            with self._quiet():
+                self._client.put_object(
+                    Bucket=self._bucket,
+                    Key=key,
+                    Body=data,
+                    ContentType=mime_type or "application/octet-stream",
+                )
         except Exception as e:  # noqa: BLE001
             self._note_failure("put_object", e)
             raise

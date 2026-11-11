@@ -32,6 +32,9 @@ certificate file that signed the endpoint. The exporter appends the signal path
 | `GENAI_ENABLE_GPU_METRICS` | `true` | GPU utilization, memory, temperature, power metrics |
 | `GENAI_ENABLE_MCP_INSTRUMENTATION` | `true` | Database, cache, vector DB, queue instrumentation |
 | `GENAI_ENABLE_HTTP_INSTRUMENTATION` | `false` | HTTP/API instrumentation (disabled to avoid OTLP conflicts) |
+| `GENAI_ENABLE_SEAWEEDFS_INSTRUMENTATION` | `true` | SeaweedFS Filer tracing; inert unless endpoints are declared |
+| `GENAI_OTEL_SEAWEEDFS_ENDPOINTS` | — | Comma-separated `host[:port]` / URLs of SeaweedFS gateway and Filer; see the [SeaweedFS guide](../guides/seaweedfs.md) |
+| `GENAI_OTEL_SEAWEEDFS_PATH_PREFIX_SEGMENTS` | `2` | Path segments kept in `url.path.prefix` on Filer spans |
 | `GENAI_ENABLE_SESSION_PROPAGATION` | `true` | Copy `session.id` / `user.id` from a `genai_otel.session()` block or the parent span onto every span |
 | `GENAI_SESSION_BAGGAGE_KEYS` | (none) | Which of `session.id`, `user.id` this service sends to the services it calls, as W3C baggage |
 | `GENAI_SESSION_BAGGAGE_ACCEPT` | (none) | Which of `session.id`, `user.id` this service accepts from inbound baggage. Only where callers are trusted |
@@ -571,6 +574,9 @@ Capture image/audio/document content parts on spans. See the
 | `GENAI_OTEL_MEDIA_STORE_PREFIX` | `traces/{date}/{trace_id}/` | template |
 | `GENAI_OTEL_MEDIA_STORE_ACCESS_KEY` | — | for s3/minio/seaweed |
 | `GENAI_OTEL_MEDIA_STORE_SECRET_KEY` | — | for s3/minio/seaweed |
+| `GENAI_OTEL_MEDIA_STORE_CONNECT_TIMEOUT` | `1.0` | seconds; S3-compatible stores only |
+| `GENAI_OTEL_MEDIA_STORE_READ_TIMEOUT` | `5.0` | seconds; S3-compatible stores only |
+| `GENAI_OTEL_MEDIA_STORE_TRACE_CALLS` | `false` | keep `s3.*` spans for the SDK's own media uploads |
 | `GENAI_OTEL_MEDIA_MAX_BYTES` | `10485760` (10 MiB) | per-blob cap |
 | `GENAI_OTEL_MEDIA_ALLOWED_MODALITIES` | `image,audio,video,document` | comma-separated |
 | `GENAI_OTEL_MEDIA_REDACTOR` | — | dotted path to callable applied before upload |

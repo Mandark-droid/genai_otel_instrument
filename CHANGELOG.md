@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- SeaweedFS support. Declare endpoints with `GENAI_OTEL_SEAWEEDFS_ENDPOINTS` (the media-store endpoint is added automatically when `GENAI_OTEL_MEDIA_STORE=seaweed`): S3 spans to them gain `db.system.name="seaweedfs"` (`db.system="s3"` is unchanged). Matching is by declared host and port only; no port guessing.
+- S3 spans now carry `server.port`, the standard `aws.s3.bucket` / `aws.s3.key` (alongside the legacy `s3.bucket` / `s3.object`, which are deprecated and kept) and `aws.request_id`.
+- Filer HTTP API tracing for declared hosts through `httpx` and `aiohttp` (`seaweedfs.filer.<operation>` spans: operation, status, sizes and a two-segment path prefix; never contents, query values, headers or error text). `requests` is intentionally not patched. New settings `GENAI_ENABLE_SEAWEEDFS_INSTRUMENTATION` and `GENAI_OTEL_SEAWEEDFS_PATH_PREFIX_SEGMENTS`.
+- Async S3 clients are now traced: one wrapper on aiobotocore's `AioBaseClient._make_api_call` covers aiobotocore, aioboto3 and s3fs.
+
+### Changed
+
+- The SDK's own media-store uploads no longer produce `s3.*` spans by default (they run under OpenTelemetry's instrumentation suppression). Set `GENAI_OTEL_MEDIA_STORE_TRACE_CALLS=true` to restore them.
+
 ## [1.46.8] - 2026-11-11
 
 Patch: media store performance fix.

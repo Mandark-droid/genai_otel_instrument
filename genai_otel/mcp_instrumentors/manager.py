@@ -31,6 +31,7 @@ from .opensearch_instrumentor import OpenSearchInstrumentor
 from .rabbitmq_instrumentor import RabbitMQInstrumentor
 from .redis_instrumentor import RedisInstrumentor
 from .s3_instrumentor import S3Instrumentor
+from .seaweedfs import SeaweedFilerInstrumentor
 from .timescaledb_instrumentor import TimescaleDBInstrumentor
 from .vector_db_instrumentor import VectorDBInstrumentor
 
@@ -233,6 +234,18 @@ class MCPInstrumentorManager:  # pylint: disable=R0903
         except Exception as e:
             failure_count += 1
             logger.error("[ERROR] Failed to instrument S3-compatible storage: %s", e, exc_info=True)
+            if fail_on_error:
+                raise
+
+        # SeaweedFS Filer HTTP API (httpx / aiohttp); inert unless endpoints are declared
+        try:
+            filer_instrumentor = SeaweedFilerInstrumentor(self.config)
+            if filer_instrumentor.instrument():
+                success_count += 1
+                logger.info("[OK] SeaweedFS Filer instrumentation enabled")
+        except Exception as e:
+            failure_count += 1
+            logger.error("[ERROR] Failed to instrument SeaweedFS Filer: %s", e, exc_info=True)
             if fail_on_error:
                 raise
 

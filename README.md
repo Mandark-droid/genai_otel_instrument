@@ -166,7 +166,7 @@ CrewAI, LangGraph, Google ADK, AutoGen, AutoGen AgentChat, OpenAI Agents SDK, Py
 
 ### MCP Tools (20+)
 **Databases:** PostgreSQL, MySQL, MongoDB, SQLAlchemy, TimescaleDB, OpenSearch, Elasticsearch, FalkorDB
-**Caching:** Redis | **Queues:** Kafka, RabbitMQ | **Storage:** MinIO, SeaweedFS (S3 API)
+**Caching:** Redis | **Queues:** Kafka, RabbitMQ | **Storage:** MinIO, SeaweedFS (S3 API and Filer HTTP API; boto3, aiobotocore, aioboto3, s3fs)
 **Vector DBs:** Pinecone, Weaviate, Qdrant, ChromaDB, Milvus, FAISS, LanceDB
 
 [See all MCP tools >>](https://mandark-droid.github.io/genai_otel_instrument/guides/mcp-tools/)

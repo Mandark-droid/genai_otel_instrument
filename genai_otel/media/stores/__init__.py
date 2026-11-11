@@ -37,6 +37,7 @@ _STORE_CONFIG_FIELDS = (
     "media_store_access_key",
     "media_store_secret_key",
     "media_store_connect_timeout",
+    "media_store_trace_calls",
     "media_store_read_timeout",
     "profile",
     "allow_external_egress",
@@ -98,6 +99,7 @@ def _build_store(config: Any) -> Optional[MediaStore]:
             require_https=require_https,
             connect_timeout=_float(getattr(config, "media_store_connect_timeout", None), 1.0),
             read_timeout=_float(getattr(config, "media_store_read_timeout", None), 5.0),
+            trace_calls=bool(getattr(config, "media_store_trace_calls", False)),
         )
     if backend == "http":
         from .http import HttpStore

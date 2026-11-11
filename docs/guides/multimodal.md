@@ -41,8 +41,11 @@ export GENAI_OTEL_MEDIA_STORE_ACCESS_KEY=...
 export GENAI_OTEL_MEDIA_STORE_SECRET_KEY=...
 ```
 
-The same boto3 instrumentation also emits nested S3 client spans for uploads
-performed by the media store.
+The SDK's own media uploads are **not** traced as `s3.*` spans by default, so
+they do not clutter your traces; the calls run with OpenTelemetry's standard
+instrumentation suppression active. Set `GENAI_OTEL_MEDIA_STORE_TRACE_CALLS=true`
+to get nested S3 client spans for the uploads again. Your own S3 calls are
+always traced. See [SeaweedFS](seaweedfs.md) for labelling the gateway.
 
 ```python
 from genai_otel import instrument
@@ -145,6 +148,9 @@ output, TTS responses).
 | `GENAI_OTEL_MEDIA_STORE_PREFIX` | `traces/{date}/{trace_id}/` | template |
 | `GENAI_OTEL_MEDIA_STORE_ACCESS_KEY` | — | for s3/minio/seaweed |
 | `GENAI_OTEL_MEDIA_STORE_SECRET_KEY` | — | for s3/minio/seaweed |
+| `GENAI_OTEL_MEDIA_STORE_CONNECT_TIMEOUT` | `1.0` | seconds; S3-compatible stores only |
+| `GENAI_OTEL_MEDIA_STORE_READ_TIMEOUT` | `5.0` | seconds; S3-compatible stores only |
+| `GENAI_OTEL_MEDIA_STORE_TRACE_CALLS` | `false` | keep `s3.*` spans for the SDK's own media uploads |
 | `GENAI_OTEL_MEDIA_MAX_BYTES` | `10485760` | per-blob size cap |
 | `GENAI_OTEL_MEDIA_ALLOWED_MODALITIES` | `image,audio,video,document` | comma-separated |
 | `GENAI_OTEL_MEDIA_REDACTOR` | — | dotted path to callable |

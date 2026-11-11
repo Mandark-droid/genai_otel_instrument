@@ -87,6 +87,7 @@ nav:
     - GPU Metrics & CO2: guides/gpu-metrics.md
     - Evaluation & Safety: guides/evaluation.md
     - Multimodal Observability: guides/multimodal.md
+    - SeaweedFS: guides/seaweedfs.md
     - Sarvam AI: guides/sarvam-ai.md
     - Arize AX: guides/arize-ax.md
   - Benchmarks: benchmarks.md
@@ -95,6 +96,8 @@ nav:
     - Python Compatibility: reference/python-compatibility.md
     - Server Metrics: reference/server-metrics.md
     - Semantic Conventions: reference/semantic-conventions.md
+  - Specs:
+    - SeaweedFS instrumentation: specs/seaweedfs-instrumentation.md
   - Community:
     - Contributing: community/contributing.md
     - Human and LLM agent contributions: community/agent-contributions.md

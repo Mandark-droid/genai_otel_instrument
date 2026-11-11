@@ -338,6 +338,18 @@ class OTelConfig:
         default_factory=lambda: os.getenv("GENAI_ENABLE_HTTP_INSTRUMENTATION", "false").lower()
         == "true"
     )
+    # SeaweedFS: Filer (httpx / aiohttp) tracing and S3-gateway labelling. Only hosts
+    # declared here (plus the media-store endpoint when media_store == "seaweed") match.
+    enable_seaweedfs_instrumentation: bool = field(
+        default_factory=lambda: os.getenv("GENAI_ENABLE_SEAWEEDFS_INSTRUMENTATION", "true").lower()
+        == "true"
+    )
+    seaweedfs_endpoints: Optional[str] = field(
+        default_factory=lambda: os.getenv("GENAI_OTEL_SEAWEEDFS_ENDPOINTS")
+    )  # comma-separated host[:port] or URLs; "*.suffix" hosts allowed
+    seaweedfs_path_prefix_segments: int = field(
+        default_factory=lambda: int(os.getenv("GENAI_OTEL_SEAWEEDFS_PATH_PREFIX_SEGMENTS", "2"))
+    )
     # Mirrors gen_ai.agent.name into the OpenInference agent.name / graph.node.*
     # attributes that Arize AX and Phoenix build their agent graph from.
     enable_agent_graph_attributes: bool = field(
@@ -770,6 +782,10 @@ class OTelConfig:
     media_store_secret_key: Optional[str] = field(
         default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_STORE_SECRET_KEY")
     )
+    media_store_trace_calls: bool = field(
+        default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_STORE_TRACE_CALLS", "false").lower()
+        == "true"
+    )  # keep s3.* spans for the SDK's own media uploads (default: suppressed)
     media_store_connect_timeout: float = field(
         default_factory=lambda: float(os.getenv("GENAI_OTEL_MEDIA_STORE_CONNECT_TIMEOUT", "1.0"))
     )  # seconds; S3-compatible stores only
