@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Media store: with an S3/MinIO/SeaweedFS store configured, every instrumented model call built a new store and synchronously attempted `create_bucket` with default boto timeouts and retries, adding 12-20 s per call against an unreachable endpoint. The store is now built once per process per effective config, and only when a non-text part is actually offloaded (`media_capture_mode=full`); `create_bucket` runs at most once per store; the S3 client uses a short connect/read timeout (`GENAI_OTEL_MEDIA_STORE_CONNECT_TIMEOUT`, default 1 s; `GENAI_OTEL_MEDIA_STORE_READ_TIMEOUT`, default 5 s) and no retries; the first failure logs a single WARNING and uploads are skipped for a 30 s cool-down. Model calls never block on media upload.
+
 ## [1.46.7] - 2026-11-10
 
 Pricing-only patch: Claude Fable 5.2.

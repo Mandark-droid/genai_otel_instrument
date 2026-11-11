@@ -770,6 +770,12 @@ class OTelConfig:
     media_store_secret_key: Optional[str] = field(
         default_factory=lambda: os.getenv("GENAI_OTEL_MEDIA_STORE_SECRET_KEY")
     )
+    media_store_connect_timeout: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_OTEL_MEDIA_STORE_CONNECT_TIMEOUT", "1.0"))
+    )  # seconds; S3-compatible stores only
+    media_store_read_timeout: float = field(
+        default_factory=lambda: float(os.getenv("GENAI_OTEL_MEDIA_STORE_READ_TIMEOUT", "5.0"))
+    )
     media_max_bytes: int = field(
         default_factory=lambda: int(os.getenv("GENAI_OTEL_MEDIA_MAX_BYTES", str(10 * 1024 * 1024)))
     )  # 10 MiB

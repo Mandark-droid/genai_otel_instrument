@@ -1805,12 +1805,20 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
         if provider is None:
             return
 
-        store = None
-        try:
-            store = get_store(self.config)
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Failed to initialize media store: %s", e)
-            store = None
+        # The store is resolved lazily, only when a non-text part is about to be
+        # offloaded in "full" mode; text-only calls never touch it.
+        _store_box: list = []
+
+        def _store_for(part: Any) -> Any:
+            if part.type == "text" or getattr(self.config, "media_capture_mode", "off") != "full":
+                return None
+            if not _store_box:
+                try:
+                    _store_box.append(get_store(self.config))
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("Failed to initialize media store: %s", e)
+                    _store_box.append(None)
+            return _store_box[0]
 
         # Trace ID for keying uploads
         trace_id_hex = ""
@@ -1850,7 +1858,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             span.set_attribute(SC.GEN_AI_PROMPT_ROLE.format(n=n), role)
             for m, part in enumerate(parts):
                 try:
-                    offload_part(part, config=self.config, store=store, trace_id=trace_id_hex)
+                    offload_part(
+                        part, config=self.config, store=_store_for(part), trace_id=trace_id_hex
+                    )
                 except Exception as e:  # noqa: BLE001
                     logger.warning("offload_part failed: %s", e)
                 self._set_part_attrs(span, "prompt", n, m, part)
@@ -1866,7 +1876,9 @@ class BaseInstrumentor(ABC):  # pylint: disable=R0902
             span.set_attribute(SC.GEN_AI_COMPLETION_ROLE.format(n=0), "assistant")
             for m, part in enumerate(completion_parts):
                 try:
-                    offload_part(part, config=self.config, store=store, trace_id=trace_id_hex)
+                    offload_part(
+                        part, config=self.config, store=_store_for(part), trace_id=trace_id_hex
+                    )
                 except Exception as e:  # noqa: BLE001
                     logger.warning("offload_part (completion) failed: %s", e)
                 self._set_part_attrs(span, "completion", 0, m, part)

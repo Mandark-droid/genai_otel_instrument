@@ -3,11 +3,19 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+import threading
+from typing import Any, Dict, Optional, Tuple
 
 from .base import MediaStore
 
 logger = logging.getLogger(__name__)
+
+
+def _float(value: Any, default: float) -> float:
+    try:
+        return float(value) if value is not None else default
+    except (TypeError, ValueError):
+        return default
 
 
 def _require_https(config: Any) -> bool:
@@ -22,7 +30,43 @@ def _require_https(config: Any) -> bool:
     return getattr(config, "allow_external_egress", True) is False
 
 
+_STORE_CONFIG_FIELDS = (
+    "media_store",
+    "media_store_endpoint",
+    "media_store_bucket",
+    "media_store_access_key",
+    "media_store_secret_key",
+    "media_store_connect_timeout",
+    "media_store_read_timeout",
+    "profile",
+    "allow_external_egress",
+)
+_STORE_CACHE: Dict[Tuple[Any, ...], Optional[MediaStore]] = {}
+_STORE_LOCK = threading.Lock()
+
+
+def clear_store_cache() -> None:
+    """Forget cached stores (tests, or after reconfiguration)."""
+    with _STORE_LOCK:
+        _STORE_CACHE.clear()
+
+
 def get_store(config: Any) -> Optional[MediaStore]:
+    """Return the MediaStore for this config, built once per process per effective config.
+
+    Returns None if disabled. A store that fails to construct raises on every
+    call (nothing is cached for a failure) so misconfiguration stays visible.
+    """
+    key = tuple(getattr(config, f, None) for f in _STORE_CONFIG_FIELDS)
+    with _STORE_LOCK:
+        if key in _STORE_CACHE:
+            return _STORE_CACHE[key]
+        store = _build_store(config)
+        _STORE_CACHE[key] = store
+        return store
+
+
+def _build_store(config: Any) -> Optional[MediaStore]:
     """Build a MediaStore from OTelConfig, or return None if disabled."""
     backend = (getattr(config, "media_store", "none") or "none").lower()
     if backend in ("none", ""):
@@ -52,6 +96,8 @@ def get_store(config: Any) -> Optional[MediaStore]:
             addressing_style="path" if backend == "seaweed" else "auto",
             create_bucket_if_missing=backend != "seaweed",
             require_https=require_https,
+            connect_timeout=_float(getattr(config, "media_store_connect_timeout", None), 1.0),
+            read_timeout=_float(getattr(config, "media_store_read_timeout", None), 5.0),
         )
     if backend == "http":
         from .http import HttpStore
@@ -64,4 +110,4 @@ def get_store(config: Any) -> Optional[MediaStore]:
     return None
 
 
-__all__ = ["MediaStore", "get_store"]
+__all__ = ["MediaStore", "clear_store_cache", "get_store"]

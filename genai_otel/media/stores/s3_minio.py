@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from typing import Optional
 from urllib.parse import urlsplit, urlunsplit
 
@@ -44,6 +46,8 @@ class S3MinioStore:
         addressing_style: str = "auto",
         create_bucket_if_missing: bool = True,
         require_https: bool = False,
+        connect_timeout: float = 1.0,
+        read_timeout: float = 5.0,
     ) -> None:
         if require_https and endpoint and endpoint.lower().startswith("http://"):
             raise ValueError(
@@ -61,11 +65,17 @@ class S3MinioStore:
 
         self._bucket = bucket
         self._endpoint = endpoint
+        self._warned = False
+        self._down_until = 0.0
+        self._lock = threading.Lock()
         client_kwargs = {
             "service_name": "s3",
             "region_name": region,
             "config": Config(
                 signature_version="s3v4",
+                connect_timeout=connect_timeout,
+                read_timeout=read_timeout,
+                retries={"max_attempts": 1},
                 s3={"addressing_style": addressing_style},
             ),
         }
@@ -81,16 +91,41 @@ class S3MinioStore:
             try:
                 self._client.create_bucket(Bucket=bucket)
             except Exception as e:  # noqa: BLE001
-                # BucketAlreadyOwnedByYou / BucketAlreadyExists are expected
-                logger.debug("create_bucket: %s", e)
+                code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
+                if code in ("BucketAlreadyOwnedByYou", "BucketAlreadyExists"):
+                    logger.debug("create_bucket: %s", e)
+                else:
+                    self._note_failure("create_bucket", e)
+
+    _COOLDOWN_SECONDS = 30.0
+
+    def _note_failure(self, op: str, exc: Exception) -> None:
+        """Log ONE warning per store and start a short cool-down for uploads."""
+        with self._lock:
+            self._down_until = time.monotonic() + self._COOLDOWN_SECONDS
+            if self._warned:
+                return
+            self._warned = True
+        logger.warning(
+            "Media store %s failed (%s); media offload is skipped while it is "
+            "unreachable. Further failures are not logged at WARNING.",
+            op,
+            exc,
+        )
 
     def put(self, data: bytes, *, key: str, mime_type: str) -> str:
-        self._client.put_object(
-            Bucket=self._bucket,
-            Key=key,
-            Body=data,
-            ContentType=mime_type or "application/octet-stream",
-        )
+        if time.monotonic() < self._down_until:
+            raise RuntimeError("media store unreachable (cooling down)")
+        try:
+            self._client.put_object(
+                Bucket=self._bucket,
+                Key=key,
+                Body=data,
+                ContentType=mime_type or "application/octet-stream",
+            )
+        except Exception as e:  # noqa: BLE001
+            self._note_failure("put_object", e)
+            raise
         if self._endpoint:
             # Strip any embedded credentials so they don't leak into telemetry.
             public_endpoint = _strip_userinfo(self._endpoint.rstrip("/"))
