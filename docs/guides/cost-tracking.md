@@ -142,7 +142,7 @@ and the recorded cost would then depend on which aggregator was indexed first.
 |----------|--------|--------------|
 | OpenAI | GPT-6 Astra/Luna/Sol, GPT-6.1 Sol/Terra, GPT Image 2.6/2.5/2/1.5/1 Mini, GPT-Live 1, gpt-realtime-2.1, gpt-transcribe, GPT-5.5 series, GPT-4o, GPT-4 Turbo, o1/o3, embeddings (50+) | Per token (prompt/completion) |
 | Anthropic | Claude Opus 5.5, Claude Sonnet 5.5, Claude Haiku 5.5, Claude Fable 5.1, Claude Opus 5, Claude Sonnet 5, Claude 3.5/3 series (20+) | Per token + cache pricing |
-| Google AI | Gemini 4 Argon, Nano Banana 2.1, Gemini 3.8 Flash / Flash TTS / Live, Gemini 3.5 Transcribe, Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.5 Flash / Flash Lite, Gemini 3.1/2.5 Pro/Flash, PaLM 2 (35+) | Per token |
+| Google AI | Gemini 4 Argon, Nano Banana 2.1, Gemini 3.8 Flash / Flash TTS / Live, Gemini 3.5 Transcribe, Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.5 Flash / Flash Lite, Gemini 3.1/2.5 Pro/Flash, Gemini Decision 1 (decisions), PaLM 2 (35+) | Per token |
 | AWS Bedrock | Titan, Claude, Llama, Mistral (25+) | Per token |
 | Azure OpenAI | Same as OpenAI | Per token |
 | Cohere | Command A/R/R+, North Mini Code, Embed v4/v3, rerankers (15+) | Per token |

@@ -7,6 +7,9 @@ never pass through an SDK method this library wraps, so they are recognised by
 their path instead:
 
 * ``POST .../v1/decisions``              -> OpenAI Decisions protocol
+* ``POST https://generativelanguage.googleapis.com/v1beta/decisions`` (or ``/v1/decisions``)
+                                         -> Gemini Decisions. Matched on the host as well as the
+                                         path: ``/v1beta/decisions`` on any other host is not Gemini.
 * ``POST .../v1/systemone`` (including ``/decisions/v1/systemone``) -> SystemOne
 
 ``requests``, ``httpx`` and ``httpx2`` are covered.
@@ -32,8 +35,10 @@ import wrapt
 
 from ..config import OTelConfig
 from .decision import (
+    PROTOCOL_GEMINI_DECISIONS,
     PROTOCOL_OPENAI_DECISIONS,
     PROTOCOL_SYSTEMONE,
+    SYSTEM_GOOGLE,
     SYSTEM_OPENAI,
     SYSTEM_TYPESAFE,
     BaseDecisionInstrumentor,
@@ -41,6 +46,7 @@ from .decision import (
     DecisionRequest,
     _get,
     _inside_decision_span,
+    gemini_error_code,
     openai_questions,
     provider_for_base_url,
     systemone_questions,
@@ -55,6 +61,10 @@ _DECISION_PATHS = (
     ("/v1/decisions", PROTOCOL_OPENAI_DECISIONS),
 )
 
+# Gemini Decisions is recognised by host, not by path alone.
+_GEMINI_HOST = "generativelanguage.googleapis.com"
+_GEMINI_PATHS = ("/v1beta/decisions", "/v1/decisions")
+
 # What has been wrapped, by target, so instrument() is idempotent.
 _WRAPPED = set()
 
@@ -64,9 +74,13 @@ def match_decision_path(method: Any, url: Any) -> Optional[str]:
     if not method or str(method).upper() != "POST" or not url:
         return None
     try:
-        path = urlparse(str(url)).path.rstrip("/")
+        parsed = urlparse(str(url))
+        path = parsed.path.rstrip("/")
+        host = (parsed.hostname or "").lower()
     except Exception:  # pragma: no cover - urlparse is near-total
         return None
+    if host == _GEMINI_HOST:
+        return PROTOCOL_GEMINI_DECISIONS if path.endswith(_GEMINI_PATHS) else None
     for suffix, protocol in _DECISION_PATHS:
         if path.endswith(suffix):
             return protocol
@@ -120,7 +134,11 @@ class DecisionHTTPInstrumentor(BaseDecisionInstrumentor):
         body = body if isinstance(body, dict) else {}
         questions = body.get("questions")
         model = body.get("model")
-        if protocol == PROTOCOL_OPENAI_DECISIONS:
+        if protocol == PROTOCOL_GEMINI_DECISIONS:
+            system, operation = SYSTEM_GOOGLE, "google.genai.decisions"
+            parsed = systemone_questions(questions)
+            payload = {"model": model, "input": body.get("input"), "questions": questions}
+        elif protocol == PROTOCOL_OPENAI_DECISIONS:
             system, operation = SYSTEM_OPENAI, "openai.decisions"
             parsed = openai_questions(questions)
             payload = {"model": model, "input": body.get("input"), "questions": questions}
@@ -153,7 +171,9 @@ class DecisionHTTPInstrumentor(BaseDecisionInstrumentor):
     def _record(recorder: DecisionRecorder, response: Any, body: Any) -> None:
         status = getattr(response, "status_code", None)
         if isinstance(status, int) and status >= 400:
-            recorder.fail(f"HTTP {status}", str(status))
+            # A Gemini 400 names why in ``error.code`` (safety, blocklist, ...).
+            code = gemini_error_code(body)
+            recorder.fail(f"HTTP {status}", code or str(status))
             return
         if isinstance(body, dict):
             recorder.record_response(body)
@@ -185,6 +205,8 @@ class DecisionHTTPInstrumentor(BaseDecisionInstrumentor):
 
     @staticmethod
     def _span_name(protocol: str) -> str:
+        if protocol == PROTOCOL_GEMINI_DECISIONS:
+            return "decision.http.google"
         return (
             "decision.http.openai"
             if protocol == PROTOCOL_OPENAI_DECISIONS

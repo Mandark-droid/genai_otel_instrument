@@ -155,7 +155,7 @@ responses). Install `genai-otel-instrument[databricks]`; see the [Databricks set
 examples](https://mandark-droid.github.io/genai_otel_instrument/guides/llm-providers/#databricks-model-serving)
 for OpenAI, SDK, and MLflow code.
 
-**Decision models** (OpenInference `DECISION` spans, priced separately from chat): OpenAI Decisions (`gpt-6-luna`, also via OpenRouter and Azure), SystemOne servers (TypeSafe Jev, LiquidAI D1, Cloudflare Clef, self-hosted Hub decision models on vLLM / SGLang), Granite Switch's decision adapter, plain-HTTP calls to those endpoints, and in-process models through `genai_otel.decision_span`
+**Decision models** (OpenInference `DECISION` spans, priced separately from chat): OpenAI Decisions (`gpt-6-luna`, also via OpenRouter and Azure), Google Gemini Decisions (`gemini-decision-1`, SDK and REST), SystemOne servers (TypeSafe Jev, LiquidAI D1, Cloudflare Clef, self-hosted Hub decision models on vLLM / SGLang), Granite Switch's decision adapter, plain-HTTP calls to those endpoints, and in-process models through `genai_otel.decision_span`
 
 [See all providers with examples >>](https://mandark-droid.github.io/genai_otel_instrument/guides/llm-providers/)
 

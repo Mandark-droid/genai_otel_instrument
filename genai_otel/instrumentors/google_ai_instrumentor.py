@@ -8,14 +8,86 @@ Legacy SDK (deprecated Nov 30, 2025): import google.generativeai as genai
 New SDK (GA May 2025): from google import genai
 """
 
+import inspect
 import logging
 from typing import Any, Dict, Optional
+
+from opentelemetry import trace
 
 from ..config import OTelConfig
 from ._gemini_usage import gemini_usage
 from .base import BaseInstrumentor
+from .decision import (
+    PROTOCOL_GEMINI_DECISIONS,
+    SYSTEM_GOOGLE,
+    BaseDecisionInstrumentor,
+    DecisionRequest,
+    gemini_exception_code,
+    systemone_questions,
+)
 
 logger = logging.getLogger(__name__)
+
+GEMINI_DECISIONS_OPERATION = "google.genai.decisions"
+
+
+class GeminiDecisionsTracer(BaseDecisionInstrumentor):
+    """Decision spans for ``client.decisions.create`` of the ``google-genai`` SDK.
+
+    Owned and configured by :class:`GoogleAIInstrumentor`; it is not an
+    instrumentor of its own, so ``GENAI_ENABLED_INSTRUMENTORS=google`` covers
+    Gemini decisions. The wire shape is SystemOne's (named questions, named
+    answers), so the SystemOne parsers read it.
+    """
+
+    def instrument(self, config: OTelConfig) -> None:
+        self.config = config
+        self._instrumented = True
+
+    def decisions_request(self, kwargs: Dict[str, Any]) -> DecisionRequest:
+        """A ``decisions.create`` request (keyword-only in the SDK)."""
+        questions = kwargs.get("questions")
+        model = kwargs.get("model")
+        return DecisionRequest(
+            protocol=PROTOCOL_GEMINI_DECISIONS,
+            system=SYSTEM_GOOGLE,
+            operation=GEMINI_DECISIONS_OPERATION,
+            model=str(model) if model else None,
+            provider="google",
+            questions=systemone_questions(questions),
+            payload={"model": model, "input": kwargs.get("input"), "questions": questions},
+        )
+
+    def traced(self, span_name: str, request: DecisionRequest, original, client, args, kwargs):
+        """Run ``original`` in a decision span; a safety 400 names its ``error.code`` on the span."""
+
+        def tag(exc: BaseException) -> None:
+            try:
+                code = gemini_exception_code(exc)
+                if code:
+                    trace.get_current_span().set_attribute("error.type", code)
+            except Exception:  # noqa: BLE001 - telemetry must not mask the API error
+                pass
+
+        def guarded(*call_args, **call_kwargs):
+            try:
+                result = original(*call_args, **call_kwargs)
+            except Exception as exc:
+                tag(exc)
+                raise
+            if inspect.iscoroutine(result):
+
+                async def awaited():
+                    try:
+                        return await result
+                    except Exception as exc:
+                        tag(exc)
+                        raise
+
+                return awaited()
+            return result
+
+        return self._traced_decision(span_name, request, guarded, client, args, kwargs)
 
 
 class GoogleAIInstrumentor(BaseInstrumentor):
@@ -154,6 +226,12 @@ class GoogleAIInstrumentor(BaseInstrumentor):
                     extract_attributes=self._extract_google_embedding_attributes_new_sdk,
                 )(original_embed)
 
+        # Gemini Decisions API (google-genai >= 3.2): a DECISION span, not a chat one.
+        self._wrap_decisions(client.decisions if hasattr(client, "decisions") else None, client, "")
+        self._wrap_decisions(
+            getattr(getattr(client, "aio", None), "decisions", None), client, ".aio"
+        )
+
         # google-genai also exposes async methods under client.aio.models.
         aio_models = getattr(getattr(client, "aio", None), "models", None)
         if aio_models is not None:
@@ -167,6 +245,45 @@ class GoogleAIInstrumentor(BaseInstrumentor):
                     span_name="google.genai.aio.models.embeddings",
                     extract_attributes=self._extract_google_embedding_attributes_new_sdk,
                 )(aio_models.embed_content)
+
+    def _decision_tracer(self) -> GeminiDecisionsTracer:
+        """The decision tracer this instrumentor owns, kept in step with its configuration."""
+        tracer = getattr(self, "_genai_decision_tracer", None)
+        if tracer is None:
+            tracer = GeminiDecisionsTracer()
+            self._genai_decision_tracer = tracer
+        tracer.config = self.config
+        tracer.tracer = self.tracer
+        tracer._instrumented = True
+        tracer._cost_calculator_override = getattr(self, "_cost_calculator_override", None)
+        return tracer
+
+    def _wrap_decisions(self, decisions: Any, client: Any, aio: str) -> bool:
+        """Trace ``decisions.create`` as a DECISION span. A no-op when the SDK has no such resource.
+
+        An older ``google-genai`` has no ``decisions`` attribute (and ``client.aio`` may have
+        none even where the sync client does): the client is left alone.
+        """
+        original = getattr(decisions, "create", None) if decisions is not None else None
+        if not callable(original):
+            return False
+        span_name = f"google.genai{aio}.decisions"
+
+        def create(*args, **kwargs):
+            tracer = self._decision_tracer()
+            try:
+                request = tracer.decisions_request(kwargs)
+            except Exception as e:  # noqa: BLE001 - never let telemetry block the call
+                logger.debug("Could not read Gemini decisions request: %s", e)
+                return original(*args, **kwargs)
+            return tracer.traced(span_name, request, original, client, args, kwargs)
+
+        try:
+            decisions.create = create
+        except Exception as e:  # noqa: BLE001 - a frozen resource object is left alone
+            logger.debug("Could not wrap Gemini decisions.create: %s", e)
+            return False
+        return True
 
     def _instrument_legacy_sdk(self):
         """Instrument the legacy google-generativeai SDK."""

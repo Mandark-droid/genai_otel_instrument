@@ -10376,6 +10376,13 @@
       "cacheWritePrice": 0.0,
       "note": "gpt-6-luna through OpenRouter's Decisions API. input $0.10/1M, output $0. Source: https://openrouter.ai/openai/gpt-6-luna-decisions"
     },
+    "gemini-decision-1": {
+      "promptPrice": 0.0001,
+      "completionPrice": 0.0,
+      "cacheReadPrice": 0.0,
+      "cacheWritePrice": 0.0,
+      "note": "Google Gemini Decisions API (POST /v1beta/decisions), gemini-decision-1. input $0.10/1M; output is free (the API reports 0 output tokens). The shared input is billed once per request. Not priced as chat. Source: https://aistudio.google.com/docs/decisions-api"
+    },
     "d1": {
       "promptPrice": 2e-05,
       "completionPrice": 0.0,

@@ -56,11 +56,13 @@ DECISION_SPAN_KIND = "DECISION"
 
 PROTOCOL_OPENAI_DECISIONS = "openai_decisions"
 PROTOCOL_SYSTEMONE = "systemone"
+PROTOCOL_GEMINI_DECISIONS = "gemini_decisions"
 PROTOCOL_GRANITE_ADAPTER = "granite_adapter"
 PROTOCOL_MANUAL = "manual"
 
 SYSTEM_OPENAI = "openai"
 SYSTEM_TYPESAFE = "typesafe"
+SYSTEM_GOOGLE = "google"
 
 # What every serialised image is replaced with, matching OpenInference's
 # ``hide_input_images``. A data URL is the image itself, and a URL may be a
@@ -80,6 +82,7 @@ _PROVIDER_HOSTS = {
     "api.liquid.ai": "liquid",
     "api.typesafe.ai": "typesafe",
     "api.cloudflare.com": "cloudflare",
+    "generativelanguage.googleapis.com": "google",
 }
 _PROVIDER_HOST_SUFFIXES = ((".openai.azure.com", "azure"),)
 
@@ -198,6 +201,8 @@ class DecisionUsage:
     output_tokens: Optional[int] = None
     cached_input_tokens: Optional[int] = None
     cache_write_input_tokens: Optional[int] = None
+    # Input tokens per modality (Gemini Decisions), lower-cased: {"text": 12, "image": 258}.
+    input_tokens_by_modality: Dict[str, int] = dataclasses.field(default_factory=dict)
 
     @property
     def reported(self) -> bool:
@@ -412,10 +417,63 @@ def granite_answers(result: Any, label_count: Optional[int]) -> List[DecisionAns
     return [answer]
 
 
-def usage_of(raw: Any) -> DecisionUsage:
-    """Token counts from a response's ``usage``, under either protocol's spelling."""
+def _modality_name(value: Any) -> Optional[str]:
+    value = getattr(value, "value", value)
+    text = str(value).strip().lower() if value is not None else ""
+    return text or None
+
+
+def gemini_decision_usage(raw: Any) -> DecisionUsage:
+    """Token counts of a Gemini Decisions ``usage`` block.
+
+    ``total_input_tokens`` is the input (the shared ``input`` is billed once) and
+    ``total_output_tokens`` the output, which the API reports as 0.
+    ``input_tokens_by_modality`` is ``[{modality, tokens}]``. Counts the response
+    does not carry stay None, never 0.
+    """
     if raw is None:
         return DecisionUsage()
+    by_modality: Dict[str, int] = {}
+    for item in _items(_get(raw, "input_tokens_by_modality")):
+        name = _modality_name(_get(item, "modality"))
+        tokens = _count(_get(item, "tokens"))
+        if name and tokens is not None:
+            by_modality[name] = by_modality.get(name, 0) + tokens
+    return DecisionUsage(
+        input_tokens=_count(_get(raw, "total_input_tokens")),
+        output_tokens=_count(_get(raw, "total_output_tokens")),
+        input_tokens_by_modality=by_modality,
+    )
+
+
+def _named_error_code(error: Any) -> Optional[str]:
+    """The ``error.code`` of a Gemini error body when it is a name (``safety``), not an HTTP number."""
+    code = _get(error, "code")
+    if isinstance(code, str) and code.strip() and not code.strip().isdigit():
+        return code.strip().lower()
+    return None
+
+
+def gemini_error_code(body: Any) -> Optional[str]:
+    """The ``error.code`` of a Gemini Decisions 400 body (``safety``, ``blocklist``, ...), or None."""
+    return _named_error_code(_get(body, "error"))
+
+
+def gemini_exception_code(exc: BaseException) -> Optional[str]:
+    """The same code from a ``google-genai`` ``APIError``, which keeps the body as ``details``."""
+    for source in (_get(exc, "details"), _get(exc, "response_json")):
+        code = gemini_error_code(source)
+        if code:
+            return code
+    return _named_error_code(exc)
+
+
+def usage_of(raw: Any) -> DecisionUsage:
+    """Token counts from a response's ``usage``, under any protocol's spelling."""
+    if raw is None:
+        return DecisionUsage()
+    if _get(raw, "total_input_tokens") is not None or _get(raw, "total_output_tokens") is not None:
+        return gemini_decision_usage(raw)
     input_tokens = _count(_get(raw, "input_tokens"))
     if input_tokens is None:
         input_tokens = _count(_get(raw, "prompt_tokens"))
@@ -830,6 +888,9 @@ def response_attributes(
     if usage.output_tokens is not None:
         attrs["decision.token_count.output"] = usage.output_tokens
         attrs["gen_ai.usage.output_tokens"] = usage.output_tokens
+    # Counts, not content: recorded with content capture off too.
+    for modality, tokens in usage.input_tokens_by_modality.items():
+        attrs[f"decision.token_count.input.{modality}"] = tokens
 
     questions = request.questions
     count = len(questions) or len(answers)

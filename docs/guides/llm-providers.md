@@ -171,8 +171,9 @@ without an instrumentor of its own.
 | Call path | Protocol | Span | Covers |
 |---|---|---|---|
 | `client.decisions.create` (OpenAI SDK, sync and async, `with_raw_response` too) | OpenAI Decisions (`POST /v1/decisions`) | `openai.decisions` | OpenAI `gpt-6-luna`; Azure OpenAI through `AzureOpenAI`; OpenRouter (`openrouter.decisions`); any server that answers `/v1/decisions` |
+| `client.decisions.create` / `client.aio.decisions.create` (`google-genai` 3.2+, `api_version="v1beta"`) | Gemini Decisions (`POST /v1beta/decisions`) | `google.genai.decisions` / `google.genai.aio.decisions` | Google `gemini-decision-1`. Per-modality input tokens land in `decision.token_count.input.<modality>`; a safety 400 is an ERROR span with `error.type` set to the API's `error.code`. No-op on a `google-genai` without `decisions` |
 | `TypeSafeClient.system_one` / `AsyncTypeSafeClient.system_one` (`typesafe-sdk`, any `base_url`) | SystemOne (`POST /v1/systemone`) | `typesafe.system_one` | TypeSafe Jev, LiquidAI D1 / D1 Ultra, Cloudflare Workers AI, vLLM / SGLang / Ollajev / laya-serve serving Hub decision models (JEV, Clef, GEV, decider, ...) |
-| a POST with `requests`, `httpx` or `httpx2` to `.../v1/systemone`, `.../decisions/v1/systemone` or `.../v1/decisions`, outside an SDK call | either | `decision.http.systemone` / `decision.http.openai` | apps that call the endpoints without an SDK, such as LiquidAI's image examples |
+| a POST with `requests`, `httpx` or `httpx2` to `.../v1/systemone`, `.../decisions/v1/systemone`, `.../v1/decisions`, or `https://generativelanguage.googleapis.com/v1beta/decisions` (matched on that host only), outside an SDK call | any of the three | `decision.http.systemone` / `decision.http.openai` / `decision.http.google` | apps that call the endpoints without an SDK, such as LiquidAI's image examples |
 | OpenAI chat completions with `extra_body={"chat_template_kwargs": {"adapter_name": "decision"}}` | Granite Switch decision adapter | `openai.chat.decision` | IBM Granite Switch 4.1 on vLLM. Its other adapters (`guardian-core`) stay chat spans |
 | `genai_otel.decision_span` (context manager or decorator) | in-process | `decision` (or your name) | Laya `Router`, Clef's `joint_schema_model.systemone`, `transformers` checkpoints, rules engines |
 
@@ -292,6 +293,7 @@ output at $0.50/1M.
 |---|---|---|
 | `gpt-6-luna` (OpenAI Decisions; cache reads and writes free) | $0.10 | $0 |
 | `openai/gpt-6-luna-decisions` (OpenRouter) | $0.10 | $0 |
+| `gemini-decision-1` (Google Gemini Decisions) | $0.10 | $0 |
 | `d1` / `d1-ultra` (LiquidAI, any route) | $0.02 / $0.042 | $0 |
 | `jev` (TypeSafe) | $0.042 | $0 |
 | `clef`, `clef-flash`, `clef-omni` | not priced until Cloudflare publishes a price | |
