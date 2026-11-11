@@ -650,6 +650,31 @@ async def test_a_raised_a2a_error_marks_both_spans_error(make_instrumentor, expo
     assert server.attributes["error.type"] == "TaskNotFoundError"
 
 
+@pytest.mark.parametrize("content", [False, True])
+def test_error_text_is_kept_only_with_content_capture(make_instrumentor, exporter, content):
+    from genai_otel.a2a_semconv.extract import Observation
+    from genai_otel.a2a_semconv.instrumentor import _CallScope
+
+    inst = make_instrumentor(content=content)
+    secret = "no task for card 4111111111111111"
+    span = inst.tracer.start_span("x", kind=SpanKind.CLIENT)
+    scope = _CallScope(inst, span, True, Observation(content), Observation(content))
+    scope.fail(ValueError(secret))
+    scope.finish()
+    done = _one(exporter.get_finished_spans())
+    blob = json.dumps(
+        [done.status.description] + [dict(e.attributes) for e in done.events], default=str
+    )
+    assert done.status.status_code == StatusCode.ERROR
+    assert done.attributes["error.type"] == "ValueError"
+    if content:
+        assert secret in blob
+    else:
+        assert secret not in blob
+        assert done.status.description == "ValueError"
+        assert [e.attributes["exception.type"] for e in done.events] == ["ValueError"]
+
+
 def test_error_type_for_the_sdks_generic_client_error():
     from genai_otel.a2a_semconv.extract import error_type
 

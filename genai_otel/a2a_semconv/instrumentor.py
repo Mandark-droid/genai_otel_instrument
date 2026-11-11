@@ -184,9 +184,17 @@ class _CallScope:
                 self.instrumentor._put_content(span, key, value)
             if self.error is not None:
                 span.set_attribute(A2AAttributes.ERROR_TYPE, error_type(self.error))
-                span.set_status(Status(StatusCode.ERROR, str(self.error)[:200]))
-                if self.owned:
-                    span.record_exception(self.error)
+                etype = error_type(self.error)
+                if self.instrumentor._capture():
+                    # A2A error messages can echo message or task content, so the text
+                    # is kept only with content capture on.
+                    span.set_status(Status(StatusCode.ERROR, str(self.error)[:200]))
+                    if self.owned:
+                        span.record_exception(self.error)
+                else:
+                    span.set_status(Status(StatusCode.ERROR, etype))
+                    if self.owned:
+                        span.add_event("exception", {"exception.type": type(self.error).__name__})
         except Exception as exc:  # noqa: BLE001  # pragma: no cover - never break the call
             logger.debug("Could not finish an A2A span: %s", exc)
         finally:
