@@ -281,8 +281,8 @@ only `.[dev]`; `a2ui-agent-sdk` is added to the `dev` extra.
 ## 10. Implementation notes and deviations (1.48.0)
 
 The Python part (sections 2, 3, 5, 6 and 7-Python; A2UI-D1 to D4 and D10) as built. Checked against
-`a2ui-agent-sdk` 0.11.0 and `a2ui-core` 0.6.0 as installed, and `a2a-sdk` 1.3.0. The Node part is not
-in this change.
+`a2ui-agent-sdk` 0.11.0 and `a2ui-core` 0.6.0 as installed, and `a2a-sdk` 1.3.0. The Node port is
+section 10.1.
 
 Layout: `genai_otel/a2ui_semconv/` holds `attributes.py` (names, media types, constants),
 `extract.py` (the shared reader, an `A2uiObservation` over wire-format dicts; it imports neither `a2a`
@@ -352,3 +352,44 @@ Deviations and choices the spec left open:
 Not verified: the real `a2ui.a2a.parts` module (see 1); `a2ui-agent-sdk` versions other than 0.11.0; the
 A2UI extension header on gRPC; Google ADK and MCP transports (the wrappers are transport-independent, and
 are tested only through the processors).
+
+### 10.1 The Node port (`@traceverse/genai-otel-instrument-node` 0.1.0-alpha.11)
+
+Released on npm on 2026-11-12, together with the A2A client from 1.47.0. Built against `@a2a-js/sdk` 1.3.0,
+`@a2ui/agent` 0.1.0 and `@a2ui/web_core` 0.15. The attribute names, span names, content rule, multi-value
+rule, URL scrubbing and v0.8 handling are the Python ones above. They are generated from this repository's
+attribute modules at commit `7762b71` into `contract/a2a-a2ui.json`, and CI fails if that file is edited by
+hand. Where the Node port differs from the Python one:
+
+1. **The contract is a scoped addition, not a re-pin.** The Node contract stays pinned at v1.46.0. Only the
+   A2A and A2UI names come from `7762b71`, because a full re-pin would also pull in unrelated changes from
+   1.46.x to 1.48.0. `a2a` and `a2ui` are added to the default instrumentor list. Apart from that, the list
+   is the pinned one.
+2. **There is no `a2ui.process` span.** `@a2ui/agent` 0.1.0 has no renderer-to-agent message processor, so
+   nothing exists to wrap. Renderer-to-agent messages are still counted wherever they cross A2A or the API
+   (item 4).
+3. **A renderer adapter that Python lacks.** The opt-in `a2ui_web_core` adapter wraps `@a2ui/web_core`'s
+   `MessageProcessor`, which is shared by `@a2ui/react`, `@a2ui/lit` and `@a2ui/angular`. It opens one
+   `a2ui.apply` span per batch. The span is `ERROR` when the processor throws or reports errors. Every
+   renderer error is an `a2ui.error` event, including errors the app never sends back to the agent
+   (`reportErrorsOnly`, `processMessagesWithErrors`). The adapter is off by default because it records
+   on the user's device.
+4. **A recording API for transports the library cannot see** (AG-UI, a custom WebSocket, MCP Apps):
+   `recordA2uiReceived`, `recordA2uiSent` and `recordA2uiRendererError`. Each call adds to the current
+   span, or opens a short `INTERNAL` span (`a2ui.receive`, `a2ui.send {type}`, `a2ui.renderer_error`) when
+   no span is recording. The calls never throw and never set a status. This API is how React Native
+   renderers that don't use `@a2ui/web_core` are covered.
+5. **Browsers and React Native take modules by hand.** Those environments have no module lookup by name,
+   so the module is passed to `instrumentA2aClient`, `instrumentA2uiAgent` or `instrumentA2uiWebCore`. In
+   those entries a call's span is not made active while the SDK runs, because all calls share one scope
+   stack. As a result, the app's own `fetch` spans are not its children, but `traceparent` is still sent.
+   `@a2ui/agent` and `@a2ui/web_core` are ES modules only. A CommonJS app that reaches them only through a
+   dynamic `import()` has to pass them in by hand as well.
+6. **Trace context goes into the call's `serviceParameters`** (copied, never edited) rather than through
+   an SDK interceptor. The wrapper's span is already open before the SDK builds the request, so the
+   result is the same, and it does not depend on the app's `clientConfig.interceptors`.
+7. **The A2A server side is not built.** Only the client is (Python has both).
+
+The following were not verified in the Node port: A2A over `@a2a-js/sdk`'s v0.3 compatibility layer, and
+`@a2ui/agent` or `@a2ui/web_core` versions other than the ones above. Flutter, SwiftUI and Jetpack Compose
+renderers are not covered, because there is no Dart, Swift or Kotlin port.
