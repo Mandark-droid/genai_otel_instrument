@@ -17,6 +17,12 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 from urllib.parse import urlparse
 
+from ..a2ui_semconv.extract import (
+    A2uiObservation,
+    read_a2a_part,
+    read_capabilities_metadata,
+    scrub_payload,
+)
 from .attributes import BINDING_GRPC, BINDING_HTTP_JSON, BINDING_JSONRPC, A2AAttributes
 
 logger = logging.getLogger(__name__)
@@ -259,8 +265,18 @@ def _data_json(value: Any) -> str:
 class Observation:
     """What a call put on the wire, or got back, accumulated across stream events."""
 
-    def __init__(self, capture: bool = False) -> None:
+    def __init__(
+        self,
+        capture: bool = False,
+        a2ui: Optional[A2uiObservation] = None,
+        a2ui_side: Optional[str] = None,
+    ) -> None:
         self.capture = capture
+        # When set, A2UI data parts also feed this accumulator, from ``a2ui_side``. The
+        # request and the response of one call share one, so an identifier seen as two
+        # values across them is omitted. None (the default) reads no A2UI at all.
+        self.a2ui = a2ui
+        self.a2ui_side = a2ui_side
         self.task_ids: Set[str] = set()
         self.context_ids: Set[str] = set()
         self.states: Set[str] = set()
@@ -289,6 +305,8 @@ class Observation:
                 media_type = getattr(part, "media_type", "")
                 if isinstance(media_type, str) and media_type:
                     self.file_media_types.add(media_type)
+            elif kind == "data" and self.a2ui is not None and self._add_a2ui_part(part):
+                continue
             elif not self.capture:
                 continue
             elif kind == "text":
@@ -296,10 +314,36 @@ class Observation:
             else:
                 self.datas.append(_data_json(part.data))
 
+    def _add_a2ui_part(self, part: Any) -> bool:
+        """Read an A2UI data part. True when it was one (its data is then handled here)."""
+        payload = read_a2a_part(part)
+        if payload is None or self.a2ui is None or self.a2ui_side is None:
+            return False
+        self.a2ui.add_payload(payload, self.a2ui_side)
+        if self.capture:
+            # The same data, with media URLs left out, so the A2A data attribute does not
+            # carry what the A2UI content rule never records.
+            self.datas.append(json.dumps(scrub_payload(payload), default=str, sort_keys=True))
+        return True
+
+    def observe_extensions(self, values: Iterable[Any]) -> None:
+        """Note the A2UI extension among ``values`` (header values, URIs from a context)."""
+        if self.a2ui is not None:
+            self.a2ui.mark_extension(values)
+
+    def _add_metadata(self, metadata: Any) -> None:
+        """Read the renderer's catalogs out of message or request metadata."""
+        if self.a2ui is None:
+            return
+        data = read_capabilities_metadata(metadata)
+        if data is not None:
+            self.a2ui.add_capabilities(data)
+
     def _add_artifact(self, artifact: Any) -> None:
         artifact_id = getattr(artifact, "artifact_id", "")
         self.artifact_ids.add(artifact_id or f"#{len(self.artifact_ids)}")
         self._add_parts(getattr(artifact, "parts", []) or [])
+        self.observe_extensions(list(getattr(artifact, "extensions", []) or []))
 
     def _add_ids(self, task_id: Any = None, context_id: Any = None) -> None:
         if isinstance(task_id, str) and task_id:
@@ -331,6 +375,9 @@ class Observation:
                 self.message_id = message.message_id or None
                 self.reference_task_ids = list(message.reference_task_ids)
                 self._add_parts(message.parts)
+                self.observe_extensions(list(message.extensions))
+                self._add_metadata(message.metadata)
+                self._add_metadata(request.metadata)
             elif kind in ("GetTaskRequest", "CancelTaskRequest", "SubscribeToTaskRequest"):
                 self._add_ids(request.id)
             elif kind == "ListTasksRequest":
@@ -369,6 +416,7 @@ class Observation:
         elif kind == "Message":
             self._add_ids(result.task_id, result.context_id)
             self._add_parts(result.parts)
+            self.observe_extensions(list(result.extensions))
         elif kind == "TaskStatusUpdateEvent":
             self._add_ids(result.task_id, result.context_id)
             self._add_status(result.status)

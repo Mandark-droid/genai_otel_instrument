@@ -176,6 +176,11 @@ try:
 except ImportError:  # pragma: no cover - mirrors the fallback used above
     from genai_otel.a2a_semconv.instrumentor import A2AInstrumentor
 
+try:
+    from .a2ui_semconv.instrumentor import A2UIInstrumentor
+except ImportError:  # pragma: no cover - mirrors the fallback used above
+    from genai_otel.a2ui_semconv.instrumentor import A2UIInstrumentor
+
 logger = logging.getLogger(__name__)
 
 # OpenInference instrumentors are loaded lazily to avoid importing litellm (~10s)
@@ -290,6 +295,9 @@ INSTRUMENTORS = {
     # A2A (Agent2Agent) client + server spans and trace propagation between agents.
     # Default-on, and a no-op unless a2a-sdk 1.0+ is installed.
     "a2a": A2AInstrumentor,
+    # A2UI (Agent-to-UI) spans for the Python agent SDK (a2ui-agent-sdk 0.11+).
+    # Default-on, and a no-op unless that package is installed.
+    "a2ui": A2UIInstrumentor,
 }
 
 # OpenInference instrumentors are added to INSTRUMENTORS

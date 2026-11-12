@@ -31,6 +31,7 @@ README = REPO_ROOT / "README.md"
 # docs/guides/multi-agent-frameworks.md and docs/guides/mcp-tools.md instead.
 NON_PROVIDER_KEYS = {
     "a2a",
+    "a2ui",
     "agents",
     "antigravity",
     "autogen",

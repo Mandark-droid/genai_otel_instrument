@@ -164,6 +164,8 @@ CrewAI, LangGraph, Google ADK, AutoGen, AutoGen AgentChat, OpenAI Agents SDK, Py
 
 **Agent-to-agent calls:** A2A (Agent2Agent, `a2a-sdk` 1.x) clients and servers get spans with the method, task, context and agent attributes, and W3C trace context travels between the agents so one trace crosses both. Failed or rejected tasks are not error spans; message text, data parts and skill names are recorded only with content capture on; files are never inlined. `a2a.protocol.binding` is provisional. See [A2A](https://mandark-droid.github.io/genai_otel_instrument/guides/multi-agent-frameworks/#a2a-agent2agent).
 
+**Agent-to-UI:** A2UI (Google's open protocol for an agent to send a user interface as JSON) is recorded two ways. A2A spans that carry A2UI parts gain `a2ui.*` attributes (message types, surface, catalog, the user's action name, renderer error codes), and the Python agent SDK (`a2ui-agent-sdk` 0.11+) gets `a2ui.parse_response`, `a2ui.parse_stream` and `a2ui.process` spans, so UI the model got wrong or the renderer rejected shows up in the trace. The UI itself, action context and error text are recorded only with content capture on; image and file URLs never. `GENAI_A2UI_ENABLED=false` turns it off. The `a2ui.*` names are provisional. See [A2UI](https://mandark-droid.github.io/genai_otel_instrument/guides/multi-agent-frameworks/#a2ui-agent-to-ui).
+
 [See all frameworks with examples >>](https://mandark-droid.github.io/genai_otel_instrument/guides/multi-agent-frameworks/)
 
 ### MCP Tools (20+)

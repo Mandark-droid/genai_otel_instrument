@@ -69,6 +69,9 @@ DEFAULT_INSTRUMENTORS = [
     "crewai",
     # Does nothing unless a2a-sdk 1.0+ is installed.
     "a2a",
+    # A2UI (Agent-to-UI) spans for the Python agent SDK. Does nothing unless a2ui-agent-sdk
+    # 0.11+ is installed.
+    "a2ui",
     # Voice agents. Each does nothing unless its framework is installed.
     "pipecat",
     "livekit_agents",
@@ -337,6 +340,12 @@ class OTelConfig:
     # transport instrumentation did. On by default, so one trace crosses both agents.
     a2a_propagate: bool = field(
         default_factory=lambda: os.getenv("GENAI_A2A_PROPAGATE", "true").lower() != "false"
+    )
+    # Whether A2UI (Agent-to-UI) attributes and spans are recorded: the a2ui.* attributes
+    # on A2A spans that carry A2UI parts, and the a2ui instrumentor's spans. Turning it off
+    # leaves A2A untouched. On by default, and a no-op without A2UI traffic.
+    a2ui_enabled: bool = field(
+        default_factory=lambda: os.getenv("GENAI_A2UI_ENABLED", "true").lower() != "false"
     )
     enable_mcp_instrumentation: bool = field(
         default_factory=lambda: os.getenv("GENAI_ENABLE_MCP_INSTRUMENTATION", "true").lower()

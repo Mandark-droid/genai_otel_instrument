@@ -399,6 +399,33 @@ Also set: `gen_ai.conversation.id` (the A2A `contextId`), `gen_ai.agent.name` / 
 `.version` (from the Agent Card), `gen_ai.operation.name=invoke_agent` (client spans),
 `error.type`, `server.address`, `server.port`.
 
+### A2UI (Agent-to-UI)
+
+OpenTelemetry has no convention for A2UI, and the protocol defines no telemetry, so every
+`a2ui.*` key is a **provisional genai_otel addition** that may be renamed if a convention
+settles on other names. They appear on A2A spans that carry A2UI parts and on the
+`a2ui.parse_response`, `a2ui.parse_stream` and `a2ui.process {type}` spans. Content rules:
+[A2UI](../guides/multi-agent-frameworks.md#a2ui-agent-to-ui).
+
+| Attribute | Type | Notes |
+|---|---|---|
+| `a2ui.protocol.version` | string | `1.0`, `0.9` or `0.8`; left off when the operation saw more than one |
+| `a2ui.agent_message.count`, `a2ui.renderer_message.count` | int | Messages the agent sent to the renderer, and the renderer sent to the agent |
+| `a2ui.message.types` | string[] | Sorted distinct types: `create_surface`, `update_components`, `update_data_model`, `delete_surface`, `call_renderer_function`, `agent_function_response`, `action`, `call_agent_function`, `renderer_function_response`, `error` |
+| `a2ui.surface.id`, `a2ui.surface.count` | string / int | The surface when single; the distinct count |
+| `a2ui.catalog.id`, `a2ui.catalog.ids` | string / string[] | The catalog when single; every catalog referenced |
+| `a2ui.component.count` | int | Components in `createSurface` and `updateComponents` messages |
+| `a2ui.renderer.supported_catalog_ids` | string[] | From the renderer's capabilities metadata |
+| `a2ui.action.name`, `a2ui.function.name` | string | The user action's name, or the function called, when single |
+| `a2ui.error.codes`, `a2ui.error.count` | string[] / int | Renderer and function error codes (`VALIDATION_FAILED`, `UNALLOWED_PARENT`, `EXECUTION_ERROR`, ...) and how many |
+| `a2ui.validation.outcome` | string | `valid` or `invalid`, from agent-side parsing |
+| `a2ui.extension.active` | bool | The A2UI A2A extension URI was among the call's extensions (set only when true) |
+| `a2ui.messages`, `a2ui.data_model`, `a2ui.action.context`, `a2ui.error.paths`, `a2ui.error.messages`, `a2ui.component.types` | string / string[] | only with content capture on; media URLs inside components are never recorded |
+
+Each renderer error or function error is also a span event `a2ui.error` with
+`a2ui.error.code` and `a2ui.surface.id`. `error.type` is reused for a parse or validation
+failure.
+
 ### Object storage (S3 API and SeaweedFS)
 
 | Attribute | Notes |

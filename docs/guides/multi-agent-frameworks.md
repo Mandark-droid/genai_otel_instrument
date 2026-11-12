@@ -788,6 +788,66 @@ variable in the environment to fix that.
 `RequestHandler` is not. No A2A metrics yet: the OpenTelemetry convention for them is still
 open. The Java, Go, JavaScript and .NET SDKs are not covered.
 
+## A2UI (Agent-to-UI)
+
+[A2UI](https://a2ui.org) is Google's open protocol for an agent to send a user interface as
+declarative JSON instead of code. The agent describes surfaces and components from a catalog
+the client trusts, the client draws them with its own native components, and sends the user's
+actions back. It usually travels inside A2A messages. The protocol defines no telemetry, so
+the `a2ui.*` attributes below are genai_otel additions and **provisional**.
+
+What it makes visible: UI the renderer rejected (a validation error the server never sees),
+UI the agent SDK could not parse (the model wrote invalid output and the user sees nothing),
+what the user did (an `action` starts the agent's next turn), and what was shown.
+
+It is on by default. `GENAI_A2UI_ENABLED=false` turns it off without touching A2A.
+
+**Inside A2A spans (`a2a-sdk` 1.x).** When an A2A message, stream event or artifact carries an
+A2UI data part (`mimeType` `application/a2ui+json`, or the deprecated `application/json+a2ui`, in
+the part's metadata or its media type), the A2A span gains `a2ui.*` attributes. The payload may
+be one message or a list of messages per part; both shapes are read. What the renderer sent (the
+request) counts as `a2ui.renderer_message.count`, what the agent sent (the response, stream
+events and artifacts) as `a2ui.agent_message.count`. `a2ui.extension.active` is set when the A2UI
+extension URI is among the call's extensions, and the renderer's catalogs are read from
+`a2uiRendererCapabilities` or `a2uiClientCapabilities` in the message metadata. A2UI parts still
+count in the A2A `data` part counts. A renderer `error` message does **not** make the A2A span
+ERROR: the call that carried it worked. It sets `a2ui.error.codes` and adds one `a2ui.error`
+span event per error.
+
+**The agent SDK (`a2ui-agent-sdk` 0.11+, any transport).** The official A2UI-over-A2A bridge
+(`a2ui-a2a`) pins `a2a-sdk` 0.3, which the A2A instrumentor does not cover, and the SDK also runs
+under Google ADK and MCP, so the agent SDK is wrapped directly:
+
+| Span | Wraps | Notes |
+|---|---|---|
+| `a2ui.parse_response` | `A2uiRequestProcessor.parse_response` | ERROR with `error.type` and `a2ui.validation.outcome=invalid` when parsing or validation raises, which is the model producing invalid UI. A child of the LLM span when one is active |
+| `a2ui.parse_stream` | `A2uiRequestProcessor.open_stream` | Ends when the stream does (`close()`, or an error), with the totals. ERROR when a block is rejected, including a stream that reads past it |
+| `a2ui.process {type}` | `RendererToAgentMessageProcessor.process_message` | The renderer message (`a2ui.process action`), the reply count (`a2ui.agent_message.count`) and the error codes of renderer errors and function errors |
+| (current span) | `a2ui.a2a.parts.parse_content_to_parts` | That function swallows every exception and logs only its class. The current span gets `a2ui.validation.outcome=invalid` and an `a2ui.validation_failed` event with `error.type`. Return value and logging are unchanged. Needs `a2ui-a2a` |
+
+It does nothing when `a2ui-agent-sdk` is not installed or is older than 0.11. v1.0 and v0.9
+messages are read; v0.8 messages are recognised and counted, and their shapes are not parsed.
+
+**What is recorded, and when**
+
+| Always | Only with content capture on | Never |
+|---|---|---|
+| Message types, protocol version, surface and catalog ids, counts, component count, action and function names, error codes, the validation outcome | `a2ui.messages` (the JSON), data-model values, an action's `context`, an error's `path` and `message` (a validation message can quote user data), component type names | The content of image or file URLs inside components, and `data:` URIs |
+
+Action names are developer-defined identifiers, like span names. Component type names in a
+custom catalog can describe a business process, so they are content. A single-valued key
+(`a2ui.surface.id`, `a2ui.catalog.id`, `a2ui.action.name`, `a2ui.function.name`,
+`a2ui.protocol.version`) is left off when one operation saw several distinct values; the list
+keys are sorted and de-duplicated.
+
+**Limits.** Python only: there is no Python renderer, and the prompt-building parts of the agent
+SDK are not instrumented (the LLM span already records the prompt under content capture).
+`a2ui-a2a`'s A2A 0.3 spans are not produced (the A2A instrumentor covers `a2a-sdk` 1.x); the
+agent SDK spans cover the A2UI signal there. A function imported before instrumentation
+(`from a2ui.a2a.parts import parse_content_to_parts`) keeps the unwrapped reference, so call it
+through the module or instrument first. A stream that is never closed ends its span when it is
+garbage collected.
+
 ## Other Frameworks
 
 | Framework | Description | Install Extra | Example |

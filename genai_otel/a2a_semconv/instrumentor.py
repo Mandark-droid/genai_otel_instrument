@@ -44,6 +44,8 @@ from opentelemetry.propagators.composite import CompositePropagator
 from opentelemetry.trace import SpanKind, Status, StatusCode
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
+from ..a2ui_semconv.attributes import SIDE_AGENT, SIDE_RENDERER
+from ..a2ui_semconv.extract import A2uiObservation, apply_to_span
 from ..config import OTelConfig
 from ..instrumentors.base import BaseInstrumentor
 from ..sessions import SessionBaggagePropagator
@@ -118,6 +120,37 @@ def _propagation_enabled(config: Optional[OTelConfig]) -> bool:
     return bool(getattr(config, "a2a_propagate", True)) if config is not None else True
 
 
+def _a2ui_enabled(config: Optional[OTelConfig]) -> bool:
+    """Whether A2UI attributes go on A2A spans (``GENAI_A2UI_ENABLED``)."""
+    return bool(getattr(config, "a2ui_enabled", True)) if config is not None else True
+
+
+def _extension_values(context: Any) -> List[str]:
+    """A2A extension URIs a call asked for, from a client or server call context.
+
+    The client puts them in ``service_parameters`` under ``A2A-Extensions`` (the older
+    name ``X-A2A-Extensions`` too), the server in ``requested_extensions`` and in the
+    request headers.
+    """
+    values: List[str] = []
+    if context is None:
+        return values
+    try:
+        for params in (getattr(context, "service_parameters", None),):
+            for key, value in dict(params or {}).items():
+                if str(key).lower() in ("a2a-extensions", "x-a2a-extensions"):
+                    values.append(str(value))
+        values.extend(str(v) for v in (getattr(context, "requested_extensions", None) or ()))
+        state = getattr(context, "state", None)
+        headers = state.get("headers") if hasattr(state, "get") else None
+        for key, value in dict(headers or {}).items():
+            if str(key).lower() in ("a2a-extensions", "x-a2a-extensions"):
+                values.append(str(value))
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Could not read A2A extension headers: %s", exc)
+    return values
+
+
 class _CallScope:
     """One observed call: its span, what it saw, and how it ends."""
 
@@ -131,8 +164,10 @@ class _CallScope:
         extra_always: Optional[Dict[str, Any]] = None,
         extra_content: Optional[Dict[str, Any]] = None,
         mark_server: bool = False,
+        a2ui: Optional[A2uiObservation] = None,
     ) -> None:
         self.instrumentor = instrumentor
+        self.a2ui = a2ui
         self.span = span
         self.owned = owned
         self.request = request
@@ -182,6 +217,10 @@ class _CallScope:
                 span.set_attribute(key, value)
             for key, value in {**content, **self.extra_content}.items():
                 self.instrumentor._put_content(span, key, value)
+            if self.a2ui is not None and self.a2ui.has_data:
+                # A2UI inside A2A parts, or an A2UI extension on the call. A renderer
+                # error does not make this span ERROR: the call carrying it succeeded.
+                apply_to_span(span, self.a2ui, self.instrumentor._put_content)
             if self.error is not None:
                 span.set_attribute(A2AAttributes.ERROR_TYPE, error_type(self.error))
                 etype = error_type(self.error)
@@ -377,12 +416,15 @@ class A2AInstrumentor(BaseInstrumentor):
         return self._interceptor_class()
 
     def _begin_client(
-        self, client: Any, attr: str, method: str, request: Any
+        self, client: Any, attr: str, method: str, request: Any, context: Any = None
     ) -> Optional[_CallScope]:
         self._ensure_interceptor(client)
         capture = self._capture()
-        req = Observation(capture)
+        # The renderer sends (the request), the agent answers (the response).
+        a2ui = A2uiObservation(capture) if _a2ui_enabled(self.config) else None
+        req = Observation(capture, a2ui, SIDE_RENDERER)
         req.observe_request(request)
+        req.observe_extensions(_extension_values(context))
         card = getattr(client, "_card", None)
         transport = getattr(client, "_transport", None)
         binding = binding_from_transport(transport)
@@ -418,11 +460,12 @@ class A2AInstrumentor(BaseInstrumentor):
             span,
             owned=True,
             request=req,
-            response=Observation(capture),
+            response=Observation(capture, a2ui, SIDE_AGENT),
             extra_always={
                 k: v for k, v in always.items() if k not in start and k != A2AAttributes.AGENT_NAME
             },
             extra_content=content,
+            a2ui=a2ui,
         )
 
     def _client_unary_wrapper(self, attr: str, method: str, original: Callable[..., Any]) -> Any:
@@ -430,7 +473,9 @@ class A2AInstrumentor(BaseInstrumentor):
 
         async def wrapper(client: Any, request: Any, *args: Any, **kwargs: Any) -> Any:
             try:
-                scope = instrumentor._begin_client(client, attr, method, request)
+                scope = instrumentor._begin_client(
+                    client, attr, method, request, kwargs.get("context")
+                )
             except Exception as exc:  # noqa: BLE001
                 logger.debug("A2A client span not started: %s", exc)
                 scope = None
@@ -454,7 +499,9 @@ class A2AInstrumentor(BaseInstrumentor):
 
         async def wrapper(client: Any, request: Any, *args: Any, **kwargs: Any) -> Any:
             try:
-                scope = instrumentor._begin_client(client, attr, method, request)
+                scope = instrumentor._begin_client(
+                    client, attr, method, request, kwargs.get("context")
+                )
             except Exception as exc:  # noqa: BLE001
                 logger.debug("A2A client span not started: %s", exc)
                 scope = None
@@ -545,8 +592,10 @@ class A2AInstrumentor(BaseInstrumentor):
         if otel_context.get_value(_SERVER_ACTIVE_KEY):
             return None
         capture = self._capture()
-        req = Observation(capture)
+        a2ui = A2uiObservation(capture) if _a2ui_enabled(self.config) else None
+        req = Observation(capture, a2ui, SIDE_RENDERER)
         req.observe_request(params)
+        req.observe_extensions(_extension_values(call_context))
         card = getattr(handler, "_agent_card", None)
         state = getattr(call_context, "state", None)
         binding = binding_from_server_state(state) if state is not None else None
@@ -582,9 +631,10 @@ class A2AInstrumentor(BaseInstrumentor):
                 transport_span,
                 owned=False,
                 request=req,
-                response=Observation(capture),
+                response=Observation(capture, a2ui, SIDE_AGENT),
                 extra_content=content,
                 mark_server=True,
+                a2ui=a2ui,
             )
 
         parent = None
@@ -599,9 +649,10 @@ class A2AInstrumentor(BaseInstrumentor):
             span,
             owned=True,
             request=req,
-            response=Observation(capture),
+            response=Observation(capture, a2ui, SIDE_AGENT),
             extra_content=content,
             mark_server=True,
+            a2ui=a2ui,
         )
 
     def _server_unary_wrapper(self, attr: str, method: str, original: Callable[..., Any]) -> Any:
