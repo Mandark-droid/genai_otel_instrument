@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.48.0] - 2026-11-12
+
+A2UI (Agent-to-UI): what an agent's generated interface was, what the user did with it, and when the model's UI or the renderer failed.
+
 ### Added
 
 - A2UI (Agent-to-UI) instrumentation, on by default and a no-op without A2UI traffic. A2A 1.x spans that carry A2UI data parts (`application/a2ui+json` or the deprecated `application/json+a2ui`, one message or a list per part) gain provisional `a2ui.*` attributes: protocol version, message counts per side, message types, surface and catalog ids, component count, the renderer's supported catalogs (`a2uiRendererCapabilities` / `a2uiClientCapabilities`), the user action's and function's name, error codes and `a2ui.extension.active`. A renderer error adds one `a2ui.error` span event and does not make the A2A span ERROR. The new `a2ui` instrumentor wraps the Python agent SDK (`a2ui-agent-sdk` 0.11+, any transport): `a2ui.parse_response` (ERROR with `error.type` when the model's UI fails parsing or validation), `a2ui.parse_stream` (ends with the stream, totals), `a2ui.process {type}` (renderer messages, reply count, error codes), and it marks the current span `a2ui.validation.outcome=invalid` when `a2ui.a2a.parts.parse_content_to_parts` swallows a failure, without changing its result or logging. The messages, data-model values, action context, error path and message and component type names are recorded only with content capture on; image and file URLs never. v0.8 messages are counted, not parsed. New setting `GENAI_A2UI_ENABLED` (default `true`); `a2ui-agent-sdk` is added to the `dev` extra. See the A2UI section of the multi-agent frameworks guide.
