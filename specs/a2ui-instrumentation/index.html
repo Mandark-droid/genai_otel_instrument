@@ -1,0 +1,2174 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The most comprehensive OpenTelemetry auto-instrumentation library for LLM/GenAI applications">
+      
+      
+      
+        <link rel="canonical" href="https://mandark-droid.github.io/genai_otel_instrument/specs/a2ui-instrumentation/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A2UI (Agent-to-UI) instrumentation (spec) - TraceVerde Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="light-green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#a2ui-agent-to-ui-instrumentation-spec" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="TraceVerde Documentation" class="md-header__button md-logo" aria-label="TraceVerde Documentation" data-md-component="logo">
+      
+  <img src="../../assets/logo.jpg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TraceVerde Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A2UI (Agent-to-UI) instrumentation (spec)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="light-green"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="green" data-md-color-accent="light-green"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Mandark-droid/genai_otel_instrument" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mandark-droid/genai_otel_instrument
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="TraceVerde Documentation" class="md-nav__button md-logo" aria-label="TraceVerde Documentation" data-md-component="logo">
+      
+  <img src="../../assets/logo.jpg" alt="logo">
+
+    </a>
+    TraceVerde Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Mandark-droid/genai_otel_instrument" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mandark-droid/genai_otel_instrument
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/coding-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Instrument with a Coding Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/demo-app/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demo App
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/llm-providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/retrieval-quality/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Retrieval Quality
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/speech/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Speech telemetry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/real-world-examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-world examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/multi-agent-frameworks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Agent Frameworks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/mcp-tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cost-tracking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cost Tracking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/gpu-metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU Metrics & CO2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evaluation & Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/multimodal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multimodal Observability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/seaweedfs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/sarvam-ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sarvam AI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/arize-ax/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arize AX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/performance-tuning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/python-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/server-metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Server Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/semantic-conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Semantic Conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../seaweedfs-instrumentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS instrumentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Community
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Community
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/agent-contributions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Human and LLM agent contributions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Problem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-the-protocol-as-read-from-the-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. The protocol, as read from the sources
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. The protocol, as read from the sources">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-the-sdks-a2uiorg-lists-and-what-covers-each" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 The SDKs a2ui.org lists, and what covers each
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-proposal-python-1480" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Proposal: Python (1.48.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Proposal: Python (1.48.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-recognise-a2ui-inside-a2a-spans-a2a-sdk-1x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Recognise A2UI inside A2A spans (a2a-sdk 1.x)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-instrument-the-agent-sdk-a2ui-agent-sdk-any-transport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Instrument the agent SDK (a2ui-agent-sdk, any transport)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-what-is-not-instrumented-in-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 What is not instrumented in Python
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-proposal-node-browser-and-react-native" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Proposal: Node, browser and React Native
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Proposal: Node, browser and React Native">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#40-the-typescript-agent-sdk-a2uiagent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.0 The TypeScript agent SDK (@a2ui/agent)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#41-a2a-client-instrumentation-for-a2a-jssdk-prerequisite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 A2A client instrumentation for @a2a-js/sdk (prerequisite)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-wire-level-a2ui-recognition-independent-of-the-renderer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Wire-level A2UI recognition, independent of the renderer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-renderer-adapter-for-a2uiweb_core-official-web-renderers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Renderer adapter for @a2ui/web_core (official web renderers)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-porting-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Porting rule
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Attributes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-decisions-for-approval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Decisions for approval
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-out-of-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Out of scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-implementation-notes-and-deviations-1480" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Implementation notes and deviations (1.48.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="a2ui-agent-to-ui-instrumentation-spec">A2UI (Agent-to-UI) instrumentation (spec)<a class="headerlink" href="#a2ui-agent-to-ui-instrumentation-spec" title="Permanent link">&para;</a></h1>
+<p>Status: <strong>APPROVED 2026-11-12</strong>. A2UI-D1 to A2UI-D11 are approved as recommended. The Python part ships in
+<strong>1.48.0</strong>. The Node part covers Node, browser and React Native applications and ships as the next npm release of
+<code>@traceverse/genai-otel-instrument-node</code> (after 0.1.0-alpha.10). Correction 2026-11-12: the Node port is published
+on npm, so it gets a release too; its contract is pinned to v1.46.0, not v1.30.0.</p>
+<h2 id="1-problem">1. Problem<a class="headerlink" href="#1-problem" title="Permanent link">&para;</a></h2>
+<p>A2UI is Google's open protocol (Apache 2.0) for an agent to send a user interface as declarative JSON instead of
+code. The agent describes surfaces and components from a catalog the client trusts. The client draws them with its
+own native components (React, Lit, Angular, Flutter, SwiftUI, Jetpack Compose). The client sends user actions back
+to the agent. v1.0 is the current protocol version on a2ui.org; v0.9.1 and v0.9 are previous, and v0.8 is
+deprecated.</p>
+<p>This library records nothing A2UI-specific today. A2UI usually travels inside A2A messages, so 1.47.0's A2A spans
+see it, but only as an anonymous <code>data</code> part: the span cannot say that a UI was sent, which surface or catalog it
+used, what the user did with it, or that the client rejected it. The protocol defines no telemetry of its own.</p>
+<p>What matters for observability, in order:</p>
+<ol>
+<li><strong>The agent produced UI the client rejected.</strong> Renderer <code>error</code> messages (<code>VALIDATION_FAILED</code>,
+   <code>UNALLOWED_PARENT</code>, <code>UNALLOWED_CHILD</code>, function errors) mean the user saw a broken or missing interface while
+   every server-side span looked healthy.</li>
+<li><strong>The model produced UI the agent SDK could not parse or validate.</strong> The agent SDK drops the response, so the
+   user sees nothing. This is a model-quality signal: invalid output from the LLM.</li>
+<li><strong>What the user did.</strong> An <code>action</code> message is the user's click or submit. It starts the agent's next turn and
+   belongs in the same trace as the UI that offered it.</li>
+<li><strong>What was shown.</strong> The surface, the catalog, the protocol version and the size of the update.</li>
+</ol>
+<h2 id="2-the-protocol-as-read-from-the-sources">2. The protocol, as read from the sources<a class="headerlink" href="#2-the-protocol-as-read-from-the-sources" title="Permanent link">&para;</a></h2>
+<p>Sources: the v1.0 specification and the A2A extension specification on a2ui.org, and the Python packages
+<code>a2ui-agent-sdk</code> 0.11.0, <code>a2ui-a2a</code> 0.3.0 and <code>a2ui-core</code> 0.6.0 (all read from their published wheels).</p>
+<ul>
+<li><strong>Agent-to-renderer messages.</strong> Each message has exactly one of <code>createSurface</code>, <code>updateComponents</code>,
+  <code>updateDataModel</code>, <code>deleteSurface</code>, <code>callRendererFunction</code> or <code>agentFunctionResponse</code>, and a top-level
+  <code>"version": "1.0"</code>. v0.9 messages have the same shape with their own version; v0.8 messages have no <code>version</code>.</li>
+<li><strong>Renderer-to-agent messages.</strong> Each has exactly one of <code>action</code>, <code>callAgentFunction</code>,
+  <code>rendererFunctionResponse</code> or <code>error</code>.</li>
+<li><strong>Identity.</strong> <code>surfaceId</code> on surface messages. <code>catalogId</code> on <code>createSurface</code> (the surface default), <code>@catalogId</code>
+  on a component that overrides it, and <code>catalogId</code> on function calls. These are string identifiers, not URLs.</li>
+<li><strong>Errors.</strong> A validation error is <code>{"error": {"code", "surfaceId", "path", "message"}}</code>. Function responses carry
+  <code>error.code</code> and <code>error.message</code> (<code>INVALID_FUNCTION_CALL</code>, <code>EXECUTION_ERROR</code>, <code>EXPRESSION_ERROR</code>,
+  <code>INTEGRITY_ERROR</code>).</li>
+<li><strong>Over A2A.</strong></li>
+<li>The extension URI is <code>https://a2ui.org/a2a-extension/a2ui/v1.0</code>. It is activated through the
+    <code>X-A2A-Extensions</code> header (JSON-RPC and HTTP) or the gRPC <code>metadata["X-A2A-Extensions"]</code>. Activation is
+    optional.</li>
+<li>An A2UI part is a <code>DataPart</code> whose <code>metadata["mimeType"]</code> is <code>application/a2ui+json</code>. v0.8 and v0.9 use the
+    deprecated <code>application/json+a2ui</code>, and receivers must accept both.</li>
+<li><strong>The spec and the SDK disagree on the part payload.</strong> The spec says the <code>data</code> field MUST be an array of
+    messages, processed in order and not as a transaction. The Python SDK writes one message per <code>DataPart</code>
+    (<code>create_a2ui_part</code>). Both shapes must be read.</li>
+<li>The renderer advertises its catalogs in <code>message.metadata["a2uiRendererCapabilities"]["1.0"]["supportedCatalogIds"]</code>.
+    The Python SDK's constant is <code>a2uiClientCapabilities</code>, and both keys must be read.</li>
+<li><strong>Other transports.</strong> The agent SDK also integrates with Google ADK and MCP, and leaves the transport to the
+  application.</li>
+<li><strong>A version trap.</strong> <code>a2ui-a2a</code> 0.3.0 requires <code>a2a-sdk&gt;=0.3.0,&lt;0.4.0</code>. 1.47.0's A2A instrumentor covers
+  <code>a2a-sdk</code> 1.x only and is a no-op on 0.3. An agent built on the official A2UI-over-A2A bridge therefore gets
+  <strong>no</strong> A2A spans today, so A2UI coverage cannot depend on the A2A instrumentor alone.</li>
+</ul>
+<h3 id="21-the-sdks-a2uiorg-lists-and-what-covers-each">2.1 The SDKs a2ui.org lists, and what covers each<a class="headerlink" href="#21-the-sdks-a2uiorg-lists-and-what-covers-each" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Listed SDK</th>
+<th>Side</th>
+<th>Covered by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a2ui-agent-sdk</code> (PyPI, 0.11.0; protocol v0.8, v0.9.1, v1.0)</td>
+<td>Agent</td>
+<td>3.2</td>
+</tr>
+<tr>
+<td><code>a2ui-a2a</code> (PyPI, 0.3.0; pins <code>a2a-sdk</code> 0.3)</td>
+<td>Agent, A2A bridge</td>
+<td>3.2 (its parts come from the agent SDK). 3.1 does not apply, because that needs A2A 1.x (A2UI-D2)</td>
+</tr>
+<tr>
+<td><code>a2ui-adk</code> (PyPI, 0.3.0; Google ADK)</td>
+<td>Agent</td>
+<td>3.2 (it calls the agent SDK's processor)</td>
+</tr>
+<tr>
+<td><code>@a2ui/agent</code> (npm, 0.1.0, 2026-11-02; the TypeScript port of the agent SDK, same <code>A2uiRequestProcessor</code> / <code>Parser</code> surface)</td>
+<td>Agent, Node</td>
+<td>4.0</td>
+</tr>
+<tr>
+<td><code>@a2ui/web_core</code> (npm, 0.15.0) with <code>@a2ui/react</code>, <code>@a2ui/lit</code>, <code>@a2ui/angular</code></td>
+<td>Renderer, web</td>
+<td>4.3, plus 4.1 and 4.2 for the transport</td>
+</tr>
+<tr>
+<td><code>a2ui_agent</code> (Dart) and Flutter</td>
+<td>Agent and renderer</td>
+<td>Out of scope: no Dart port</td>
+</tr>
+<tr>
+<td>SwiftUI, Jetpack Compose renderers, legacy Kotlin agent SDK</td>
+<td>Renderer / agent</td>
+<td>Out of scope: no Swift port. The Java port has no A2A or A2UI support (a later spec)</td>
+</tr>
+<tr>
+<td>Go community libraries (<code>satorunooshie/a2ui-go</code>, <code>tmc/a2ui</code>) and terminal renderers</td>
+<td>Agent / renderer</td>
+<td>A2UI-D9</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-proposal-python-1480">3. Proposal: Python (1.48.0)<a class="headerlink" href="#3-proposal-python-1480" title="Permanent link">&para;</a></h2>
+<h3 id="31-recognise-a2ui-inside-a2a-spans-a2a-sdk-1x">3.1 Recognise A2UI inside A2A spans (a2a-sdk 1.x)<a class="headerlink" href="#31-recognise-a2ui-inside-a2a-spans-a2a-sdk-1x" title="Permanent link">&para;</a></h3>
+<p>Extend <code>genai_otel/a2a_semconv/extract.py</code>. When a data part carries either A2UI media type (in
+<code>metadata["mimeType"]</code> or in the part's <code>media_type</code>), parse its payload as an A2UI message or list of messages and
+add the <code>a2ui.*</code> attributes of section 5 to the existing A2A span:</p>
+<ul>
+<li>the request side for what the renderer sent;</li>
+<li>the response side, including stream events and artifacts, for what the agent sent.</li>
+</ul>
+<p>This needs no new span. A2UI parts still count in the A2A <code>data</code> part counts, unchanged. The extension URI in
+<code>X-A2A-Extensions</code>, when present, sets <code>a2ui.extension.active=true</code>.</p>
+<h3 id="32-instrument-the-agent-sdk-a2ui-agent-sdk-any-transport">3.2 Instrument the agent SDK (<code>a2ui-agent-sdk</code>, any transport)<a class="headerlink" href="#32-instrument-the-agent-sdk-a2ui-agent-sdk-any-transport" title="Permanent link">&para;</a></h3>
+<p>This works whether the agent speaks A2A 0.3, A2A 1.x, ADK, MCP or something else.</p>
+<ul>
+<li><strong><code>A2uiRequestProcessor.parse_response</code></strong> gets one INTERNAL span, <code>a2ui.parse_response</code>. It records the
+  messages produced and their attributes.</li>
+<li>If parsing or validation raises, the span is ERROR with <code>error.type</code> set to the exception class.</li>
+<li><code>a2ui.validation.outcome</code> is <code>valid</code> or <code>invalid</code>.</li>
+<li>Under the active LLM span when there is one, this is where "the model wrote broken UI" becomes visible.</li>
+<li><strong><code>A2uiRequestProcessor.open_stream</code></strong> gets one span, <code>a2ui.parse_stream</code>, which covers the whole stream. Its
+  attributes are the totals at the end.</li>
+<li><strong><code>RendererToAgentMessageProcessor.process_message</code></strong> gets one INTERNAL span,
+  <code>a2ui.process {message type}</code> (for example <code>a2ui.process action</code>). It records:</li>
+<li>the incoming message's attributes;</li>
+<li>the reply count;</li>
+<li>renderer <code>error</code> messages, by code.</li>
+<li><strong><code>parse_content_to_parts</code></strong> catches every exception and logs only its class. Our wrapper records it as
+  <code>a2ui.validation.outcome=invalid</code> on the current span. It changes neither the return value nor the logging.</li>
+</ul>
+<p>No-op when <code>a2ui-agent-sdk</code> is not installed or is older than 0.11. Protocol versions v1.0 and v0.9 are read; v0.8
+is recognised by media type and counted, but its message shapes are not parsed (it is deprecated).</p>
+<h3 id="33-what-is-not-instrumented-in-python">3.3 What is not instrumented in Python<a class="headerlink" href="#33-what-is-not-instrumented-in-python" title="Permanent link">&para;</a></h3>
+<ul>
+<li>No renderer. Python has no A2UI renderer.</li>
+<li>The prompt-building parts of the agent SDK (schema prompts, catalog pruning, examples). They run before the LLM
+  call and the LLM span already records the prompt under content capture.</li>
+</ul>
+<h2 id="4-proposal-node-browser-and-react-native">4. Proposal: Node, browser and React Native<a class="headerlink" href="#4-proposal-node-browser-and-react-native" title="Permanent link">&para;</a></h2>
+<p>The Node SDK is the port for Node services, browsers and React Native apps. In a mobile or web app the app is the
+<strong>renderer</strong>: it receives the agent's UI and sends the user's actions. Three pieces are needed.</p>
+<h3 id="40-the-typescript-agent-sdk-a2uiagent">4.0 The TypeScript agent SDK (<code>@a2ui/agent</code>)<a class="headerlink" href="#40-the-typescript-agent-sdk-a2uiagent" title="Permanent link">&para;</a></h3>
+<p><code>@a2ui/agent</code> 0.1.0 is the TypeScript port of the Python agent SDK. It exports the same <code>A2uiRequestProcessor</code>,
+<code>Parser</code> and response-stream classes, and its error classes (<code>A2uiValidationError</code>, <code>ParseError</code>, the <code>Express*</code>
+errors). An agent written in Node gets the same spans as section 3.2:</p>
+<ul>
+<li><code>a2ui.parse_response</code>;</li>
+<li><code>a2ui.parse_stream</code>, which is ERROR on a parse or validation failure, with <code>error.type</code> set to the error class.</li>
+</ul>
+<p>The exact method names are checked against the 0.1.0 sources at implementation time. 0.1.0 exports no
+renderer-to-agent processor, so the <code>a2ui.process</code> span is Python-only until the TypeScript SDK adds one. The Node
+agent's A2A <strong>server</strong> spans remain A2UI-D6.</p>
+<h3 id="41-a2a-client-instrumentation-for-a2a-jssdk-prerequisite">4.1 A2A client instrumentation for <code>@a2a-js/sdk</code> (prerequisite)<a class="headerlink" href="#41-a2a-client-instrumentation-for-a2a-jssdk-prerequisite" title="Permanent link">&para;</a></h3>
+<p>The Node SDK has no A2A support today. A renderer talks to its agent over A2A, so without this there is no span for
+the call, no A2UI attributes on it, and no trace from the user's tap to the agent's work.</p>
+<ul>
+<li>Port the client half of the 1.47.0 Python design to <code>@a2a-js/sdk</code> 1.x: <code>a2a.client</code> spans, the same
+  attributes, W3C trace-context injection through the SDK's interceptor or fetch hook, and the same content rule.</li>
+<li><strong>The server half (a Node agent) is in scope only if A2UI-D6 says so.</strong></li>
+</ul>
+<h3 id="42-wire-level-a2ui-recognition-independent-of-the-renderer">4.2 Wire-level A2UI recognition, independent of the renderer<a class="headerlink" href="#42-wire-level-a2ui-recognition-independent-of-the-renderer" title="Permanent link">&para;</a></h3>
+<p>The renderer landscape is fragmented. The official ones are React, Lit and Angular (sharing <code>@a2ui/web_core</code>),
+plus Flutter, SwiftUI and Compose. Community ones include two React Native renderers
+(<code>a2ui-react-native-renderer</code> 1.0.0 on npm for v1.0, and <code>sivamrudram-eng/a2ui-react-native</code> for v0.8), Vue,
+Svelte, Lynx and terminal renderers. Patching each renderer does not scale. Instead:</p>
+<ul>
+<li><strong>A2A client spans</strong> parse A2UI parts the same way as section 3.1. On the request, they record the user action
+  being sent and the renderer capabilities. On the response, they record what the agent sent. This alone covers any
+  renderer that talks to its agent through <code>@a2a-js/sdk</code>.</li>
+<li><strong>A small public API</strong> for apps whose transport we do not see (AG-UI, a custom WebSocket, MCP Apps):
+  <code>recordA2uiReceived(messages)</code>, <code>recordA2uiSent(message)</code> and <code>recordA2uiRendererError(error)</code>. Each adds the
+  attributes of section 5 to the current span, or opens a short INTERNAL span when none is active. All three are
+  exported from the Node, browser and React Native entry points.</li>
+</ul>
+<h3 id="43-renderer-adapter-for-a2uiweb_core-official-web-renderers">4.3 Renderer adapter for <code>@a2ui/web_core</code> (official web renderers)<a class="headerlink" href="#43-renderer-adapter-for-a2uiweb_core-official-web-renderers" title="Permanent link">&para;</a></h3>
+<p><code>@a2ui/react</code>, <code>@a2ui/lit</code> and <code>@a2ui/angular</code> share <code>@a2ui/web_core</code> (0.15). An opt-in adapter wraps its message
+processor:</p>
+<ul>
+<li>it records one <code>a2ui.apply</code> span per batch of agent messages applied, with the duration until the batch is
+  processed;</li>
+<li>it records renderer-side validation errors as span events with their code, even when the app never sends the
+  <code>error</code> message back to the agent.</li>
+</ul>
+<p>The community React Native renderers do not depend on <code>web_core</code>. For them the A2A path in 4.1 and 4.2 and the API
+in 4.2 apply. A dedicated adapter for <code>a2ui-react-native-renderer</code> is decision A2UI-D7.</p>
+<h3 id="44-porting-rule">4.4 Porting rule<a class="headerlink" href="#44-porting-rule" title="Permanent link">&para;</a></h3>
+<p>The Node port vendors the Python contract (semantic conventions, configuration, pricing) from one pinned Python
+tag, with SHA checks, and its parity matrix tracks every difference. The A2UI and A2A attribute names are added to
+the vendored contract <strong>from the 1.48.0 tag</strong>, not typed in by hand. Re-pinning the whole contract from v1.46.0 to
+v1.48.0 also brings in 1.46.x-1.47.0 changes unrelated to A2UI. A2UI-D8 decides between a full re-pin and a scoped addition recorded in
+<code>SDK_ADDITIONS.md</code>.</p>
+<h2 id="5-attributes">5. Attributes<a class="headerlink" href="#5-attributes" title="Permanent link">&para;</a></h2>
+<p>All names are <code>a2ui.*</code> additions of this library and are marked provisional: there is no OpenTelemetry convention
+for A2UI. Multi-valued rules follow 1.47.0's A2A rules: a single-valued identifier is omitted when one operation saw
+several distinct values, and lists are sorted and de-duplicated.</p>
+<p><strong>Always recorded.</strong> These are identifiers, counts and codes, not content:</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a2ui.protocol.version</code></td>
+<td><code>1.0</code>, <code>0.9</code>, <code>0.8</code> (single value; omitted if mixed)</td>
+</tr>
+<tr>
+<td><code>a2ui.agent_message.count</code></td>
+<td>Agent-to-renderer messages in the operation</td>
+</tr>
+<tr>
+<td><code>a2ui.renderer_message.count</code></td>
+<td>Renderer-to-agent messages in the operation</td>
+</tr>
+<tr>
+<td><code>a2ui.message.types</code></td>
+<td>Sorted distinct message types, snake_case (<code>create_surface</code>, <code>update_components</code>, <code>action</code>, <code>error</code>, ...)</td>
+</tr>
+<tr>
+<td><code>a2ui.surface.id</code> / <code>a2ui.surface.count</code></td>
+<td>The surface, when single; the distinct surface count</td>
+</tr>
+<tr>
+<td><code>a2ui.catalog.id</code> / <code>a2ui.catalog.ids</code></td>
+<td>The catalog when single; all catalogs referenced</td>
+</tr>
+<tr>
+<td><code>a2ui.component.count</code></td>
+<td>Components in <code>updateComponents</code> messages</td>
+</tr>
+<tr>
+<td><code>a2ui.renderer.supported_catalog_ids</code></td>
+<td>From the renderer capabilities metadata</td>
+</tr>
+<tr>
+<td><code>a2ui.action.name</code></td>
+<td>The user action's name, when single (see A2UI-D3)</td>
+</tr>
+<tr>
+<td><code>a2ui.function.name</code></td>
+<td>For <code>callAgentFunction</code> / <code>callRendererFunction</code>, when single</td>
+</tr>
+<tr>
+<td><code>a2ui.error.codes</code> / <code>a2ui.error.count</code></td>
+<td>Renderer and function error codes; their count</td>
+</tr>
+<tr>
+<td><code>a2ui.validation.outcome</code></td>
+<td><code>valid</code> / <code>invalid</code> (agent-side parsing, section 3.2)</td>
+</tr>
+<tr>
+<td><code>a2ui.extension.active</code></td>
+<td>The A2A extension URI was negotiated</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recorded only with content capture on:</strong></p>
+<ul>
+<li><code>a2ui.messages</code>, the JSON of the messages, truncated at the existing content limit;</li>
+<li>the data-model values in <code>updateDataModel</code>;</li>
+<li>the action's <code>context</code>;</li>
+<li>the error <code>path</code> and <code>message</code>, because a validation message can quote user data;</li>
+<li>the component type names (see A2UI-D3).</li>
+</ul>
+<p>Never recorded: the content of image or file URLs inside components.</p>
+<p><strong>Span status.</strong></p>
+<ul>
+<li>A renderer <code>error</code> message or a function error <strong>does not</strong> by itself make the A2A span ERROR. The call carrying
+  it succeeded; this follows A2A-D5. It sets <code>a2ui.error.codes</code>.</li>
+<li>The agent-side <code>a2ui.parse_response</code> span <strong>is</strong> ERROR on a parse or validation failure, because that operation
+  failed.</li>
+<li>The Node <code>a2ui.apply</code> span is ERROR when the renderer rejected the batch.</li>
+</ul>
+<p><strong>Span events.</strong> One event <code>a2ui.error</code> per renderer error, with <code>a2ui.error.code</code> and <code>a2ui.surface.id</code>, so each
+error is visible even when one operation carries several.</p>
+<h2 id="6-configuration">6. Configuration<a class="headerlink" href="#6-configuration" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>GENAI_A2UI_ENABLED</code> (default <code>true</code>) turns the A2UI attributes and spans off without touching A2A.</li>
+<li>The instrumentor <code>a2ui</code> is added to <code>DEFAULT_INSTRUMENTORS</code>. It is a no-op without <code>a2ui-agent-sdk</code>. The A2A
+  enrichment of section 3.1 lives in the <code>a2a</code> instrumentor and follows <code>GENAI_A2UI_ENABLED</code>.</li>
+<li>The existing content-capture setting governs everything in section 5's second list. There is no separate A2UI
+  capture switch.</li>
+</ul>
+<h2 id="7-tests">7. Tests<a class="headerlink" href="#7-tests" title="Permanent link">&para;</a></h2>
+<p>No network and no real servers are used. The optional libraries are imported with <code>importorskip</code>, since CI installs
+only <code>.[dev]</code>; <code>a2ui-agent-sdk</code> is added to the <code>dev</code> extra.</p>
+<ul>
+<li><strong>Python.</strong></li>
+<li>A2A 1.x parts carrying A2UI in both shapes (one message per part, list per part), under both media types.</li>
+<li>Request and response sides, and streaming.</li>
+<li><code>parse_response</code> valid and invalid, including an LLM span as parent.</li>
+<li><code>open_stream</code> totals.</li>
+<li><code>process_message</code> for <code>action</code>, <code>callAgentFunction</code> and <code>error</code>.</li>
+<li>Content capture off and on.</li>
+<li>Multi-value omission.</li>
+<li><code>GENAI_A2UI_ENABLED=false</code>.</li>
+<li>No-op without the package.</li>
+<li>v0.8 counted but not parsed.</li>
+<li><strong>Node.</strong></li>
+<li><code>@a2a-js/sdk</code> client spans and trace injection.</li>
+<li>A2UI parsing on request and response.</li>
+<li>The public API under each entry point (Node, browser bundle, React Native bundle).</li>
+<li>The <code>web_core</code> adapter against <code>@a2ui/web_core</code> 0.15.</li>
+<li>Content rules.</li>
+</ul>
+<h2 id="8-decisions-for-approval">8. Decisions for approval<a class="headerlink" href="#8-decisions-for-approval" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Question</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A2UI-D1</td>
+<td>Python: enrich A2A 1.x spans (3.1) <strong>and</strong> instrument <code>a2ui-agent-sdk</code> directly (3.2), so agents on A2A 0.3, ADK or MCP are covered</td>
+<td><strong>Yes</strong>. The official A2UI-over-A2A bridge pins <code>a2a-sdk</code> 0.3, which our A2A instrumentor does not cover</td>
+</tr>
+<tr>
+<td>A2UI-D2</td>
+<td>Do <strong>not</strong> extend the 1.47.0 A2A instrumentor to <code>a2a-sdk</code> 0.3 in this release</td>
+<td><strong>Yes</strong>. The agent-SDK spans cover the A2UI signal; A2A 0.3 support is its own change if wanted</td>
+</tr>
+<tr>
+<td>A2UI-D3</td>
+<td>Content rule: ids, counts, types of message, catalog ids, action and function names, error codes always; payloads, data-model values, action context, error path and message, and component type names only under content capture</td>
+<td><strong>Yes</strong>. Action names are developer-defined identifiers, like span names. Component type names in a custom catalog can describe a business process, as skill names do (A2A-D4)</td>
+</tr>
+<tr>
+<td>A2UI-D4</td>
+<td>A renderer error does not by itself make the carrying A2A span ERROR; an agent-side parse or validation failure does make its own span ERROR</td>
+<td><strong>Yes</strong></td>
+</tr>
+<tr>
+<td>A2UI-D5</td>
+<td>Node: add A2A <strong>client</strong> instrumentation for <code>@a2a-js/sdk</code> as part of this work</td>
+<td><strong>Yes</strong>. Without it a mobile or web app gets no A2UI telemetry and no trace from tap to agent</td>
+</tr>
+<tr>
+<td>A2UI-D6</td>
+<td>Node: A2A <strong>server</strong> instrumentation (agents written in Node)</td>
+<td><strong>Later</strong>. Apps are clients; Node agents can follow</td>
+</tr>
+<tr>
+<td>A2UI-D11</td>
+<td>Node: instrument the TypeScript agent SDK <code>@a2ui/agent</code> (4.0), not only renderers</td>
+<td><strong>Yes</strong>. It is the official agent SDK for Node and costs one wrapper on the same two methods as Python</td>
+</tr>
+<tr>
+<td>A2UI-D7</td>
+<td>Node: renderer adapters. The <code>@a2ui/web_core</code> adapter now; React Native through the A2A path and the public API, with no adapter for a community renderer</td>
+<td><strong>Yes</strong>. Revisit an <code>a2ui-react-native-renderer</code> adapter if a customer standardises on it</td>
+</tr>
+<tr>
+<td>A2UI-D8</td>
+<td>Node contract: add the A2A and A2UI names as a scoped addition from the v1.48.0 tag (recorded in <code>SDK_ADDITIONS.md</code> and the parity matrix), not a full re-pin from v1.46.0</td>
+<td><strong>Scoped addition</strong>. A full re-pin pulls in unrelated 1.46.x-1.47.0 changes</td>
+</tr>
+<tr>
+<td>A2UI-D9</td>
+<td>Go: not in this release. Go's A2UI libraries are community agent libraries at v0.9 and two terminal renderers, and the Go port has no A2A support yet</td>
+<td><strong>Later</strong>, as a separate spec covering A2A and A2UI for Go together</td>
+</tr>
+<tr>
+<td>A2UI-D10</td>
+<td>Versions: Python ships as <strong>1.48.0</strong>, so the parked price-identity release moves to the next minor. The Node work ships as the next npm alpha of the Node port (corrected 2026-11-12: it is published on npm)</td>
+<td><strong>Yes</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="9-out-of-scope">9. Out of scope<a class="headerlink" href="#9-out-of-scope" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Flutter, SwiftUI and Jetpack Compose renderers. They need Dart, Swift and Kotlin instrumentation, and this
+  library has no Dart or Swift port.</li>
+<li>Metrics. Spans only, as with A2A.</li>
+<li>Rendering performance beyond the <code>web_core</code> adapter's batch duration (frame timing, layout).</li>
+<li>Proposing A2UI conventions upstream to OpenTelemetry. This is worth doing once the attributes have been used.</li>
+</ul>
+<h2 id="10-implementation-notes-and-deviations-1480">10. Implementation notes and deviations (1.48.0)<a class="headerlink" href="#10-implementation-notes-and-deviations-1480" title="Permanent link">&para;</a></h2>
+<p>The Python part (sections 2, 3, 5, 6 and 7-Python; A2UI-D1 to D4 and D10) as built. Checked against
+<code>a2ui-agent-sdk</code> 0.11.0 and <code>a2ui-core</code> 0.6.0 as installed, and <code>a2a-sdk</code> 1.3.0. The Node part is not
+in this change.</p>
+<p>Layout: <code>genai_otel/a2ui_semconv/</code> holds <code>attributes.py</code> (names, media types, constants),
+<code>extract.py</code> (the shared reader, an <code>A2uiObservation</code> over wire-format dicts; it imports neither <code>a2a</code>
+nor <code>a2ui</code>) and <code>instrumentor.py</code> (<code>A2UIInstrumentor</code>, the agent-SDK wrappers). The A2A path adds an
+optional <code>a2ui</code> accumulator to <code>a2a_semconv.extract.Observation</code>, shared by a call's request and
+response, so a single-valued key seen as two values across the two sides is omitted.</p>
+<p>Signatures checked against the installed package, and wrapped as follows:</p>
+<ul>
+<li><code>A2uiRequestProcessor.parse_response(self, content, wrapped=True, *, state=None)</code> returns
+  <code>list[ResponsePart]</code>; <code>A2uiPart.a2ui</code> is a list of pydantic schema models, read through
+  <code>model_dump(mode="json", by_alias=True, exclude_unset=True)</code> with the model's <code>version</code> put back (a
+  v1.0 model leaves <code>version</code> unset, so a plain dump drops it).</li>
+<li><code>A2uiRequestProcessor.open_stream(self, *, wrapped=True, state=None, after_rejected_block="end")</code> is
+  <strong>synchronous</strong> and returns a <code>ResponseStream</code> whose <code>feed(chunk)</code> and <code>close()</code> are synchronous. The
+  span starts in <code>open_stream</code> (a child of the current span, but <strong>not made current</strong>, because it outlives
+  the call) and ends when <code>close()</code> returns or <code>feed</code> / <code>close</code> raises. The two methods are replaced on the
+  stream instance. A stream that is never closed ends its span when it is garbage collected.</li>
+<li><code>RendererToAgentMessageProcessor.process_message(self, message)</code> is async and returns <code>ProcessResult(handled,
+  replies)</code>. Its replies go back to the renderer, so they are counted as <strong>agent</strong> messages.</li>
+</ul>
+<p>Deviations and choices the spec left open:</p>
+<ol>
+<li><strong><code>parse_content_to_parts</code> lives in <code>a2ui-a2a</code>, not in <code>a2ui-agent-sdk</code>.</strong> <code>a2ui/a2a/parts.py</code> imports
+   <code>a2a.types.DataPart</code>, which <code>a2a-sdk</code> 1.x does not have, so it cannot be imported beside the 1.x the A2A
+   tests need. It is wrapped only when <code>a2ui.a2a.parts</code> imports. Because the function swallows the
+   exception inside itself, the wrapper cannot see it; it notices the <code>Failed to parse A2UI response: &lt;class&gt;</code>
+   warning the function logs (a log filter that only reads, installed on the <code>a2ui.a2a.parts</code> logger and
+   keyed to a context variable that is set only while the wrapper runs). Nothing is suppressed or changed.
+   Consequence: it is missed if that logger is set above WARNING. The failure is recorded as
+   <code>a2ui.validation.outcome=invalid</code> on the current span plus an event <code>a2ui.validation_failed</code> carrying
+   <code>error.type</code>; <code>error.type</code> is not set as an attribute and the span is not made ERROR, because the
+   operation did not fail. <strong>Not verified against the real module</strong>, only against a stand-in with the same
+   name, logger and message, taken from the 0.3.0 source.</li>
+<li><strong>Rejected block in a continuing stream.</strong> A stream opened with <code>after_rejected_block="continue"</code> returns
+   an <code>ErrorPart</code> instead of raising. <code>a2ui.parse_stream</code> is ERROR for it too (a block failed validation),
+   with <code>error.type</code> set to the error's class and the outcome <code>invalid</code>.</li>
+<li><strong><code>a2ui.process</code> only sets <code>invalid</code> on a validation exception.</strong> The SDK does not validate a message
+   that has no callback, so a successful call does not claim <code>valid</code>. An unrecognised message names its
+   span <code>a2ui.process unknown</code>.</li>
+<li><strong><code>a2ui.component.count</code> also counts <code>createSurface.components</code>.</strong> The v1.0 schema lets <code>createSurface</code>
+   carry components, so counting only <code>updateComponents</code> would undercount.</li>
+<li><strong>Extension and header names.</strong> <code>a2a-sdk</code> 1.x renamed the header to <code>A2A-Extensions</code>; the spec text says
+   <code>X-A2A-Extensions</code>. Both names are read, from the client's <code>service_parameters</code>, the server's
+   <code>requested_extensions</code> and request headers, and <code>Message.extensions</code> / <code>Artifact.extensions</code>. Any URI
+   under <code>https://a2ui.org/a2a-extension/a2ui/</code> matches, so a v0.8 or v0.9 extension URI also sets
+   <code>a2ui.extension.active</code>. The attribute is written only when true.</li>
+<li><strong>Content attribute names the spec left open</strong> (provisional, <code>a2ui.*</code>): <code>a2ui.messages</code>,
+   <code>a2ui.data_model</code>, <code>a2ui.action.context</code> (JSON strings), <code>a2ui.error.paths</code>, <code>a2ui.error.messages</code>,
+   <code>a2ui.component.types</code> (string lists). Each is dropped with content capture off, and nothing of the
+   payload is held in memory then. The event <code>a2ui.validation_failed</code> is the one event name beyond
+   <code>a2ui.error</code>.</li>
+<li><strong>Media URLs are scrubbed.</strong> Inside the components of <code>createSurface</code> / <code>updateComponents</code>, the value of a
+   key named <code>url</code>, <code>src</code>, <code>uri</code> or ending in <code>Url</code> / <code>Uri</code> becomes <code>[redacted]</code> (a <code>{"@path": ...}</code> binding is
+   kept, since it names where a value lives); a string starting <code>data:</code> is redacted anywhere. The existing
+   <code>a2a.*.data</code> content attribute is also written from the scrubbed copy for A2UI parts, but only when the
+   A2UI reader is on; with <code>GENAI_A2UI_ENABLED=false</code> that attribute is exactly what 1.47.0 wrote.</li>
+<li><strong>v0.8 is detected by the missing <code>version</code> field</strong>, counted, and its content is not recorded.
+   Versions are normalised to <code>major.minor</code> (<code>v0.9.1</code> is <code>0.9</code>).</li>
+<li><strong><code>a2ui.renderer.supported_catalog_ids</code></strong> is the union over the per-version map, and over either metadata
+   key, and over <code>message.metadata</code> and <code>SendMessageRequest.metadata</code>.</li>
+<li><strong>Packaging and tests.</strong> <code>genai_otel.a2ui_semconv</code> is in <code>[tool.setuptools] packages</code>. <code>a2ui-agent-sdk&gt;=0.11,&lt;1</code>
+    is in the <code>dev</code> extra; <code>a2ui-a2a</code> is deliberately not (it would downgrade <code>a2a-sdk</code>). There is no
+    optional extra for A2A, so none was added for A2UI. The tests <code>importorskip</code> the SDK and use the real
+    processors; the A2A path runs over the same in-process ASGI rig as the A2A tests.</li>
+</ol>
+<p>Not verified: the real <code>a2ui.a2a.parts</code> module (see 1); <code>a2ui-agent-sdk</code> versions other than 0.11.0; the
+A2UI extension header on gRPC; Google ADK and MCP transports (the wrappers are transport-independent, and
+are tested only through the processors).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/Mandark-droid/genai_otel_instrument" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/6SVz6VKK" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/genai-otel-instrument/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

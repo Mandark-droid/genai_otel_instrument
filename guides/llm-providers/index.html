@@ -1258,6 +1258,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../seaweedfs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sarvam-ai/" class="md-nav__link">
         
   
@@ -1546,7 +1574,7 @@
   <span class="md-ellipsis">
     
   
-    Community
+    Specs
   
 
     
@@ -1559,6 +1587,95 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/seaweedfs-instrumentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS instrumentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Community
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2396,15 +2513,21 @@ without an instrumentor of its own.</p>
 <td>OpenAI <code>gpt-6-luna</code>; Azure OpenAI through <code>AzureOpenAI</code>; OpenRouter (<code>openrouter.decisions</code>); any server that answers <code>/v1/decisions</code></td>
 </tr>
 <tr>
+<td><code>client.decisions.create</code> / <code>client.aio.decisions.create</code> (<code>google-genai</code> 3.2+, <code>api_version="v1beta"</code>)</td>
+<td>Gemini Decisions (<code>POST /v1beta/decisions</code>)</td>
+<td><code>google.genai.decisions</code> / <code>google.genai.aio.decisions</code></td>
+<td>Google <code>gemini-decision-1</code>. Per-modality input tokens land in <code>decision.token_count.input.&lt;modality&gt;</code>; a safety 400 is an ERROR span with <code>error.type</code> set to the API's <code>error.code</code>. No-op on a <code>google-genai</code> without <code>decisions</code></td>
+</tr>
+<tr>
 <td><code>TypeSafeClient.system_one</code> / <code>AsyncTypeSafeClient.system_one</code> (<code>typesafe-sdk</code>, any <code>base_url</code>)</td>
 <td>SystemOne (<code>POST /v1/systemone</code>)</td>
 <td><code>typesafe.system_one</code></td>
 <td>TypeSafe Jev, LiquidAI D1 / D1 Ultra, Cloudflare Workers AI, vLLM / SGLang / Ollajev / laya-serve serving Hub decision models (JEV, Clef, GEV, decider, ...)</td>
 </tr>
 <tr>
-<td>a POST with <code>requests</code>, <code>httpx</code> or <code>httpx2</code> to <code>.../v1/systemone</code>, <code>.../decisions/v1/systemone</code> or <code>.../v1/decisions</code>, outside an SDK call</td>
-<td>either</td>
-<td><code>decision.http.systemone</code> / <code>decision.http.openai</code></td>
+<td>a POST with <code>requests</code>, <code>httpx</code> or <code>httpx2</code> to <code>.../v1/systemone</code>, <code>.../decisions/v1/systemone</code>, <code>.../v1/decisions</code>, or <code>https://generativelanguage.googleapis.com/v1beta/decisions</code> (matched on that host only), outside an SDK call</td>
+<td>any of the three</td>
+<td><code>decision.http.systemone</code> / <code>decision.http.openai</code> / <code>decision.http.google</code></td>
 <td>apps that call the endpoints without an SDK, such as LiquidAI's image examples</td>
 </tr>
 <tr>
@@ -2612,6 +2735,11 @@ output at $0.50/1M.</p>
 </tr>
 <tr>
 <td><code>openai/gpt-6-luna-decisions</code> (OpenRouter)</td>
+<td>$0.10</td>
+<td>$0</td>
+</tr>
+<tr>
+<td><code>gemini-decision-1</code> (Google Gemini Decisions)</td>
 <td>$0.10</td>
 <td>$0</td>
 </tr>

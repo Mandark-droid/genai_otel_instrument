@@ -1280,6 +1280,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guides/seaweedfs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guides/sarvam-ai/" class="md-nav__link">
         
   
@@ -1568,7 +1596,7 @@
   <span class="md-ellipsis">
     
   
-    Community
+    Specs
   
 
     
@@ -1581,6 +1609,95 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/seaweedfs-instrumentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS instrumentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Community
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2234,6 +2351,31 @@ certificate file that signed the endpoint. The exporter appends the signal path
 <td><code>GENAI_ENABLE_HTTP_INSTRUMENTATION</code></td>
 <td><code>false</code></td>
 <td>HTTP/API instrumentation (disabled to avoid OTLP conflicts)</td>
+</tr>
+<tr>
+<td><code>GENAI_A2A_PROPAGATE</code></td>
+<td><code>true</code></td>
+<td>Carry W3C trace context between agents on A2A calls (client injects, server joins the trace). <code>false</code> turns it off. See <a href="../../guides/multi-agent-frameworks/#a2a-agent2agent">A2A</a></td>
+</tr>
+<tr>
+<td><code>GENAI_A2UI_ENABLED</code></td>
+<td><code>true</code></td>
+<td>Record A2UI (Agent-to-UI) attributes on A2A spans and the <code>a2ui</code> instrumentor's spans for the Python agent SDK. <code>false</code> turns A2UI off and leaves A2A as it is. Content (messages, action context, error text) still follows content capture. See <a href="../../guides/multi-agent-frameworks/#a2ui-agent-to-ui">A2UI</a></td>
+</tr>
+<tr>
+<td><code>GENAI_ENABLE_SEAWEEDFS_INSTRUMENTATION</code></td>
+<td><code>true</code></td>
+<td>SeaweedFS Filer tracing; inert unless endpoints are declared</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_SEAWEEDFS_ENDPOINTS</code></td>
+<td>—</td>
+<td>Comma-separated <code>host[:port]</code> / URLs of SeaweedFS gateway and Filer; see the <a href="../../guides/seaweedfs/">SeaweedFS guide</a></td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_SEAWEEDFS_PATH_PREFIX_SEGMENTS</code></td>
+<td><code>2</code></td>
+<td>Path segments kept in <code>url.path.prefix</code> on Filer spans</td>
 </tr>
 <tr>
 <td><code>GENAI_ENABLE_SESSION_PROPAGATION</code></td>
@@ -3293,6 +3435,21 @@ for per-call overhead numbers and the measurement tooling.</p>
 <td><code>GENAI_OTEL_MEDIA_STORE_SECRET_KEY</code></td>
 <td>—</td>
 <td>for s3/minio/seaweed</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_CONNECT_TIMEOUT</code></td>
+<td><code>1.0</code></td>
+<td>seconds; S3-compatible stores only</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_READ_TIMEOUT</code></td>
+<td><code>5.0</code></td>
+<td>seconds; S3-compatible stores only</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_TRACE_CALLS</code></td>
+<td><code>false</code></td>
+<td>keep <code>s3.*</code> spans for the SDK's own media uploads</td>
 </tr>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_MAX_BYTES</code></td>

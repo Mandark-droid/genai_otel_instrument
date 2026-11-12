@@ -16,7 +16,7 @@
         <link rel="prev" href="../server-metrics/">
       
       
-        <link rel="next" href="../../community/contributing/">
+        <link rel="next" href="../../specs/seaweedfs-instrumentation/">
       
       
         
@@ -824,6 +824,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guides/seaweedfs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guides/sarvam-ai/" class="md-nav__link">
         
   
@@ -1306,6 +1334,39 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#a2a-agent2agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2A (Agent2Agent)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a2ui-agent-to-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2UI (Agent-to-UI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#object-storage-s3-api-and-seaweedfs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Object storage (S3 API and SeaweedFS)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#multimodal-content-part-attributes-v100" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1369,7 +1430,7 @@
   <span class="md-ellipsis">
     
   
-    Community
+    Specs
   
 
     
@@ -1382,6 +1443,95 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/seaweedfs-instrumentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS instrumentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Community
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1696,6 +1846,39 @@
     <span class="md-ellipsis">
       
         Evaluation Runtime Attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a2a-agent2agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2A (Agent2Agent)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a2ui-agent-to-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2UI (Agent-to-UI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#object-storage-s3-api-and-seaweedfs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Object storage (S3 API and SeaweedFS)
       
     </span>
   </a>
@@ -2684,6 +2867,178 @@ label, so dashboards built on it keep working. It is removed at 2.0.</p>
 <td><code>evaluation.&lt;detector&gt;.prompt.analyzed_length</code></td>
 <td>int</td>
 <td>Characters read by <code>prompt_injection</code>, <code>restricted_topics</code> or <code>bias</code> when it has a block policy: the whole prompt</td>
+</tr>
+</tbody>
+</table>
+<h3 id="a2a-agent2agent">A2A (Agent2Agent)<a class="headerlink" href="#a2a-agent2agent" title="Permanent link">&para;</a></h3>
+<p><code>a2a.*</code> keys follow the OpenTelemetry A2A conventions (development status); the part and
+artifact counts are genai_otel additions. <code>a2a.protocol.binding</code> is <strong>provisional</strong> while
+OpenTelemetry settles how to record the binding. Content rules and error mapping:
+<a href="../../guides/multi-agent-frameworks/#a2a-agent2agent">A2A</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a2a.method.name</code></td>
+<td>string</td>
+<td><code>SendMessage</code>, <code>SendStreamingMessage</code>, <code>GetTask</code>, ...</td>
+</tr>
+<tr>
+<td><code>a2a.protocol.version</code>, <code>a2a.protocol.binding</code> (provisional), <code>a2a.tenant</code></td>
+<td>string</td>
+<td>binding is <code>jsonrpc</code>, <code>grpc</code> or <code>http_json</code></td>
+</tr>
+<tr>
+<td><code>a2a.message.id</code>, <code>a2a.message.reference_task_ids</code>, <code>a2a.task.id</code>, <code>a2a.task.state</code></td>
+<td>string / string[]</td>
+<td>state is lower-case, e.g. <code>input_required</code></td>
+</tr>
+<tr>
+<td><code>a2a.message.{text,file,data}_part_count</code>, <code>a2a.response.{text,file,data}_part_count</code>, <code>a2a.artifact.count</code>, <code>a2a.agent.skill_count</code></td>
+<td>int</td>
+<td>counts only (genai_otel)</td>
+</tr>
+<tr>
+<td><code>a2a.message.file_media_types</code>, <code>a2a.response.file_media_types</code></td>
+<td>string[]</td>
+<td>media types of file parts; never their bytes, URLs or names</td>
+</tr>
+<tr>
+<td><code>a2a.message.text</code>, <code>a2a.message.data</code>, <code>a2a.response.text</code>, <code>a2a.response.data</code>, <code>a2a.agent.skill_names</code></td>
+<td>string / string[]</td>
+<td>only with content capture on</td>
+</tr>
+</tbody>
+</table>
+<p>Also set: <code>gen_ai.conversation.id</code> (the A2A <code>contextId</code>), <code>gen_ai.agent.name</code> / <code>.description</code> /
+<code>.version</code> (from the Agent Card), <code>gen_ai.operation.name=invoke_agent</code> (client spans),
+<code>error.type</code>, <code>server.address</code>, <code>server.port</code>.</p>
+<h3 id="a2ui-agent-to-ui">A2UI (Agent-to-UI)<a class="headerlink" href="#a2ui-agent-to-ui" title="Permanent link">&para;</a></h3>
+<p>OpenTelemetry has no convention for A2UI, and the protocol defines no telemetry, so every
+<code>a2ui.*</code> key is a <strong>provisional genai_otel addition</strong> that may be renamed if a convention
+settles on other names. They appear on A2A spans that carry A2UI parts and on the
+<code>a2ui.parse_response</code>, <code>a2ui.parse_stream</code> and <code>a2ui.process {type}</code> spans. Content rules:
+<a href="../../guides/multi-agent-frameworks/#a2ui-agent-to-ui">A2UI</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a2ui.protocol.version</code></td>
+<td>string</td>
+<td><code>1.0</code>, <code>0.9</code> or <code>0.8</code>; left off when the operation saw more than one</td>
+</tr>
+<tr>
+<td><code>a2ui.agent_message.count</code>, <code>a2ui.renderer_message.count</code></td>
+<td>int</td>
+<td>Messages the agent sent to the renderer, and the renderer sent to the agent</td>
+</tr>
+<tr>
+<td><code>a2ui.message.types</code></td>
+<td>string[]</td>
+<td>Sorted distinct types: <code>create_surface</code>, <code>update_components</code>, <code>update_data_model</code>, <code>delete_surface</code>, <code>call_renderer_function</code>, <code>agent_function_response</code>, <code>action</code>, <code>call_agent_function</code>, <code>renderer_function_response</code>, <code>error</code></td>
+</tr>
+<tr>
+<td><code>a2ui.surface.id</code>, <code>a2ui.surface.count</code></td>
+<td>string / int</td>
+<td>The surface when single; the distinct count</td>
+</tr>
+<tr>
+<td><code>a2ui.catalog.id</code>, <code>a2ui.catalog.ids</code></td>
+<td>string / string[]</td>
+<td>The catalog when single; every catalog referenced</td>
+</tr>
+<tr>
+<td><code>a2ui.component.count</code></td>
+<td>int</td>
+<td>Components in <code>createSurface</code> and <code>updateComponents</code> messages</td>
+</tr>
+<tr>
+<td><code>a2ui.renderer.supported_catalog_ids</code></td>
+<td>string[]</td>
+<td>From the renderer's capabilities metadata</td>
+</tr>
+<tr>
+<td><code>a2ui.action.name</code>, <code>a2ui.function.name</code></td>
+<td>string</td>
+<td>The user action's name, or the function called, when single</td>
+</tr>
+<tr>
+<td><code>a2ui.error.codes</code>, <code>a2ui.error.count</code></td>
+<td>string[] / int</td>
+<td>Renderer and function error codes (<code>VALIDATION_FAILED</code>, <code>UNALLOWED_PARENT</code>, <code>EXECUTION_ERROR</code>, ...) and how many</td>
+</tr>
+<tr>
+<td><code>a2ui.validation.outcome</code></td>
+<td>string</td>
+<td><code>valid</code> or <code>invalid</code>, from agent-side parsing</td>
+</tr>
+<tr>
+<td><code>a2ui.extension.active</code></td>
+<td>bool</td>
+<td>The A2UI A2A extension URI was among the call's extensions (set only when true)</td>
+</tr>
+<tr>
+<td><code>a2ui.messages</code>, <code>a2ui.data_model</code>, <code>a2ui.action.context</code>, <code>a2ui.error.paths</code>, <code>a2ui.error.messages</code>, <code>a2ui.component.types</code></td>
+<td>string / string[]</td>
+<td>only with content capture on; media URLs inside components are never recorded</td>
+</tr>
+</tbody>
+</table>
+<p>Each renderer error or function error is also a span event <code>a2ui.error</code> with
+<code>a2ui.error.code</code> and <code>a2ui.surface.id</code>. <code>error.type</code> is reused for a parse or validation
+failure.</p>
+<h3 id="object-storage-s3-api-and-seaweedfs">Object storage (S3 API and SeaweedFS)<a class="headerlink" href="#object-storage-s3-api-and-seaweedfs" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>db.system</code></td>
+<td><code>s3</code> on S3 API spans (unchanged)</td>
+</tr>
+<tr>
+<td><code>db.system.name</code></td>
+<td><code>seaweedfs</code> on S3 spans to a declared SeaweedFS endpoint, and on Filer spans (custom value; the registry has none)</td>
+</tr>
+<tr>
+<td><code>server.address</code>, <code>server.port</code></td>
+<td>Host and port of the endpoint (credentials, path and query never recorded)</td>
+</tr>
+<tr>
+<td><code>aws.s3.bucket</code>, <code>aws.s3.key</code></td>
+<td>Standard names, added next to the legacy <code>s3.bucket</code> / <code>s3.object</code> (both emitted; the legacy names are deprecated)</td>
+</tr>
+<tr>
+<td><code>aws.request_id</code></td>
+<td>From the <code>x-amz-request-id</code> response header</td>
+</tr>
+<tr>
+<td><code>db.operation.name</code>, <code>http.request.method</code>, <code>http.response.status_code</code></td>
+<td>Filer spans (<code>seaweedfs.filer.&lt;operation&gt;</code>)</td>
+</tr>
+<tr>
+<td><code>url.path.prefix</code></td>
+<td>First N path segments only (default 2)</td>
+</tr>
+<tr>
+<td><code>seaweedfs.request.size</code>, <code>seaweedfs.response.size</code></td>
+<td>Bytes, from <code>Content-Length</code> when stated</td>
 </tr>
 </tbody>
 </table>

@@ -881,6 +881,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#a2a-agent2agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2A (Agent2Agent)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a2ui-agent-to-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2UI (Agent-to-UI)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#other-frameworks" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1038,6 +1060,34 @@
     
   
     Multimodal Observability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../seaweedfs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS
   
 
     
@@ -1346,7 +1396,7 @@
   <span class="md-ellipsis">
     
   
-    Community
+    Specs
   
 
     
@@ -1359,6 +1409,95 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/seaweedfs-instrumentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS instrumentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Community
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1644,6 +1783,28 @@
     <span class="md-ellipsis">
       
         Voice Agents: Pipecat and LiveKit Agents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a2a-agent2agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2A (Agent2Agent)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a2ui-agent-to-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2UI (Agent-to-UI)
       
     </span>
   </a>
@@ -2329,6 +2490,208 @@ nest under Pipecat's, so tokens are counted once.</p>
 <a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>        <span class="o">...</span>
 <a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>    <span class="n">conv</span><span class="o">.</span><span class="n">add_turn</span><span class="p">(</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">t2</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">t3</span><span class="p">)</span>   <span class="c1"># or with times known afterwards (epoch seconds)</span>
 </code></pre></div>
+<h2 id="a2a-agent2agent">A2A (Agent2Agent)<a class="headerlink" href="#a2a-agent2agent" title="Permanent link">&para;</a></h2>
+<p><a href="https://a2a-protocol.org">A2A</a> is the protocol agents use to call each other: discover an
+agent through its Agent Card, send it a message, follow the task it runs. The <code>a2a</code>
+instrumentor covers the official Python SDK, <code>a2a-sdk</code> 1.0 or later (<code>pip install a2a-sdk</code>).
+It is on by default and does nothing when the SDK is absent or older than 1.0.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">genai_otel</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="n">genai_otel</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>   <span class="c1"># before the first `import a2a`, see &quot;The SDK&#39;s own spans&quot; below</span>
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">a2a.client.client_factory</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClientFactory</span>
+<a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="c1"># ... build the client and call send_message as usual</span>
+</code></pre></div>
+<p><strong>What you get</strong></p>
+<ul>
+<li>A CLIENT span per client call (<code>send_message</code>, <code>get_task</code>, <code>list_tasks</code>, <code>cancel_task</code>,
+  <code>subscribe</code>, <code>get_extended_agent_card</code> and the push-notification config calls), named
+  <code>{a2a.method.name} {agent name}</code>. A streaming call's span ends when the stream does.
+  It also carries <code>gen_ai.operation.name=invoke_agent</code> and the target's <code>gen_ai.agent.name</code>,
+  so an agent graph can draw the edge from the calling agent to the called one.</li>
+<li>A server side for the SDK's request handlers (<code>DefaultRequestHandler</code>, its v2 and legacy
+  forms, and so the JSON-RPC, REST and gRPC bindings). When an HTTP or gRPC server span is
+  already current (FastAPI, Starlette, ASGI or gRPC instrumentation), the A2A attributes go
+  on that span, and an HTTP one is renamed to <code>{method} {agent}</code>. Only when there is none
+  does a SERVER span open.</li>
+<li><strong>One trace across both agents.</strong> The client injects W3C <code>traceparent</code> / <code>tracestate</code>
+  through the SDK's <code>ClientCallInterceptor</code> hook (headers over HTTP, metadata over gRPC), and
+  the server joins that trace when no transport instrumentation did. Baggage follows the
+  session-baggage rules: nothing but the ids you named in <code>GENAI_SESSION_BAGGAGE_KEYS</code>
+  leaves the process as <code>session.id</code> / <code>user.id</code>. <code>GENAI_A2A_PROPAGATE=false</code> turns
+  propagation off.</li>
+</ul>
+<p><strong>Attributes</strong></p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a2a.method.name</code></td>
+<td><code>SendMessage</code>, <code>SendStreamingMessage</code>, <code>GetTask</code>, <code>CancelTask</code>, <code>SubscribeToTask</code> ...</td>
+</tr>
+<tr>
+<td><code>a2a.protocol.version</code></td>
+<td>From the Agent Card interface in use (client spans)</td>
+</tr>
+<tr>
+<td><code>a2a.protocol.binding</code></td>
+<td><strong>Provisional.</strong> <code>jsonrpc</code>, <code>grpc</code> or <code>http_json</code>. OpenTelemetry has not settled how to record the binding (semantic-conventions-genai issue 612); this name may change</td>
+</tr>
+<tr>
+<td><code>a2a.tenant</code>, <code>a2a.message.id</code>, <code>a2a.message.reference_task_ids</code></td>
+<td>From the request</td>
+</tr>
+<tr>
+<td><code>a2a.task.id</code>, <code>a2a.task.state</code></td>
+<td>State is one of <code>submitted</code>, <code>working</code>, <code>completed</code>, <code>failed</code>, <code>canceled</code>, <code>input_required</code>, <code>rejected</code>, <code>auth_required</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.conversation.id</code></td>
+<td>The A2A <code>contextId</code></td>
+</tr>
+<tr>
+<td><code>gen_ai.agent.name</code> / <code>.description</code> / <code>.version</code></td>
+<td>From the Agent Card</td>
+</tr>
+<tr>
+<td><code>server.address</code>, <code>server.port</code></td>
+<td>From the card's interface URL (client spans)</td>
+</tr>
+<tr>
+<td><code>error.type</code></td>
+<td>The A2A error name (<code>TaskNotFoundError</code>), else the HTTP or gRPC status</td>
+</tr>
+<tr>
+<td><code>a2a.message.{text,file,data}_part_count</code>, <code>a2a.response.{text,file,data}_part_count</code>, <code>a2a.artifact.count</code>, <code>a2a.agent.skill_count</code></td>
+<td>genai_otel additions: counts, never content</td>
+</tr>
+</tbody>
+</table>
+<p>A task id, context id or state that takes several values during one operation (a stream
+that goes <code>submitted</code>, <code>working</code>, <code>completed</code>) is left off rather than guessed.</p>
+<p><strong>What is recorded, and when</strong></p>
+<table>
+<thead>
+<tr>
+<th>Always</th>
+<th>Only with content capture on (<code>OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true</code> or <code>GENAI_ENABLE_CONTENT_CAPTURE=true</code>)</th>
+<th>Never</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ids, task states, counts of parts by kind, the artifact count, file media types, the Agent Card's name, description and version, the skill count</td>
+<td>Message and artifact text (<code>a2a.message.text</code>, <code>a2a.response.text</code>), data parts (<code>a2a.message.data</code>, <code>a2a.response.data</code>), skill names (<code>a2a.agent.skill_names</code>)</td>
+<td>File bytes, file URLs and file names</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Failed tasks are not errors.</strong> A task that ends <code>failed</code> or <code>rejected</code> sets
+<code>a2a.task.state</code> and leaves the span status alone: the call worked, and the agent's answer
+was no. A raised error (a JSON-RPC error, a gRPC status, an HTTP error) marks the span ERROR.</p>
+<p><strong>The SDK's own spans.</strong> <code>a2a-sdk</code> makes spans of its own, named after Python modules and
+carrying no A2A attributes, with its internal queues marked SERVER. The instrumentor sets
+<code>OTEL_INSTRUMENTATION_A2A_SDK_ENABLED=false</code> to stop them, unless you set that variable
+yourself. The SDK reads it once, when <code>a2a.utils.telemetry</code> is first imported, so
+<code>genai_otel.instrument()</code> has to run before your application imports <code>a2a</code>. If <code>a2a</code> is
+already imported the SDK's spans stay on beside ours, and one INFO line says so; set the
+variable in the environment to fix that.</p>
+<p><strong>Limits.</strong> Python SDK 1.x only. Client wrapping covers the SDK's <code>BaseClient</code> (what
+<code>ClientFactory</code> returns); a custom <code>Client</code> subclass is not wrapped. Server wrapping covers
+<code>DefaultRequestHandler</code> (V2) and <code>LegacyRequestHandler</code>; a handler you write yourself on
+<code>RequestHandler</code> is not. No A2A metrics yet: the OpenTelemetry convention for them is still
+open. The Java, Go, JavaScript and .NET SDKs are not covered.</p>
+<h2 id="a2ui-agent-to-ui">A2UI (Agent-to-UI)<a class="headerlink" href="#a2ui-agent-to-ui" title="Permanent link">&para;</a></h2>
+<p><a href="https://a2ui.org">A2UI</a> is Google's open protocol for an agent to send a user interface as
+declarative JSON instead of code. The agent describes surfaces and components from a catalog
+the client trusts, the client draws them with its own native components, and sends the user's
+actions back. It usually travels inside A2A messages. The protocol defines no telemetry, so
+the <code>a2ui.*</code> attributes below are genai_otel additions and <strong>provisional</strong>.</p>
+<p>What it makes visible: UI the renderer rejected (a validation error the server never sees),
+UI the agent SDK could not parse (the model wrote invalid output and the user sees nothing),
+what the user did (an <code>action</code> starts the agent's next turn), and what was shown.</p>
+<p>It is on by default. <code>GENAI_A2UI_ENABLED=false</code> turns it off without touching A2A.</p>
+<p><strong>Inside A2A spans (<code>a2a-sdk</code> 1.x).</strong> When an A2A message, stream event or artifact carries an
+A2UI data part (<code>mimeType</code> <code>application/a2ui+json</code>, or the deprecated <code>application/json+a2ui</code>, in
+the part's metadata or its media type), the A2A span gains <code>a2ui.*</code> attributes. The payload may
+be one message or a list of messages per part; both shapes are read. What the renderer sent (the
+request) counts as <code>a2ui.renderer_message.count</code>, what the agent sent (the response, stream
+events and artifacts) as <code>a2ui.agent_message.count</code>. <code>a2ui.extension.active</code> is set when the A2UI
+extension URI is among the call's extensions, and the renderer's catalogs are read from
+<code>a2uiRendererCapabilities</code> or <code>a2uiClientCapabilities</code> in the message metadata. A2UI parts still
+count in the A2A <code>data</code> part counts. A renderer <code>error</code> message does <strong>not</strong> make the A2A span
+ERROR: the call that carried it worked. It sets <code>a2ui.error.codes</code> and adds one <code>a2ui.error</code>
+span event per error.</p>
+<p><strong>The agent SDK (<code>a2ui-agent-sdk</code> 0.11+, any transport).</strong> The official A2UI-over-A2A bridge
+(<code>a2ui-a2a</code>) pins <code>a2a-sdk</code> 0.3, which the A2A instrumentor does not cover, and the SDK also runs
+under Google ADK and MCP, so the agent SDK is wrapped directly:</p>
+<table>
+<thead>
+<tr>
+<th>Span</th>
+<th>Wraps</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a2ui.parse_response</code></td>
+<td><code>A2uiRequestProcessor.parse_response</code></td>
+<td>ERROR with <code>error.type</code> and <code>a2ui.validation.outcome=invalid</code> when parsing or validation raises, which is the model producing invalid UI. A child of the LLM span when one is active</td>
+</tr>
+<tr>
+<td><code>a2ui.parse_stream</code></td>
+<td><code>A2uiRequestProcessor.open_stream</code></td>
+<td>Ends when the stream does (<code>close()</code>, or an error), with the totals. ERROR when a block is rejected, including a stream that reads past it</td>
+</tr>
+<tr>
+<td><code>a2ui.process {type}</code></td>
+<td><code>RendererToAgentMessageProcessor.process_message</code></td>
+<td>The renderer message (<code>a2ui.process action</code>), the reply count (<code>a2ui.agent_message.count</code>) and the error codes of renderer errors and function errors</td>
+</tr>
+<tr>
+<td>(current span)</td>
+<td><code>a2ui.a2a.parts.parse_content_to_parts</code></td>
+<td>That function swallows every exception and logs only its class. The current span gets <code>a2ui.validation.outcome=invalid</code> and an <code>a2ui.validation_failed</code> event with <code>error.type</code>. Return value and logging are unchanged. Needs <code>a2ui-a2a</code></td>
+</tr>
+</tbody>
+</table>
+<p>It does nothing when <code>a2ui-agent-sdk</code> is not installed or is older than 0.11. v1.0 and v0.9
+messages are read; v0.8 messages are recognised and counted, and their shapes are not parsed.</p>
+<p><strong>What is recorded, and when</strong></p>
+<table>
+<thead>
+<tr>
+<th>Always</th>
+<th>Only with content capture on</th>
+<th>Never</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Message types, protocol version, surface and catalog ids, counts, component count, action and function names, error codes, the validation outcome</td>
+<td><code>a2ui.messages</code> (the JSON), data-model values, an action's <code>context</code>, an error's <code>path</code> and <code>message</code> (a validation message can quote user data), component type names</td>
+<td>The content of image or file URLs inside components, and <code>data:</code> URIs</td>
+</tr>
+</tbody>
+</table>
+<p>Action names are developer-defined identifiers, like span names. Component type names in a
+custom catalog can describe a business process, so they are content. A single-valued key
+(<code>a2ui.surface.id</code>, <code>a2ui.catalog.id</code>, <code>a2ui.action.name</code>, <code>a2ui.function.name</code>,
+<code>a2ui.protocol.version</code>) is left off when one operation saw several distinct values; the list
+keys are sorted and de-duplicated.</p>
+<p><strong>Limits.</strong> Python only: there is no Python renderer, and the prompt-building parts of the agent
+SDK are not instrumented (the LLM span already records the prompt under content capture).
+<code>a2ui-a2a</code>'s A2A 0.3 spans are not produced (the A2A instrumentor covers <code>a2a-sdk</code> 1.x); the
+agent SDK spans cover the A2UI signal there. A function imported before instrumentation
+(<code>from a2ui.a2a.parts import parse_content_to_parts</code>) keeps the unwrapped reference, so call it
+through the module or instrument first. A stream that is never closed ends its span when it is
+garbage collected.</p>
 <h2 id="other-frameworks">Other Frameworks<a class="headerlink" href="#other-frameworks" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

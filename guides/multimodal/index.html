@@ -16,7 +16,7 @@
         <link rel="prev" href="../evaluation/">
       
       
-        <link rel="next" href="../sarvam-ai/">
+        <link rel="next" href="../seaweedfs/">
       
       
         
@@ -959,6 +959,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../seaweedfs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sarvam-ai/" class="md-nav__link">
         
   
@@ -1247,7 +1275,7 @@
   <span class="md-ellipsis">
     
   
-    Community
+    Specs
   
 
     
@@ -1260,6 +1288,95 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/seaweedfs-instrumentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SeaweedFS instrumentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Community
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1525,8 +1642,11 @@ can write objects to it.</p>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_ACCESS_KEY</span><span class="o">=</span>...
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GENAI_OTEL_MEDIA_STORE_SECRET_KEY</span><span class="o">=</span>...
 </code></pre></div>
-<p>The same boto3 instrumentation also emits nested S3 client spans for uploads
-performed by the media store.</p>
+<p>The SDK's own media uploads are <strong>not</strong> traced as <code>s3.*</code> spans by default, so
+they do not clutter your traces; the calls run with OpenTelemetry's standard
+instrumentation suppression active. Set <code>GENAI_OTEL_MEDIA_STORE_TRACE_CALLS=true</code>
+to get nested S3 client spans for the uploads again. Your own S3 calls are
+always traced. See <a href="../seaweedfs/">SeaweedFS</a> for labelling the gateway.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">genai_otel</span><span class="w"> </span><span class="kn">import</span> <span class="n">instrument</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">instrument</span><span class="p">()</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
@@ -1734,6 +1854,21 @@ output, TTS responses).</p>
 <td><code>GENAI_OTEL_MEDIA_STORE_SECRET_KEY</code></td>
 <td>—</td>
 <td>for s3/minio/seaweed</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_CONNECT_TIMEOUT</code></td>
+<td><code>1.0</code></td>
+<td>seconds; S3-compatible stores only</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_READ_TIMEOUT</code></td>
+<td><code>5.0</code></td>
+<td>seconds; S3-compatible stores only</td>
+</tr>
+<tr>
+<td><code>GENAI_OTEL_MEDIA_STORE_TRACE_CALLS</code></td>
+<td><code>false</code></td>
+<td>keep <code>s3.*</code> spans for the SDK's own media uploads</td>
 </tr>
 <tr>
 <td><code>GENAI_OTEL_MEDIA_MAX_BYTES</code></td>
