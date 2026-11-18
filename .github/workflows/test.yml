@@ -5,9 +5,21 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
-  # Allow running the full test matrix manually from the Actions tab
-  # ("Run workflow" button) against any branch.
+  schedule:
+    - cron: '0 3 * * *'      # nightly full tier, 03:00 UTC
+    - cron: '0 4 * * 1'      # weekly upstream jobs (canary, ADK), Monday 04:00 UTC
+  # Run the full test matrix manually from the Actions tab.
   workflow_dispatch:
+    inputs:
+      notify_test:
+        description: 'Force the failure-notification path'
+        type: boolean
+        default: false
+
+# The event name is in the group so a push on main cannot cancel a running nightly.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
 # Least privilege: the default GITHUB_TOKEN is write-all. Restrict every job to
 # read-only here and grant per-job elevation only where a job genuinely needs it.
@@ -20,32 +32,22 @@ permissions:
 # the corresponding `@<40-char-sha>  # vN` once verified.
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, macos-latest, windows-latest]
-        # 3.13 was already advertised by package metadata but was missing from
-        # CI. 3.14 is included as a support candidate pending a green matrix.
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
-
+  lint:
+    runs-on: ubuntu-24.04
+    if: github.event.schedule != '0 4 * * 1'
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.13"
+        cache: pip
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
-
-    - name: Lint with pylint
-      run: |
-        pylint genai_otel --rcfile=.pylintrc || true
 
     - name: Check formatting with black
       run: |
@@ -55,15 +57,66 @@ jobs:
       run: |
         isort --check-only --skip-glob='*/__version__.py' genai_otel tests
 
+    # Advisory, exactly as before: the lint gate gates formatting only.
+    - name: Lint with pylint
+      run: |
+        pylint genai_otel --rcfile=.pylintrc || true
+
     - name: Type check with mypy
       run: |
         mypy genai_otel || true
 
-    - name: Run tests
+  test:
+    if: github.event.schedule != '0 4 * * 1'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+              && '["ubuntu-24.04","windows-latest","macos-latest"]'
+              || '["ubuntu-24.04","windows-latest"]') }}
+        python-version: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+              && '["3.9","3.10","3.11","3.12","3.13","3.14"]'
+              || '["3.9","3.13"]') }}
+        exclude: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+              && '[]'
+              || '[{"os":"windows-latest","python-version":"3.9"}]') }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # Exactly one of these two runs. The nightly installs without the pip cache
+    # so it also catches upstream dependency drift.
+    - name: Set up Python ${{ matrix.python-version }}
+      if: github.event_name != 'schedule'
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: pip
+
+    - name: Set up Python ${{ matrix.python-version }} (no cache)
+      if: github.event_name == 'schedule'
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Run tests (with coverage)
+      if: matrix.os == 'ubuntu-24.04' && matrix.python-version == '3.13'
       run: |
         pytest tests/ -v --cov=genai_otel --cov-report=xml --cov-report=term
 
+    - name: Run tests
+      if: ${{ !(matrix.os == 'ubuntu-24.04' && matrix.python-version == '3.13') }}
+      run: |
+        pytest tests/ -v
+
     - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-24.04' && matrix.python-version == '3.13'
       # codecov-action@v3 is EOL; bumped to the current major (v5). SHA-pinning
       # (e.g. codecov/codecov-action@<sha>  # v5) is preferred over a mutable tag.
       # If you switch to tokenless OIDC upload (use_oidc), grant this job
@@ -77,12 +130,17 @@ jobs:
 
   # New job: Test package build and installation
   build-and-install-test:
+    if: github.event.schedule != '0 4 * * 1'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, windows-latest]
-        python-version: ["3.9", "3.12", "3.13", "3.14"]
+        python-version: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+              && '["3.9","3.12","3.13","3.14"]' || '["3.9","3.13"]') }}
+        exclude: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+              && '[]'
+              || '[{"os":"ubuntu-24.04","python-version":"3.13"},{"os":"windows-latest","python-version":"3.9"}]') }}
 
     steps:
     - uses: actions/checkout@v4
@@ -130,11 +188,11 @@ jobs:
         # Cleanup
         deactivate
 
-  # Python 3.15 is prerelease. Keep an early compatibility signal without
-  # claiming support or blocking ordinary CI on upstream prerelease churn.
+  # Python 3.15 is prerelease. Weekly early compatibility signal (issue on failure)
+  # without claiming support or blocking pushes on upstream prerelease churn.
   python-prerelease-canary:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 4 * * 1'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
     - uses: actions/checkout@v4
 
@@ -152,11 +210,11 @@ jobs:
       run: pytest tests/ -v --cov=genai_otel --cov-report=term
 
   # Google ADK traced end to end against real ADK releases (the main matrix skips these
-  # tests: google-adk is not a dev dependency). Optional, so an ADK release that changes
-  # its internals is a signal, not a blocked merge.
+  # tests: google-adk is not a dev dependency). Weekly only, so an ADK release that changes
+  # its internals is a signal (an issue), not a blocked merge.
   google-adk-compat:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 4 * * 1'
     runs-on: ubuntu-latest
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -178,6 +236,7 @@ jobs:
       run: pytest tests/instrumentors/test_google_adk_real.py tests/instrumentors/test_generator_span_context.py -v
 
   security:
+    if: github.event.schedule != '0 4 * * 1'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -210,3 +269,52 @@ jobs:
     - name: Run bandit security check
       run: |
         bandit -r genai_otel -ll
+
+  # Runs only when notify_test is true and fails on purpose, to exercise notify.
+  failure-drill:
+    if: github.event_name == 'workflow_dispatch' && inputs.notify_test
+    runs-on: ubuntu-24.04
+    steps:
+    - run: 'echo "deliberate failure to test the notify job"; exit 1'
+
+  notify:
+    needs: [lint, test, build-and-install-test, security, python-prerelease-canary, google-adk-compat, failure-drill]
+    if: >-
+      always() && contains(needs.*.result, 'failure') &&
+      (github.event_name == 'schedule' || inputs.notify_test)
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}   # no checkout here, so gh needs GH_REPO
+    steps:
+    - run: |
+        label=nightly-failure
+        [ "${{ github.event.schedule }}" = "0 4 * * 1" ] && label=upstream
+        url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        n=$(gh issue list --state open --label "$label" --limit 1 --json number --jq '.[0].number // empty')
+        if [ -n "$n" ]; then gh issue comment "$n" --body "Still failing: $url"
+        else gh issue create --label "$label" --title "Nightly matrix failing ($label)" --body "Failing run: $url"; fi
+
+  resolve:
+    needs: [lint, test, build-and-install-test, security, python-prerelease-canary, google-adk-compat]
+    if: >-
+      always() && github.event_name == 'schedule' &&
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+    - run: |
+        label=nightly-failure
+        [ "${{ github.event.schedule }}" = "0 4 * * 1" ] && label=upstream
+        url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        for n in $(gh issue list --state open --label "$label" --json number --jq '.[].number'); do
+          gh issue close "$n" --comment "Green again: $url"
+        done

@@ -15,7 +15,39 @@ permissions:
 # with `@<40-char-sha>  # vN` once verified.
 
 jobs:
+  # Separate job with no PyPI secrets: a release is published only from a commit
+  # whose v* tag run of pre-release-check.yml succeeded. Dispatch publishes
+  # nothing, so it is not gated.
+  gate:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}   # no checkout, so gh needs GH_REPO
+    steps:
+    - run: |
+        set -euo pipefail
+        sha="$GITHUB_SHA"
+        deadline=$(( $(date +%s) + 1800 ))          # 30 minutes; the 18-leg run takes about 10
+        while :; do
+          # an API error must fail fast with its message, not poll for 30 minutes
+          out=$(gh run list --workflow pre-release-check.yml --commit "$sha" --event push --limit 1 \
+                  --json databaseId,status,conclusion --jq '.[0] | "\(.databaseId) \(.status) \(.conclusion)"')
+          read -r id status conclusion <<< "${out:-null null null}"
+          if [ "$status" = "completed" ]; then
+            [ "$conclusion" = "success" ] && { echo "tag run $id succeeded"; exit 0; }
+            echo "::error::pre-release-check run $id concluded $conclusion"; exit 1
+          fi
+          [ "$(date +%s)" -ge "$deadline" ] && { echo "::error::no completed pre-release-check run for $sha within 30 minutes (status: $status)"; exit 1; }
+          sleep 30
+        done
+
   build-and-publish:
+    needs: gate
+    if: always() && (github.event_name != 'release' || needs.gate.result == 'success')
     runs-on: ubuntu-latest
 
     # This job holds long-lived PyPI tokens (secrets.*_PYPI_API_TOKEN). Keep the

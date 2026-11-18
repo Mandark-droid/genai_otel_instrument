@@ -26,9 +26,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, windows-latest, macos-latest]
-        # Keep release validation aligned with the regular test matrix for all
-        # currently supported versions and the 3.14 support candidate.
-        python-version: ["3.9", "3.12", "3.13", "3.14"]
+        # All six supported Pythons: this is the release tier (18 legs).
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@v4
@@ -53,12 +52,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
 
-    - name: Auto-format code
+    # Formatting gates first so a failure ends the leg in a minute. Run black and
+    # isort locally before tagging; this workflow no longer rewrites files.
+    - name: Check formatting
       run: |
-        echo "→ Auto-formatting code with isort and black..."
-        isort genai_otel tests
-        black genai_otel tests
-        echo "✓ Code formatting applied"
+        black --check genai_otel tests --exclude='__version__\.py'
+        isort --check-only --skip-glob='*/__version__.py' genai_otel tests
 
     - name: Run full test suite
       run: |
@@ -69,8 +68,6 @@ jobs:
     - name: Code quality checks
       run: |
         echo "→ Running code quality checks..."
-        black --check genai_otel tests --exclude='__version__\.py'
-        isort --check-only --skip-glob='*/__version__.py' genai_otel tests
         pylint genai_otel --rcfile=.pylintrc --exit-zero || true
         echo "✓ Code quality checks complete"
 
@@ -133,8 +130,8 @@ jobs:
         echo ""
         echo "Release Checklist:"
         echo "✅ All tests passing"
-        echo "✅ Code formatting applied"
-        echo "✅ Import sorting applied"
+        echo "✅ Code formatting checked"
+        echo "✅ Import sorting checked"
         echo "✅ Package builds successfully"
         echo "✅ Installation tested"
         echo "✅ CLI tool works"

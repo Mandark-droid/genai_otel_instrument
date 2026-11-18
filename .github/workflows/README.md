@@ -6,9 +6,14 @@ This directory contains GitHub Actions workflows for automated testing, validati
 
 ### 1. `test.yml` - Continuous Integration Tests
 
-**Triggers:**
-- Push to `main` or `develop` branches
-- Pull requests to `main` or `develop` branches
+**Triggers and tiers:**
+- **Fast** (push / PR to `main` or `develop`): `lint`, `test` on ubuntu 3.9 and 3.13 plus windows 3.13, `build-and-install-test` on ubuntu 3.9 and windows 3.13, `security` (7 jobs)
+- **Full** (nightly 03:00 UTC, and manual dispatch): 3 OS x six Pythons plus the 8 build-and-install legs, no pip cache. A red nightly opens (or comments on) one `nightly-failure` issue; the next green nightly closes it
+- **Weekly** (Monday 04:00 UTC, and dispatch): Python 3.15 canary and Google ADK compat; failures use the `upstream` label
+- `notify_test` on dispatch forces the failure path to test notification
+- Tag runs belong to `pre-release-check.yml` only
+
+The matrix below describes the full tier.
 
 **Jobs:**
 
@@ -66,12 +71,12 @@ This directory contains GitHub Actions workflows for automated testing, validati
 
 **Purpose:** Comprehensive validation before creating a release (mimics `scripts/test_release.sh`)
 
-**Matrix:** Runs on Ubuntu, Windows, and macOS with Python 3.9, 3.12, 3.13, and 3.14
+**Matrix:** Runs on Ubuntu, Windows, and macOS with Python 3.9 to 3.14 (18 legs)
 
 **Steps:**
 1. Display environment information
 2. Install development dependencies
-3. Auto-format code (isort + black)
+3. Check formatting (black + isort; run them locally before tagging, nothing is rewritten)
 4. Run full test suite with coverage
 5. Perform code quality checks
 6. Build package
@@ -108,7 +113,7 @@ This will run all validation checks across all platforms.
 
 2. **Ensure all checks pass**
 
-3. **Create and push a version tag:**
+3. **Check the last nightly is green** (or rely on the tag run covering it), then **create and push a version tag:**
    ```bash
    git tag v0.2.0
    git push origin v0.2.0
@@ -121,7 +126,7 @@ This will run all validation checks across all platforms.
    - Fill in release notes
    - Click "Publish release"
 
-   This triggers the publish workflow which will:
+   This triggers the publish workflow, whose `gate` job waits (up to 30 minutes) for the tag's `pre-release-check` run and refuses to publish unless it succeeded. It will:
    - Run tests
    - Build package
    - Publish to Test PyPI

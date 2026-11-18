@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (CI)
+- `test.yml` is tiered: a 7-job fast tier on push/PR (`lint`, ubuntu 3.9/3.13 and windows 3.13 tests, two build-and-install legs, `security`); the full OS x Python matrix runs nightly and on dispatch; the Python 3.15 canary and Google ADK compat run weekly. Failures open or comment on a `nightly-failure` / `upstream` issue and the next green run closes it.
+- `pre-release-check.yml` covers all six Pythons (18 legs) and checks formatting instead of rewriting files.
+- `publish.yml` gains a `gate` job: a release publishes only if the tag's pre-release run succeeded.
+
 ## [1.48.1] - 2026-11-18
 
 Pricing-only patch: GPT-6.2 Astra and GPT-6.2 Sol.
