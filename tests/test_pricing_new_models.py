@@ -1350,3 +1350,38 @@ def test_gemini_3_8_flash_caches_at_its_own_rate(calc, model):
     # Google: context caching $0.075/1M through 2026-12-31 (input $0.75/1M).
     entry = calc.pricing_data["chat"][calc._normalize_model_name(model, "chat")]
     assert entry["cacheReadPrice"] == pytest.approx(0.000075)
+
+
+# --- GPT-6.2 Astra and Sol (released 2026-11-17) -----------------------------
+# developers.openai.com/api/docs/pricing, checked 2026-11-18. Astra is cheaper
+# than GPT-6 Astra ($10/$50); Sol keeps GPT-6.1 Sol's rates. A "6.2" name must
+# never fall back to a 6 / 6.1 price, and the 6.1 prices must not move.
+GPT_6_2_MODELS = [
+    ("gpt-6.2-astra", 0.008, 0.04, 0.0004, 0.01),
+    ("gpt-6-2-astra", 0.008, 0.04, 0.0004, 0.01),
+    ("openai/gpt-6.2-astra", 0.008, 0.04, 0.0004, 0.01),
+    ("gpt-6.2-sol", 0.002, 0.01, 0.0001, 0.0025),
+    ("gpt-6-2-sol", 0.002, 0.01, 0.0001, 0.0025),
+    ("gpt-6-astra", 0.01, 0.05, 0.001, 0.0125),
+    ("gpt-6.1-sol", 0.002, 0.01, 0.0001, 0.0025),
+]
+
+
+@pytest.mark.parametrize(
+    "model,prompt_price,completion_price,cache_read,cache_write", GPT_6_2_MODELS
+)
+def test_gpt_6_2_priced(calc, model, prompt_price, completion_price, cache_read, cache_write):
+    usage = {
+        "prompt_tokens": 1000,
+        "completion_tokens": 1000,
+        "cache_read_input_tokens": 1000,
+        "cache_creation_input_tokens": 1000,
+    }
+    costs = calc.calculate_granular_cost(model, usage, "chat")
+    assert costs["completion"] == pytest.approx(completion_price)
+    assert costs["cache_read"] == pytest.approx(cache_read)
+    assert costs["cache_write"] == pytest.approx(cache_write)
+    plain = calc.calculate_granular_cost(
+        model, {"prompt_tokens": 1000, "completion_tokens": 0}, "chat"
+    )
+    assert plain["prompt"] == pytest.approx(prompt_price)

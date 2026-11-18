@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.48.1] - 2026-11-18
+
+Pricing-only patch: GPT-6.2 Astra and GPT-6.2 Sol.
+
+### Added
+
+- **GPT-6.2 Astra and GPT-6.2 Sol pricing** (released 2026-11-17). Astra: input $8, output $40, cached input $0.40,
+  30-minute cache write $10 per 1M tokens (GPT-6 Astra was $10 / $50). Sol: input $2, output $10, cached input $0.10,
+  30-minute cache write $2.50, the same as GPT-6.1 Sol. Both dotted and dashed ids (`gpt-6.2-astra`, `gpt-6-2-astra`,
+  `gpt-6.2-sol`, `gpt-6-2-sol`). The base (up to 272K context) tier is stored; above it OpenAI charges Astra $16 / $60 and
+  Sol $4 / $15, which the flat schema cannot model. Before this a `gpt-6.2-*` name was unpriced, since the lookup rule never
+  prices a new version at an older one's rate. Source: developers.openai.com/api/docs/pricing, checked 2026-11-18.
+
 ## [1.48.0] - 2026-11-12
 
 A2UI (Agent-to-UI): what an agent's generated interface was, what the user did with it, and when the model's UI or the renderer failed.
